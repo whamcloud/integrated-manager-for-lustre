@@ -8,7 +8,10 @@ use crate::{
     timer::{configure_snapshot_timer, remove_snapshot_timer},
 };
 use chrono::{DateTime, Utc};
-use futures::{future::join_all, TryFutureExt, TryStreamExt};
+use futures::{
+    future::{join_all, try_join_all},
+    TryFutureExt, TryStreamExt,
+};
 use iml_manager_env::get_report_path;
 use iml_postgres::{sqlx, sqlx::postgres::types::PgInterval, PgPool};
 use iml_rabbit::Pool;
@@ -28,6 +31,7 @@ use std::{
     ops::Deref,
     sync::Arc,
 };
+use tokio::fs;
 use warp::Filter;
 
 #[derive(juniper::GraphQLObject)]
@@ -135,6 +139,19 @@ impl Deref for SortDir {
             Self::Desc => "desc",
         }
     }
+}
+
+#[derive(juniper::GraphQLObject)]
+/// Information about a stratagem report
+struct StratagemReport {
+    /// The filename of the stratagem report under /var/spool/iml/report
+    filename: String,
+    /// When the report was created
+    create_time: DateTime<Utc>,
+    /// When the report was last modified
+    modify_time: DateTime<Utc>,
+    /// The size of the report in bytes
+    size: i32,
 }
 
 pub(crate) struct QueryRoot;
@@ -468,15 +485,26 @@ impl QueryRoot {
 
         Ok(xs)
     }
+
     /// List completed Stratagem reports that currently reside on the manager node.
     /// Note: All report names must be valid unicode.
-    async fn stratagem_reports(_context: &Context) -> juniper::FieldResult<Vec<String>> {
+    async fn stratagem_reports(_context: &Context) -> juniper::FieldResult<Vec<StratagemReport>> {
         let paths = tokio::fs::read_dir(get_report_path()).await?;
 
-        let items: Vec<String> = paths
+        let file_paths = paths
             .map_ok(|x| x.file_name().to_string_lossy().to_string())
-            .try_collect()
-            .await?;
+            .try_collect::<Vec<String>>()
+            .await?
+            .into_iter()
+            .map(|filename| fs::canonicalize(get_report_path().join(filename)));
+
+        let items = try_join_all(file_paths)
+            .await?
+            .into_iter()
+            .map(|x| x.to_string_lossy().to_string())
+            .map(get_stratagem_files);
+
+        let items = try_join_all(items).await?;
 
         Ok(items)
     }
@@ -1094,4 +1122,15 @@ async fn fqdn_by_host_id(pool: &PgPool, id: i32) -> Result<String, iml_postgres:
     .fqdn;
 
     Ok(fqdn)
+}
+
+async fn get_stratagem_files(file_path: String) -> juniper::FieldResult<StratagemReport> {
+    let attr = fs::metadata(file_path.to_string()).await?;
+
+    Ok(StratagemReport {
+        filename: file_path.to_string(),
+        create_time: attr.created()?.into(),
+        modify_time: attr.modified()?.into(),
+        size: attr.len() as i32,
+    })
 }

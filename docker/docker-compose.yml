@@ -347,6 +347,7 @@ services:
     deploy: *default-deploy
     volumes:
       - "manager-config:/var/lib/chroma"
+      - "report:/var/spool/iml/report"
     environment:
       - PROXY_HOST=iml-api
       - RUST_LOG=info,sqlx::query=warn
