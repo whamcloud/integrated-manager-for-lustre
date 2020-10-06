@@ -627,11 +627,8 @@ impl QueryRoot {
         .into_iter()
         .map(|i| i as i16)
         .collect();
-        let severity = if let Some(s) = severity {
-            s as i16
-        } else {
-            LogSeverity::Debug as i16
-        };
+
+        let severity = severity.unwrap_or(LogSeverity::Debug) as i16;
 
         let results = sqlx::query_as!(
             LogMessageRecord,
