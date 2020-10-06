@@ -626,12 +626,9 @@ impl QueryRoot {
             .map(|s| s.parse::<chrono::DateTime<Utc>>())
             .map_or(Ok(None), |r| r.map(Some))?;
 
-        let message_class: Vec<_> = if let Some(mc) = message_class {
-            if !mc.is_empty() {
-                mc
-            } else {
-                vec![MessageClass::Normal]
-            }
+        let message_class = message_class.unwrap_or_else(|| vec![MessageClass::Normal]);
+        let message_class: Vec<_> = if !message_class.is_empty() {
+            message_class
         } else {
             vec![MessageClass::Normal]
         }
