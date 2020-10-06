@@ -1,4 +1,4 @@
-FROM imlteam/python-service-base:6.2.0-dev
+FROM imlteam/python-service-base:6.2.0
 
 RUN python setup.py install
 

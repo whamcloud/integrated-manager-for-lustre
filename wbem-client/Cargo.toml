@@ -5,7 +5,7 @@ edition = "2018"
 license = "MIT"
 name = "wbem-client"
 repository = "https://github.com/whamcloud/integrated-manager-for-lustre/tree/master/wbem-client"
-version = "0.1.0"
+version = "0.2.0"
 
 [dependencies]
 async-trait = "0.1"
