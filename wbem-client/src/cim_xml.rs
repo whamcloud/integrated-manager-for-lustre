@@ -267,7 +267,7 @@ pub mod resp {
             #[serde(rename = "TYPE")]
             prop_type: String,
             #[serde(rename = "VALUE.ARRAY")]
-            values: ValueArray,
+            values: Option<ValueArray>,
         },
     }
 

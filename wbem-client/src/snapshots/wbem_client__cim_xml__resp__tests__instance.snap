@@ -148,9 +148,11 @@ Cim {
                                     "NTPServers",
                                 ),
                                 prop_type: "string",
-                                values: ValueArray {
-                                    inner: [],
-                                },
+                                values: Some(
+                                    ValueArray {
+                                        inner: [],
+                                    },
+                                ),
                             },
                             Single {
                                 name: Some(
@@ -193,9 +195,11 @@ Cim {
                                     "Licenses",
                                 ),
                                 prop_type: "uint8",
-                                values: ValueArray {
-                                    inner: [],
-                                },
+                                values: Some(
+                                    ValueArray {
+                                        inner: [],
+                                    },
+                                ),
                             },
                             Single {
                                 name: Some(

@@ -106,36 +106,44 @@ Cim {
                                             "RiserDates",
                                         ),
                                         prop_type: "string",
-                                        values: ValueArray {
-                                            inner: [],
-                                        },
+                                        values: Some(
+                                            ValueArray {
+                                                inner: [],
+                                            },
+                                        ),
                                     },
                                     Multiple {
                                         name: Some(
                                             "RiserVersions",
                                         ),
                                         prop_type: "string",
-                                        values: ValueArray {
-                                            inner: [],
-                                        },
+                                        values: Some(
+                                            ValueArray {
+                                                inner: [],
+                                            },
+                                        ),
                                     },
                                     Multiple {
                                         name: Some(
                                             "RiserSerialNumbers",
                                         ),
                                         prop_type: "string",
-                                        values: ValueArray {
-                                            inner: [],
-                                        },
+                                        values: Some(
+                                            ValueArray {
+                                                inner: [],
+                                            },
+                                        ),
                                     },
                                     Multiple {
                                         name: Some(
                                             "RiserPartNumbers",
                                         ),
                                         prop_type: "string",
-                                        values: ValueArray {
-                                            inner: [],
-                                        },
+                                        values: Some(
+                                            ValueArray {
+                                                inner: [],
+                                            },
+                                        ),
                                     },
                                     Single {
                                         name: Some(
@@ -267,81 +275,99 @@ Cim {
                                             "PathZones",
                                         ),
                                         prop_type: "uint8",
-                                        values: ValueArray {
-                                            inner: [],
-                                        },
+                                        values: Some(
+                                            ValueArray {
+                                                inner: [],
+                                            },
+                                        ),
                                     },
                                     Multiple {
                                         name: Some(
                                             "PathRPs",
                                         ),
                                         prop_type: "string",
-                                        values: ValueArray {
-                                            inner: [],
-                                        },
+                                        values: Some(
+                                            ValueArray {
+                                                inner: [],
+                                            },
+                                        ),
                                     },
                                     Multiple {
                                         name: Some(
                                             "PathRPIndices",
                                         ),
                                         prop_type: "uint8",
-                                        values: ValueArray {
-                                            inner: [],
-                                        },
+                                        values: Some(
+                                            ValueArray {
+                                                inner: [],
+                                            },
+                                        ),
                                     },
                                     Multiple {
                                         name: Some(
                                             "PathIOCPorts",
                                         ),
                                         prop_type: "uint8",
-                                        values: ValueArray {
-                                            inner: [],
-                                        },
+                                        values: Some(
+                                            ValueArray {
+                                                inner: [],
+                                            },
+                                        ),
                                     },
                                     Multiple {
                                         name: Some(
                                             "PathIOCHandles",
                                         ),
                                         prop_type: "uint8",
-                                        values: ValueArray {
-                                            inner: [],
-                                        },
+                                        values: Some(
+                                            ValueArray {
+                                                inner: [],
+                                            },
+                                        ),
                                     },
                                     Multiple {
                                         name: Some(
                                             "PathIndices",
                                         ),
                                         prop_type: "uint16",
-                                        values: ValueArray {
-                                            inner: [],
-                                        },
+                                        values: Some(
+                                            ValueArray {
+                                                inner: [],
+                                            },
+                                        ),
                                     },
                                     Multiple {
                                         name: Some(
                                             "PathDiskChannelIndices",
                                         ),
                                         prop_type: "uint16",
-                                        values: ValueArray {
-                                            inner: [],
-                                        },
+                                        values: Some(
+                                            ValueArray {
+                                                inner: [],
+                                            },
+                                        ),
                                     },
                                     Multiple {
                                         name: Some(
                                             "PathControllerIndices",
                                         ),
                                         prop_type: "uint8",
-                                        values: ValueArray {
-                                            inner: [],
-                                        },
+                                        values: Some(
+                                            ValueArray {
+                                                inner: [],
+                                            },
+                                        ),
                                     },
                                     Multiple {
                                         name: Some(
                                             "PathAllInfo",
                                         ),
                                         prop_type: "string",
-                                        values: ValueArray {
-                                            inner: [],
-                                        },
+                                        values: Some(
+                                            ValueArray {
+                                                inner: [],
+                                            },
+                                        ),
                                     },
                                     Single {
                                         name: Some(
@@ -686,36 +712,44 @@ Cim {
                                             "RiserDates",
                                         ),
                                         prop_type: "string",
-                                        values: ValueArray {
-                                            inner: [],
-                                        },
+                                        values: Some(
+                                            ValueArray {
+                                                inner: [],
+                                            },
+                                        ),
                                     },
                                     Multiple {
                                         name: Some(
                                             "RiserVersions",
                                         ),
                                         prop_type: "string",
-                                        values: ValueArray {
-                                            inner: [],
-                                        },
+                                        values: Some(
+                                            ValueArray {
+                                                inner: [],
+                                            },
+                                        ),
                                     },
                                     Multiple {
                                         name: Some(
                                             "RiserSerialNumbers",
                                         ),
                                         prop_type: "string",
-                                        values: ValueArray {
-                                            inner: [],
-                                        },
+                                        values: Some(
+                                            ValueArray {
+                                                inner: [],
+                                            },
+                                        ),
                                     },
                                     Multiple {
                                         name: Some(
                                             "RiserPartNumbers",
                                         ),
                                         prop_type: "string",
-                                        values: ValueArray {
-                                            inner: [],
-                                        },
+                                        values: Some(
+                                            ValueArray {
+                                                inner: [],
+                                            },
+                                        ),
                                     },
                                     Single {
                                         name: Some(
@@ -831,144 +865,162 @@ Cim {
                                             "PathZones",
                                         ),
                                         prop_type: "uint8",
-                                        values: ValueArray {
-                                            inner: [
-                                                "1",
-                                                "1",
-                                                "2",
-                                                "1",
-                                                "1",
-                                                "2",
-                                            ],
-                                        },
+                                        values: Some(
+                                            ValueArray {
+                                                inner: [
+                                                    "1",
+                                                    "1",
+                                                    "2",
+                                                    "1",
+                                                    "1",
+                                                    "2",
+                                                ],
+                                            },
+                                        ),
                                     },
                                     Multiple {
                                         name: Some(
                                             "PathRPs",
                                         ),
                                         prop_type: "string",
-                                        values: ValueArray {
-                                            inner: [
-                                                "0",
-                                                "1",
-                                                "1",
-                                                "0",
-                                                "1",
-                                                "1",
-                                            ],
-                                        },
+                                        values: Some(
+                                            ValueArray {
+                                                inner: [
+                                                    "0",
+                                                    "1",
+                                                    "1",
+                                                    "0",
+                                                    "1",
+                                                    "1",
+                                                ],
+                                            },
+                                        ),
                                     },
                                     Multiple {
                                         name: Some(
                                             "PathRPIndices",
                                         ),
                                         prop_type: "uint8",
-                                        values: ValueArray {
-                                            inner: [
-                                                "0",
-                                                "1",
-                                                "1",
-                                                "0",
-                                                "1",
-                                                "1",
-                                            ],
-                                        },
+                                        values: Some(
+                                            ValueArray {
+                                                inner: [
+                                                    "0",
+                                                    "1",
+                                                    "1",
+                                                    "0",
+                                                    "1",
+                                                    "1",
+                                                ],
+                                            },
+                                        ),
                                     },
                                     Multiple {
                                         name: Some(
                                             "PathIOCPorts",
                                         ),
                                         prop_type: "uint8",
-                                        values: ValueArray {
-                                            inner: [
-                                                "0",
-                                                "0",
-                                                "0",
-                                                "0",
-                                                "0",
-                                                "0",
-                                            ],
-                                        },
+                                        values: Some(
+                                            ValueArray {
+                                                inner: [
+                                                    "0",
+                                                    "0",
+                                                    "0",
+                                                    "0",
+                                                    "0",
+                                                    "0",
+                                                ],
+                                            },
+                                        ),
                                     },
                                     Multiple {
                                         name: Some(
                                             "PathIOCHandles",
                                         ),
                                         prop_type: "uint8",
-                                        values: ValueArray {
-                                            inner: [
-                                                "1",
-                                                "2",
-                                                "1",
-                                                "1",
-                                                "2",
-                                                "1",
-                                            ],
-                                        },
+                                        values: Some(
+                                            ValueArray {
+                                                inner: [
+                                                    "1",
+                                                    "2",
+                                                    "1",
+                                                    "1",
+                                                    "2",
+                                                    "1",
+                                                ],
+                                            },
+                                        ),
                                     },
                                     Multiple {
                                         name: Some(
                                             "PathIndices",
                                         ),
                                         prop_type: "uint16",
-                                        values: ValueArray {
-                                            inner: [
-                                                "192",
-                                                "32960",
-                                                "32768",
-                                                "192",
-                                                "32960",
-                                                "32768",
-                                            ],
-                                        },
+                                        values: Some(
+                                            ValueArray {
+                                                inner: [
+                                                    "192",
+                                                    "32960",
+                                                    "32768",
+                                                    "192",
+                                                    "32960",
+                                                    "32768",
+                                                ],
+                                            },
+                                        ),
                                     },
                                     Multiple {
                                         name: Some(
                                             "PathDiskChannelIndices",
                                         ),
                                         prop_type: "uint16",
-                                        values: ValueArray {
-                                            inner: [
-                                                "1",
-                                                "3",
-                                                "2",
-                                                "9",
-                                                "11",
-                                                "10",
-                                            ],
-                                        },
+                                        values: Some(
+                                            ValueArray {
+                                                inner: [
+                                                    "1",
+                                                    "3",
+                                                    "2",
+                                                    "9",
+                                                    "11",
+                                                    "10",
+                                                ],
+                                            },
+                                        ),
                                     },
                                     Multiple {
                                         name: Some(
                                             "PathControllerIndices",
                                         ),
                                         prop_type: "uint8",
-                                        values: ValueArray {
-                                            inner: [
-                                                "1",
-                                                "1",
-                                                "1",
-                                                "0",
-                                                "0",
-                                                "0",
-                                            ],
-                                        },
+                                        values: Some(
+                                            ValueArray {
+                                                inner: [
+                                                    "1",
+                                                    "1",
+                                                    "1",
+                                                    "0",
+                                                    "0",
+                                                    "0",
+                                                ],
+                                            },
+                                        ),
                                     },
                                     Multiple {
                                         name: Some(
                                             "PathAllInfo",
                                         ),
                                         prop_type: "string",
-                                        values: ValueArray {
-                                            inner: [
-                                                "1,0,1,1,0x00c0,1,0",
-                                                "1,1,3,1,0x80c0,2,0",
-                                                "1,1,2,2,0x8000,1,0",
-                                                "0,0,9,1,0x00c0,1,0",
-                                                "0,1,11,1,0x80c0,2,0",
-                                                "0,1,10,2,0x8000,1,0",
-                                            ],
-                                        },
+                                        values: Some(
+                                            ValueArray {
+                                                inner: [
+                                                    "1,0,1,1,0x00c0,1,0",
+                                                    "1,1,3,1,0x80c0,2,0",
+                                                    "1,1,2,2,0x8000,1,0",
+                                                    "0,0,9,1,0x00c0,1,0",
+                                                    "0,1,11,1,0x80c0,2,0",
+                                                    "0,1,10,2,0x8000,1,0",
+                                                ],
+                                            },
+                                        ),
                                     },
                                     Single {
                                         name: Some(
@@ -1313,36 +1365,44 @@ Cim {
                                             "RiserDates",
                                         ),
                                         prop_type: "string",
-                                        values: ValueArray {
-                                            inner: [],
-                                        },
+                                        values: Some(
+                                            ValueArray {
+                                                inner: [],
+                                            },
+                                        ),
                                     },
                                     Multiple {
                                         name: Some(
                                             "RiserVersions",
                                         ),
                                         prop_type: "string",
-                                        values: ValueArray {
-                                            inner: [],
-                                        },
+                                        values: Some(
+                                            ValueArray {
+                                                inner: [],
+                                            },
+                                        ),
                                     },
                                     Multiple {
                                         name: Some(
                                             "RiserSerialNumbers",
                                         ),
                                         prop_type: "string",
-                                        values: ValueArray {
-                                            inner: [],
-                                        },
+                                        values: Some(
+                                            ValueArray {
+                                                inner: [],
+                                            },
+                                        ),
                                     },
                                     Multiple {
                                         name: Some(
                                             "RiserPartNumbers",
                                         ),
                                         prop_type: "string",
-                                        values: ValueArray {
-                                            inner: [],
-                                        },
+                                        values: Some(
+                                            ValueArray {
+                                                inner: [],
+                                            },
+                                        ),
                                     },
                                     Single {
                                         name: Some(
@@ -1468,126 +1528,144 @@ Cim {
                                             "PathZones",
                                         ),
                                         prop_type: "uint8",
-                                        values: ValueArray {
-                                            inner: [
-                                                "1",
-                                                "1",
-                                                "1",
-                                                "1",
-                                            ],
-                                        },
+                                        values: Some(
+                                            ValueArray {
+                                                inner: [
+                                                    "1",
+                                                    "1",
+                                                    "1",
+                                                    "1",
+                                                ],
+                                            },
+                                        ),
                                     },
                                     Multiple {
                                         name: Some(
                                             "PathRPs",
                                         ),
                                         prop_type: "string",
-                                        values: ValueArray {
-                                            inner: [
-                                                "1",
-                                                "1",
-                                                "1",
-                                                "1",
-                                            ],
-                                        },
+                                        values: Some(
+                                            ValueArray {
+                                                inner: [
+                                                    "1",
+                                                    "1",
+                                                    "1",
+                                                    "1",
+                                                ],
+                                            },
+                                        ),
                                     },
                                     Multiple {
                                         name: Some(
                                             "PathRPIndices",
                                         ),
                                         prop_type: "uint8",
-                                        values: ValueArray {
-                                            inner: [
-                                                "1",
-                                                "1",
-                                                "1",
-                                                "1",
-                                            ],
-                                        },
+                                        values: Some(
+                                            ValueArray {
+                                                inner: [
+                                                    "1",
+                                                    "1",
+                                                    "1",
+                                                    "1",
+                                                ],
+                                            },
+                                        ),
                                     },
                                     Multiple {
                                         name: Some(
                                             "PathIOCPorts",
                                         ),
                                         prop_type: "uint8",
-                                        values: ValueArray {
-                                            inner: [
-                                                "2",
-                                                "0",
-                                                "2",
-                                                "0",
-                                            ],
-                                        },
+                                        values: Some(
+                                            ValueArray {
+                                                inner: [
+                                                    "2",
+                                                    "0",
+                                                    "2",
+                                                    "0",
+                                                ],
+                                            },
+                                        ),
                                     },
                                     Multiple {
                                         name: Some(
                                             "PathIOCHandles",
                                         ),
                                         prop_type: "uint8",
-                                        values: ValueArray {
-                                            inner: [
-                                                "0",
-                                                "0",
-                                                "0",
-                                                "0",
-                                            ],
-                                        },
+                                        values: Some(
+                                            ValueArray {
+                                                inner: [
+                                                    "0",
+                                                    "0",
+                                                    "0",
+                                                    "0",
+                                                ],
+                                            },
+                                        ),
                                     },
                                     Multiple {
                                         name: Some(
                                             "PathIndices",
                                         ),
                                         prop_type: "uint16",
-                                        values: ValueArray {
-                                            inner: [
-                                                "32976",
-                                                "32977",
-                                                "32976",
-                                                "32977",
-                                            ],
-                                        },
+                                        values: Some(
+                                            ValueArray {
+                                                inner: [
+                                                    "32976",
+                                                    "32977",
+                                                    "32976",
+                                                    "32977",
+                                                ],
+                                            },
+                                        ),
                                     },
                                     Multiple {
                                         name: Some(
                                             "PathDiskChannelIndices",
                                         ),
                                         prop_type: "uint16",
-                                        values: ValueArray {
-                                            inner: [
-                                                "6",
-                                                "4",
-                                                "14",
-                                                "12",
-                                            ],
-                                        },
+                                        values: Some(
+                                            ValueArray {
+                                                inner: [
+                                                    "6",
+                                                    "4",
+                                                    "14",
+                                                    "12",
+                                                ],
+                                            },
+                                        ),
                                     },
                                     Multiple {
                                         name: Some(
                                             "PathControllerIndices",
                                         ),
                                         prop_type: "uint8",
-                                        values: ValueArray {
-                                            inner: [
-                                                "1",
-                                                "1",
-                                                "0",
-                                                "0",
-                                            ],
-                                        },
+                                        values: Some(
+                                            ValueArray {
+                                                inner: [
+                                                    "1",
+                                                    "1",
+                                                    "0",
+                                                    "0",
+                                                ],
+                                            },
+                                        ),
                                     },
                                     Multiple {
                                         name: Some(
                                             "PathAllInfo",
                                         ),
                                         prop_type: "string",
-                                        values: ValueArray {
-                                            inner: [
-                                                "1,1,6,1,0x80d0,0,2",
-                                                "1,1,4,1,0x80d1,0,0",
-                                                "0,1,14,1,0x80d0,0,2",
-                                                "0,1,12,1,0x80d1,0,0",
-                                            ],
-                                        },
+                                        values: Some(
+                                            ValueArray {
+                                                inner: [
+                                                    "1,1,6,1,0x80d0,0,2",
+                                                    "1,1,4,1,0x80d1,0,0",
+                                                    "0,1,14,1,0x80d0,0,2",
+                                                    "0,1,12,1,0x80d1,0,0",
+                                                ],
+                                            },
+                                        ),
                                     },
                                     Single {
                                         name: Some(
@@ -1942,36 +2020,44 @@ Cim {
                                             "RiserDates",
                                         ),
                                         prop_type: "string",
-                                        values: ValueArray {
-                                            inner: [],
-                                        },
+                                        values: Some(
+                                            ValueArray {
+                                                inner: [],
+                                            },
+                                        ),
                                     },
                                     Multiple {
                                         name: Some(
                                             "RiserVersions",
                                         ),
                                         prop_type: "string",
-                                        values: ValueArray {
-                                            inner: [],
-                                        },
+                                        values: Some(
+                                            ValueArray {
+                                                inner: [],
+                                            },
+                                        ),
                                     },
                                     Multiple {
                                         name: Some(
                                             "RiserSerialNumbers",
                                         ),
                                         prop_type: "string",
-                                        values: ValueArray {
-                                            inner: [],
-                                        },
+                                        values: Some(
+                                            ValueArray {
+                                                inner: [],
+                                            },
+                                        ),
                                     },
                                     Multiple {
                                         name: Some(
                                             "RiserPartNumbers",
                                         ),
                                         prop_type: "string",
-                                        values: ValueArray {
-                                            inner: [],
-                                        },
+                                        values: Some(
+                                            ValueArray {
+                                                inner: [],
+                                            },
+                                        ),
                                     },
                                     Single {
                                         name: Some(
@@ -2103,81 +2189,99 @@ Cim {
                                             "PathZones",
                                         ),
                                         prop_type: "uint8",
-                                        values: ValueArray {
-                                            inner: [],
-                                        },
+                                        values: Some(
+                                            ValueArray {
+                                                inner: [],
+                                            },
+                                        ),
                                     },
                                     Multiple {
                                         name: Some(
                                             "PathRPs",
                                         ),
                                         prop_type: "string",
-                                        values: ValueArray {
-                                            inner: [],
-                                        },
+                                        values: Some(
+                                            ValueArray {
+                                                inner: [],
+                                            },
+                                        ),
                                     },
                                     Multiple {
                                         name: Some(
                                             "PathRPIndices",
                                         ),
                                         prop_type: "uint8",
-                                        values: ValueArray {
-                                            inner: [],
-                                        },
+                                        values: Some(
+                                            ValueArray {
+                                                inner: [],
+                                            },
+                                        ),
                                     },
                                     Multiple {
                                         name: Some(
                                             "PathIOCPorts",
                                         ),
                                         prop_type: "uint8",
-                                        values: ValueArray {
-                                            inner: [],
-                                        },
+                                        values: Some(
+                                            ValueArray {
+                                                inner: [],
+                                            },
+                                        ),
                                     },
                                     Multiple {
                                         name: Some(
                                             "PathIOCHandles",
                                         ),
                                         prop_type: "uint8",
-                                        values: ValueArray {
-                                            inner: [],
-                                        },
+                                        values: Some(
+                                            ValueArray {
+                                                inner: [],
+                                            },
+                                        ),
                                     },
                                     Multiple {
                                         name: Some(
                                             "PathIndices",
                                         ),
                                         prop_type: "uint16",
-                                        values: ValueArray {
-                                            inner: [],
-                                        },
+                                        values: Some(
+                                            ValueArray {
+                                                inner: [],
+                                            },
+                                        ),
                                     },
                                     Multiple {
                                         name: Some(
                                             "PathDiskChannelIndices",
                                         ),
                                         prop_type: "uint16",
-                                        values: ValueArray {
-                                            inner: [],
-                                        },
+                                        values: Some(
+                                            ValueArray {
+                                                inner: [],
+                                            },
+                                        ),
                                     },
                                     Multiple {
                                         name: Some(
                                             "PathControllerIndices",
                                         ),
                                         prop_type: "uint8",
-                                        values: ValueArray {
-                                            inner: [],
-                                        },
+                                        values: Some(
+                                            ValueArray {
+                                                inner: [],
+                                            },
+                                        ),
                                     },
                                     Multiple {
                                         name: Some(
                                             "PathAllInfo",
                                         ),
                                         prop_type: "string",
-                                        values: ValueArray {
-                                            inner: [],
-                                        },
+                                        values: Some(
+                                            ValueArray {
+                                                inner: [],
+                                            },
+                                        ),
                                     },
                                     Single {
                                         name: Some(
