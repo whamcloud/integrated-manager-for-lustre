@@ -563,7 +563,7 @@ pub async fn get_mgs_filesystem_map(
 ) -> Result<TargetFsRecord, ImlDeviceError> {
     let query_result: Option<Vec<FsRecord>> = influx_client
         .query_into(
-            "select host,target,mgs_fs,is_mgs_fs from target order by time desc limit 1;",
+            "select host,target,mgs_fs,is_mgs_fs from target group by mgs_fs order by time desc limit 1;",
             Some(Precision::Nanoseconds),
         )
         .await?;
