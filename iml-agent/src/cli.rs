@@ -246,7 +246,7 @@ pub enum StratagemClientCommand {
         /// remote fs path
         target_fs: String,
 
-        #[structopt(parse(from_os_str))]
+        #[structopt(parse(from_os_str), min_values = 1, required = true)]
         files: Vec<PathBuf>,
     },
 
@@ -261,7 +261,7 @@ pub enum StratagemClientCommand {
         /// destination s3 bucket
         target: String,
 
-        #[structopt(parse(from_os_str))]
+        #[structopt(parse(from_os_str), min_values = 1, required = true)]
         files: Vec<PathBuf>,
     },
 }
