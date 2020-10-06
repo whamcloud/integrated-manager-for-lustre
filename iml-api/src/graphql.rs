@@ -607,16 +607,14 @@ impl QueryRoot {
     ) -> juniper::FieldResult<Vec<LogMessage>> {
         let dir = dir.unwrap_or_default();
 
-        let start_datetime: Option<chrono::DateTime<Utc>> = if let Some(s) = start_datetime {
-            Some(s.parse()?)
-        } else {
-            None
-        };
-        let end_datetime: Option<chrono::DateTime<Utc>> = if let Some(e) = end_datetime {
-            Some(e.parse()?)
-        } else {
-            None
-        };
+        let start_datetime = start_datetime
+            .map(|s| s.parse::<chrono::DateTime<Utc>>())
+            .map_or(Ok(None), |r| r.map(Some))?;
+
+        let end_datetime = end_datetime
+            .map(|s| s.parse::<chrono::DateTime<Utc>>())
+            .map_or(Ok(None), |r| r.map(Some))?;
+
         let message_class: Vec<_> = if let Some(mc) = message_class {
             if !mc.is_empty() {
                 mc
