@@ -3,10 +3,10 @@ authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
 license = "MIT"
 name = "zed-enhancer"
-version = "0.1.0"
+version = "0.2.0"
 
 [dependencies]
-device-types = {path = "../device-types", version = "0.2.0"}
+device-types = {path = "../device-types", version = "0.3.0"}
 futures = "0.3"
 libzfs = "0.6.16"
 libzfs-types = "0.1.2"
