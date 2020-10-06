@@ -494,12 +494,15 @@ impl QueryRoot {
             .try_collect::<Vec<String>>()
             .await?
             .into_iter()
-            .map(|filename| fs::canonicalize(get_report_path().join(filename)));
+            .map(|filename| {
+                fs::canonicalize(get_report_path().join(filename.clone()))
+                    .map_ok(|file_path| (file_path, filename))
+            });
 
         let items = try_join_all(file_paths)
             .await?
             .into_iter()
-            .map(|x| x.to_string_lossy().to_string())
+            .map(|(file_path, filename)| (file_path.to_string_lossy().to_string(), filename))
             .map(get_stratagem_files);
 
         let items = try_join_all(items).await?;
@@ -1122,11 +1125,13 @@ async fn fqdn_by_host_id(pool: &PgPool, id: i32) -> Result<String, iml_postgres:
     Ok(fqdn)
 }
 
-async fn get_stratagem_files(file_path: String) -> juniper::FieldResult<StratagemReport> {
+async fn get_stratagem_files(
+    (file_path, filename): (String, String),
+) -> juniper::FieldResult<StratagemReport> {
     let attr = fs::metadata(file_path.to_string()).await?;
 
     Ok(StratagemReport {
-        filename: file_path.to_string(),
+        filename,
         modify_time: attr.modified()?.into(),
         size: attr.len() as i32,
     })
