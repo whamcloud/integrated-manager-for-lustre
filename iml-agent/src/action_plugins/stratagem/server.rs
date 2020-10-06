@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{agent_error::ImlAgentError, http_comms::streaming_client};
+use crate::{agent_error::ImlAgentError, agent_error::RequiredError, http_comms::streaming_client};
 use futures::{future, stream, StreamExt, TryStreamExt};
 use iml_cmd::{CheckedCommandExt, Command};
 use iml_fs::{read_file_to_end, stream_dir_lines, write_tempfile};
@@ -289,7 +289,7 @@ pub fn get_mailbox_files(
     base_dir: &str,
     stratagem_data: &StratagemConfig,
     stratagem_result: &StratagemResult,
-) -> MailboxFiles {
+) -> Result<MailboxFiles, ImlAgentError> {
     stratagem_result
         .group_counters
         .iter()
@@ -303,22 +303,30 @@ pub fn get_mailbox_files(
                 .map(move |(idx, counter)| {
                     let group = stratagem_data
                         .get_group_by_name(&group.name)
-                        .unwrap_or_else(|| panic!("did not find group by name {}", group.name));
+                        .ok_or_else(|| {
+                            ImlAgentError::RequiredError(RequiredError(format!(
+                                "Did not find group by name {}",
+                                group.name
+                            )))
+                        })?;
 
-                    let rule = group
-                        .get_rule_by_idx(idx - 1)
-                        .unwrap_or_else(|| panic!("did not find rule by idx {}", idx - 1));
+                    let rule = group.get_rule_by_idx(idx).ok_or_else(|| {
+                        ImlAgentError::RequiredError(RequiredError(format!(
+                            "did not find rule by idx {}",
+                            idx
+                        )))
+                    })?;
 
                     let p = [base_dir, &group.name, &counter.name()]
                         .iter()
                         .cloned()
                         .collect::<PathBuf>();
 
-                    (p, format!("{}-{}", group.name, rule.argument))
+                    Ok((p, format!("{}-{}", group.name, rule.argument)))
                 })
         })
         .flatten()
-        .collect()
+        .collect::<Result<Vec<_>, _>>()
 }
 
 /// Triggers a scan with Stratagem.
@@ -352,7 +360,7 @@ pub async fn trigger_scan(
 
     let x = serde_json::from_slice(&xs)?;
 
-    let mailbox_files = get_mailbox_files(&tmp_dir, &data, &x);
+    let mailbox_files = get_mailbox_files(&tmp_dir, &data, &x)?;
 
     Ok((tmp_dir, x, mailbox_files))
 }
@@ -452,13 +460,6 @@ mod tests {
                     name: "size_distribution".into(),
                     counters: vec![
                         StratagemCounters::StratagemCounter(StratagemCounter {
-                            count: 1,
-                            blocks: 0,
-                            size: 0,
-                            flist_type: "none".into(),
-                            name: "Other".into(),
-                        }),
-                        StratagemCounters::StratagemCounter(StratagemCounter {
                             count: 0,
                             blocks: 0,
                             size: 0,
@@ -492,13 +493,6 @@ mod tests {
                     name: "warn_purge_times".into(),
                     counters: vec![
                         StratagemCounters::StratagemCounter(StratagemCounter {
-                            count: 2,
-                            blocks: 0,
-                            size: 0,
-                            flist_type: "none".into(),
-                            name: "Other".into(),
-                        }),
-                        StratagemCounters::StratagemCounter(StratagemCounter {
                             count: 0,
                             blocks: 0,
                             size: 0,
@@ -517,7 +511,7 @@ mod tests {
             ],
         };
 
-        let actual = get_mailbox_files("foo_bar", &stratagem_data, &stratagem_result);
+        let actual = get_mailbox_files("foo_bar", &stratagem_data, &stratagem_result).unwrap();
 
         assert_eq!(
             actual,
@@ -531,6 +525,147 @@ mod tests {
                     "warn_purge_times-fids_expired".into()
                 )
             ]
+        );
+    }
+
+    #[test]
+    fn test_get_filesync() {
+        let stratagem_data = StratagemConfig {
+            flist_type: "none".into(),
+            device: StratagemDevice {
+                path: "/dev/mapper/vg_mdt0000_es01a-mdt0000".into(),
+                groups: vec![
+                    "size_distribution".into(),
+                    "user_distribution".into(),
+                    "filesync".into(),
+                ],
+            },
+            groups: vec![
+                StratagemGroup {
+                    rules: vec![
+                        StratagemRule {
+                            action: "LAT_COUNTER_INC".into(),
+                            expression: "&& < size 1048576 != type S_IFDIR".into(),
+                            argument: "SIZE < 1M".into(),
+                            counter_name: None,
+                        },
+                        StratagemRule {
+                            action: "LAT_COUNTER_INC".into(),
+                            expression: "&& >= size 1048576000000 != type S_IFDIR".into(),
+                            argument: "SIZE >= 1T".into(),
+                            counter_name: None,
+                        },
+                        StratagemRule {
+                            action: "LAT_COUNTER_INC".into(),
+                            expression: "&& >= size 1048576000 != type S_IFDIR".into(),
+                            argument: "SIZE >= 1G".into(),
+                            counter_name: None,
+                        },
+                        StratagemRule {
+                            action: "LAT_COUNTER_INC".into(),
+                            expression: "&& >= size 1048576 != type S_IFDIR".into(),
+                            argument: "1M <= SIZE < 1G".into(),
+                            counter_name: None,
+                        },
+                    ],
+                    name: "size_distribution".into(),
+                },
+                StratagemGroup {
+                    rules: vec![StratagemRule {
+                        action: "LAT_ATTR_CLASSIFY".into(),
+                        counter_name: Some("top_inode_users".into()),
+                        expression: "!= type S_IFDIR".into(),
+                        argument: "uid".into(),
+                    }],
+                    name: "user_distribution".into(),
+                },
+                StratagemGroup {
+                    rules: vec![StratagemRule {
+                        action: "LAT_SHELL_CMD_FID".into(),
+                        counter_name: Some("filesync".into()),
+                        expression: "size > 1".into(),
+                        argument: "filesync".into(),
+                    }],
+                    name: "filesync".into(),
+                },
+            ],
+            summarize_size: true,
+        };
+
+        let stratagem_result = StratagemResult {
+            group_counters: vec![
+                StratagemGroupResult {
+                    name: "size_distribution".into(),
+                    counters: vec![
+                        StratagemCounters::StratagemCounter(StratagemCounter {
+                            name: "SIZE < 1M".into(),
+                            count: 0,
+                            flist_type: "none".into(),
+                            size: 0,
+                            blocks: 0,
+                        }),
+                        StratagemCounters::StratagemCounter(StratagemCounter {
+                            name: "SIZE >= 1T".into(),
+                            count: 0,
+                            flist_type: "none".into(),
+                            size: 0,
+                            blocks: 0,
+                        }),
+                        StratagemCounters::StratagemCounter(StratagemCounter {
+                            name: "SIZE >= 1G".into(),
+                            count: 0,
+                            flist_type: "none".into(),
+                            size: 0,
+                            blocks: 0,
+                        }),
+                        StratagemCounters::StratagemCounter(StratagemCounter {
+                            name: "1M <= SIZE < 1G".into(),
+                            count: 0,
+                            flist_type: "none".into(),
+                            size: 0,
+                            blocks: 0,
+                        }),
+                    ],
+                },
+                StratagemGroupResult {
+                    name: "user_distribution".into(),
+                    counters: vec![StratagemCounters::StratagemClassifyCounter(
+                        StratagemClassifyCounter {
+                            name: "top_inode_users".into(),
+                            count: 0,
+                            flist_type: "none".into(),
+                            size: 0,
+                            blocks: 0,
+                            expression: "!= type S_IFDIR".into(),
+                            classify: StratagemClassifyResult {
+                                attr_type: "uid".into(),
+                                flist_type: "none".into(),
+                                counters: vec![],
+                            },
+                        },
+                    )],
+                },
+                StratagemGroupResult {
+                    name: "filesync".into(),
+                    counters: vec![StratagemCounters::StratagemCounter(StratagemCounter {
+                        name: "filesync".into(),
+                        count: 0,
+                        flist_type: "fid".into(),
+                        size: 0,
+                        blocks: 0,
+                    })],
+                },
+            ],
+        };
+
+        let actual = get_mailbox_files("foo_bar", &stratagem_data, &stratagem_result).unwrap();
+
+        assert_eq!(
+            actual,
+            vec![(
+                PathBuf::from("foo_bar/filesync/filesync"),
+                "filesync-filesync".into()
+            )]
         );
     }
 }
