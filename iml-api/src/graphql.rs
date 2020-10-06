@@ -8,7 +8,11 @@ use crate::{
     timer::{configure_snapshot_timer, remove_snapshot_timer},
 };
 use chrono::{DateTime, Utc};
-use futures::{future::join_all, TryFutureExt, TryStreamExt};
+use futures::{
+    future::{join_all, try_join_all},
+    TryFutureExt, TryStreamExt,
+};
+use iml_manager_env::get_report_path;
 use iml_postgres::{sqlx, sqlx::postgres::types::PgInterval, PgPool};
 use iml_rabbit::Pool;
 use iml_wire_types::{
@@ -27,6 +31,7 @@ use std::{
     ops::Deref,
     sync::Arc,
 };
+use tokio::fs;
 use warp::Filter;
 
 #[derive(juniper::GraphQLObject)]
@@ -134,6 +139,17 @@ impl Deref for SortDir {
             Self::Desc => "desc",
         }
     }
+}
+
+#[derive(juniper::GraphQLObject)]
+/// Information about a stratagem report
+struct StratagemReport {
+    /// The filename of the stratagem report under /var/spool/iml/report
+    filename: String,
+    /// When the report was last modified
+    modify_time: DateTime<Utc>,
+    /// The size of the report in bytes
+    size: i32,
 }
 
 pub(crate) struct QueryRoot;
@@ -466,6 +482,32 @@ impl QueryRoot {
         .await?;
 
         Ok(xs)
+    }
+
+    /// List completed Stratagem reports that currently reside on the manager node.
+    /// Note: All report names must be valid unicode.
+    async fn stratagem_reports(_context: &Context) -> juniper::FieldResult<Vec<StratagemReport>> {
+        let paths = tokio::fs::read_dir(get_report_path()).await?;
+
+        let file_paths = paths
+            .map_ok(|x| x.file_name().to_string_lossy().to_string())
+            .try_collect::<Vec<String>>()
+            .await?
+            .into_iter()
+            .map(|filename| {
+                fs::canonicalize(get_report_path().join(filename.clone()))
+                    .map_ok(|file_path| (file_path, filename))
+            });
+
+        let items = try_join_all(file_paths)
+            .await?
+            .into_iter()
+            .map(|(file_path, filename)| (file_path.to_string_lossy().to_string(), filename))
+            .map(get_stratagem_files);
+
+        let items = try_join_all(items).await?;
+
+        Ok(items)
     }
 }
 
@@ -813,6 +855,24 @@ impl MutationRoot {
 
         Ok(true)
     }
+
+    /// Delete a stratagem report
+    #[graphql(arguments(filename(description = "The report filename to delete")))]
+    async fn delete_stratagem_report(
+        _context: &Context,
+        filename: String,
+    ) -> juniper::FieldResult<bool> {
+        let report_base = get_report_path();
+        let path = tokio::fs::canonicalize(report_base.join(filename)).await?;
+
+        if !path.starts_with(report_base) {
+            return Err(FieldError::new("Invalid path", Value::null()));
+        }
+
+        tokio::fs::remove_file(path).await?;
+
+        Ok(true)
+    }
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
@@ -1063,4 +1123,16 @@ async fn fqdn_by_host_id(pool: &PgPool, id: i32) -> Result<String, iml_postgres:
     .fqdn;
 
     Ok(fqdn)
+}
+
+async fn get_stratagem_files(
+    (file_path, filename): (String, String),
+) -> juniper::FieldResult<StratagemReport> {
+    let attr = fs::metadata(file_path.to_string()).await?;
+
+    Ok(StratagemReport {
+        filename,
+        modify_time: attr.modified()?.into(),
+        size: attr.len() as i32,
+    })
 }
