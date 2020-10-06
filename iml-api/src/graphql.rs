@@ -626,15 +626,12 @@ impl QueryRoot {
             .map(|s| s.parse::<chrono::DateTime<Utc>>())
             .map_or(Ok(None), |r| r.map(Some))?;
 
-        let message_class = message_class.unwrap_or_else(|| vec![MessageClass::Normal]);
-        let message_class: Vec<_> = if !message_class.is_empty() {
-            message_class
-        } else {
-            vec![MessageClass::Normal]
-        }
-        .into_iter()
-        .map(|i| i as i16)
-        .collect();
+        let message_class: Vec<_> = message_class
+            .filter(|v| !v.is_empty())
+            .unwrap_or_else(|| vec![MessageClass::Normal])
+            .into_iter()
+            .map(|i| i as i16)
+            .collect();
 
         let severity = severity.unwrap_or(LogSeverity::Debug) as i16;
 
