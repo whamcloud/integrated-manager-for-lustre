@@ -6,6 +6,7 @@ use iml_manager_cli::{
     api::{self, api_cli, graphql_cli},
     display_utils::display_error,
     filesystem::{self, filesystem_cli},
+    selfname,
     server::{self, server_cli},
     snapshot::{self, snapshot_cli},
     stratagem::{self, stratagem_cli},
@@ -17,8 +18,7 @@ use structopt::clap::Shell;
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
-#[structopt(name = "iml", setting = structopt::clap::AppSettings::ColoredHelp)]
-/// The Integrated Manager for Lustre CLI
+#[structopt(setting = structopt::clap::AppSettings::ColoredHelp)]
 pub enum App {
     #[structopt(name = "stratagem")]
     /// Work with Stratagem server
@@ -44,7 +44,7 @@ pub enum App {
         #[structopt(subcommand)]
         command: snapshot::SnapshotCommand,
     },
-    #[structopt(name = "update_repo")]
+    #[structopt(name = "update-repo")]
     /// Update Agent repo files
     UpdateRepoFile(update_repo_file::UpdateRepoFileHosts),
 
@@ -71,7 +71,9 @@ pub enum App {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     iml_tracing::init();
 
-    let matches = App::from_args();
+    let name = selfname(None).unwrap_or_else(|| "iml".to_string());
+
+    let matches = App::from_clap(&App::clap().bin_name(&name).name(&name).get_matches());
 
     tracing::debug!("Matching args {:?}", matches);
 
