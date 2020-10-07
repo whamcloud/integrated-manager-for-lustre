@@ -31,7 +31,7 @@ inotify = "0.8"
 lazy_static = "1.4.0"
 libc = "0.2"
 liblustreapi = {path = "../liblustreapi", version = "0.4"}
-lustre_collector = "0.2.15"
+lustre_collector = "0.2.16"
 prettytable-rs = "0.8"
 quick-xml = {version = "0.18", features = ["serialize"]}
 reqwest = {version = "0.10", default-features = false, features = ["rustls-tls", "json", "stream"]}
