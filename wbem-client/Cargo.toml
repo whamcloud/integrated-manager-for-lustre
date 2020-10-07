@@ -12,10 +12,10 @@ async-trait = "0.1"
 base64 = "0.12"
 bytes = "0.5"
 futures = "0.3"
-quick-xml = {version = "0.18", features = ["serialize"]}
+quick-xml = {version = "0.19", features = ["serialize"]}
 reqwest = {version = "0.10", default-features = false, features = ["default-tls"]}
 serde = {version = "1", features = ["derive"]}
 thiserror = "1.0"
 
 [dev-dependencies]
-insta = "0.16"
+insta = "1.0"

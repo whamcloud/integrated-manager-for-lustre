@@ -367,7 +367,8 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
     environment:
-      - RUST_LOG=info
+      - RUST_LOG=info,sqlx::query=warn
+      - CLI_NAME
   iml-ostpool:
     image: "imlteam/iml-ostpool:6.2.0"
     hostname: "iml-ostpool"

@@ -41,7 +41,7 @@ features = ["std"]
 version = "1.3"
 
 [dev-dependencies]
-insta = "0.16"
+insta = "1.0"
 
 [[bin]]
 name = "iml"

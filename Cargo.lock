@@ -1507,14 +1507,14 @@ dependencies = [
  "iml-util",
  "iml-wire-types",
  "inotify",
- "insta",
+ "insta 1.0.0",
  "lazy_static",
  "libc",
  "liblustreapi",
  "lustre_collector",
  "mockito",
  "prettytable-rs",
- "quick-xml",
+ "quick-xml 0.18.1",
  "regex",
  "reqwest",
  "serde",
@@ -1644,7 +1644,7 @@ dependencies = [
  "iml-service-queue",
  "iml-tracing",
  "iml-wire-types",
- "insta",
+ "insta 0.16.1",
  "serde",
  "serde_json",
  "thiserror",
@@ -1712,7 +1712,7 @@ dependencies = [
  "iml-service-queue",
  "iml-tracing",
  "iml-wire-types",
- "insta",
+ "insta 1.0.0",
  "lazy_static",
  "regex",
  "serde",
@@ -1763,7 +1763,7 @@ dependencies = [
  "iml-tracing",
  "iml-wire-types",
  "indicatif",
- "insta",
+ "insta 1.0.0",
  "lazy_static",
  "number-formatter",
  "prettytable-rs",
@@ -1989,7 +1989,7 @@ dependencies = [
  "iml-cmd",
  "iml-fs",
  "iml-wire-types",
- "insta",
+ "insta 0.16.1",
  "petgraph",
  "serde_json",
  "thiserror",
@@ -2181,6 +2181,20 @@ dependencies = [
  "lazy_static",
  "pest",
  "pest_derive",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+]
+
+[[package]]
+name = "insta"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d3463f26c58ee98b72e4eae1a6b4c28bc3320ab69d4836b55162362c2ec63fa6"
+dependencies = [
+ "console 0.12.0",
+ "difference",
+ "lazy_static",
  "serde",
  "serde_json",
  "serde_yaml",
@@ -3054,6 +3068,16 @@ name = "quick-xml"
 version = "0.18.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3cc440ee4802a86e357165021e3e255a9143724da31db1e2ea540214c96a0f82"
+dependencies = [
+ "memchr",
+ "serde",
+]
+
+[[package]]
+name = "quick-xml"
+version = "0.19.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b3d72d5477478f85bd00b6521780dfba1ec6cdaadcf90b8b181c36d7de561f9b"
 dependencies = [
  "memchr",
  "serde",
@@ -4820,8 +4844,8 @@ dependencies = [
  "base64",
  "bytes",
  "futures",
- "insta",
- "quick-xml",
+ "insta 1.0.0",
+ "quick-xml 0.19.0",
  "reqwest",
  "serde",
  "thiserror",
