@@ -579,7 +579,7 @@ impl QueryRoot {
 
         Ok(items)
     }
-    
+
     #[graphql(arguments(
         limit(description = "optional paging limit, defaults to all rows"),
         offset(description = "Offset into items, defaults to 0"),
