@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use chrono_humanize::{Accuracy, HumanTime, Tense};
-use console::{style, Term};
+use console::style;
 use futures::{Future, FutureExt};
 use iml_wire_types::{
     snapshot::{ReserveUnit, Snapshot, SnapshotInterval, SnapshotRetention},
@@ -12,7 +12,6 @@ use iml_wire_types::{
 use indicatif::ProgressBar;
 use number_formatter::{format_bytes, format_number};
 use prettytable::{Row, Table};
-use spinners::{Spinner, Spinners};
 use std::{fmt::Display, io, str::FromStr};
 use structopt::StructOpt;
 
@@ -22,22 +21,6 @@ pub fn wrap_fut<T>(msg: &str, fut: impl Future<Output = T>) -> impl Future<Outpu
     pb.set_message(msg);
 
     fut.inspect(move |_| pb.finish_and_clear())
-}
-
-pub fn start_spinner(msg: &str) -> impl FnOnce(Option<String>) {
-    let sp = Spinner::new(Spinners::Dots9, style(msg).dim().to_string());
-
-    move |msg_opt| match msg_opt {
-        Some(msg) => {
-            sp.message(msg);
-        }
-        None => {
-            sp.stop();
-            if let Err(e) = Term::stdout().clear_line() {
-                tracing::debug!("Could not clear current line {}", e);
-            };
-        }
-    }
 }
 
 pub fn format_cmd_state(cmd: &Command) -> String {
