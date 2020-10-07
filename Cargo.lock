@@ -1772,7 +1772,6 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_yaml",
- "spinners",
  "structopt",
  "thiserror",
  "tokio",
@@ -2251,7 +2250,7 @@ dependencies = [
 [[package]]
 name = "juniper"
 version = "0.14.2"
-source = "git+https://github.com/graphql-rust/juniper#b1a03661122c0fa5c8a4fc41418dee7f9ede6308"
+source = "git+https://github.com/graphql-rust/juniper#f914322ef44eab706fb3d5d4a4b3e7022f47ab86"
 dependencies = [
  "async-trait",
  "bson",
@@ -2271,7 +2270,7 @@ dependencies = [
 [[package]]
 name = "juniper_codegen"
 version = "0.14.2"
-source = "git+https://github.com/graphql-rust/juniper#b1a03661122c0fa5c8a4fc41418dee7f9ede6308"
+source = "git+https://github.com/graphql-rust/juniper#f914322ef44eab706fb3d5d4a4b3e7022f47ab86"
 dependencies = [
  "proc-macro-error",
  "proc-macro2 1.0.24",
@@ -2291,16 +2290,16 @@ dependencies = [
 
 [[package]]
 name = "lapin"
-version = "1.4.1"
+version = "1.2.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2e54e5cfd9393c574159e44c9049fb621325e6c7560f4a506a44e2139a8cf1a8"
+checksum = "0047ccf3b150ff99158931f7e38d476c1e0251178cee776b096e6b0697d888b0"
 dependencies = [
  "amq-protocol",
  "async-task",
  "crossbeam-channel",
  "futures-core",
  "log",
- "mio 0.7.2",
+ "mio 0.7.3",
  "parking_lot",
  "pinky-swear",
 ]
@@ -2494,9 +2493,9 @@ dependencies = [
 
 [[package]]
 name = "miniz_oxide"
-version = "0.4.2"
+version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c60c0dfe32c10b43a144bad8fc83538c52f58302c92300ea7ec7bf7b38d5a7b9"
+checksum = "0f2d26ec3309788e423cfbf68ad1800f061638098d76a83681af979dc4eda19d"
 dependencies = [
  "adler",
  "autocfg 1.0.1",
@@ -2523,9 +2522,9 @@ dependencies = [
 
 [[package]]
 name = "mio"
-version = "0.7.2"
+version = "0.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6d5fc35678fa91ff960494e4bd72a0e1f8e72e035460887a2005de51915993cd"
+checksum = "e53a6ea5f38c0a48ca42159868c6d8e1bd56c0451238856cc08d58563643bdc3"
 dependencies = [
  "libc",
  "log",
@@ -4095,7 +4094,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2d147f992a9942eb288eb52f58ba1868eee976d4983f2013867fde3736c52d0c"
 dependencies = [
  "cfg-if",
- "mio 0.7.2",
+ "mio 0.7.3",
  "p12",
  "rustls-connector",
 ]

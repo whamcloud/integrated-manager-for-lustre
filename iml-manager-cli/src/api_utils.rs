@@ -2,7 +2,10 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{display_utils, error::ImlManagerCliError};
+use crate::{
+    display_utils::{self, display_cmd_state, wrap_fut},
+    error::ImlManagerCliError,
+};
 use futures::{channel::mpsc, future, FutureExt, StreamExt, TryFutureExt};
 use iml_command_utils::{wait_for_cmds_progress, Progress};
 use iml_wire_types::{ApiList, AvailableAction, Command, EndpointName, FlatQuery, Host};
@@ -61,6 +64,16 @@ pub async fn wait_for_cmd(cmd: Command) -> Result<Command, ImlManagerCliError> {
             return Ok(cmd);
         }
     }
+}
+
+/// Waits for command completion and prints a spinner during progression.
+/// When completed, prints the final command state
+pub async fn wait_for_cmd_display(cmd: Command) -> Result<Command, ImlManagerCliError> {
+    let cmd = wrap_fut(&cmd.message.to_string(), wait_for_cmd(cmd)).await?;
+
+    display_cmd_state(&cmd);
+
+    Ok(cmd)
 }
 
 /// Waits for command completion and prints progress messages

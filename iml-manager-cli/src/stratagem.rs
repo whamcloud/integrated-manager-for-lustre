@@ -3,8 +3,8 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    api_utils::{delete, first, get, post, put, wait_for_cmd},
-    display_utils::{display_cmd_state, start_spinner, DisplayType, IntoDisplayType as _},
+    api_utils::{delete, first, get, post, put, wait_for_cmd_display},
+    display_utils::{wrap_fut, DisplayType, IntoDisplayType as _},
     error::{
         DurationParseError, ImlManagerCliError, RunStratagemCommandResult,
         RunStratagemValidationError,
@@ -239,50 +239,35 @@ pub async fn stratagem_cli(command: StratagemCommand) -> Result<(), ImlManagerCl
 
             let CmdWrapper { command } = handle_cmd_resp(r).await?;
 
-            let stop_spinner = start_spinner(&command.message);
-
-            let command = wait_for_cmd(command).await?;
-
-            stop_spinner(None);
-
-            display_cmd_state(&command);
+            wait_for_cmd_display(command).await?;
         }
         StratagemCommand::Filesync(data) => {
             let r = post("run_stratagem", data).await?;
             let CmdWrapper { command } = handle_cmd_resp(r).await?;
-            let stop_spinner = start_spinner(&command.message);
-            let command = wait_for_cmd(command).await?;
 
-            stop_spinner(None);
-            display_cmd_state(&command);
+            wait_for_cmd_display(command).await?;
         }
         StratagemCommand::Cloudsync(data) => {
             let r = post("run_stratagem", data).await?;
 
-            tracing::error!("run_cloudsync: {:?}", r);
+            tracing::debug!("run_cloudsync: {:?}", r);
 
             let CmdWrapper { command } = handle_cmd_resp(r).await?;
 
-            tracing::error!("run_cloudsync: {:?}", command);
+            tracing::debug!("run_cloudsync: {:?}", command);
 
-            let stop_spinner = start_spinner(&command.message);
-            let command = wait_for_cmd(command).await?;
-
-            tracing::error!("wait_done: {:?}", command);
-            stop_spinner(None);
-            display_cmd_state(&command);
+            wait_for_cmd_display(command).await?;
         }
         StratagemCommand::StratagemInterval(x) => match x {
             StratagemInterval::List { display_type } => {
-                let stop_spinner = start_spinner("Finding existing intervals...");
-
-                let r: ApiList<StratagemConfiguration> = get(
-                    StratagemConfiguration::endpoint_name(),
-                    serde_json::json!({ "limit": 0 }),
+                let r: ApiList<StratagemConfiguration> = wrap_fut(
+                    "Finding existing intervals...",
+                    get(
+                        StratagemConfiguration::endpoint_name(),
+                        serde_json::json!({ "limit": 0 }),
+                    ),
                 )
                 .await?;
-
-                stop_spinner(None);
 
                 if r.objects.is_empty() {
                     println!("No Stratagem intervals found");
@@ -296,13 +281,7 @@ pub async fn stratagem_cli(command: StratagemCommand) -> Result<(), ImlManagerCl
 
                 let CmdWrapper { command } = handle_cmd_resp(r).await?;
 
-                let stop_spinner = start_spinner(&command.message);
-
-                let command = wait_for_cmd(command).await?;
-
-                stop_spinner(None);
-
-                display_cmd_state(&command);
+                wait_for_cmd_display(command).await?;
             }
             StratagemInterval::Update(c) => {
                 let x = get_stratagem_config_by_fs_name(&c.filesystem).await?;
@@ -315,13 +294,7 @@ pub async fn stratagem_cli(command: StratagemCommand) -> Result<(), ImlManagerCl
 
                 let CmdWrapper { command } = handle_cmd_resp(r).await?;
 
-                let stop_spinner = start_spinner(&command.message);
-
-                let command = wait_for_cmd(command).await?;
-
-                stop_spinner(None);
-
-                display_cmd_state(&command);
+                wait_for_cmd_display(command).await?;
             }
             StratagemInterval::Remove(StratagemRemoveData { name }) => {
                 let x = get_stratagem_config_by_fs_name(&name).await?;
@@ -334,13 +307,7 @@ pub async fn stratagem_cli(command: StratagemCommand) -> Result<(), ImlManagerCl
 
                 let CmdWrapper { command } = handle_cmd_resp(r).await?;
 
-                let stop_spinner = start_spinner(&command.message);
-
-                let command = wait_for_cmd(command).await?;
-
-                stop_spinner(None);
-
-                display_cmd_state(&command);
+                wait_for_cmd_display(command).await?;
             }
         },
     };
