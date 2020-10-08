@@ -203,6 +203,15 @@ server {
         gzip_types application/json;
     }
 
+    location /graphql_schema {
+        proxy_set_header Host $http_host;
+        auth_request /auth;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Server $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_pass {{IML_API_PROXY_PASS}}/graphql_schema;
+    }
+
     location /graphql {
         proxy_set_header Host $http_host;
         auth_request /auth;
