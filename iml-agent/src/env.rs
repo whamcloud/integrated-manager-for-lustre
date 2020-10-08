@@ -51,6 +51,16 @@ pub fn mailbox_sock(mailbox: &str) -> String {
     format!("{}/postman-{}.sock", sock_dir(), mailbox)
 }
 
+pub fn get_openmpi_path() -> String {
+    get_var("OPENMPI_PATH")
+}
+
+pub fn get_openmpi_count() -> u32 {
+    get_var_else("OPENMPI_COUNT", "4")
+        .parse::<u32>()
+        .expect("Could not parse OPENMPI_COUNT")
+}
+
 lazy_static! {
     pub static ref PEM: Vec<u8> = {
         let mut result = Vec::new();
