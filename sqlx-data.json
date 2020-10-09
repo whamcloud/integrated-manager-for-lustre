@@ -1915,6 +1915,11 @@
           "ordinal": 6,
           "name": "mount_path",
           "type_info": "Text"
+        },
+        {
+          "ordinal": 7,
+          "name": "dev_path",
+          "type_info": "Text"
         }
       ],
       "parameters": {
@@ -1927,6 +1932,7 @@
         false,
         false,
         false,
+        true,
         true
       ]
     }
@@ -3395,24 +3401,6 @@
       "nullable": []
     }
   },
-  "d52cd10b41279ed650bcf206d2da47bb545009a72d513c9add43b72b77637b82": {
-    "query": "INSERT INTO target\n                        (state, name, active_host_id, host_ids, filesystems, uuid, mount_path) \n                        SELECT state, name, active_host_id, string_to_array(host_ids, ',')::int[], string_to_array(filesystems, ',')::text[], uuid, mount_path\n                        FROM UNNEST($1::text[], $2::text[], $3::int[], $4::text[], $5::text[], $6::text[], $7::text[])\n                        AS t(state, name, active_host_id, host_ids, filesystems, uuid, mount_path)\n                        ON CONFLICT (uuid)\n                            DO\n                            UPDATE SET  state          = EXCLUDED.state,\n                                        name           = EXCLUDED.name,\n                                        active_host_id = EXCLUDED.active_host_id,\n                                        host_ids       = EXCLUDED.host_ids,\n                                        filesystems    = EXCLUDED.filesystems,\n                                        mount_path     = EXCLUDED.mount_path",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": [
-          "TextArray",
-          "TextArray",
-          "Int4Array",
-          "TextArray",
-          "TextArray",
-          "TextArray",
-          "TextArray"
-        ]
-      },
-      "nullable": []
-    }
-  },
   "d6b4367df2c3c035c560763054e4658c5e043c28393decb96ab76f7383f9fd37": {
     "query": "\n            INSERT INTO corosync_resource_bans (id, cluster_id, resource, node, weight, master_only)\n            SELECT\n                id,\n                $6,\n                resource,\n                node,\n                weight,\n                master_only\n            FROM UNNEST(\n                $1::text[],\n                $2::text[],\n                $3::text[],\n                $4::int[],\n                $5::bool[]\n            )\n            AS t(\n                id,\n                resource,\n                node,\n                weight,\n                master_only\n            )\n            ON CONFLICT (id, cluster_id, resource, node) DO UPDATE\n            SET\n                weight = excluded.weight,\n                master_only = excluded.master_only\n        ",
     "describe": {
@@ -3932,6 +3920,25 @@
       "nullable": []
     }
   },
+  "f4165ef6b0015f9503e88fafa27d7e5dc1e6c7150254dbdb9e67c5d10cbef4be": {
+    "query": "INSERT INTO target\n                        (state, name, active_host_id, host_ids, filesystems, uuid, mount_path, dev_path)\n                        SELECT state, name, active_host_id, string_to_array(host_ids, ',')::int[], string_to_array(filesystems, ',')::text[], uuid, mount_path, dev_path\n                        FROM UNNEST($1::text[], $2::text[], $3::int[], $4::text[], $5::text[], $6::text[], $7::text[], $8::text[])\n                        AS t(state, name, active_host_id, host_ids, filesystems, uuid, mount_path, dev_path)\n                        ON CONFLICT (uuid)\n                            DO\n                            UPDATE SET  state          = EXCLUDED.state,\n                                        name           = EXCLUDED.name,\n                                        active_host_id = EXCLUDED.active_host_id,\n                                        host_ids       = EXCLUDED.host_ids,\n                                        filesystems    = EXCLUDED.filesystems,\n                                        mount_path     = EXCLUDED.mount_path,\n                                        dev_path       = EXCLUDED.dev_path",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "TextArray",
+          "TextArray",
+          "Int4Array",
+          "TextArray",
+          "TextArray",
+          "TextArray",
+          "TextArray",
+          "TextArray"
+        ]
+      },
+      "nullable": []
+    }
+  },
   "f41f8df43f7062267e95bb90cabcb67d07d4978f9f27e834c7ca21ab91ce99c6": {
     "query": "SELECT * FROM chroma_core_task",
     "describe": {
@@ -4205,6 +4212,11 @@
           "ordinal": 6,
           "name": "mount_path",
           "type_info": "Text"
+        },
+        {
+          "ordinal": 7,
+          "name": "dev_path",
+          "type_info": "Text"
         }
       ],
       "parameters": {
@@ -4221,6 +4233,7 @@
         false,
         false,
         false,
+        true,
         true
       ]
     }

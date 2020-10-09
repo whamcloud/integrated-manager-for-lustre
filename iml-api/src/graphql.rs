@@ -63,6 +63,8 @@ struct Target {
     state: String,
     /// The target name
     name: String,
+    /// The device path used to create the target mount
+    dev_path: Option<String>,
     /// The `host.id` of the host running this target
     active_host_id: Option<i32>,
     /// The list of `hosts.id`s the target can be mounted on.
