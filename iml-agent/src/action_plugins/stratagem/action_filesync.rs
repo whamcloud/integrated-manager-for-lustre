@@ -26,7 +26,6 @@ fn do_rsync<'a>(
             let output = Command::new("rsync")
                 .arg("-a")
                 .arg("-t")
-                .arg("-X")
                 .arg(&work.src_file)
                 .arg(&work.dest_file)
                 .output()
