@@ -1,0 +1,1 @@
+ALTER TABLE IF EXISTS target ADD COLUMN dev_path TEXT;
