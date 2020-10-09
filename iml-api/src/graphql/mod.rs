@@ -879,12 +879,10 @@ impl MutationRoot {
                             ldev_entry,
                         );
                     } else {
-                        panic!("All targets must be mounted when configuring ldev conf.");
+                        return Error(ImlApiError::TargetsNotMounted);
                     }
                 } else {
-                    panic!(
-                        "All targets must be mounted on an active host when configuring ldev conf."
-                    );
+                    return Error(ImlApiError::TargetsNotMounted);
                 }
             })
             .fold(
@@ -1291,7 +1289,7 @@ async fn get_targets(
 
     let xs: Vec<Target> = sqlx::query!(
         r#"
-            SELECT state, name, active_host_id, host_ids, filesystems, uuid, mount_path, fs_type::text from target t
+            SELECT state, name, active_host_id, host_ids, filesystems, uuid, mount_path, dev_path, fs_type::text from target t
             ORDER BY
                 CASE WHEN $3 = 'asc' THEN t.name END ASC,
                 CASE WHEN $3 = 'desc' THEN t.name END DESC
@@ -1310,6 +1308,7 @@ async fn get_targets(
             filesystems: x.filesystems,
             uuid: x.uuid,
             mount_path: x.mount_path,
+            dev_path: x.dev_path,
             fs_type: x.fs_type.unwrap_or_else(|| "ldiskfs".to_string()).into()
         }
     })

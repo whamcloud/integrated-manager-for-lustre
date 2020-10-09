@@ -63,7 +63,7 @@ pub async fn create_cache(pool: &PgPool) -> Result<Cache, ImlDeviceError> {
 }
 
 pub async fn create_target_cache(pool: &PgPool) -> Result<Vec<Target>, ImlDeviceError> {
-    let xs: Vec<Target> = sqlx::query!("select state, name, active_host_id, host_ids, filesystems, uuid, mount_path, fs_type::text from target")
+    let xs: Vec<Target> = sqlx::query!("select state, name, active_host_id, host_ids, filesystems, uuid, mount_path, dev_path, fs_type::text from target")
         .fetch(pool)
         .map_ok(|x| {
             Target {
@@ -74,6 +74,7 @@ pub async fn create_target_cache(pool: &PgPool) -> Result<Vec<Target>, ImlDevice
                 filesystems: x.filesystems,
                 uuid: x.uuid,
                 mount_path: x.mount_path,
+                dev_path: x.dev_path,
                 fs_type: x.fs_type.unwrap_or_else(|| "ldiskfs".to_string()).into(),
             }
         })

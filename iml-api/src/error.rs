@@ -30,6 +30,8 @@ pub enum ImlApiError {
     FilesystemNotFound,
     #[error("Filesystem Not Found")]
     MgsNotFound,
+    #[error("All targets must be mounted when configuring ldev conf.")]
+    TargetsNotMounted,
 }
 
 impl reject::Reject for ImlApiError {}

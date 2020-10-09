@@ -4,7 +4,6 @@
 # license that can be found in the LICENSE file.
 
 from chroma_core.lib.job import Step
-from chroma_core.lib.util import invoke_rust_agent
 from chroma_core.models import Job
 from chroma_help.help import help_text
 from django.contrib.postgres import fields
@@ -18,7 +17,7 @@ class ConfigureLDevStep(Step):
         ldev_entries = json.loads(ldev_entries)
 
         for (fqdn, entries) in ldev_entries.items():
-            self.invoke_rust_agent(fqdn, "create_ldev_conf", entries)
+            self.invoke_rust_agent_expect_result(fqdn, "create_ldev_conf", entries)
 
 
 class ConfigureLDevJob(Job):

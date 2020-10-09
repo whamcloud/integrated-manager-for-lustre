@@ -30,7 +30,7 @@ async fn read_ldev_config() -> Result<String, ImlAgentError> {
 fn parse_entries(ldev_config: String) -> BTreeSet<LdevEntry> {
     ldev_config
         .lines()
-        .filter(|x| x.trim().chars().take(1).next() != Some('#'))
+        .filter(|x| !x.trim_start().starts_with("#"))
         .map(LdevEntry::from)
         .collect()
 }
@@ -275,21 +275,21 @@ mod tests {
             LdevEntry {
                 primary: "oss2".into(),
                 failover: Some("oss1".into()),
-                label: "zfsmo-OST00011".into(),
+                label: "zfsmo-OST0011".into(),
                 device: "zfs:ost17/ost17".into(),
                 fs_type: FsType::Zfs,
             },
             LdevEntry {
                 primary: "oss2".into(),
                 failover: Some("oss1".into()),
-                label: "zfsmo-OST00012".into(),
+                label: "zfsmo-OST0012".into(),
                 device: "zfs:ost18/ost18".into(),
                 fs_type: FsType::Zfs,
             },
             LdevEntry {
                 primary: "oss2".into(),
                 failover: Some("oss1".into()),
-                label: "zfsmo-OST00013".into(),
+                label: "zfsmo-OST0013".into(),
                 device: "zfs:ost19/ost19".into(),
                 fs_type: FsType::Zfs,
             },

@@ -1974,8 +1974,8 @@ impl From<&str> for LdevEntry {
             fs_type: (*parts
                 .get(3)
                 .unwrap_or_else(|| panic!("LdevEntry must specify a device.")))
-            .split(":")
-            .nth(0)
+            .split(':')
+            .next()
             .unwrap_or_else(|| "ldiskfs")
             .into(),
         }
