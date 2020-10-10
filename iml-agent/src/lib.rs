@@ -12,6 +12,7 @@ pub mod fidlist;
 pub mod high_availability;
 pub mod http_comms;
 pub mod lustre;
+pub mod network;
 pub mod poller;
 pub mod reader;
 pub mod rpm;
