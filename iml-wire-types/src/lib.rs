@@ -14,12 +14,14 @@ pub mod warp_drive;
 
 use chrono::{DateTime, Utc};
 use db::LogMessageRecord;
+use ipnetwork::{Ipv4Network, Ipv6Network};
 use std::{
     cmp::{Ord, Ordering},
     collections::{BTreeMap, BTreeSet, HashMap},
     convert::TryFrom,
     convert::TryInto,
     fmt, io,
+    num::ParseIntError,
     ops::Deref,
     sync::Arc,
 };
@@ -2078,4 +2080,218 @@ impl PartialEq for LdevEntry {
     fn eq(&self, other: &Self) -> bool {
         self.label == other.label
     }
+}
+
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum LndType {
+    Tcp,
+    O2ib,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum LinuxType {
+    Ethernet,
+    Ether,
+    Infiniband,
+}
+
+impl fmt::Display for LndType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Tcp => write!(f, "tcp"),
+            Self::O2ib => write!(f, "o2ib"),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct InterfaceError(pub String);
+
+impl fmt::Display for InterfaceError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl std::error::Error for InterfaceError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        None
+    }
+}
+
+impl TryFrom<Option<String>> for LinuxType {
+    type Error = InterfaceError;
+
+    fn try_from(val: Option<String>) -> Result<Self, Self::Error> {
+        if let Some(val) = val {
+            match val.to_ascii_lowercase().trim() {
+                "ethernet" => Ok(LinuxType::Ethernet),
+                "ether" => Ok(LinuxType::Ether),
+                "infiniband" => Ok(LinuxType::Infiniband),
+                _ => Err(InterfaceError("Invalid linux network type. Must be one of 'ethernet', 'ether', or 'infiniband'.".into())),
+            }
+        } else {
+            Err(InterfaceError("Interface type is not set.".into()))
+        }
+    }
+}
+
+impl TryFrom<Option<LinuxType>> for LndType {
+    type Error = InterfaceError;
+
+    fn try_from(i_type: Option<LinuxType>) -> Result<Self, Self::Error> {
+        if let Some(i_type) = i_type {
+            match i_type {
+                LinuxType::Ethernet => Ok(LndType::Tcp),
+                LinuxType::Ether => Ok(LndType::Tcp),
+                LinuxType::Infiniband => Ok(LndType::O2ib),
+            }
+        } else {
+            Err(InterfaceError(
+                "The linux type is not set and thus cannot be converted to an LndType.".into(),
+            ))
+        }
+    }
+}
+
+pub type StatResult = Result<u64, ParseIntError>;
+
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct RxStats {
+    pub bytes: u64,
+    pub packets: u64,
+    pub errs: u64,
+    pub drop: u64,
+    pub fifo: u64,
+    pub frame: u64,
+    pub compressed: u64,
+    pub multicast: u64,
+}
+
+impl
+    TryFrom<(
+        StatResult,
+        StatResult,
+        StatResult,
+        StatResult,
+        StatResult,
+        StatResult,
+        StatResult,
+        StatResult,
+    )> for RxStats
+{
+    type Error = ParseIntError;
+
+    fn try_from(
+        (v1, v2, v3, v4, v5, v6, v7, v8): (
+            StatResult,
+            StatResult,
+            StatResult,
+            StatResult,
+            StatResult,
+            StatResult,
+            StatResult,
+            StatResult,
+        ),
+    ) -> Result<Self, Self::Error> {
+        Ok(RxStats {
+            bytes: v1?,
+            packets: v2?,
+            errs: v3?,
+            drop: v4?,
+            fifo: v5?,
+            frame: v6?,
+            compressed: v7?,
+            multicast: v8?,
+        })
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct TxStats {
+    pub bytes: u64,
+    pub packets: u64,
+    pub errs: u64,
+    pub drop: u64,
+    pub fifo: u64,
+    pub colls: u64,
+    pub carrier: u64,
+    pub compressed: u64,
+}
+
+impl
+    TryFrom<(
+        StatResult,
+        StatResult,
+        StatResult,
+        StatResult,
+        StatResult,
+        StatResult,
+        StatResult,
+        StatResult,
+    )> for TxStats
+{
+    type Error = ParseIntError;
+
+    fn try_from(
+        (v1, v2, v3, v4, v5, v6, v7, v8): (
+            StatResult,
+            StatResult,
+            StatResult,
+            StatResult,
+            StatResult,
+            StatResult,
+            StatResult,
+            StatResult,
+        ),
+    ) -> Result<Self, Self::Error> {
+        Ok(TxStats {
+            bytes: v1?,
+            packets: v2?,
+            errs: v3?,
+            drop: v4?,
+            fifo: v5?,
+            colls: v6?,
+            carrier: v7?,
+            compressed: v8?,
+        })
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct InterfaceStats {
+    pub rx: RxStats,
+    pub tx: TxStats,
+}
+
+impl
+    TryFrom<(
+        Result<RxStats, ParseIntError>,
+        Result<TxStats, ParseIntError>,
+    )> for InterfaceStats
+{
+    type Error = ParseIntError;
+
+    fn try_from(
+        (rx, tx): (
+            Result<RxStats, ParseIntError>,
+            Result<TxStats, ParseIntError>,
+        ),
+    ) -> Result<Self, Self::Error> {
+        Ok(InterfaceStats { rx: rx?, tx: tx? })
+    }
+}
+
+#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
+pub struct NetworkInterface {
+    pub interface: String,
+    pub mac_address: Option<String>,
+    pub interface_type: Option<LndType>,
+    pub inet4_address: Vec<Ipv4Network>,
+    pub inet6_address: Vec<Ipv6Network>,
+    pub stats: Option<InterfaceStats>,
+    pub is_up: bool,
+    pub is_slave: bool,
 }
