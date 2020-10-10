@@ -1,0 +1,764 @@
+---
+source: iml-agent/src/network.rs
+expression: network_interfaces
+---
+[
+    NetworkInterface {
+        interface: "lo",
+        mac_address: Some(
+            "00:00:00:00:00:00",
+        ),
+        interface_type: Some(
+            "loopback",
+        ),
+        inet4_address: [
+            Address {
+                address: "127.0.0.1",
+                prefix: 8,
+            },
+        ],
+        inet6_address: [
+            Address {
+                address: "::1",
+                prefix: 128,
+            },
+        ],
+        is_up: true,
+        is_slave: false,
+    },
+    NetworkInterface {
+        interface: "vethd5ae58b@if35585",
+        mac_address: Some(
+            "ae:b5:89:49:2d:77",
+        ),
+        interface_type: Some(
+            "ether",
+        ),
+        inet4_address: [],
+        inet6_address: [
+            Address {
+                address: "fe80::acb5:89ff:fe49:2d77",
+                prefix: 64,
+            },
+        ],
+        is_up: true,
+        is_slave: false,
+    },
+    NetworkInterface {
+        interface: "usermode",
+        mac_address: Some(
+            "52:54:00:12:34:56",
+        ),
+        interface_type: Some(
+            "ether",
+        ),
+        inet4_address: [
+            Address {
+                address: "10.0.2.15",
+                prefix: 24,
+            },
+        ],
+        inet6_address: [
+            Address {
+                address: "fec0::5054:ff:fe12:3456",
+                prefix: 64,
+            },
+            Address {
+                address: "fe80::5054:ff:fe12:3456",
+                prefix: 64,
+            },
+        ],
+        is_up: true,
+        is_slave: false,
+    },
+    NetworkInterface {
+        interface: "mgmt0",
+        mac_address: Some(
+            "02:00:f0:cd:8d:6e",
+        ),
+        interface_type: Some(
+            "ether",
+        ),
+        inet4_address: [
+            Address {
+                address: "10.36.47.10",
+                prefix: 20,
+            },
+            Address {
+                address: "10.36.47.116",
+                prefix: 22,
+            },
+        ],
+        inet6_address: [
+            Address {
+                address: "fe80::f0ff:fecd:8d6e",
+                prefix: 64,
+            },
+        ],
+        is_up: true,
+        is_slave: false,
+    },
+    NetworkInterface {
+        interface: "mgmt1",
+        mac_address: Some(
+            "02:00:0d:40:8d:6f",
+        ),
+        interface_type: Some(
+            "ether",
+        ),
+        inet4_address: [],
+        inet6_address: [],
+        is_up: false,
+        is_slave: false,
+    },
+    NetworkInterface {
+        interface: "mgmt2",
+        mac_address: Some(
+            "02:00:8e:c2:8d:70",
+        ),
+        interface_type: Some(
+            "ether",
+        ),
+        inet4_address: [
+            Address {
+                address: "10.0.3.2",
+                prefix: 24,
+            },
+        ],
+        inet6_address: [
+            Address {
+                address: "fe80::8eff:fec2:8d70",
+                prefix: 64,
+            },
+        ],
+        is_up: true,
+        is_slave: false,
+    },
+    NetworkInterface {
+        interface: "ib0",
+        mac_address: Some(
+            "20:00:04:be:fe:80:00:00:00:00:00:00:b8:59:9f:03:00:f6:8b:c0",
+        ),
+        interface_type: Some(
+            "infiniband",
+        ),
+        inet4_address: [
+            Address {
+                address: "172.16.0.24",
+                prefix: 24,
+            },
+        ],
+        inet6_address: [
+            Address {
+                address: "fe80::ba59:9f03:f6:8bc0",
+                prefix: 64,
+            },
+        ],
+        is_up: true,
+        is_slave: false,
+    },
+    NetworkInterface {
+        interface: "ib1",
+        mac_address: Some(
+            "20:00:0e:1c:fe:80:00:00:00:00:00:00:b8:59:9f:03:00:f6:8b:c1",
+        ),
+        interface_type: Some(
+            "infiniband",
+        ),
+        inet4_address: [
+            Address {
+                address: "172.16.0.28",
+                prefix: 24,
+            },
+        ],
+        inet6_address: [
+            Address {
+                address: "fe80::ba59:9f03:f6:8bc1",
+                prefix: 64,
+            },
+        ],
+        is_up: true,
+        is_slave: false,
+    },
+    NetworkInterface {
+        interface: "docker0",
+        mac_address: Some(
+            "02:42:26:df:9d:c2",
+        ),
+        interface_type: Some(
+            "ether",
+        ),
+        inet4_address: [
+            Address {
+                address: "172.17.0.1",
+                prefix: 16,
+            },
+        ],
+        inet6_address: [],
+        is_up: true,
+        is_slave: false,
+    },
+    NetworkInterface {
+        interface: "",
+        mac_address: Some(
+            "02:42:4f:43:f8:91",
+        ),
+        interface_type: Some(
+            "ether",
+        ),
+        inet4_address: [
+            Address {
+                address: "172.18.0.1",
+                prefix: 16,
+            },
+        ],
+        inet6_address: [
+            Address {
+                address: "fe80::42:4fff:fe43:f891",
+                prefix: 64,
+            },
+        ],
+        is_up: false,
+        is_slave: false,
+    },
+    NetworkInterface {
+        interface: "vethe063ab4@if35599",
+        mac_address: Some(
+            "b2:70:2c:b3:7b:81",
+        ),
+        interface_type: Some(
+            "ether",
+        ),
+        inet4_address: [],
+        inet6_address: [
+            Address {
+                address: "fe80::b070:2cff:feb3:7b81",
+                prefix: 64,
+            },
+        ],
+        is_up: true,
+        is_slave: false,
+    },
+    NetworkInterface {
+        interface: "veth9b39f63@if35603",
+        mac_address: Some(
+            "e6:9a:da:1f:40:c9",
+        ),
+        interface_type: Some(
+            "ether",
+        ),
+        inet4_address: [],
+        inet6_address: [
+            Address {
+                address: "fe80::e49a:daff:fe1f:40c9",
+                prefix: 64,
+            },
+        ],
+        is_up: true,
+        is_slave: false,
+    },
+    NetworkInterface {
+        interface: "vetha8c1451@if35611",
+        mac_address: Some(
+            "3a:70:ac:dd:f1:b6",
+        ),
+        interface_type: Some(
+            "ether",
+        ),
+        inet4_address: [],
+        inet6_address: [
+            Address {
+                address: "fe80::3870:acff:fedd:f1b6",
+                prefix: 64,
+            },
+        ],
+        is_up: true,
+        is_slave: false,
+    },
+    NetworkInterface {
+        interface: "vethd48e062@if35621",
+        mac_address: Some(
+            "5e:ce:03:98:45:68",
+        ),
+        interface_type: Some(
+            "ether",
+        ),
+        inet4_address: [],
+        inet6_address: [
+            Address {
+                address: "fe80::5cce:3ff:fe98:4568",
+                prefix: 64,
+            },
+        ],
+        is_up: true,
+        is_slave: false,
+    },
+    NetworkInterface {
+        interface: "vethe8659e9@if35625",
+        mac_address: Some(
+            "ee:85:ca:ff:6f:9e",
+        ),
+        interface_type: Some(
+            "ether",
+        ),
+        inet4_address: [],
+        inet6_address: [
+            Address {
+                address: "fe80::ec85:caff:feff:6f9e",
+                prefix: 64,
+            },
+        ],
+        is_up: true,
+        is_slave: false,
+    },
+    NetworkInterface {
+        interface: "veth840101b@if35631",
+        mac_address: Some(
+            "66:04:3c:35:cd:f1",
+        ),
+        interface_type: Some(
+            "ether",
+        ),
+        inet4_address: [],
+        inet6_address: [
+            Address {
+                address: "fe80::6404:3cff:fe35:cdf1",
+                prefix: 64,
+            },
+        ],
+        is_up: true,
+        is_slave: false,
+    },
+    NetworkInterface {
+        interface: "veth995405a@if35637",
+        mac_address: Some(
+            "c6:fa:28:07:a1:88",
+        ),
+        interface_type: Some(
+            "ether",
+        ),
+        inet4_address: [],
+        inet6_address: [
+            Address {
+                address: "fe80::c4fa:28ff:fe07:a188",
+                prefix: 64,
+            },
+        ],
+        is_up: true,
+        is_slave: false,
+    },
+    NetworkInterface {
+        interface: "veth9523e2c@if35643",
+        mac_address: Some(
+            "02:d4:5e:76:51:61",
+        ),
+        interface_type: Some(
+            "ether",
+        ),
+        inet4_address: [],
+        inet6_address: [
+            Address {
+                address: "fe80::d4:5eff:fe76:5161",
+                prefix: 64,
+            },
+        ],
+        is_up: true,
+        is_slave: false,
+    },
+    NetworkInterface {
+        interface: "veth3fde195@if35655",
+        mac_address: Some(
+            "da:6b:45:96:ac:04",
+        ),
+        interface_type: Some(
+            "ether",
+        ),
+        inet4_address: [],
+        inet6_address: [
+            Address {
+                address: "fe80::d86b:45ff:fe96:ac04",
+                prefix: 64,
+            },
+        ],
+        is_up: true,
+        is_slave: false,
+    },
+    NetworkInterface {
+        interface: "veth9e6c33f@if35659",
+        mac_address: Some(
+            "aa:db:9f:af:96:98",
+        ),
+        interface_type: Some(
+            "ether",
+        ),
+        inet4_address: [],
+        inet6_address: [
+            Address {
+                address: "fe80::a8db:9fff:feaf:9698",
+                prefix: 64,
+            },
+        ],
+        is_up: true,
+        is_slave: false,
+    },
+    NetworkInterface {
+        interface: "vethf2e5082@if35667",
+        mac_address: Some(
+            "ea:d5:cb:14:03:c8",
+        ),
+        interface_type: Some(
+            "ether",
+        ),
+        inet4_address: [],
+        inet6_address: [
+            Address {
+                address: "fe80::e8d5:cbff:fe14:3c8",
+                prefix: 64,
+            },
+        ],
+        is_up: true,
+        is_slave: false,
+    },
+    NetworkInterface {
+        interface: "vethfee4cf7@if35669",
+        mac_address: Some(
+            "46:64:09:7f:a2:e9",
+        ),
+        interface_type: Some(
+            "ether",
+        ),
+        inet4_address: [],
+        inet6_address: [
+            Address {
+                address: "fe80::4464:9ff:fe7f:a2e9",
+                prefix: 64,
+            },
+        ],
+        is_up: true,
+        is_slave: false,
+    },
+    NetworkInterface {
+        interface: "veth13197d6@if35671",
+        mac_address: Some(
+            "c6:f9:2b:ea:b2:51",
+        ),
+        interface_type: Some(
+            "ether",
+        ),
+        inet4_address: [],
+        inet6_address: [
+            Address {
+                address: "fe80::c4f9:2bff:feea:b251",
+                prefix: 64,
+            },
+        ],
+        is_up: true,
+        is_slave: false,
+    },
+    NetworkInterface {
+        interface: "veth3a5a647@if35683",
+        mac_address: Some(
+            "1e:31:31:13:03:0b",
+        ),
+        interface_type: Some(
+            "ether",
+        ),
+        inet4_address: [],
+        inet6_address: [
+            Address {
+                address: "fe80::1c31:31ff:fe13:30b",
+                prefix: 64,
+            },
+        ],
+        is_up: true,
+        is_slave: false,
+    },
+    NetworkInterface {
+        interface: "veth64507f5@if35689",
+        mac_address: Some(
+            "02:2f:49:a3:e6:11",
+        ),
+        interface_type: Some(
+            "ether",
+        ),
+        inet4_address: [],
+        inet6_address: [
+            Address {
+                address: "fe80::2f:49ff:fea3:e611",
+                prefix: 64,
+            },
+        ],
+        is_up: true,
+        is_slave: false,
+    },
+    NetworkInterface {
+        interface: "vethd29957a@if35691",
+        mac_address: Some(
+            "6e:55:cd:b3:d1:c2",
+        ),
+        interface_type: Some(
+            "ether",
+        ),
+        inet4_address: [],
+        inet6_address: [
+            Address {
+                address: "fe80::6c55:cdff:feb3:d1c2",
+                prefix: 64,
+            },
+        ],
+        is_up: true,
+        is_slave: false,
+    },
+    NetworkInterface {
+        interface: "veth7e0f8bf@if35693",
+        mac_address: Some(
+            "b6:4b:c4:47:1e:ca",
+        ),
+        interface_type: Some(
+            "ether",
+        ),
+        inet4_address: [],
+        inet6_address: [
+            Address {
+                address: "fe80::b44b:c4ff:fe47:1eca",
+                prefix: 64,
+            },
+        ],
+        is_up: true,
+        is_slave: false,
+    },
+    NetworkInterface {
+        interface: "vethc737ce9@if35695",
+        mac_address: Some(
+            "c6:c7:1c:e2:fb:36",
+        ),
+        interface_type: Some(
+            "ether",
+        ),
+        inet4_address: [],
+        inet6_address: [
+            Address {
+                address: "fe80::c4c7:1cff:fee2:fb36",
+                prefix: 64,
+            },
+        ],
+        is_up: true,
+        is_slave: false,
+    },
+    NetworkInterface {
+        interface: "vethc8cb1fc@if35697",
+        mac_address: Some(
+            "52:a1:0d:68:05:4d",
+        ),
+        interface_type: Some(
+            "ether",
+        ),
+        inet4_address: [],
+        inet6_address: [
+            Address {
+                address: "fe80::50a1:dff:fe68:54d",
+                prefix: 64,
+            },
+        ],
+        is_up: true,
+        is_slave: false,
+    },
+    NetworkInterface {
+        interface: "vethc4e79c4@if35701",
+        mac_address: Some(
+            "3e:1c:27:6f:03:a9",
+        ),
+        interface_type: Some(
+            "ether",
+        ),
+        inet4_address: [],
+        inet6_address: [
+            Address {
+                address: "fe80::3c1c:27ff:fe6f:3a9",
+                prefix: 64,
+            },
+        ],
+        is_up: true,
+        is_slave: false,
+    },
+    NetworkInterface {
+        interface: "veth0fe62a7@if35703",
+        mac_address: Some(
+            "c6:37:d9:43:eb:83",
+        ),
+        interface_type: Some(
+            "ether",
+        ),
+        inet4_address: [],
+        inet6_address: [
+            Address {
+                address: "fe80::c437:d9ff:fe43:eb83",
+                prefix: 64,
+            },
+        ],
+        is_up: true,
+        is_slave: false,
+    },
+    NetworkInterface {
+        interface: "veth13023f4@if35705",
+        mac_address: Some(
+            "c2:50:73:a2:ba:5b",
+        ),
+        interface_type: Some(
+            "ether",
+        ),
+        inet4_address: [],
+        inet6_address: [
+            Address {
+                address: "fe80::c050:73ff:fea2:ba5b",
+                prefix: 64,
+            },
+        ],
+        is_up: true,
+        is_slave: false,
+    },
+    NetworkInterface {
+        interface: "veth626b22c@if35707",
+        mac_address: Some(
+            "7a:a8:2e:8d:f3:38",
+        ),
+        interface_type: Some(
+            "ether",
+        ),
+        inet4_address: [],
+        inet6_address: [
+            Address {
+                address: "fe80::78a8:2eff:fe8d:f338",
+                prefix: 64,
+            },
+        ],
+        is_up: true,
+        is_slave: false,
+    },
+    NetworkInterface {
+        interface: "vethac77155@if35709",
+        mac_address: Some(
+            "72:b2:a4:72:5a:b1",
+        ),
+        interface_type: Some(
+            "ether",
+        ),
+        inet4_address: [],
+        inet6_address: [
+            Address {
+                address: "fe80::70b2:a4ff:fe72:5ab1",
+                prefix: 64,
+            },
+        ],
+        is_up: true,
+        is_slave: false,
+    },
+    NetworkInterface {
+        interface: "vethc75e896@if35739",
+        mac_address: Some(
+            "6e:3a:5a:ab:a9:f5",
+        ),
+        interface_type: Some(
+            "ether",
+        ),
+        inet4_address: [],
+        inet6_address: [
+            Address {
+                address: "fe80::6c3a:5aff:feab:a9f5",
+                prefix: 64,
+            },
+        ],
+        is_up: true,
+        is_slave: false,
+    },
+    NetworkInterface {
+        interface: "vethe7540db@if35747",
+        mac_address: Some(
+            "5a:d8:7c:47:fb:bb",
+        ),
+        interface_type: Some(
+            "ether",
+        ),
+        inet4_address: [],
+        inet6_address: [
+            Address {
+                address: "fe80::58d8:7cff:fe47:fbbb",
+                prefix: 64,
+            },
+        ],
+        is_up: true,
+        is_slave: false,
+    },
+    NetworkInterface {
+        interface: "veth3d93726@if35751",
+        mac_address: Some(
+            "7a:9e:ed:05:da:e3",
+        ),
+        interface_type: Some(
+            "ether",
+        ),
+        inet4_address: [],
+        inet6_address: [
+            Address {
+                address: "fe80::789e:edff:fe05:dae3",
+                prefix: 64,
+            },
+        ],
+        is_up: true,
+        is_slave: false,
+    },
+    NetworkInterface {
+        interface: "veth6c00034@if35755",
+        mac_address: Some(
+            "36:12:59:84:77:92",
+        ),
+        interface_type: Some(
+            "ether",
+        ),
+        inet4_address: [],
+        inet6_address: [
+            Address {
+                address: "fe80::3412:59ff:fe84:7792",
+                prefix: 64,
+            },
+        ],
+        is_up: true,
+        is_slave: false,
+    },
+    NetworkInterface {
+        interface: "veth36cb179@if35759",
+        mac_address: Some(
+            "32:ef:bd:a6:03:69",
+        ),
+        interface_type: Some(
+            "ether",
+        ),
+        inet4_address: [],
+        inet6_address: [
+            Address {
+                address: "fe80::30ef:bdff:fea6:369",
+                prefix: 64,
+            },
+        ],
+        is_up: true,
+        is_slave: false,
+    },
+    NetworkInterface {
+        interface: "veth4ccba02@if35576",
+        mac_address: Some(
+            "7e:5a:0f:fd:9c:65",
+        ),
+        interface_type: Some(
+            "ether",
+        ),
+        inet4_address: [],
+        inet6_address: [
+            Address {
+                address: "fe80::7c5a:fff:fefd:9c65",
+                prefix: 64,
+            },
+        ],
+        is_up: true,
+        is_slave: false,
+    },
+]
