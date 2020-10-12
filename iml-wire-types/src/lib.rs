@@ -1273,6 +1273,22 @@ pub enum LogSeverity {
     Debug = 7,
 }
 
+impl From<i16> for LogSeverity {
+    fn from(value: i16) -> Self {
+        match value {
+            0 => LogSeverity::Emergency,
+            1 => LogSeverity::Alert,
+            2 => LogSeverity::Critical,
+            3 => LogSeverity::Error,
+            4 => LogSeverity::Warning,
+            5 => LogSeverity::Notice,
+            6 => LogSeverity::Informational,
+            7 => LogSeverity::Debug,
+            _ => panic!("Invalid variant"),
+        }
+    }
+}
+
 /// An Log record from /api/log/
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct Log {

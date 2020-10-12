@@ -11,7 +11,8 @@ use crate::{
     GMsg,
 };
 use futures::channel::oneshot;
-use iml_wire_types::{warp_drive::ArcCache, ApiList, EndpointName as _, Host, Log, LogSeverity};
+use iml_graphql_queries::{log, Response};
+use iml_wire_types::{db::LogMessageRecord, warp_drive::ArcCache, EndpointName as _, Host, Log, LogSeverity};
 use seed::{prelude::*, *};
 use std::{sync::Arc, time::Duration};
 
@@ -25,7 +26,7 @@ pub struct Model {
 pub enum State {
     Loading,
     Fetching,
-    Loaded(ApiList<Log>),
+    Loaded(log::logs::Resp),
 }
 
 impl Default for State {
@@ -36,7 +37,7 @@ impl Default for State {
 
 #[derive(Clone, Debug)]
 pub enum Msg {
-    LogsFetched(Box<fetch::ResponseDataResult<ApiList<Log>>>),
+    LogsFetched(fetch::ResponseDataResult<Response<log::logs::Resp>>),
     FetchOffset,
     Loop,
     Page(paging::Msg),
@@ -50,7 +51,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 Log::endpoint_name(),
                 &[("limit", model.pager.limit()), ("offset", model.pager.offset())],
             )
-            .map(|req| req.fetch_json_data(|x| Msg::LogsFetched(Box::new(x))))
+            .map(|req| req.fetch_json_data(|x| Msg::LogsFetched(x)))
             {
                 orders.skip().perform_cmd(cmd);
             } else {
@@ -58,13 +59,18 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             };
         }
         Msg::LogsFetched(r) => {
-            match *r {
+            match r {
                 Ok(resp) => {
                     orders
                         .proxy(Msg::Page)
                         .send_msg(paging::Msg::SetTotal(resp.meta.total_count as usize));
 
-                    model.state = State::Loaded(resp);
+                    match resp {
+                        Response::Data(d) => model.state = State::Loaded(d.data),
+                        Response::Errors(e) => {
+                            error!("An error has occurred during Snapshot Interval creation: ", e);
+                        }
+                    }
                 }
                 Err(fail_reason) => {
                     error!("An error has occurred {:?}", fail_reason);
@@ -149,7 +155,7 @@ pub fn view(model: &Model, cache: &ArcCache) -> impl View<Msg> {
                     ]
                 ],
             ],
-            logs.objects.iter().map(|x| { log_item_view(x, cache) })
+            logs.logs.iter().map(|x| { log_item_view(x, cache) })
         ],
     }]
 }
@@ -169,7 +175,7 @@ fn log_severity<T>(x: LogSeverity) -> Node<T> {
     }
 }
 
-fn log_item_view(log: &Log, cache: &ArcCache) -> Node<Msg> {
+fn log_item_view(log: &LogMessageRecord, cache: &ArcCache) -> Node<Msg> {
     div![
         class![
             C.bg_menu,
@@ -185,12 +191,12 @@ fn log_item_view(log: &Log, cache: &ArcCache) -> Node<Msg> {
         div![
             class![C.text_green_500, C.col_span_3],
             label_view("Time: "),
-            chrono::DateTime::parse_from_rfc3339(&log.datetime)
-                .unwrap()
-                .format("%H:%M:%S %Y/%m/%d")
-                .to_string()
+            &log.datetime.format("%H:%M:%S %Y/%m/%d").to_string()
         ],
-        div![class![C.grid, C.justify_end], log_severity(log.severity)],
+        div![
+            class![C.grid, C.justify_end],
+            log_severity(LogSeverity::from(log.severity))
+        ],
         div![class![C.col_span_4], log.message],
         div![
             class![C.col_span_2],
