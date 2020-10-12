@@ -11,8 +11,8 @@ use crate::{
     GMsg,
 };
 use futures::channel::oneshot;
-use iml_graphql_queries::{log, Response};
-use iml_wire_types::{db::LogMessageRecord, warp_drive::ArcCache, EndpointName as _, Host, Log, LogSeverity};
+use iml_graphql_queries::{log, Response, SortDir};
+use iml_wire_types::{db::LogMessageRecord, warp_drive::ArcCache, Host, LogSeverity};
 use seed::{prelude::*, *};
 use std::{sync::Arc, time::Duration};
 
@@ -47,31 +47,35 @@ pub enum Msg {
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
     match msg {
         Msg::FetchOffset => {
-            if let Ok(cmd) = fetch::Request::api_query(
-                Log::endpoint_name(),
-                &[("limit", model.pager.limit()), ("offset", model.pager.offset())],
-            )
-            .map(|req| req.fetch_json_data(|x| Msg::LogsFetched(x)))
-            {
-                orders.skip().perform_cmd(cmd);
-            } else {
-                error!("Could not fetch logs.");
-            };
+            let query = log::logs::build(
+                Some(model.pager.limit()),
+                Some(model.pager.offset()),
+                Some(SortDir::Desc),
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+            );
+
+            let req = fetch::Request::graphql_query(&query);
+
+            orders.perform_cmd(req.fetch_json_data(|x| Msg::LogsFetched(x)));
         }
         Msg::LogsFetched(r) => {
             match r {
-                Ok(resp) => match resp {
-                    Response::Data(d) => {
-                        orders
-                            .proxy(Msg::Page)
-                            .send_msg(paging::Msg::SetTotal(d.data.logs.len()));
+                Ok(Response::Data(d)) => {
+                    orders
+                        .proxy(Msg::Page)
+                        .send_msg(paging::Msg::SetTotal(d.data.logs.len()));
 
-                        model.state = State::Loaded(d.data)
-                    }
-                    Response::Errors(e) => {
-                        error!("An error has occurred during Snapshot Interval creation: ", e);
-                    }
-                },
+                    model.state = State::Loaded(d.data)
+                }
+                Ok(Response::Errors(e)) => {
+                    error!("An error has occurred during fetching logs: ", e);
+                }
                 Err(fail_reason) => {
                     error!("An error has occurred {:?}", fail_reason);
                     orders.skip();

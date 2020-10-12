@@ -7,7 +7,7 @@ pub mod logs {
     use iml_wire_types::{LogSeverity, MessageClass, db::LogMessageRecord};
 
     pub static QUERY: &str = r#"
-            query logs(limit: Int, offset: Int, dir: SortDir, message: String, fqdn: String, tag: String, startDatetime: String, endDatetime: String, messageClass: [MessageClass!], severity: LogSeverity) {
+            query logs($limit: Int, $offset: Int, $dir: SortDir, $message: String, $fqdn: String, $tag: String, $startDatetime: String, $endDatetime: String, $messageClass: [MessageClass!], $severity: LogSeverity) {
                 logs(limit: $limit, offset: $offset, dir: $dir, message: $message, fqdn: $fqdn, tag: $tag, startDatetime: $startDatetime, endDatetime: $endDatetime, messageClass: $messageClass, severity: $severity) {
                     id
                     datetime
@@ -23,8 +23,8 @@ pub mod logs {
 
     #[derive(Debug, serde::Serialize)]
     pub struct Vars {
-        limit: Option<i32>,
-        offset: Option<i32>,
+        limit: Option<usize>,
+        offset: Option<usize>,
         dir: Option<SortDir>,
         message: Option<String>,
         fqdn: Option<String>,
@@ -36,14 +36,14 @@ pub mod logs {
     }
 
     pub fn build(
-        limit: Option<i32>,
-        offset: Option<i32>,
+        limit: Option<usize>,
+        offset: Option<usize>,
         dir: Option<SortDir>,
-        message: Option<impl ToString>,
-        fqdn: Option<impl ToString>,
-        tag: Option<impl ToString>,
-        start_datetime: Option<impl ToString>,
-        end_datetime: Option<impl ToString>,
+        message: Option<String>,
+        fqdn: Option<String>,
+        tag: Option<String>,
+        start_datetime: Option<String>,
+        end_datetime: Option<String>,
         message_class: Option<Vec<MessageClass>>,
         severity: Option<LogSeverity>,
     ) -> Query<Vars> {
@@ -66,7 +66,6 @@ pub mod logs {
 
     #[derive(Debug, Clone, serde::Deserialize)]
     pub struct Resp {
-        #[serde(rename(deserialize = "logs"))]
         pub logs: Vec<LogMessageRecord>,
     }
 }
