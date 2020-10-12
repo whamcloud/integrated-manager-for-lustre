@@ -60,18 +60,18 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         }
         Msg::LogsFetched(r) => {
             match r {
-                Ok(resp) => {
-                    orders
-                        .proxy(Msg::Page)
-                        .send_msg(paging::Msg::SetTotal(resp.meta.total_count as usize));
+                Ok(resp) => match resp {
+                    Response::Data(d) => {
+                        orders
+                            .proxy(Msg::Page)
+                            .send_msg(paging::Msg::SetTotal(d.data.logs.len()));
 
-                    match resp {
-                        Response::Data(d) => model.state = State::Loaded(d.data),
-                        Response::Errors(e) => {
-                            error!("An error has occurred during Snapshot Interval creation: ", e);
-                        }
+                        model.state = State::Loaded(d.data)
                     }
-                }
+                    Response::Errors(e) => {
+                        error!("An error has occurred during Snapshot Interval creation: ", e);
+                    }
+                },
                 Err(fail_reason) => {
                     error!("An error has occurred {:?}", fail_reason);
                     orders.skip();
