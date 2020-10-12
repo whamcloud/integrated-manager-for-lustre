@@ -305,7 +305,19 @@ impl Llapi {
     }
 
     pub fn search_fsname(&self, pathname: &str) -> Result<String, LiblustreError> {
-        let fsc = CString::new(pathname.as_bytes())?;
+        let mut path = PathBuf::from(pathname);
+        let md = std::fs::symlink_metadata(&path)?;
+        if md.file_type().is_symlink() {
+            path.pop();
+        }
+
+        let fsc = CString::new(
+            path.clone()
+                .into_os_string()
+                .into_string()
+                .unwrap()
+                .as_bytes(),
+        )?;
         let mut fsname: Vec<u8> = vec![0; std::mem::size_of::<u8>() * MAXFSNAME + 1];
         let ptr = fsname.as_mut_ptr() as *mut libc::c_char;
 
