@@ -40,8 +40,9 @@ fn do_rsync<'a>(
         .chunks(10)
         .map(Ok)
         .try_fold(vec![], |mut acc, xs| async {
-            let xs = try_join_all(xs).await?;
+            let mut xs = try_join_all(xs).await?;
 
+            xs.retain(|x| x.errno != 0);
             acc.extend(xs);
 
             Ok::<_, ImlAgentError>(acc)
