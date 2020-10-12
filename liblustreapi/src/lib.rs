@@ -12,6 +12,7 @@ use std::{
     ffi::{CStr, CString},
     fmt, io,
     num::ParseIntError,
+    os::unix::ffi::OsStrExt,
     path::PathBuf,
     str::FromStr,
     sync::Arc,
@@ -314,8 +315,6 @@ impl Llapi {
         let fsc = CString::new(
             path.clone()
                 .into_os_string()
-                .into_string()
-                .unwrap()
                 .as_bytes(),
         )?;
         let mut fsname: Vec<u8> = vec![0; std::mem::size_of::<u8>() * MAXFSNAME + 1];
