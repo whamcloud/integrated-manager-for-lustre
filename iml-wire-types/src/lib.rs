@@ -1315,6 +1315,18 @@ impl EndpointName for StratagemConfiguration {
     }
 }
 
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+#[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
+/// Information about a stratagem report
+pub struct StratagemReport {
+    /// The filename of the stratagem report
+    pub filename: String,
+    /// When the report was last modified
+    pub modify_time: DateTime<Utc>,
+    /// The size of the report in bytes
+    pub size: i32,
+}
+
 /// An `AlertType` record from `api/alert_type`.
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Eq, PartialEq)]
 pub struct AlertType {

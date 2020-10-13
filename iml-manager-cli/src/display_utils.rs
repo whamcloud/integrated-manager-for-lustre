@@ -7,7 +7,7 @@ use console::style;
 use futures::{Future, FutureExt};
 use iml_wire_types::{
     snapshot::{ReserveUnit, Snapshot, SnapshotInterval, SnapshotRetention},
-    Command, Filesystem, Host, OstPool, ServerProfile, StratagemConfiguration,
+    Command, Filesystem, Host, OstPool, ServerProfile, StratagemConfiguration, StratagemReport,
 };
 use indicatif::ProgressBar;
 use number_formatter::{format_bytes, format_number};
@@ -182,6 +182,16 @@ impl IntoTable for Vec<SnapshotRetention> {
                         .unwrap_or_else(|| "---".to_string()),
                 ]
             }),
+        )
+    }
+}
+
+impl IntoTable for Vec<StratagemReport> {
+    fn into_table(self) -> Table {
+        generate_table(
+            &["Filename", "Size", "Modify Time"],
+            self.into_iter()
+                .map(|r| vec![r.filename, r.size.to_string(), r.modify_time.to_rfc2822()]),
         )
     }
 }

@@ -18,7 +18,7 @@ use iml_rabbit::Pool;
 use iml_wire_types::{
     graphql_duration::GraphQLDuration,
     snapshot::{ReserveUnit, Snapshot, SnapshotInterval, SnapshotRetention},
-    Command, EndpointName, Job,
+    Command, EndpointName, Job, StratagemReport,
 };
 use itertools::Itertools;
 use juniper::{
@@ -139,17 +139,6 @@ impl Deref for SortDir {
             Self::Desc => "desc",
         }
     }
-}
-
-#[derive(juniper::GraphQLObject)]
-/// Information about a stratagem report
-struct StratagemReport {
-    /// The filename of the stratagem report under /var/spool/iml/report
-    filename: String,
-    /// When the report was last modified
-    modify_time: DateTime<Utc>,
-    /// The size of the report in bytes
-    size: i32,
 }
 
 pub(crate) struct QueryRoot;
