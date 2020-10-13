@@ -11,9 +11,12 @@ pub mod logs {
             query logs($limit: Int, $offset: Int, $dir: SortDir, $message: String, $fqdn: String, $tag: String, $startDatetime: String, $endDatetime: String, $messageClass: [MessageClass!], $severity: LogSeverity) {
                 logs(limit: $limit, offset: $offset, dir: $dir, message: $message, fqdn: $fqdn, tag: $tag, startDatetime: $startDatetime, endDatetime: $endDatetime, messageClass: $messageClass, severity: $severity) {
                     id
+                    datetime
                     facility
                     fqdn
                     message
+                    messageClass
+                    severity
                     tag
                 }
             }
@@ -65,12 +68,13 @@ pub mod logs {
     #[derive(Debug, Clone, serde::Deserialize)]
     pub struct LogMessage {
         pub id: i32,
-        // pub datetime: chrono::DateTime<Utc>,
+        pub datetime: chrono::DateTime<Utc>,
         pub facility: i32,
         pub fqdn: String,
         pub message: String,
-        // pub message_class: MessageClass,
-        // pub severity: LogSeverity,
+        #[serde(rename = "messageClass")]
+        pub message_class: MessageClass,
+        pub severity: LogSeverity,
         pub tag: String,
     }
 
