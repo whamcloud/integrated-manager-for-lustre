@@ -2,23 +2,23 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+mod stratagem;
+mod task;
+
 use crate::{
     command::get_command,
     error::ImlApiError,
     timer::{configure_snapshot_timer, remove_snapshot_timer},
 };
 use chrono::{DateTime, Utc};
-use futures::{
-    future::{join_all, try_join_all},
-    TryFutureExt, TryStreamExt,
-};
-use iml_manager_env::get_report_path;
+use futures::{future::join_all, TryFutureExt, TryStreamExt};
 use iml_postgres::{sqlx, sqlx::postgres::types::PgInterval, PgPool};
-use iml_rabbit::Pool;
+use iml_rabbit::{ImlRabbitError, Pool};
 use iml_wire_types::{
     graphql_duration::GraphQLDuration,
     snapshot::{ReserveUnit, Snapshot, SnapshotInterval, SnapshotRetention},
-    Command, EndpointName, Job, StratagemReport,
+    task::Task,
+    Command, EndpointName, Job,
 };
 use itertools::Itertools;
 use juniper::{
@@ -31,7 +31,6 @@ use std::{
     ops::Deref,
     sync::Arc,
 };
-use tokio::fs;
 use warp::Filter;
 
 #[derive(juniper::GraphQLObject)]
@@ -56,7 +55,7 @@ struct CorosyncNode {
     r#type: String,
 }
 
-#[derive(juniper::GraphQLObject)]
+#[derive(Debug, juniper::GraphQLObject)]
 /// A Lustre Target
 struct Target {
     /// The target's state. One of "mounted" or "unmounted"
@@ -143,10 +142,22 @@ impl Deref for SortDir {
     }
 }
 
+#[derive(Debug, serde::Serialize)]
+pub struct SendJob<'a, T> {
+    pub class_name: &'a str,
+    pub args: T,
+}
+
 pub(crate) struct QueryRoot;
 
 #[juniper::graphql_object(Context = Context)]
 impl QueryRoot {
+    fn stratagem(&self) -> stratagem::StratagemQuery {
+        stratagem::StratagemQuery
+    }
+    fn task(&self) -> task::TaskQuery {
+        task::TaskQuery
+    }
     #[graphql(arguments(
         limit(description = "optional paging limit, defaults to all rows"),
         offset(description = "Offset into items, defaults to 0"),
@@ -279,7 +290,7 @@ impl QueryRoot {
     /// of cluster nodes that make up the filesystem.
     /// This is useful to find nodes capable of running resources associated
     /// with the given `fs_name`.
-    #[graphql(arguments(fs_name(description = "The filesystem to search cluster nodes for"),))]
+    #[graphql(arguments(fs_name(description = "The filesystem to search cluster nodes for")))]
     async fn get_fs_cluster_hosts(
         context: &Context,
         fs_name: String,
@@ -474,32 +485,6 @@ impl QueryRoot {
 
         Ok(xs)
     }
-
-    /// List completed Stratagem reports that currently reside on the manager node.
-    /// Note: All report names must be valid unicode.
-    async fn stratagem_reports(_context: &Context) -> juniper::FieldResult<Vec<StratagemReport>> {
-        let paths = tokio::fs::read_dir(get_report_path()).await?;
-
-        let file_paths = paths
-            .map_ok(|x| x.file_name().to_string_lossy().to_string())
-            .try_collect::<Vec<String>>()
-            .await?
-            .into_iter()
-            .map(|filename| {
-                fs::canonicalize(get_report_path().join(filename.clone()))
-                    .map_ok(|file_path| (file_path, filename))
-            });
-
-        let items = try_join_all(file_paths)
-            .await?
-            .into_iter()
-            .map(|(file_path, filename)| (file_path.to_string_lossy().to_string(), filename))
-            .map(get_stratagem_files);
-
-        let items = try_join_all(items).await?;
-
-        Ok(items)
-    }
 }
 
 struct SnapshotIntervalName {
@@ -528,6 +513,12 @@ pub(crate) struct MutationRoot;
 
 #[juniper::graphql_object(Context = Context)]
 impl MutationRoot {
+    fn stratagem(&self) -> stratagem::StratagemMutation {
+        stratagem::StratagemMutation
+    }
+    fn task(&self) -> task::TaskMutation {
+        task::TaskMutation
+    }
     #[graphql(arguments(
         fsname(description = "Filesystem to snapshot"),
         name(description = "Name of the snapshot"),
@@ -846,24 +837,6 @@ impl MutationRoot {
 
         Ok(true)
     }
-
-    /// Delete a stratagem report
-    #[graphql(arguments(filename(description = "The report filename to delete")))]
-    async fn delete_stratagem_report(
-        _context: &Context,
-        filename: String,
-    ) -> juniper::FieldResult<bool> {
-        let report_base = get_report_path();
-        let path = tokio::fs::canonicalize(report_base.join(filename)).await?;
-
-        if !path.starts_with(report_base) {
-            return Err(FieldError::new("Invalid path", Value::null()));
-        }
-
-        tokio::fs::remove_file(path).await?;
-
-        Ok(true)
-    }
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
@@ -903,6 +876,8 @@ pub(crate) struct Context {
     pub(crate) pg_pool: PgPool,
     pub(crate) rabbit_pool: Pool,
 }
+
+impl juniper::Context for Context {}
 
 pub(crate) async fn graphql(
     schema: Arc<Schema>,
@@ -1121,14 +1096,100 @@ async fn fqdn_by_host_id(pool: &PgPool, id: i32) -> Result<String, iml_postgres:
     Ok(fqdn)
 }
 
-async fn get_stratagem_files(
-    (file_path, filename): (String, String),
-) -> juniper::FieldResult<StratagemReport> {
-    let attr = fs::metadata(file_path.to_string()).await?;
+async fn fs_id_by_name(pool: &PgPool, name: &str) -> Result<i32, juniper::FieldError> {
+    sqlx::query!(
+        "SELECT id FROM chroma_core_managedfilesystem WHERE name=$1 and not_deleted = 't'",
+        name
+    )
+    .fetch_optional(pool)
+    .await?
+    .map(|x| x.id)
+    .ok_or_else(|| FieldError::new(format!("Filesystem {} not found", name), Value::null()))
+}
 
-    Ok(StratagemReport {
-        filename,
-        modify_time: attr.modified()?.into(),
-        size: attr.len() as i32,
-    })
+async fn insert_task(
+    name: &str,
+    state: &str,
+    single_runner: bool,
+    keep_failed: bool,
+    actions: &[String],
+    args: serde_json::Value,
+    fs_id: i32,
+    pool: &PgPool,
+) -> Result<Task, ImlApiError> {
+    let x = sqlx::query_as!(
+        Task,
+        r#"
+                INSERT INTO chroma_core_task (
+                    name,
+                    start,
+                    state,
+                    fids_total,
+                    fids_completed,
+                    fids_failed,
+                    data_transfered,
+                    single_runner,
+                    keep_failed,
+                    actions,
+                    args,
+                    filesystem_id
+                )
+                VALUES (
+                    $1,
+                    now(),
+                    $2,
+                    0,
+                    0,
+                    0,
+                    0,
+                    $3,
+                    $4,
+                    $5,
+                    $6,
+                    $7
+                )
+                RETURNING *
+            "#,
+        name,
+        state,
+        single_runner,
+        keep_failed,
+        actions,
+        args,
+        fs_id
+    )
+    .fetch_one(pool)
+    .await?;
+
+    Ok(x)
+}
+
+async fn run_jobs<T: std::fmt::Debug + serde::Serialize>(
+    msg: impl ToString,
+    jobs: Vec<SendJob<'_, T>>,
+    rabbit_pool: &Pool,
+) -> Result<i32, ImlApiError> {
+    let kwargs: HashMap<String, String> = vec![("message".into(), msg.to_string())]
+        .into_iter()
+        .collect();
+
+    let id: i32 = iml_job_scheduler_rpc::call(
+        &rabbit_pool.get().await.map_err(ImlRabbitError::PoolError)?,
+        "run_jobs",
+        vec![jobs],
+        Some(kwargs),
+    )
+    .map_err(ImlApiError::ImlJobSchedulerRpcError)
+    .await?;
+
+    Ok(id)
+}
+
+fn create_task_job<'a>(task_id: i32) -> SendJob<'a, HashMap<String, serde_json::Value>> {
+    SendJob {
+        class_name: "CreateTaskJob".into(),
+        args: vec![("task_id".into(), serde_json::json!(task_id))]
+            .into_iter()
+            .collect(),
+    }
 }

@@ -8,6 +8,8 @@ pub mod graphql_duration;
 pub mod high_availability;
 pub mod sfa;
 pub mod snapshot;
+pub mod stratagem;
+pub mod task;
 pub mod warp_drive;
 
 use chrono::{DateTime, Utc};
@@ -1878,25 +1880,6 @@ pub struct FidError {
 pub struct FidItem {
     pub fid: String,
     pub data: serde_json::Value,
-}
-
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
-pub struct Task {
-    pub id: i32,
-    pub name: String,
-    pub start: DateTime<Utc>,
-    pub finish: Option<DateTime<Utc>>,
-    pub state: String,
-    pub fids_total: i64,
-    pub fids_completed: i64,
-    pub fids_failed: i64,
-    pub data_transfered: i64,
-    pub single_runner: bool,
-    pub keep_failed: bool,
-    pub actions: Vec<String>,
-    pub args: serde_json::Value,
-    pub filesystem_id: i32,
-    pub running_on_id: Option<i32>,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]

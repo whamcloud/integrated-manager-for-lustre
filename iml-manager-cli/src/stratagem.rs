@@ -98,12 +98,14 @@ pub struct StratagemRemoveData {
 pub struct StratagemScanData {
     /// The name of the filesystem to scan
     filesystem: String,
-    /// The report duration
-    #[structopt(short = "r", long = "report", parse(try_from_str = parse_duration))]
-    report_duration: Option<u64>,
-    /// The purge duration
-    #[structopt(short = "p", long = "purge", parse(try_from_str = parse_duration))]
-    purge_duration: Option<u64>,
+    /// The report duration, specified as a humantime string
+    /// EX: 1hour
+    #[structopt(short = "r", long = "report", min_values = 1)]
+    report_duration: Option<Vec<String>>,
+    /// The purge duration, specified as a humantime string
+    /// EX: 1hour
+    #[structopt(short = "p", long = "purge", min_values = 1)]
+    purge_duration: Option<Vec<String>>,
 }
 
 arg_enum! {
@@ -125,11 +127,7 @@ arg_enum! {
 
 #[derive(serde::Serialize, StructOpt, Debug)]
 pub struct StratagemFilesyncData {
-    /// action, 'push' is supported
-    #[structopt()]
-    action: FilesyncAction,
     /// The name of the filesystem to scan
-    #[structopt(short = "f", long = "filesystem")]
     filesystem: String,
     /// The remote filesystem
     #[structopt(short = "r", long = "remote")]
@@ -137,17 +135,13 @@ pub struct StratagemFilesyncData {
     /// Match expression
     #[structopt(short = "e", long = "expression")]
     expression: String,
-    #[structopt(skip = true)]
-    filesync: bool,
 }
 
 #[derive(serde::Serialize, StructOpt, Debug)]
 pub struct StratagemCloudsyncData {
     /// action, either push or pull
-    #[structopt()]
     action: CloudsyncAction,
     /// The name of the filesystem to scan
-    #[structopt(short = "f", long = "filesystem")]
     filesystem: String,
     /// The s3 instance
     #[structopt(short = "r", long = "remote")]
@@ -155,8 +149,6 @@ pub struct StratagemCloudsyncData {
     /// Match expression
     #[structopt(short = "e", long = "expression")]
     expression: String,
-    #[structopt(skip = true)]
-    cloudsync: bool,
 }
 
 fn parse_duration(src: &str) -> Result<u64, ImlManagerCliError> {
@@ -250,7 +242,7 @@ async fn report_cli(cmd: ReportCommand) -> Result<(), ImlManagerCliError> {
 
             let resp: iml_graphql_queries::Response<stratagem_queries::list_reports::Resp> =
                 graphql(query).await?;
-            let reports = Result::from(resp)?.data.stratagem_reports;
+            let reports = Result::from(resp)?.data.stratagem.stratagem_reports;
 
             let x = reports.into_display_type(display_type);
 
@@ -318,26 +310,46 @@ async fn interval_cli(cmd: IntervalCommand) -> Result<(), ImlManagerCliError> {
 pub async fn stratagem_cli(command: StratagemCommand) -> Result<(), ImlManagerCliError> {
     match command {
         StratagemCommand::Scan(data) => {
-            let r = post("run_stratagem", data).await?;
+            let query = stratagem_queries::fast_file_scan::build(
+                &data.filesystem,
+                data.report_duration.map(|xs| xs.join(" ")),
+                data.purge_duration.map(|xs| xs.join(" ")),
+            );
 
-            tracing::debug!("resp {:?}", r);
+            let resp: iml_graphql_queries::Response<stratagem_queries::fast_file_scan::Resp> =
+                graphql(query).await?;
 
-            let CmdWrapper { command } = handle_cmd_resp(r).await?;
+            let command = Result::from(resp)?.data.stratagem.run_fast_file_scan;
 
             wait_for_cmd_display(command).await?;
         }
         StratagemCommand::Filesync(data) => {
-            let r = post("run_stratagem", data).await?;
-            let CmdWrapper { command } = handle_cmd_resp(r).await?;
+            let query = stratagem_queries::filesync::build(
+                &data.filesystem,
+                data.remote,
+                data.expression,
+                "push",
+            );
+
+            let resp: iml_graphql_queries::Response<stratagem_queries::filesync::Resp> =
+                graphql(query).await?;
+
+            let command = Result::from(resp)?.data.stratagem.run_filesync;
 
             wait_for_cmd_display(command).await?;
         }
         StratagemCommand::Cloudsync(data) => {
-            let r = post("run_stratagem", data).await?;
+            let query = stratagem_queries::cloudsync::build(
+                &data.filesystem,
+                data.remote,
+                data.expression,
+                data.action,
+            );
 
-            tracing::debug!("run_cloudsync: {:?}", r);
+            let resp: iml_graphql_queries::Response<stratagem_queries::cloudsync::Resp> =
+                graphql(query).await?;
 
-            let CmdWrapper { command } = handle_cmd_resp(r).await?;
+            let command = Result::from(resp)?.data.stratagem.run_cloudsync;
 
             tracing::debug!("run_cloudsync: {:?}", command);
 

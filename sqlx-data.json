@@ -1045,6 +1045,116 @@
       "nullable": []
     }
   },
+  "457c805cf2fb6b16d6b42b2662c7f2569d1261d68547e9a3fc7c41bcd5694e26": {
+    "query": "\n                INSERT INTO chroma_core_task (\n                    name,\n                    start,\n                    state,\n                    fids_total,\n                    fids_completed,\n                    fids_failed,\n                    data_transfered,\n                    single_runner,\n                    keep_failed,\n                    actions,\n                    args,\n                    filesystem_id\n                )\n                VALUES (\n                    $1,\n                    now(),\n                    $2,\n                    0,\n                    0,\n                    0,\n                    0,\n                    $3,\n                    $4,\n                    $5,\n                    $6,\n                    $7\n                )\n                RETURNING *\n            ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "name",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 2,
+          "name": "start",
+          "type_info": "Timestamptz"
+        },
+        {
+          "ordinal": 3,
+          "name": "finish",
+          "type_info": "Timestamptz"
+        },
+        {
+          "ordinal": 4,
+          "name": "state",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 5,
+          "name": "fids_total",
+          "type_info": "Int8"
+        },
+        {
+          "ordinal": 6,
+          "name": "fids_completed",
+          "type_info": "Int8"
+        },
+        {
+          "ordinal": 7,
+          "name": "fids_failed",
+          "type_info": "Int8"
+        },
+        {
+          "ordinal": 8,
+          "name": "data_transfered",
+          "type_info": "Int8"
+        },
+        {
+          "ordinal": 9,
+          "name": "single_runner",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 10,
+          "name": "keep_failed",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 11,
+          "name": "actions",
+          "type_info": "TextArray"
+        },
+        {
+          "ordinal": 12,
+          "name": "args",
+          "type_info": "Jsonb"
+        },
+        {
+          "ordinal": 13,
+          "name": "filesystem_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 14,
+          "name": "running_on_id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Varchar",
+          "Varchar",
+          "Bool",
+          "Bool",
+          "TextArray",
+          "Jsonb",
+          "Int4"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true
+      ]
+    }
+  },
   "45af175923382837733407cab5f3fa02f1a14ea460d607407d742dabda0c14ff": {
     "query": "\n            SELECT active_host_id from target WHERE filesystems @> $1 and name='MGS'\n        ",
     "describe": {
@@ -1160,6 +1270,38 @@
       "nullable": [
         false,
         false,
+        false,
+        true,
+        false
+      ]
+    }
+  },
+  "49bd9f25a94b082053121c3dacc67f7363340f5ec4a6da58c1f21a1103748ff0": {
+    "query": "\n            SELECT t.name, t.dev_path, h.fqdn\n            FROM target t\n            INNER JOIN chroma_core_managedhost h\n            ON t.active_host_id = h.id\n            WHERE $1 = ANY(t.filesystems)\n            AND h.not_deleted = 't'\n        ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 1,
+          "name": "dev_path",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "fqdn",
+          "type_info": "Varchar"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      },
+      "nullable": [
         false,
         true,
         false
@@ -2327,6 +2469,26 @@
       "nullable": [
         false,
         true
+      ]
+    }
+  },
+  "8cb590d72a1f4577a8198ad04c9331da9b65ae93086f90a06537c732d7aac04a": {
+    "query": "SELECT id FROM chroma_core_managedfilesystem WHERE name=$1 and not_deleted = 't'",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      },
+      "nullable": [
+        false
       ]
     }
   },

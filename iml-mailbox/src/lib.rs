@@ -6,7 +6,7 @@ use bytes::Buf;
 use futures::{stream::BoxStream, Stream, StreamExt, TryFutureExt, TryStreamExt};
 use iml_postgres::sqlx::{self, PgPool};
 use iml_tracing::tracing;
-use iml_wire_types::{db::LustreFid, Task};
+use iml_wire_types::{db::LustreFid, task::Task};
 use serde_json::json;
 use std::{collections::HashMap, str::FromStr};
 use thiserror::Error;
