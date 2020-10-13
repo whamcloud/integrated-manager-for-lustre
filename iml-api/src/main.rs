@@ -6,6 +6,8 @@ mod action;
 mod command;
 mod error;
 mod graphql;
+mod graphql_json;
+mod task;
 mod timer;
 
 use iml_manager_env::get_pool_limit;
@@ -21,6 +23,20 @@ const DEFAULT_POOL_LIMIT: u32 = 5;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     iml_tracing::init();
+    std::env::set_var("PROXY_HOST", "localhost");
+    std::env::set_var("IML_API_PORT", "8080");
+    std::env::set_var("AMQP_BROKER_URL", "false");
+    std::env::set_var("DB_HOST", "tiv1");
+    std::env::set_var("DB_PORT", "8432");
+    std::env::set_var("DB_USER", "chroma");
+    std::env::set_var("DB_PASSWORD", "");
+    std::env::set_var("DB_NAME", "chroma");
+    std::env::set_var("ALLOW_ANONYMOUS_READ", "true");
+    std::env::set_var("BUILD", "");
+    std::env::set_var("VERSION", "6.1.0-1");
+    std::env::set_var("IS_RELEASE", "false");
+    std::env::set_var("BRANDING", "Whamcloud");
+    std::env::set_var("USE_STRATAGEM", "false");
 
     let addr = iml_manager_env::get_iml_api_addr();
 

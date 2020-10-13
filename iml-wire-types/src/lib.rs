@@ -790,6 +790,7 @@ impl EndpointName for Command {
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
 pub struct JobLock {
     pub locked_item_content_type_id: i32,
     pub locked_item_id: i32,
@@ -798,6 +799,7 @@ pub struct JobLock {
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
 pub struct AvailableTransition {
     pub label: String,
     pub state: String,

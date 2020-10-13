@@ -19,6 +19,12 @@ use futures::{
 use iml_postgres::{
     active_mgs_host_fqdn, fqdn_by_host_id, sqlx, sqlx::postgres::types::PgInterval, PgPool,
 };
+use iml_manager_env::get_report_path;
+use iml_postgres::{
+    sqlx,
+    sqlx::postgres::types::PgInterval,
+    PgPool,
+};
 use iml_rabbit::{ImlRabbitError, Pool};
 use iml_wire_types::{
     db::{LogMessageRecord, ServerProfileRecord, TargetRecord},
@@ -27,7 +33,7 @@ use iml_wire_types::{
     logs::{LogResponse, Meta},
     snapshot::{ReserveUnit, Snapshot, SnapshotInterval, SnapshotRetention},
     task::Task,
-    Command, EndpointName, FsType, Job, LogMessage, LogSeverity, MessageClass, SortDir,
+    Command, EndpointName, FsType, Job, AvailableTransition, JobLock, LogMessage, LogSeverity, MessageClass, SortDir,
 };
 use itertools::Itertools;
 use juniper::{
@@ -139,6 +145,19 @@ impl Deref for JobState {
             JobState::Tasked => "tasked",
             JobState::Completed => "complete",
             JobState::Cancelled => "cancelled",
+        }
+    }
+}
+
+
+impl From<&str> for JobState {
+    fn from(s: &str) -> Self {
+        match s {
+            "pending" => JobState::Pending,
+            "tasked" => JobState::Tasked,
+            "complete" => JobState::Completed,
+            "cancelled" => JobState::Cancelled,
+            _ => unreachable!() // TODO
         }
     }
 }
@@ -382,7 +401,7 @@ impl QueryRoot {
         let dir = dir.unwrap_or_default();
         let is_completed = !is_active.unwrap_or(true);
         let commands: Vec<Command> = sqlx::query_as!(
-            CommandTmpRecord,
+            CommandRecord,
             r#"
                 SELECT
                     c.id AS id,
@@ -409,8 +428,8 @@ impl QueryRoot {
             msg,
         )
         .fetch_all(&context.pg_pool)
-        .map_ok(|xs: Vec<CommandTmpRecord>| {
-            xs.into_iter().map(to_command).collect::<Vec<Command>>()
+        .map_ok(|xs: Vec<CommandRecord>| {
+            xs.into_iter().map(|x| x.into()).collect::<Vec<Command>>()
         })
         .await?;
         Ok(commands)
@@ -432,7 +451,7 @@ impl QueryRoot {
     ) -> juniper::FieldResult<Vec<Option<Command>>> {
         let ids: &[i32] = &ids[..];
         let unordered_cmds: Vec<Command> = sqlx::query_as!(
-            CommandTmpRecord,
+            CommandRecord,
             r#"
                 SELECT
                     c.id AS id,
@@ -453,8 +472,8 @@ impl QueryRoot {
             ids,
         )
         .fetch_all(&context.pg_pool)
-        .map_ok(|xs: Vec<CommandTmpRecord>| {
-            xs.into_iter().map(to_command).collect::<Vec<Command>>()
+        .map_ok(|xs: Vec<CommandRecord>| {
+            xs.into_iter().map(|x| x.into()).collect::<Vec<Command>>()
         })
         .await?;
         let mut hm = unordered_cmds
@@ -469,72 +488,51 @@ impl QueryRoot {
         Ok(commands)
     }
 
-    /// Fetch the list of jobs
-    #[graphql(arguments(
-        limit(description = "paging limit, defaults to 20"),
-        offset(description = "Offset into items, defaults to 0"),
-        dir(description = "Sort direction, defaults to ASC"),
-        job_state(description = "Job state, one of {COMPLETE, TASKED, PENDING}, default is COMPLETE"),
-    ))]
-    async fn jobs(
-        context: &Context,
-        limit: Option<i32>,
-        offset: Option<i32>,
-        dir: Option<SortDir>,
-        job_state: Option<JobState>,
-    ) -> juniper::FieldResult<Vec<Job<serde_json::Value>>> {
-        let dir = dir.unwrap_or_default();
-        let jobs: Vec<Job<serde_json::Value>> = sqlx::query!(
-            r#"
-                SELECT
-                    j.id AS id,
-                    state,
-                    errored,
-                    cancelled,
-                    created_at,
-                    modified_at,
-                    wait_for_json,
-                    locks_json,
-                    content_type_id
-                FROM chroma_core_job j
-                WHERE ($4::VARCHAR IS NULL OR state = $4)
-                ORDER BY
-                    CASE WHEN $3 = 'asc' THEN j.created_at END ASC,
-                    CASE WHEN $3 = 'desc' THEN j.modified_at END DESC
-                OFFSET $1 LIMIT $2
-            "#,
-            offset.unwrap_or(0) as i64,
-            limit.unwrap_or(20) as i64,
-            dir.deref(),
-            job_state,
-        )
-        .fetch_all(&context.pg_pool)
-        .map_ok(|xs: Vec<_>| {
-            xs.into_iter()
-                .map(|x| Job {
-                    id: x.id,
-                    class_name: "".to_string(),
-                    cancelled: x.cancelled,
-                    errored: x.errored,
-                    available_transitions: vec![],
-                    modified_at: x.modified_at.format("%Y-%m-%dT%T%.6f").to_string(),
-                    created_at: x.created_at.format("%Y-%m-%dT%T%.6f").to_string(),
-                    resource_uri: format!("/api/{}/{}/", Job::<()>::endpoint_name(), x.id),
-                    state: x.state,
-                    step_results: Default::default(),
-                    steps: vec![],
-                    wait_for: vec![],
-                    commands: vec![],
-                    description: "".to_string(),
-                    read_locks: vec![],
-                    write_locks: vec![]
-                })
-                .collect::<Vec<_>>()
-        })
-        .await?;
-
-        Ok(jobs)
-    }
+    // /// Fetch the list of jobs
+    // #[graphql(arguments(
+    //     limit(description = "paging limit, defaults to 20"),
+    //     offset(description = "Offset into items, defaults to 0"),
+    //     ids(description = "The list of command ids to fetch, ids may be empty"),
+    // ))]
+    // async fn jobs_by_ids(
+    //     context: &Context,
+    //     limit: Option<i32>,
+    //     offset: Option<i32>,
+    //     ids: Vec<i32>,
+    // ) -> juniper::FieldResult<Vec<Job0>> {
+    //     let jobs: Vec<Job0> = sqlx::query_as!(
+    //         JobRecord,
+    //         r#"
+    //             SELECT
+    //                 j.id AS id,
+    //                 state,
+    //                 errored,
+    //                 cancelled,
+    //                 created_at,
+    //                 modified_at,
+    //                 wait_for_json,
+    //                 locks_json,
+    //                 content_type_id
+    //             FROM chroma_core_job j
+    //             WHERE ($4::VARCHAR IS NULL OR state = $4)
+    //             ORDER BY
+    //                 CASE WHEN $3 = 'asc' THEN j.created_at END ASC,
+    //                 CASE WHEN $3 = 'desc' THEN j.modified_at END DESC
+    //             OFFSET $1 LIMIT $2
+    //         "#,
+    //         offset.unwrap_or(0) as i64,
+    //         limit.unwrap_or(20) as i64,
+    //         dir.deref(),
+    //         job_state,
+    //     )
+    //     .fetch_all(&context.pg_pool)
+    //     .map_ok(|xs: Vec<JobRecord>|
+    //         xs.into_iter().map(|x| x.into()).collect::<Vec<Job0>>()
+    //     )
+    //     .await?;
+    //     Ok(jobs)
+    //     Ok(vec![])
+    // }
 
     /// List all snapshot intervals
     async fn snapshot_intervals(context: &Context) -> juniper::FieldResult<Vec<SnapshotInterval>> {
@@ -1237,7 +1235,7 @@ impl MutationRoot {
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
-struct CommandTmpRecord {
+struct CommandRecord {
     pub cancelled: bool,
     pub complete: bool,
     pub created_at: DateTime<Utc>,
@@ -1247,23 +1245,80 @@ struct CommandTmpRecord {
     pub message: String,
 }
 
-fn to_command(x: CommandTmpRecord) -> Command {
-    Command {
-        id: x.id,
-        cancelled: x.cancelled,
-        complete: x.complete,
-        errored: x.errored,
-        created_at: x.created_at.format("%Y-%m-%dT%T%.6f").to_string(),
-        jobs: {
-            x.job_ids
-                .unwrap_or_default()
-                .into_iter()
-                .map(|job_id: i32| format!("/api/{}/{}/", Job::<()>::endpoint_name(), job_id))
-                .collect::<Vec<_>>()
-        },
-        logs: "".to_string(),
-        message: x.message.clone(),
-        resource_uri: format!("/api/{}/{}/", Command::endpoint_name(), x.id),
+impl From<CommandRecord> for Command {
+    fn from(x: CommandRecord) -> Self {
+        Self {
+            id: x.id,
+            cancelled: x.cancelled,
+            complete: x.complete,
+            errored: x.errored,
+            created_at: x.created_at.format("%Y-%m-%dT%T%.6f").to_string(),
+            jobs: {
+                x.job_ids
+                    .unwrap_or_default()
+                    .into_iter()
+                    .map(|job_id: i32| format!("/api/{}/{}/", Job::<()>::endpoint_name(), job_id))
+                    .collect::<Vec<_>>()
+            },
+            logs: "".to_string(),
+            message: x.message.clone(),
+            resource_uri: format!("/api/{}/{}/", Command::endpoint_name(), x.id),
+        }
+    }
+}
+
+/// Stuff
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+pub struct Job0 {
+    // pub available_transitions: Vec<AvailableTransition>,
+    pub cancelled: bool,
+    pub class_name: String,
+    pub commands: Vec<String>,
+    pub created_at: String,
+    pub description: String,
+    pub errored: bool,
+    pub id: i32,
+    pub modified_at: String,
+    // pub read_locks: Vec<JobLock>,
+    pub resource_uri: String,
+    pub state: String,
+    pub step_results: String, // GraphQLMap<GraphQLJson>,
+    pub steps: Vec<String>,
+    pub wait_for: Vec<String>,
+    // pub write_locks: Vec<JobLock>,
+}
+
+#[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
+#[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
+struct JobRecord {
+    id: i32,
+    cancelled: bool,
+    errored: bool,
+    modified_at: DateTime<Utc>,
+    created_at: DateTime<Utc>,
+    state: String,
+}
+
+impl From<JobRecord> for Job0 {
+    fn from(x: JobRecord) -> Self {
+        Self {
+            id: x.id,
+            class_name: "".to_string(),
+            cancelled: x.cancelled,
+            errored: x.errored,
+            // available_transitions: vec![],
+            modified_at: x.modified_at.format("%Y-%m-%dT%T%.6f").to_string(),
+            created_at: x.created_at.format("%Y-%m-%dT%T%.6f").to_string(),
+            resource_uri: format!("/api/{}/{}/", Job::<()>::endpoint_name(), x.id),
+            state: x.state,
+            step_results: Default::default(),
+            steps: vec![],
+            wait_for: vec![],
+            commands: vec![],
+            description: "".to_string(),
+            // read_locks: vec![],
+            // write_locks: vec![],
+        }
     }
 }
 
