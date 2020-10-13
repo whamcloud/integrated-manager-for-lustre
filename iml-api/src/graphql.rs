@@ -221,6 +221,17 @@ impl From<LogMessageRecord> for LogMessage {
     }
 }
 
+#[derive(juniper::GraphQLObject)]
+struct Meta {
+    total_count: i32,
+}
+
+#[derive(juniper::GraphQLObject)]
+struct LogResponse {
+    logs: Vec<LogMessage>,
+    meta: Meta,
+}
+
 pub(crate) struct QueryRoot;
 
 #[juniper::graphql_object(Context = Context)]
@@ -603,7 +614,7 @@ impl QueryRoot {
         end_datetime: Option<String>,
         message_class: Option<Vec<MessageClass>>,
         severity: Option<LogSeverity>,
-    ) -> juniper::FieldResult<Vec<LogMessage>> {
+    ) -> juniper::FieldResult<LogResponse> {
         let dir = dir.unwrap_or_default();
 
         let start_datetime = start_datetime
@@ -653,7 +664,10 @@ impl QueryRoot {
         .await?;
         let xs: Vec<LogMessage> = results.into_iter().map(|x| x.into()).collect();
 
-        Ok(xs)
+        Ok(LogResponse {
+            logs: xs,
+            meta: Meta { total_count: 0 },
+        })
     }
 }
 

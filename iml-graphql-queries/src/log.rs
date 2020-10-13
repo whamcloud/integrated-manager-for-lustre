@@ -10,14 +10,19 @@ pub mod logs {
     pub static QUERY: &str = r#"
             query logs($limit: Int, $offset: Int, $dir: SortDir, $message: String, $fqdn: String, $tag: String, $startDatetime: String, $endDatetime: String, $messageClass: [MessageClass!], $severity: LogSeverity) {
                 logs(limit: $limit, offset: $offset, dir: $dir, message: $message, fqdn: $fqdn, tag: $tag, startDatetime: $startDatetime, endDatetime: $endDatetime, messageClass: $messageClass, severity: $severity) {
-                    id
-                    datetime
-                    facility
-                    fqdn
-                    message
-                    messageClass
-                    severity
-                    tag
+                    logs {
+                        id
+                        datetime
+                        facility
+                        fqdn
+                        message
+                        messageClass
+                        severity
+                        tag
+                    }
+                    meta {
+                        totalCount
+                    }
                 }
             }
         "#;
@@ -66,6 +71,18 @@ pub mod logs {
     }
 
     #[derive(Debug, Clone, serde::Deserialize)]
+    pub struct Meta {
+        #[serde(rename = "totalCount")]
+        pub total_count: i32,
+    }
+
+    #[derive(Debug, Clone, serde::Deserialize)]
+    pub struct LogResponse {
+        pub logs: Vec<LogMessage>,
+        pub meta: Meta,
+    }
+
+    #[derive(Debug, Clone, serde::Deserialize)]
     pub struct LogMessage {
         pub id: i32,
         pub datetime: chrono::DateTime<Utc>,
@@ -80,6 +97,6 @@ pub mod logs {
 
     #[derive(Debug, Clone, serde::Deserialize)]
     pub struct Resp {
-        pub logs: Vec<LogMessage>,
+        pub logs: LogResponse,
     }
 }
