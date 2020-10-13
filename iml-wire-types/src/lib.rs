@@ -11,7 +11,6 @@ pub mod snapshot;
 pub mod warp_drive;
 
 use chrono::{DateTime, Utc};
-use serde_repr::{Deserialize_repr, Serialize_repr};
 use std::{
     cmp::{Ord, Ordering},
     collections::{BTreeMap, BTreeSet, HashMap},
@@ -1258,7 +1257,7 @@ pub enum MessageClass {
 /// | 6    | Informational: informational messages    |
 /// | 7    | Debug: debug-level messages              |
 ///
-#[derive(Serialize_repr, Deserialize_repr, PartialEq, Eq, Ord, PartialOrd, Clone, Copy, Debug)]
+#[derive(serde::Deserialize, serde::Serialize, PartialEq, Eq, Ord, PartialOrd, Clone, Copy, Debug)]
 #[repr(u8)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum LogSeverity {

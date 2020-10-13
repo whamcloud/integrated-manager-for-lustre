@@ -70,8 +70,10 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         Msg::LogsFetched(r) => {
             match r {
                 Ok(Response::Data(d)) => {
+                    log!("Fetched logs: ", d.data.logs.len());
                     orders
                         .proxy(Msg::Page)
+                        // FIXME: This doesn't set total correctly. It uses number of cached logs as total
                         .send_msg(paging::Msg::SetTotal(d.data.logs.len()));
 
                     model.state = State::Loaded(d.data)
@@ -80,7 +82,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                     error!("An error has occurred during fetching logs: ", e);
                 }
                 Err(fail_reason) => {
-                    error!("An error has occurred {:?}", fail_reason);
+                    error!("An error has occurred: ", fail_reason);
                     orders.skip();
                 }
             }
@@ -195,15 +197,15 @@ fn log_item_view(log: &LogMessage, cache: &ArcCache) -> Node<Msg> {
             C.my_6,
             C.p_8
         ],
-        // div![
-        //     class![C.text_green_500, C.col_span_3],
-        //     label_view("Time: "),
-        //     &log.datetime.format("%H:%M:%S %Y/%m/%d").to_string()
-        // ],
-        // div![
-        //     class![C.grid, C.justify_end],
-        //     log_severity(LogSeverity::from(log.severity))
-        // ],
+        div![
+            class![C.text_green_500, C.col_span_3],
+            label_view("Time: "),
+            &log.datetime.format("%H:%M:%S %Y/%m/%d").to_string()
+        ],
+        div![
+            class![C.grid, C.justify_end],
+            log_severity(LogSeverity::from(log.severity))
+        ],
         div![class![C.col_span_4], log.message],
         div![
             class![C.col_span_2],
