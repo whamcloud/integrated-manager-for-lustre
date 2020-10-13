@@ -312,7 +312,7 @@ impl Llapi {
             path.pop();
         }
 
-        let fsc = CString::new(path.clone().into_os_string().as_bytes())?;
+        let fsc = CString::new(path.into_os_string().as_bytes())?;
         let mut fsname: Vec<u8> = vec![0; std::mem::size_of::<u8>() * MAXFSNAME + 1];
         let ptr = fsname.as_mut_ptr() as *mut libc::c_char;
 
