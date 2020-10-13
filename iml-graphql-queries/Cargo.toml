@@ -7,6 +7,7 @@ version = "0.2.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+chrono = "0.4"
 humantime = "2.0"
 iml-wire-types = {version = "0.4", path = "../iml-wire-types"}
 serde = {version = "1", features = ["derive"]}

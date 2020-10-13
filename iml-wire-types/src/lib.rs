@@ -1260,6 +1260,7 @@ pub enum MessageClass {
 ///
 #[derive(Serialize_repr, Deserialize_repr, PartialEq, Eq, Ord, PartialOrd, Clone, Copy, Debug)]
 #[repr(u8)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum LogSeverity {
     Emergency = 0,
     Alert = 1,

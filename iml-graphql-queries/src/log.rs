@@ -4,18 +4,16 @@
 
 pub mod logs {
     use crate::{Query, SortDir};
-    use iml_wire_types::{LogSeverity, MessageClass, db::LogMessageRecord};
+    use chrono::Utc;
+    use iml_wire_types::{LogSeverity, MessageClass};
 
     pub static QUERY: &str = r#"
             query logs($limit: Int, $offset: Int, $dir: SortDir, $message: String, $fqdn: String, $tag: String, $startDatetime: String, $endDatetime: String, $messageClass: [MessageClass!], $severity: LogSeverity) {
                 logs(limit: $limit, offset: $offset, dir: $dir, message: $message, fqdn: $fqdn, tag: $tag, startDatetime: $startDatetime, endDatetime: $endDatetime, messageClass: $messageClass, severity: $severity) {
                     id
-                    datetime
                     facility
                     fqdn
                     message
-                    messageClass
-                    severity
                     tag
                 }
             }
@@ -65,7 +63,19 @@ pub mod logs {
     }
 
     #[derive(Debug, Clone, serde::Deserialize)]
+    pub struct LogMessage {
+        pub id: i32,
+        // pub datetime: chrono::DateTime<Utc>,
+        pub facility: i32,
+        pub fqdn: String,
+        pub message: String,
+        // pub message_class: MessageClass,
+        // pub severity: LogSeverity,
+        pub tag: String,
+    }
+
+    #[derive(Debug, Clone, serde::Deserialize)]
     pub struct Resp {
-        pub logs: Vec<LogMessageRecord>,
+        pub logs: Vec<LogMessage>,
     }
 }
