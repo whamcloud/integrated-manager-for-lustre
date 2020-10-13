@@ -70,11 +70,10 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         Msg::LogsFetched(r) => {
             match r {
                 Ok(Response::Data(d)) => {
-                    log!("Fetched logs: ", d.data.logs.len());
+                    log!("Fetched logs: ", d.data.logs.logs.len());
                     orders
                         .proxy(Msg::Page)
-                        // FIXME: This doesn't set total correctly. It uses number of cached logs as total
-                        .send_msg(paging::Msg::SetTotal(d.data.logs.len()));
+                        .send_msg(paging::Msg::SetTotal(d.data.logs.meta.total_count as usize));
 
                     model.state = State::Loaded(d.data)
                 }
@@ -164,7 +163,7 @@ pub fn view(model: &Model, cache: &ArcCache) -> impl View<Msg> {
                     ]
                 ],
             ],
-            logs.logs.iter().map(|x| { log_item_view(x, cache) })
+            logs.logs.logs.iter().map(|x| { log_item_view(x, cache) })
         ],
     }]
 }
