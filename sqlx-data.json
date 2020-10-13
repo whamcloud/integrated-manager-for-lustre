@@ -1880,6 +1880,24 @@
       "nullable": []
     }
   },
+  "664d0c17acb625d51e033c999e13460067137311087a92ec5140d6f1b316c080": {
+    "query": "SELECT chroma_core_logmessage_id_seq.last_value FROM chroma_core_logmessage_id_seq;",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "last_value",
+          "type_info": "Int8"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false
+      ]
+    }
+  },
   "67823b0937ae10ec17b2f0bb4f82ca85be68e46e999129786957970af1fcf7e2": {
     "query": "\n                SELECT\n                    c.id AS id,\n                    cancelled,\n                    complete,\n                    errored,\n                    created_at,\n                    array_agg(cj.job_id)::INT[] AS job_ids,\n                    message\n                FROM chroma_core_command c\n                JOIN chroma_core_command_jobs cj ON c.id = cj.command_id\n                WHERE ($4::BOOL IS NULL OR complete = $4)\n                  AND ($5::TEXT IS NULL OR c.message ILIKE '%' || $5 || '%')\n                GROUP BY c.id\n                ORDER BY\n                    CASE WHEN $3 = 'asc' THEN c.id END ASC,\n                    CASE WHEN $3 = 'desc' THEN c.id END DESC\n                OFFSET $1 LIMIT $2\n            ",
     "describe": {

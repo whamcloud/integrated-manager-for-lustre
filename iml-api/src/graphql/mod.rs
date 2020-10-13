@@ -28,7 +28,7 @@ use juniper::{
 };
 use std::{
     collections::{HashMap, HashSet},
-    convert::{Infallible, TryFrom as _},
+    convert::{Infallible, TryFrom as _, TryInto},
     ops::Deref,
     sync::Arc,
 };
@@ -651,9 +651,19 @@ impl QueryRoot {
         .await?;
         let xs: Vec<LogMessage> = results.into_iter().map(|x| x.into()).collect();
 
+        let total_count = sqlx::query!(
+            "SELECT chroma_core_logmessage_id_seq.last_value FROM chroma_core_logmessage_id_seq;"
+        )
+        .fetch_one(&context.pg_pool)
+        .await?
+        .last_value;
+
         Ok(LogResponse {
             logs: xs,
-            meta: Meta { total_count: 0 },
+            meta: Meta {
+                // FIXME: Convert to i32 in some other way?
+                total_count: total_count.try_into().unwrap(),
+            },
         })
     }
 }
