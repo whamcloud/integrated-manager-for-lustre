@@ -10,8 +10,7 @@ async fn test_docker_stratagem_setup() -> Result<(), TestError> {
     let config: Config = Config::default();
     let config: Config = Config {
         profile_map: vec![
-            ("stratagem_server".into(), config.mds_servers()),
-            ("base_monitored".into(), config.oss_servers()),
+            ("base_monitored".into(), config.storage_servers()),
             ("stratagem_client".into(), config.client_servers()),
         ],
         use_stratagem: true,

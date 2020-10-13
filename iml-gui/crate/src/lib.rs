@@ -443,7 +443,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 .proxy(Msg::Page)
                 .proxy(page::Msg::Filesystem)
                 .proxy(page::filesystem::Msg::Stratagem)
-                .send_msg(stratagem::Msg::CheckStratagem)
                 .send_msg(stratagem::Msg::SetStratagemConfig(
                     model.records.stratagem_config.values().cloned().collect(),
                 ));
@@ -478,12 +477,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                             model.records.pacemaker_configuration.clone(),
                             model.records.corosync_configuration.clone(),
                         ));
-
-                    orders
-                        .proxy(Msg::Page)
-                        .proxy(page::Msg::Filesystem)
-                        .proxy(page::filesystem::Msg::Stratagem)
-                        .send_msg(stratagem::Msg::CheckStratagem);
                 }
                 warp_drive::RecordId::Filesystem(x) => {
                     orders
@@ -501,12 +494,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                         .proxy(Msg::Page)
                         .proxy(page::Msg::Mgts)
                         .send_msg(page::mgts::Msg::RemoveTarget(x));
-
-                    orders
-                        .proxy(Msg::Page)
-                        .proxy(page::Msg::Filesystem)
-                        .proxy(page::filesystem::Msg::Stratagem)
-                        .send_msg(stratagem::Msg::CheckStratagem);
                 }
                 warp_drive::RecordId::ActiveAlert(_) => {
                     let old = model.activity_health;
@@ -655,12 +642,6 @@ fn handle_record_change(
                             model.records.pacemaker_configuration.clone(),
                             model.records.corosync_configuration.clone(),
                         ));
-
-                    orders
-                        .proxy(Msg::Page)
-                        .proxy(page::Msg::Filesystem)
-                        .proxy(page::filesystem::Msg::Stratagem)
-                        .send_msg(stratagem::Msg::CheckStratagem);
                 }
                 ArcRecord::ManagedTargetMount(x) => {
                     model.records.managed_target_mount.insert(x.id, x);
@@ -710,12 +691,6 @@ fn handle_record_change(
                         .proxy(Msg::Page)
                         .proxy(page::Msg::Filesystem)
                         .proxy(page::filesystem::Msg::Stratagem)
-                        .send_msg(stratagem::Msg::CheckStratagem);
-
-                    orders
-                        .proxy(Msg::Page)
-                        .proxy(page::Msg::Filesystem)
-                        .proxy(page::filesystem::Msg::Stratagem)
                         .send_msg(stratagem::Msg::UpdateStratagemConfig(x));
                 }
                 ArcRecord::Target(x) => {
@@ -736,12 +711,6 @@ fn handle_record_change(
                         .proxy(Msg::Page)
                         .proxy(page::Msg::Target)
                         .send_msg(page::target::Msg::UpdateTarget(Arc::clone(&x)));
-
-                    orders
-                        .proxy(Msg::Page)
-                        .proxy(page::Msg::Filesystem)
-                        .proxy(page::filesystem::Msg::Stratagem)
-                        .send_msg(stratagem::Msg::CheckStratagem);
 
                     orders
                         .proxy(Msg::Page)

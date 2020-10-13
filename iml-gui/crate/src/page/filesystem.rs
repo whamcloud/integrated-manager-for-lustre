@@ -41,7 +41,7 @@ pub struct Model {
 }
 
 impl Model {
-    pub(crate) fn new(fs: &Arc<Filesystem>) -> Self {
+    pub(crate) fn new(use_stratagem: bool, fs: &Arc<Filesystem>) -> Self {
         Self {
             fs: Arc::clone(fs),
             mdts: Default::default(),
@@ -50,7 +50,7 @@ impl Model {
             osts: Default::default(),
             ost_paging: Default::default(),
             rows: Default::default(),
-            stratagem: stratagem::Model::new(Arc::clone(fs)),
+            stratagem: stratagem::Model::new(use_stratagem, Arc::clone(fs)),
             stats: iml_influx::filesystem::Response::default(),
             stats_cancel: None,
             stats_url: format!(r#"/influx?db=iml_stats&q={}"#, iml_influx::filesystem::query(&fs.name)),
@@ -73,14 +73,11 @@ pub enum Msg {
     Noop,
 }
 
-pub fn init(cache: &ArcCache, orders: &mut impl Orders<Msg, GMsg>) {
+pub fn init(cache: &ArcCache, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
     orders.send_msg(Msg::SetTargets(cache.target.values().cloned().collect()));
-    orders
-        .proxy(Msg::Stratagem)
-        .send_msg(stratagem::Msg::CheckStratagem)
-        .send_msg(stratagem::Msg::SetStratagemConfig(
-            cache.stratagem_config.values().cloned().collect(),
-        ));
+
+    stratagem::init(cache, &model.stratagem, &mut orders.proxy(Msg::Stratagem));
+
     orders.send_msg(Msg::FetchStats);
 }
 
@@ -204,7 +201,7 @@ pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl O
                 .proxy(Msg::OstPaging)
                 .send_msg(paging::Msg::SetTotal(model.osts.len()));
         }
-        Msg::Stratagem(msg) => stratagem::update(msg, cache, &mut model.stratagem, &mut orders.proxy(Msg::Stratagem)),
+        Msg::Stratagem(msg) => stratagem::update(msg, &mut model.stratagem, &mut orders.proxy(Msg::Stratagem)),
         Msg::Noop => {}
     }
 }

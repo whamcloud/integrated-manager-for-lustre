@@ -12,7 +12,8 @@ use iml_postgres::{
 use iml_tracing::tracing;
 use iml_wire_types::{
     db::{FidTaskQueue, LustreFid},
-    AgentResult, FidError, FidItem, LustreClient, Task, TaskAction,
+    task::Task,
+    AgentResult, FidError, FidItem, LustreClient, TaskAction,
 };
 use lazy_static::lazy_static;
 use std::{

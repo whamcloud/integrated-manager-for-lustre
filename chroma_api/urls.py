@@ -104,7 +104,6 @@ api.register(chroma_api.lnet_configuration.LNetConfigurationResource())
 api.register(chroma_api.corosync.CorosyncConfigurationResource())
 api.register(chroma_api.pacemaker.PacemakerConfigurationResource())
 api.register(chroma_api.stratagem.StratagemConfigurationResource())
-api.register(chroma_api.stratagem.RunStratagemResource())
 api.register(chroma_api.ntp.NtpConfigurationResource())
 api.register(chroma_api.ticket.TicketResource())
 

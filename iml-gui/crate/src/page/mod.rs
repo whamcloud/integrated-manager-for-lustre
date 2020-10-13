@@ -158,7 +158,7 @@ impl<'a> From<(&ArcCache, &Conf, &Route<'a>)> for Page {
                 .parse()
                 .ok()
                 .and_then(|x| cache.filesystem.get(&x))
-                .map(|x| Self::Filesystem(Box::new(filesystem::Model::new(x))))
+                .map(|x| Self::Filesystem(Box::new(filesystem::Model::new(conf.use_stratagem, x))))
                 .unwrap_or_default(),
             Route::Dashboard => Self::Dashboard(dashboard::Model {
                 sfa_overview: if conf.monitor_sfa {
@@ -283,8 +283,8 @@ impl Page {
             Self::Filesystems(_) => {
                 filesystems::init(cache, &mut orders.proxy(Msg::Filesystems));
             }
-            Self::Filesystem(_) => {
-                filesystem::init(cache, &mut orders.proxy(Msg::Filesystem));
+            Self::Filesystem(m) => {
+                filesystem::init(cache, m, &mut orders.proxy(Msg::Filesystem));
             }
             Self::Mgts(_) => {
                 mgts::init(cache, &mut orders.proxy(Msg::Mgts));
