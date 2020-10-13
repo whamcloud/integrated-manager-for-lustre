@@ -11,8 +11,11 @@ use crate::{
     GMsg,
 };
 use futures::channel::oneshot;
-use iml_graphql_queries::{log, Response, SortDir};
-use iml_wire_types::{db::LogMessageRecord, warp_drive::ArcCache, Host, LogSeverity};
+use iml_graphql_queries::{
+    log::{self, logs::LogMessage},
+    Response, SortDir,
+};
+use iml_wire_types::{warp_drive::ArcCache, Host, LogSeverity};
 use seed::{prelude::*, *};
 use std::{sync::Arc, time::Duration};
 
@@ -179,7 +182,7 @@ fn log_severity<T>(x: LogSeverity) -> Node<T> {
     }
 }
 
-fn log_item_view(log: &LogMessageRecord, cache: &ArcCache) -> Node<Msg> {
+fn log_item_view(log: &LogMessage, cache: &ArcCache) -> Node<Msg> {
     div![
         class![
             C.bg_menu,
@@ -192,15 +195,15 @@ fn log_item_view(log: &LogMessageRecord, cache: &ArcCache) -> Node<Msg> {
             C.my_6,
             C.p_8
         ],
-        div![
-            class![C.text_green_500, C.col_span_3],
-            label_view("Time: "),
-            &log.datetime.format("%H:%M:%S %Y/%m/%d").to_string()
-        ],
-        div![
-            class![C.grid, C.justify_end],
-            log_severity(LogSeverity::from(log.severity))
-        ],
+        // div![
+        //     class![C.text_green_500, C.col_span_3],
+        //     label_view("Time: "),
+        //     &log.datetime.format("%H:%M:%S %Y/%m/%d").to_string()
+        // ],
+        // div![
+        //     class![C.grid, C.justify_end],
+        //     log_severity(LogSeverity::from(log.severity))
+        // ],
         div![class![C.col_span_4], log.message],
         div![
             class![C.col_span_2],

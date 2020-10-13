@@ -201,7 +201,6 @@ impl From<i16> for LogSeverity {
     }
 }
 
-/// An Log record from /api/log/
 #[derive(juniper::GraphQLObject)]
 struct LogMessage {
     pub id: i32,
