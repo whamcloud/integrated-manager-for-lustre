@@ -11,11 +11,8 @@ use crate::{
     GMsg,
 };
 use futures::channel::oneshot;
-use iml_graphql_queries::{
-    log::{self, logs::LogMessage},
-    Response, SortDir,
-};
-use iml_wire_types::{warp_drive::ArcCache, Host, LogSeverity};
+use iml_graphql_queries::{log, Response};
+use iml_wire_types::{warp_drive::ArcCache, Host, LogMessage, LogSeverity, SortDir};
 use seed::{prelude::*, *};
 use std::{sync::Arc, time::Duration};
 
@@ -62,6 +59,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 None,
                 None,
             );
+            log!(query.variables.as_ref().map(|o| &o.dir));
 
             let req = fetch::Request::graphql_query(&query);
 

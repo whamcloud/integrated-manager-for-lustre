@@ -69,6 +69,7 @@ impl RequestExt for fetch::Request {
         Self::api_call(format!("{}/{}", path.to_string(), item.to_string()))
     }
     fn graphql_query<T: serde::Serialize>(x: &T) -> Self {
+        log!(serde_json::to_string_pretty(x).unwrap());
         Self::new("/graphql")
             .with_auth()
             .method(fetch::Method::Post)
