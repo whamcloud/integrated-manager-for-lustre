@@ -149,6 +149,7 @@ device-scanner-srpm:
 		${TARGET}/release/device-scanner-daemon \
 		${TARGET}/release/{history_event,pool_create,pool_destroy,pool_export,pool_import,vdev_add}-scanner \
 		${TARGET}/release/mount-emitter \
+		${TARGET}/release/swap-emitter \
 		${TARGET}/release/uevent-listener \
 		${TARGET}/release/zed-enhancer \
 		${TMPDIR}/release/iml-device-scanner
