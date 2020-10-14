@@ -16,12 +16,12 @@ pub mod logs {
                         facility
                         fqdn
                         message
-                        messageClass
+                        message_class: messageClass
                         severity
                         tag
                     }
                     meta {
-                        totalCount
+                        total_count: totalCount
                     }
                 }
             }
@@ -72,7 +72,6 @@ pub mod logs {
 
     #[derive(Debug, Clone, serde::Deserialize)]
     pub struct Meta {
-        #[serde(rename = "totalCount")]
         pub total_count: i32,
     }
 
@@ -89,7 +88,6 @@ pub mod logs {
         pub facility: i32,
         pub fqdn: String,
         pub message: String,
-        #[serde(rename = "messageClass")]
         pub message_class: MessageClass,
         pub severity: LogSeverity,
         pub tag: String,
