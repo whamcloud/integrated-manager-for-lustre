@@ -22,6 +22,7 @@ RUN yum update -y \
   && yum clean all \
   && yum install -y python python-pip python-devel postgresql96 openssl gcc-c++ \
   && pip install --upgrade pip \
+  && pip install --upgrade setuptools \
   && pip install -r requirements.txt \
   && yum autoremove -y gcc-c++ python-pip python-devel \
   && rm -rf /root/.cache/pip \
