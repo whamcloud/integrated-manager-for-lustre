@@ -20,7 +20,7 @@ COPY --from=builder /build/base.repo .
 RUN yum update -y \
   && yum install -y epel-release https://download.postgresql.org/pub/repos/yum/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm \
   && yum clean all \
-  && yum install -y python python-pip python-devel postgresql96 openssl gcc-c++ \
+  && yum install -y python python-pip python-devel python2-pbr postgresql96 openssl gcc-c++ \
   && pip install -r requirements.txt \
   && yum autoremove -y gcc-c++ python-pip python-devel \
   && rm -rf /root/.cache/pip \
