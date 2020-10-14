@@ -13,6 +13,7 @@ pub mod task;
 pub mod warp_drive;
 
 use chrono::{DateTime, Utc};
+use db::LogMessageRecord;
 use std::{
     cmp::{Ord, Ordering},
     collections::{BTreeMap, BTreeSet, HashMap},
@@ -1237,13 +1238,29 @@ pub struct Substitution {
 }
 
 #[derive(serde::Deserialize, serde::Serialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "postgres-interop", derive(sqlx::Type))]
+#[cfg_attr(feature = "graphql", derive(juniper::GraphQLEnum))]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+#[repr(i16)]
 pub enum MessageClass {
     Normal = 0,
     Lustre = 1,
     LustreError = 2,
     Copytool = 3,
     CopytoolError = 4,
+}
+
+impl From<i16> for MessageClass {
+    fn from(value: i16) -> Self {
+        match value {
+            0 => MessageClass::Normal,
+            1 => MessageClass::Lustre,
+            2 => MessageClass::LustreError,
+            3 => MessageClass::Copytool,
+            4 => MessageClass::CopytoolError,
+            _ => panic!("Invalid variant"),
+        }
+    }
 }
 
 /// Severities from syslog protocol
@@ -1262,8 +1279,10 @@ pub enum MessageClass {
 #[derive(
     serde::Deserialize, serde::Serialize, PartialEq, Eq, Ord, PartialOrd, Clone, Copy, Debug,
 )]
-#[repr(u8)]
+#[cfg_attr(feature = "postgres-interop", derive(sqlx::Type))]
+#[cfg_attr(feature = "graphql", derive(juniper::GraphQLEnum))]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+#[repr(i16)]
 pub enum LogSeverity {
     Emergency = 0,
     Alert = 1,
@@ -1309,6 +1328,60 @@ pub struct Log {
 impl EndpointName for Log {
     fn endpoint_name() -> &'static str {
         "log"
+    }
+}
+
+// A log message from GraphQL endpoint
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+#[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
+pub struct LogMessage {
+    pub id: i32,
+    pub datetime: chrono::DateTime<Utc>,
+    pub facility: i32,
+    pub fqdn: String,
+    pub message: String,
+    pub message_class: MessageClass,
+    pub severity: LogSeverity,
+    pub tag: String,
+}
+
+impl From<LogMessageRecord> for LogMessage {
+    fn from(record: LogMessageRecord) -> Self {
+        Self {
+            id: record.id,
+            datetime: record.datetime,
+            facility: record.facility as i32,
+            fqdn: record.fqdn,
+            message: record.message,
+            message_class: MessageClass::from(record.message_class),
+            severity: LogSeverity::from(record.severity),
+            tag: record.tag,
+        }
+    }
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+#[cfg_attr(feature = "graphql", derive(juniper::GraphQLEnum))]
+#[serde(untagged, rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum SortDir {
+    Asc,
+    Desc,
+}
+
+impl Default for SortDir {
+    fn default() -> Self {
+        Self::Asc
+    }
+}
+
+impl Deref for SortDir {
+    type Target = str;
+
+    fn deref(&self) -> &Self::Target {
+        match self {
+            Self::Asc => "ASC",
+            Self::Desc => "DESC",
+        }
     }
 }
 

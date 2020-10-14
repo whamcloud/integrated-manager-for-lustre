@@ -19,12 +19,12 @@ use iml_wire_types::{
     graphql_duration::GraphQLDuration,
     snapshot::{ReserveUnit, Snapshot, SnapshotInterval, SnapshotRetention},
     task::Task,
-    Command, EndpointName, Job,
+    Command, EndpointName, Job, LogMessage, LogSeverity, MessageClass, SortDir, StratagemReport,
 };
 use itertools::Itertools;
 use juniper::{
     http::{graphiql::graphiql_source, GraphQLRequest},
-    EmptySubscription, FieldError, GraphQLEnum, RootNode, Value,
+    EmptySubscription, FieldError, RootNode, Value,
 };
 use std::{
     collections::{HashMap, HashSet},
@@ -120,114 +120,6 @@ struct BannedResource {
     master_only: bool,
 }
 
-#[derive(GraphQLEnum)]
-enum SortDir {
-    Asc,
-    Desc,
-}
-
-impl Default for SortDir {
-    fn default() -> Self {
-        Self::Asc
-    }
-}
-
-impl Deref for SortDir {
-    type Target = str;
-
-    fn deref(&self) -> &Self::Target {
-        match self {
-            Self::Asc => "asc",
-            Self::Desc => "desc",
-        }
-    }
-}
-
-#[derive(Debug, serde::Serialize)]
-pub struct SendJob<'a, T> {
-    pub class_name: &'a str,
-    pub args: T,
-}
-
-#[derive(GraphQLEnum, sqlx::Type)]
-#[repr(i16)]
-enum MessageClass {
-    Normal = 0,
-    Lustre = 1,
-    LustreError = 2,
-    Copytool = 3,
-    CopytoolError = 4,
-}
-
-impl From<i16> for MessageClass {
-    fn from(value: i16) -> Self {
-        match value {
-            0 => MessageClass::Normal,
-            1 => MessageClass::Lustre,
-            2 => MessageClass::LustreError,
-            3 => MessageClass::Copytool,
-            4 => MessageClass::CopytoolError,
-            _ => panic!("Invalid variant"),
-        }
-    }
-}
-
-#[derive(GraphQLEnum, sqlx::Type)]
-#[repr(i16)]
-enum LogSeverity {
-    Emergency = 0,
-    Alert = 1,
-    Critical = 2,
-    Error = 3,
-    Warning = 4,
-    Notice = 5,
-    Informational = 6,
-    Debug = 7,
-}
-
-impl From<i16> for LogSeverity {
-    fn from(value: i16) -> Self {
-        match value {
-            0 => LogSeverity::Emergency,
-            1 => LogSeverity::Alert,
-            2 => LogSeverity::Critical,
-            3 => LogSeverity::Error,
-            4 => LogSeverity::Warning,
-            5 => LogSeverity::Notice,
-            6 => LogSeverity::Informational,
-            7 => LogSeverity::Debug,
-            _ => panic!("Invalid variant"),
-        }
-    }
-}
-
-#[derive(juniper::GraphQLObject)]
-struct LogMessage {
-    pub id: i32,
-    pub datetime: chrono::DateTime<Utc>,
-    pub facility: i32,
-    pub fqdn: String,
-    pub message: String,
-    pub message_class: MessageClass,
-    pub severity: LogSeverity,
-    pub tag: String,
-}
-
-impl From<LogMessageRecord> for LogMessage {
-    fn from(record: LogMessageRecord) -> Self {
-        Self {
-            id: record.id,
-            datetime: record.datetime,
-            facility: record.facility as i32,
-            fqdn: record.fqdn,
-            message: record.message,
-            message_class: MessageClass::from(record.message_class),
-            severity: LogSeverity::from(record.severity),
-            tag: record.tag,
-        }
-    }
-}
-
 #[derive(juniper::GraphQLObject)]
 struct Meta {
     total_count: i32,
@@ -282,7 +174,7 @@ impl QueryRoot {
                 type
                 FROM corosync_node n
                 ORDER BY
-                    CASE WHEN $1 = 'asc' THEN n.id END ASC,
+                    CASE WHEN $1 = 'ASC' THEN n.id END ASC,
                     CASE WHEN $1 = 'desc' THEN n.id END DESC
                 OFFSET $2 LIMIT $3"#,
             dir.deref(),
@@ -318,7 +210,7 @@ impl QueryRoot {
             r#"
                 SELECT * from target t
                 ORDER BY
-                    CASE WHEN $3 = 'asc' THEN t.name END ASC,
+                    CASE WHEN $3 = 'ASC' THEN t.name END ASC,
                     CASE WHEN $3 = 'desc' THEN t.name END DESC
                 OFFSET $1 LIMIT $2"#,
             offset.unwrap_or(0) as i64,
@@ -415,7 +307,7 @@ impl QueryRoot {
                     SELECT filesystem_name, snapshot_name, create_time, modify_time, snapshot_fsname, mounted, comment FROM snapshot s
                     WHERE filesystem_name = $4 AND ($5::text IS NULL OR snapshot_name = $5)
                     ORDER BY
-                        CASE WHEN $3 = 'asc' THEN s.create_time END ASC,
+                        CASE WHEN $3 = 'ASC' THEN s.create_time END ASC,
                         CASE WHEN $3 = 'desc' THEN s.create_time END DESC
                     OFFSET $1 LIMIT $2"#,
                 offset.unwrap_or(0) as i64,
@@ -465,7 +357,7 @@ impl QueryRoot {
                   AND ($5::TEXT IS NULL OR c.message ILIKE '%' || $5 || '%')
                 GROUP BY c.id
                 ORDER BY
-                    CASE WHEN $3 = 'asc' THEN c.id END ASC,
+                    CASE WHEN $3 = 'ASC' THEN c.id END ASC,
                     CASE WHEN $3 = 'desc' THEN c.id END DESC
                 OFFSET $1 LIMIT $2
             "#,
@@ -602,7 +494,9 @@ impl QueryRoot {
         message_class: Option<Vec<MessageClass>>,
         severity: Option<LogSeverity>,
     ) -> juniper::FieldResult<LogResponse> {
+        tracing::info!("dir: {:?}", dir);
         let dir = dir.unwrap_or_default();
+        tracing::info!("dir: {:?}", dir);
 
         let start_datetime = start_datetime
             .map(|s| s.parse::<chrono::DateTime<Utc>>())
@@ -633,8 +527,8 @@ impl QueryRoot {
                       AND ARRAY[t.message_class] <@ $9
                       AND t.severity <= $10
                     ORDER BY
-                        CASE WHEN $3 = 'asc' THEN t.datetime END ASC,
-                        CASE WHEN $3 = 'desc' THEN t.datetime END DESC
+                        CASE WHEN $3 = 'ASC' THEN t.datetime END ASC,
+                        CASE WHEN $3 = 'DESC' THEN t.datetime END DESC
                     OFFSET $1 LIMIT $2"#,
             offset.unwrap_or(0) as i64,
             limit.map(|x| x as i64),

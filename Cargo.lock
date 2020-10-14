@@ -1729,6 +1729,7 @@ dependencies = [
  "chrono",
  "humantime 2.0.1",
  "iml-wire-types",
+ "juniper",
  "serde",
  "serde_json",
 ]

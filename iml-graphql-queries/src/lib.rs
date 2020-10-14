@@ -72,10 +72,3 @@ impl<T> From<Response<T>> for Result<Data<T>, Errors> {
         }
     }
 }
-
-#[derive(Debug, Clone, serde::Serialize)]
-#[serde(untagged, rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum SortDir {
-    Asc,
-    Desc,
-}

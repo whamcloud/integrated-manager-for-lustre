@@ -3,9 +3,8 @@
 // license that can be found in the LICENSE file.
 
 pub mod logs {
-    use crate::{Query, SortDir};
-    use chrono::Utc;
-    use iml_wire_types::{LogSeverity, MessageClass};
+    use crate::Query;
+    use iml_wire_types::{LogMessage, LogSeverity, MessageClass, SortDir};
 
     pub static QUERY: &str = r#"
             query logs($limit: Int, $offset: Int, $dir: SortDir, $message: String, $fqdn: String, $tag: String, $startDatetime: String, $endDatetime: String, $messageClass: [MessageClass!], $severity: LogSeverity) {
@@ -31,7 +30,7 @@ pub mod logs {
     pub struct Vars {
         limit: Option<usize>,
         offset: Option<usize>,
-        dir: Option<SortDir>,
+        pub dir: Option<SortDir>,
         message: Option<String>,
         fqdn: Option<String>,
         tag: Option<String>,
@@ -79,18 +78,6 @@ pub mod logs {
     pub struct LogResponse {
         pub logs: Vec<LogMessage>,
         pub meta: Meta,
-    }
-
-    #[derive(Debug, Clone, serde::Deserialize)]
-    pub struct LogMessage {
-        pub id: i32,
-        pub datetime: chrono::DateTime<Utc>,
-        pub facility: i32,
-        pub fqdn: String,
-        pub message: String,
-        pub message_class: MessageClass,
-        pub severity: LogSeverity,
-        pub tag: String,
     }
 
     #[derive(Debug, Clone, serde::Deserialize)]
