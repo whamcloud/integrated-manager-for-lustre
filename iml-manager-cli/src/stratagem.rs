@@ -155,7 +155,6 @@ pub struct StratagemCloudsyncData {
     /// Match expression
     #[structopt(short = "e", long = "expression")]
     expression: String,
-    policy: String,
     #[structopt(skip = true)]
     cloudsync: bool,
 }
