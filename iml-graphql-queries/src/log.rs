@@ -30,7 +30,7 @@ pub mod logs {
     pub struct Vars {
         limit: Option<usize>,
         offset: Option<usize>,
-        pub dir: Option<SortDir>,
+        dir: Option<SortDir>,
         message: Option<String>,
         fqdn: Option<String>,
         tag: Option<String>,
