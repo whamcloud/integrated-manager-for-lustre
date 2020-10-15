@@ -1726,10 +1726,8 @@ dependencies = [
 name = "iml-graphql-queries"
 version = "0.2.0"
 dependencies = [
- "chrono",
  "humantime 2.0.1",
  "iml-wire-types",
- "juniper",
  "serde",
  "serde_json",
 ]

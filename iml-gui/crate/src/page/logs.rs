@@ -59,8 +59,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 None,
                 None,
             );
-            log!(query.variables.as_ref().map(|o| &o.dir));
-
             let req = fetch::Request::graphql_query(&query);
 
             orders.perform_cmd(req.fetch_json_data(|x| Msg::LogsFetched(x)));
@@ -68,7 +66,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         Msg::LogsFetched(r) => {
             match r {
                 Ok(Response::Data(d)) => {
-                    log!("Fetched logs: ", d.data.logs.logs.len());
                     orders
                         .proxy(Msg::Page)
                         .send_msg(paging::Msg::SetTotal(d.data.logs.meta.total_count as usize));
