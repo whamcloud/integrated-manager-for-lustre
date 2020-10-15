@@ -1360,7 +1360,7 @@ impl From<LogMessageRecord> for LogMessage {
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 #[cfg_attr(feature = "graphql", derive(juniper::GraphQLEnum))]
-#[serde(untagged, rename_all = "SCREAMING_SNAKE_CASE")]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum SortDir {
     Asc,
     Desc,
