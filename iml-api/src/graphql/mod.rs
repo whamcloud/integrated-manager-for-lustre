@@ -175,7 +175,7 @@ impl QueryRoot {
                 FROM corosync_node n
                 ORDER BY
                     CASE WHEN $1 = 'ASC' THEN n.id END ASC,
-                    CASE WHEN $1 = 'desc' THEN n.id END DESC
+                    CASE WHEN $1 = 'DESC' THEN n.id END DESC
                 OFFSET $2 LIMIT $3"#,
             dir.deref(),
             offset.unwrap_or(0) as i64,
@@ -211,7 +211,7 @@ impl QueryRoot {
                 SELECT * from target t
                 ORDER BY
                     CASE WHEN $3 = 'ASC' THEN t.name END ASC,
-                    CASE WHEN $3 = 'desc' THEN t.name END DESC
+                    CASE WHEN $3 = 'DESC' THEN t.name END DESC
                 OFFSET $1 LIMIT $2"#,
             offset.unwrap_or(0) as i64,
             limit.map(|x| x as i64),
@@ -308,7 +308,7 @@ impl QueryRoot {
                     WHERE filesystem_name = $4 AND ($5::text IS NULL OR snapshot_name = $5)
                     ORDER BY
                         CASE WHEN $3 = 'ASC' THEN s.create_time END ASC,
-                        CASE WHEN $3 = 'desc' THEN s.create_time END DESC
+                        CASE WHEN $3 = 'DESC' THEN s.create_time END DESC
                     OFFSET $1 LIMIT $2"#,
                 offset.unwrap_or(0) as i64,
                 limit.map(|x| x as i64),
@@ -358,7 +358,7 @@ impl QueryRoot {
                 GROUP BY c.id
                 ORDER BY
                     CASE WHEN $3 = 'ASC' THEN c.id END ASC,
-                    CASE WHEN $3 = 'desc' THEN c.id END DESC
+                    CASE WHEN $3 = 'DESC' THEN c.id END DESC
                 OFFSET $1 LIMIT $2
             "#,
             offset.unwrap_or(0) as i64,
