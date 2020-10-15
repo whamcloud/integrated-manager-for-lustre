@@ -919,7 +919,7 @@ pub(crate) fn endpoint(
 ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
     let graphql_route = warp::path!("graphql")
         .and(warp::post())
-        .and(schema_filter)
+        .and(schema_filter.clone())
         .and(ctx_filter)
         .and(warp::body::json())
         .and_then(graphql);
@@ -928,7 +928,12 @@ pub(crate) fn endpoint(
         .and(warp::get())
         .map(|| warp::reply::html(graphiql_source("graphql", None)));
 
-    graphql_route.or(graphiql_route)
+    let graphql_schema_route = warp::path!("graphql_schema")
+        .and(warp::get())
+        .and(schema_filter)
+        .map(|schema: Arc<Schema>| schema.as_schema_language());
+
+    graphql_route.or(graphiql_route).or(graphql_schema_route)
 }
 
 async fn get_fs_target_resources(
