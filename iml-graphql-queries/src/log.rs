@@ -76,7 +76,7 @@ pub mod logs {
 
     #[derive(Debug, Clone, serde::Deserialize)]
     pub struct LogResponse {
-        pub logs: Vec<LogMessage>,
+        pub data: Vec<LogMessage>,
         pub meta: Meta,
     }
 

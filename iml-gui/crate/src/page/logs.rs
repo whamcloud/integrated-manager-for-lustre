@@ -141,7 +141,7 @@ pub fn view(model: &Model, cache: &ArcCache) -> impl View<Msg> {
             ],
             div![loading::view()]
         ],
-        State::Loaded(logs) => div![
+        State::Loaded(response) => div![
             class![C.bg_menu_active],
             div![
                 class![C.px_6, C.py_4, C.bg_blue_1000],
@@ -158,7 +158,7 @@ pub fn view(model: &Model, cache: &ArcCache) -> impl View<Msg> {
                     ]
                 ],
             ],
-            logs.logs.logs.iter().map(|x| { log_item_view(x, cache) })
+            response.logs.data.iter().map(|x| { log_item_view(x, cache) })
         ],
     }]
 }
