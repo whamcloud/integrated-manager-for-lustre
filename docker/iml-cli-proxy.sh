@@ -7,4 +7,4 @@ if [ -n "$RUST_LOG" ]; then
 	ENVOPT="-e RUST_LOG=$RUST_LOG"
 fi
 
-docker exec -i $TTYOPT $ENVOPT iml_iml-manager-cli.1.$trailer /usr/bin/iml "${@:1}"
+docker exec -i $TTYOPT $ENVOPT iml_iml-manager-cli.1.$trailer iml "${@:1}"
