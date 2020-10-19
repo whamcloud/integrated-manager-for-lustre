@@ -71,7 +71,11 @@ impl Config {
             slow = self.cold_pool,
             extend = mailbox_extend,
             resync = mailbox_resync,
-            heatfn = if let Some(val) = self.heatfn { format!("{}", val) } else { "none".into() },
+            heatfn = if let Some(val) = self.heatfn {
+                format!("{}", val)
+            } else {
+                "none".into()
+            },
         )
     }
 }
@@ -127,6 +131,7 @@ mod lamigo_tests {
             mountpoint: "/mnt/spfs".into(),
             mailbox_extend: "mailbox-extend".into(),
             mailbox_resync: "mailbox-resync".into(),
+            heatfn: None,
         };
         let fmt1 = "/etc/systemd/system/lamigo-{fs}-{mdt}.service";
         assert_eq!(
@@ -156,6 +161,7 @@ mod lamigo_tests {
             mountpoint: "/mnt/spfs".into(),
             mailbox_extend: "mailbox-extend".into(),
             mailbox_resync: "mailbox-resync".into(),
+            heatfn: None,
         };
 
         assert_eq!(

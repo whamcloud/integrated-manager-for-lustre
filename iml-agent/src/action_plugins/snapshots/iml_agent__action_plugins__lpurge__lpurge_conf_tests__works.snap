@@ -3,10 +3,9 @@ source: iml-agent/src/action_plugins/lpurge.rs
 expression: cnt
 ---
 device=lima-OST0010
-dryrun=true
 freehi=123
 freelo=60
-listen_socket=foobar
+iml_socket=foobar
 max_jobs=0
 pool=lima.santiago
 
