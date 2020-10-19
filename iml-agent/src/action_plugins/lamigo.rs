@@ -44,6 +44,9 @@ pub struct Config {
     #[structopt(long)]
     /// IML mailbox name, e.g. `mailbox2`, where `lamigo` will write FIDs for mirror resync
     mailbox_resync: String,
+
+    #[structopt(long)]
+    heatfn: Option<u32>,
 }
 
 impl Config {
@@ -57,6 +60,7 @@ impl Config {
              tgt={slow}\n\
              iml-ex-socket={extend}\n\
              iml-re-socket={resync}\n\
+             heatfn={heatfn}\n\
              ",
             fs = self.fs,
             mdt = self.mdt,
@@ -67,6 +71,7 @@ impl Config {
             slow = self.cold_pool,
             extend = mailbox_extend,
             resync = mailbox_resync,
+            heatfn = if let Some(val) = self.heatfn { format!("{}", val) } else { "none".into() },
         )
     }
 }
