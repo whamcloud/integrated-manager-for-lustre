@@ -18,6 +18,7 @@ use std::{
     cmp::{Ord, Ordering},
     collections::{BTreeMap, BTreeSet, HashMap},
     convert::TryFrom,
+    convert::TryInto,
     fmt, io,
     ops::Deref,
     sync::Arc,
@@ -1250,15 +1251,17 @@ pub enum MessageClass {
     CopytoolError = 4,
 }
 
-impl From<i16> for MessageClass {
-    fn from(value: i16) -> Self {
+impl TryFrom<i16> for MessageClass {
+    type Error = &'static str;
+
+    fn try_from(value: i16) -> Result<Self, Self::Error> {
         match value {
-            0 => MessageClass::Normal,
-            1 => MessageClass::Lustre,
-            2 => MessageClass::LustreError,
-            3 => MessageClass::Copytool,
-            4 => MessageClass::CopytoolError,
-            _ => panic!("Invalid variant"),
+            0 => Ok(MessageClass::Normal),
+            1 => Ok(MessageClass::Lustre),
+            2 => Ok(MessageClass::LustreError),
+            3 => Ok(MessageClass::Copytool),
+            4 => Ok(MessageClass::CopytoolError),
+            _ => Err("Invalid variant for MessageClass"),
         }
     }
 }
@@ -1294,18 +1297,20 @@ pub enum LogSeverity {
     Debug = 7,
 }
 
-impl From<i16> for LogSeverity {
-    fn from(value: i16) -> Self {
+impl TryFrom<i16> for LogSeverity {
+    type Error = &'static str;
+
+    fn try_from(value: i16) -> Result<Self, <Self as TryFrom<i16>>::Error> {
         match value {
-            0 => LogSeverity::Emergency,
-            1 => LogSeverity::Alert,
-            2 => LogSeverity::Critical,
-            3 => LogSeverity::Error,
-            4 => LogSeverity::Warning,
-            5 => LogSeverity::Notice,
-            6 => LogSeverity::Informational,
-            7 => LogSeverity::Debug,
-            _ => panic!("Invalid variant"),
+            0 => Ok(LogSeverity::Emergency),
+            1 => Ok(LogSeverity::Alert),
+            2 => Ok(LogSeverity::Critical),
+            3 => Ok(LogSeverity::Error),
+            4 => Ok(LogSeverity::Warning),
+            5 => Ok(LogSeverity::Notice),
+            6 => Ok(LogSeverity::Informational),
+            7 => Ok(LogSeverity::Debug),
+            _ => Err("Invalid variant for LogSeverity"),
         }
     }
 }
@@ -1345,18 +1350,20 @@ pub struct LogMessage {
     pub tag: String,
 }
 
-impl From<LogMessageRecord> for LogMessage {
-    fn from(record: LogMessageRecord) -> Self {
-        Self {
+impl TryFrom<LogMessageRecord> for LogMessage {
+    type Error = &'static str;
+
+    fn try_from(record: LogMessageRecord) -> Result<Self, Self::Error> {
+        Ok(Self {
             id: record.id,
             datetime: record.datetime,
             facility: record.facility as i32,
             fqdn: record.fqdn,
             message: record.message,
-            message_class: MessageClass::from(record.message_class),
-            severity: LogSeverity::from(record.severity),
+            message_class: record.message_class.try_into()?,
+            severity: record.severity.try_into()?,
             tag: record.tag,
-        }
+        })
     }
 }
 

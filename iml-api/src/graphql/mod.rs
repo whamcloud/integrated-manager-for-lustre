@@ -543,7 +543,10 @@ impl QueryRoot {
         )
         .fetch_all(&context.pg_pool)
         .await?;
-        let xs: Vec<LogMessage> = results.into_iter().map(|x| x.into()).collect();
+        let xs: Vec<LogMessage> = results
+            .into_iter()
+            .map(|x| x.try_into())
+            .collect::<Result<_, _>>()?;
 
         let total_count = sqlx::query!(
             "SELECT chroma_core_logmessage_id_seq.last_value FROM chroma_core_logmessage_id_seq;"
