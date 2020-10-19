@@ -78,6 +78,41 @@ pub mod logs {
             self
         }
 
+        pub fn with_message(mut self, message: impl ToString) -> Self {
+            self.vars.message = Some(message.to_string());
+            self
+        }
+
+        pub fn with_fqdn(mut self, fqdn: impl ToString) -> Self {
+            self.vars.fqdn = Some(fqdn.to_string());
+            self
+        }
+
+        pub fn with_tag(mut self, tag: impl ToString) -> Self {
+            self.vars.tag = Some(tag.to_string());
+            self
+        }
+
+        pub fn with_start_datetime(mut self, start_datetime: impl ToString) -> Self {
+            self.vars.start_datetime = Some(start_datetime.to_string());
+            self
+        }
+
+        pub fn with_end_datetime(mut self, end_datetime: impl ToString) -> Self {
+            self.vars.end_datetime = Some(end_datetime.to_string());
+            self
+        }
+
+        pub fn with_message_class(mut self, message_class: &[MessageClass]) -> Self {
+            self.vars.message_class = Some(message_class.to_vec());
+            self
+        }
+
+        pub fn with_severity(mut self, severity: &LogSeverity) -> Self {
+            self.vars.severity = Some(severity.clone());
+            self
+        }
+
         pub fn build(self) -> Query<Vars> {
             Query {
                 query: QUERY.to_string(),
