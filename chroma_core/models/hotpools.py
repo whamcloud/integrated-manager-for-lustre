@@ -125,7 +125,7 @@ class ConfigureHotpoolJob(StateChangeJob):
                 (
                     CreateClonedClientStep,
                     {
-                        "host": host.fqdn,
+                        "host": host,
                         "mountpoint": mp,
                         "fs_name": fs.name,
                     },
@@ -216,7 +216,7 @@ class StartHotpoolJob(StateChangeJob):
         steps = []
         fs = self.hotpool_configuration.filesystem
         for host in (l[0] for l in fs.get_server_groups()):
-            steps.append((StartResourceStep, {"host": host.fqdn, "ha_label": self.hotpool_configuration.ha_label}))
+            steps.append((StartResourceStep, {"host": host, "ha_label": self.hotpool_configuration.ha_label}))
             # @@ wait for component starts?
 
         return steps
@@ -249,7 +249,7 @@ class StopHotpoolJob(StateChangeJob):
         fs = self.hotpool_configuration.filesystem
 
         for host in (l[0] for l in fs.get_server_groups()):
-            steps.append((StopResourceStep, {"host": host.fqdn, "ha_label": self.hotpool_configuration.ha_label}))
+            steps.append((StopResourceStep, {"host": host, "ha_label": self.hotpool_configuration.ha_label}))
 
         return steps
 
@@ -289,7 +289,7 @@ class RemoveHotpoolJob(StateChangeJob):
         fs = self.hotpool_configuration.filesystem
         mp = self.hotpool_configuration.mountpoint
         for host in (l[0] for l in fs.get_server_groups()):
-            steps.append((RemoveClonedClientStep, {"host": host.fqdn, "fs_name": fs.name, "mountpoint": mp}))
+            steps.append((RemoveClonedClientStep, {"host": host, "fs_name": fs.name, "mountpoint": mp}))
 
         for host in fs.get_servers():
             steps.append((UnmountStep, {"host": host.fqdn, "mountpoint": mp}))
@@ -344,7 +344,7 @@ class RemoveConfiguredHotpoolJob(StateChangeJob):
         fs = self.hotpool_configuration.filesystem
         mp = self.hotpool_configuration.mountpoint
         for host in (l[0] for l in fs.get_server_groups()):
-            steps.append((RemoveClonedClientStep, {"host": host.fqdn, "fs_name": fs.name, "mountpoint": mp}))
+            steps.append((RemoveClonedClientStep, {"host": host, "fs_name": fs.name, "mountpoint": mp}))
 
         for host in fs.get_servers():
             steps.append((UnmountStep, {"host": host.fqdn, "mountpoint": mp}))

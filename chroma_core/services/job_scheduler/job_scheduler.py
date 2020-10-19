@@ -2093,6 +2093,7 @@ class JobScheduler(object):
                     extend_task.start = task_data["start"]
                     extend_task.state = task_data["state"]
                     extend_task.args = task_data["args"]
+                    extend_task.save(update_fields=["args", "filesystem", "start", "state"])
                 except Task.DoesNotExist:
                     extend_task = Task.objects.create(**task_data)
                 job_list.append({"class_name": "CreateTaskJob", "args": {"task": extend_task}})
@@ -2112,6 +2113,7 @@ class JobScheduler(object):
                     resync_task.filesystem = filesystem
                     resync_task.start = task_data["start"]
                     resync_task.state = task_data["state"]
+                    resync_task.save(update_fields=["filesystem", "start", "state"])
                 except Task.DoesNotExist:
                     resync_task = Task.objects.create(**task_data)
                 job_list.append({"class_name": "CreateTaskJob", "args": {"task": resync_task}})
@@ -2148,6 +2150,7 @@ class JobScheduler(object):
                     task.filesystem = filesystem
                     task.start = task_data["start"]
                     task.state = task_data["state"]
+                    task.save(update_fields=["filesystem", "start", "state"])
                 except Task.DoesNotExist:
                     task = Task.objects.create(**task_data)
                 job_list.append({"class_name": "CreateTaskJob", "args": {"task": task}})
