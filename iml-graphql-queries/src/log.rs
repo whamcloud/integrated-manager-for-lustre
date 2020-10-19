@@ -120,33 +120,4 @@ pub mod logs {
             }
         }
     }
-
-    pub fn build(
-        limit: Option<usize>,
-        offset: Option<usize>,
-        dir: Option<SortDir>,
-        message: Option<String>,
-        fqdn: Option<String>,
-        tag: Option<String>,
-        start_datetime: Option<String>,
-        end_datetime: Option<String>,
-        message_class: Option<Vec<MessageClass>>,
-        severity: Option<LogSeverity>,
-    ) -> Query<Vars> {
-        Query {
-            query: QUERY.to_string(),
-            variables: Some(Vars {
-                limit,
-                offset,
-                dir,
-                message,
-                fqdn,
-                tag,
-                start_datetime,
-                end_datetime,
-                message_class,
-                severity,
-            }),
-        }
-    }
 }
