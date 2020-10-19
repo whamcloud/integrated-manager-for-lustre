@@ -12,7 +12,7 @@ use crate::{
 };
 use futures::channel::oneshot;
 use iml_graphql_queries::{log, Response};
-use iml_wire_types::{warp_drive::ArcCache, Host, LogMessage, LogSeverity, SortDir, logs};
+use iml_wire_types::{logs, warp_drive::ArcCache, Host, LogMessage, LogSeverity, SortDir};
 use seed::{prelude::*, *};
 use std::{sync::Arc, time::Duration};
 
