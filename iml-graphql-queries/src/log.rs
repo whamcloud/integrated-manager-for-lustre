@@ -4,12 +4,12 @@
 
 pub mod logs {
     use crate::Query;
-    use iml_wire_types::{LogMessage, LogSeverity, MessageClass, SortDir};
+    use iml_wire_types::{LogSeverity, MessageClass, SortDir};
 
     pub static QUERY: &str = r#"
             query logs($limit: Int, $offset: Int, $dir: SortDir, $message: String, $fqdn: String, $tag: String, $startDatetime: String, $endDatetime: String, $messageClass: [MessageClass!], $severity: LogSeverity) {
                 logs(limit: $limit, offset: $offset, dir: $dir, message: $message, fqdn: $fqdn, tag: $tag, startDatetime: $startDatetime, endDatetime: $endDatetime, messageClass: $messageClass, severity: $severity) {
-                    logs {
+                    data {
                         id
                         datetime
                         facility
@@ -40,6 +40,52 @@ pub mod logs {
         severity: Option<LogSeverity>,
     }
 
+    #[derive(Debug)]
+    pub struct Builder {
+        vars: Vars,
+    }
+
+    impl Builder {
+        pub fn new() -> Self {
+            Self {
+                vars: Vars {
+                    limit: None,
+                    offset: None,
+                    dir: None,
+                    message: None,
+                    fqdn: None,
+                    tag: None,
+                    start_datetime: None,
+                    end_datetime: None,
+                    message_class: None,
+                    severity: None,
+                },
+            }
+        }
+
+        pub fn with_limit(mut self, limit: usize) -> Self {
+            self.vars.limit = Some(limit);
+            self
+        }
+
+        pub fn with_offset(mut self, offset: usize) -> Self {
+            self.vars.offset = Some(offset);
+            self
+        }
+
+        pub fn with_dir(mut self, dir: SortDir) -> Self {
+            self.vars.dir = Some(dir);
+            self
+        }
+
+        pub fn build(self) -> Query<Vars> {
+            Query {
+                query: QUERY.to_string(),
+                variables: Some(self.vars),
+            }
+        }
+    }
+
     pub fn build(
         limit: Option<usize>,
         offset: Option<usize>,
@@ -67,21 +113,5 @@ pub mod logs {
                 severity,
             }),
         }
-    }
-
-    #[derive(Debug, Clone, serde::Deserialize)]
-    pub struct Meta {
-        pub total_count: i32,
-    }
-
-    #[derive(Debug, Clone, serde::Deserialize)]
-    pub struct LogResponse {
-        pub data: Vec<LogMessage>,
-        pub meta: Meta,
-    }
-
-    #[derive(Debug, Clone, serde::Deserialize)]
-    pub struct Resp {
-        pub logs: LogResponse,
     }
 }

@@ -12,7 +12,7 @@ use crate::{
 };
 use futures::channel::oneshot;
 use iml_graphql_queries::{log, Response};
-use iml_wire_types::{warp_drive::ArcCache, Host, LogMessage, LogSeverity, SortDir};
+use iml_wire_types::{warp_drive::ArcCache, Host, LogMessage, LogSeverity, SortDir, logs};
 use seed::{prelude::*, *};
 use std::{sync::Arc, time::Duration};
 
@@ -26,7 +26,7 @@ pub struct Model {
 pub enum State {
     Loading,
     Fetching,
-    Loaded(log::logs::Resp),
+    Loaded(logs::Resp),
 }
 
 impl Default for State {
@@ -37,7 +37,7 @@ impl Default for State {
 
 #[derive(Clone, Debug)]
 pub enum Msg {
-    LogsFetched(fetch::ResponseDataResult<Response<log::logs::Resp>>),
+    LogsFetched(fetch::ResponseDataResult<Response<logs::Resp>>),
     FetchOffset,
     Loop,
     Page(paging::Msg),
@@ -47,18 +47,11 @@ pub enum Msg {
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
     match msg {
         Msg::FetchOffset => {
-            let query = log::logs::build(
-                Some(model.pager.limit()),
-                Some(model.pager.offset()),
-                Some(SortDir::Desc),
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-            );
+            let builder = log::logs::Builder::new()
+                .with_limit(model.pager.limit())
+                .with_offset(model.pager.offset())
+                .with_dir(SortDir::Desc);
+            let query = builder.build();
             let req = fetch::Request::graphql_query(&query);
 
             orders.perform_cmd(req.fetch_json_data(|x| Msg::LogsFetched(x)));

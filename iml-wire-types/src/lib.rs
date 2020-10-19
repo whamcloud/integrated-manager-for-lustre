@@ -1392,6 +1392,29 @@ impl Deref for SortDir {
     }
 }
 
+pub mod logs {
+    use crate::LogMessage;
+
+    #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+    #[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
+    pub struct Meta {
+        pub total_count: i32,
+    }
+
+    #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+    #[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
+    pub struct LogResponse {
+        pub data: Vec<LogMessage>,
+        pub meta: Meta,
+    }
+
+    #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+    #[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
+    pub struct Resp {
+        pub logs: LogResponse,
+    }
+}
+
 /// A `StratagemConfiguration` record from `api/stratagem_configuration`.
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct StratagemConfiguration {

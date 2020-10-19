@@ -17,6 +17,8 @@ use iml_rabbit::{ImlRabbitError, Pool};
 use iml_wire_types::{
     db::LogMessageRecord,
     graphql_duration::GraphQLDuration,
+    logs::LogResponse,
+    logs::Meta,
     snapshot::{ReserveUnit, Snapshot, SnapshotInterval, SnapshotRetention},
     task::Task,
     Command, EndpointName, Job, LogMessage, LogSeverity, MessageClass, SortDir, StratagemReport,
@@ -118,17 +120,6 @@ struct BannedResource {
     weight: i32,
     /// Is master only
     master_only: bool,
-}
-
-#[derive(juniper::GraphQLObject)]
-struct Meta {
-    total_count: i32,
-}
-
-#[derive(juniper::GraphQLObject)]
-struct LogResponse {
-    logs: Vec<LogMessage>,
-    meta: Meta,
 }
 
 pub(crate) struct QueryRoot;
@@ -556,7 +547,7 @@ impl QueryRoot {
         .last_value;
 
         Ok(LogResponse {
-            logs: xs,
+            data: xs,
             meta: Meta {
                 // FIXME: Convert to i32 in some other way?
                 total_count: total_count.try_into().unwrap(),
