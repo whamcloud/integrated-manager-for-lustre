@@ -384,13 +384,13 @@ pub fn find_targets<'a>(
 
             let fs_uuid = device.get_fs_uuid()?;
 
-            Some((fqdn, mntpnt, dev_id, fs_uuid, target))
+            Some((fqdn, mntpnt, dev_id, dev, fs_uuid, target))
         })
         .collect();
 
     let xs: Vec<_> = xs
         .into_iter()
-        .filter_map(|(fqdn, mntpnt, dev_id, fs_uuid, target)| {
+        .filter_map(|(fqdn, mntpnt, dev_id, dev_path, fs_uuid, target)| {
             let ys: Vec<_> = device_index
                 .0
                 .iter()
@@ -416,16 +416,18 @@ pub fn find_targets<'a>(
                 [vec![*host_id], ys].concat(),
                 mntpnt,
                 fs_uuid,
+                dev_path,
                 target,
             ))
         })
         .collect();
 
     xs.into_iter()
-        .map(|(fqdn, ids, mntpnt, fs_uuid, target)| Target {
+        .map(|(fqdn, ids, mntpnt, fs_uuid, dev_path, target)| Target {
             state: "mounted".into(),
             active_host_id: Some(*fqdn),
             host_ids: ids,
+            dev_path: Some(dev_path.0.to_string_lossy().to_string()),
             filesystems: target_to_fs_map
                 .get(target)
                 .map(|xs| {
@@ -451,6 +453,7 @@ pub fn find_targets<'a>(
 pub struct Target {
     pub state: String,
     pub name: String,
+    pub dev_path: Option<String>,
     pub active_host_id: Option<i32>,
     pub host_ids: Vec<i32>,
     pub filesystems: Vec<String>,
@@ -623,6 +626,7 @@ mod tests {
             Target {
                 state: "mounted".into(),
                 name: "mdt1".into(),
+                dev_path: None,
                 active_host_id: Some(1),
                 host_ids: vec![2],
                 filesystems: vec!["fs1".to_string()],
@@ -632,6 +636,7 @@ mod tests {
             Target {
                 state: "mounted".into(),
                 name: "ost1".into(),
+                dev_path: Some("/dev/mapper/mpathz".to_string()),
                 active_host_id: Some(3),
                 host_ids: vec![4],
                 filesystems: vec!["fs1".to_string()],
@@ -652,6 +657,7 @@ mod tests {
         let t = Target {
             state: "mounted".into(),
             name: "mdt1".into(),
+            dev_path: None,
             active_host_id: Some(1),
             host_ids: vec![2],
             filesystems: vec!["fs1".to_string()],
@@ -665,6 +671,7 @@ mod tests {
             Target {
                 state: "mounted".into(),
                 name: "mdt2".into(),
+                dev_path: None,
                 active_host_id: Some(2),
                 host_ids: vec![1],
                 filesystems: vec!["fs1".to_string()],
@@ -674,6 +681,7 @@ mod tests {
             Target {
                 state: "mounted".into(),
                 name: "ost1".into(),
+                dev_path: None,
                 active_host_id: Some(3),
                 host_ids: vec![4],
                 filesystems: vec!["fs1".to_string()],
@@ -694,6 +702,7 @@ mod tests {
         let t = Target {
             state: "mounted".into(),
             name: "mdt1".into(),
+            dev_path: None,
             active_host_id: Some(1),
             host_ids: vec![2],
             filesystems: vec!["fs1".into()],
