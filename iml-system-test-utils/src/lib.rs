@@ -725,7 +725,8 @@ pub async fn test_stratagem_taskqueue(config: Config) -> Result<Config, TestErro
             needs_cleanup: false,
         },
     );
-    ssh::graphql_call(&config, &q).await?;
+
+    ssh::graphql_call::<_, task::create::Resp>(&config, &q).await?;
 
     // TODO wait for command to complete
     delay_for(Duration::from_secs(20)).await;
