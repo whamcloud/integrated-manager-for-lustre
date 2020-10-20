@@ -4,12 +4,15 @@
 
 use crate::{
     auth, breakpoints,
-    components::{breadcrumbs, ddn_logo, ddn_logo_lettering, font_awesome, restrict, whamcloud_logo},
+    components::{
+        ai_200x, ai_400x, ai_7990x, breadcrumbs, ddn_logo, ddn_logo_lettering, exa5, font_awesome, restrict,
+        whamcloud_logo,
+    },
     generated::css_classes::C,
     MergeAttrs, Model, Msg, Route, SessionExt,
     Visibility::*,
 };
-use iml_wire_types::{Branding, GroupType};
+use iml_wire_types::{Branding, DdnBranding, GroupType};
 use seed::{prelude::*, *};
 
 fn menu_icon<T>(icon_name: &str) -> Node<T> {
@@ -203,7 +206,13 @@ fn logo_nav_view<T>(branding: Branding) -> Node<T> {
             ddn_logo_full(),
             span![
                 class![C.font_semibold, C.text_2xl, C.tracking_tight, C.ml_2],
-                ddn_brand.to_string()
+                match ddn_brand {
+                    DdnBranding::AI200X => ai_200x().merge_attrs(class![C.h_8, C.mr_1]),
+                    DdnBranding::AI400X => ai_400x().merge_attrs(class![C.h_8, C.mr_1]),
+                    DdnBranding::AI7990X => ai_7990x().merge_attrs(class![C.h_8, C.mr_1]),
+                    DdnBranding::Exascaler => exa5().merge_attrs(class![C.h_8, C.mr_1]),
+                    _ => plain![ddn_brand.to_string()],
+                }
             ],
         ),
     };

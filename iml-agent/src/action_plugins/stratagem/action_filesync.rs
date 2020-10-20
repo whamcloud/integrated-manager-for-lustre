@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{agent_error::ImlAgentError, lustre::search_rootpath};
+use crate::{agent_error::ImlAgentError, env, lustre::search_rootpath};
 use futures::{future::try_join_all, future::Future, stream, StreamExt, TryStreamExt};
 use iml_wire_types::{FidError, FidItem};
 use liblustreapi::LlapiFid;
@@ -26,7 +26,6 @@ fn do_rsync<'a>(
             let output = Command::new("rsync")
                 .arg("-a")
                 .arg("-t")
-                .arg("-X")
                 .arg(&work.src_file)
                 .arg(&work.dest_file)
                 .output()
@@ -41,8 +40,9 @@ fn do_rsync<'a>(
         .chunks(10)
         .map(Ok)
         .try_fold(vec![], |mut acc, xs| async {
-            let xs = try_join_all(xs).await?;
+            let mut xs = try_join_all(xs).await?;
 
+            xs.retain(|x| x.errno != 0);
             acc.extend(xs);
 
             Ok::<_, ImlAgentError>(acc)
@@ -57,6 +57,8 @@ async fn archive_fids(
     let mut result = vec![];
 
     let mut rsync_list: Vec<Work> = vec![];
+    let mpi_path = format!("{}/mpirun", env::get_openmpi_path());
+    let mpi_count = env::get_openmpi_count();
 
     for fid in fid_list {
         let fid_path = match llapi.fid2path(&fid.fid) {
@@ -81,10 +83,12 @@ async fn archive_fids(
          * and big files, otherwise just use rsync
          */
         if md.is_dir() || (md.len() > LARGEFILE) {
-            let output = Command::new("/usr/lib64/openmpi/bin/mpirun")
+            let output = Command::new(&mpi_path)
+                .arg("--allow-run-as-root")
+                .arg("-c")
+                .arg(format!("{}", mpi_count))
                 .arg("--hostfile")
                 .arg("/etc/iml/filesync-hostfile")
-                .arg("--allow-run-as-root")
                 .arg("dsync")
                 .arg("-S")
                 .arg(src_file)
@@ -136,6 +140,8 @@ async fn restore_fids(
     fid_list: Vec<FidItem>,
 ) -> Result<Vec<FidError>, ImlAgentError> {
     let mut result = vec![];
+    let mpi_path = format!("{}/mpirun", env::get_openmpi_path());
+    let mpi_count = env::get_openmpi_count();
 
     for fid in fid_list {
         let fid_path = llapi.fid2path(&fid.fid)?;
@@ -152,10 +158,12 @@ async fn restore_fids(
          */
         let output;
         if md.is_dir() || (md.len() > LARGEFILE) {
-            output = Command::new("mpirun")
+            output = Command::new(&mpi_path)
+                .arg("--allow-run-as-root")
+                .arg("-c")
+                .arg(format!("{}", mpi_count))
                 .arg("--hostfile")
                 .arg("/etc/iml/filesync-hostfile")
-                .arg("--allow-run-as-root")
                 .arg("dsync")
                 .arg("-S")
                 .arg(dest_file)
@@ -188,7 +196,7 @@ async fn restore_fids(
 }
 
 arg_enum! {
-    #[derive(Debug, serde::Deserialize, Clone, Copy)]
+    #[derive(Debug, serde::Deserialize, Clone, Copy, PartialEq)]
     #[serde(rename_all = "lowercase")]
     pub enum ActionType {
     Push,

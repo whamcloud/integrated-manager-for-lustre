@@ -44,7 +44,9 @@ HTTP_API_PROXY_PASS = "http://{}:{}".format(PROXY_HOST, HTTP_API_PORT)
 
 IML_API_PORT = 8004
 
-IML_API_PROXY_PASS = "http://{}:{}".format(PROXY_HOST, IML_API_PORT)
+IML_API_HOST = os.getenv("IML_API_HOST", PROXY_HOST)
+
+IML_API_PROXY_PASS = "http://{}:{}".format(IML_API_HOST, IML_API_PORT)
 
 WARP_DRIVE_PORT = 8890
 
@@ -99,8 +101,6 @@ BRANDING = os.getenv("BRANDING", "Whamcloud")
 EXA_VERSION = os.getenv("EXA_VERSION")
 
 USE_STRATAGEM = os.getenv("USE_STRATAGEM", "false")
-
-USE_SNAPSHOTS = os.getenv("USE_SNAPSHOTS", "false")
 
 ALLOWED_HOSTS = ["*"]
 

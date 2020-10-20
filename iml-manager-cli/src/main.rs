@@ -6,6 +6,7 @@ use iml_manager_cli::{
     api::{self, api_cli, graphql_cli},
     display_utils::display_error,
     filesystem::{self, filesystem_cli},
+    selfname,
     server::{self, server_cli},
     snapshot::{self, snapshot_cli},
     stratagem::{self, stratagem_cli},
@@ -13,11 +14,11 @@ use iml_manager_cli::{
 };
 
 use std::process::exit;
+use structopt::clap::Shell;
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
-#[structopt(name = "iml", setting = structopt::clap::AppSettings::ColoredHelp)]
-/// The Integrated Manager for Lustre CLI
+#[structopt(setting = structopt::clap::AppSettings::ColoredHelp)]
 pub enum App {
     #[structopt(name = "stratagem")]
     /// Work with Stratagem server
@@ -43,7 +44,7 @@ pub enum App {
         #[structopt(subcommand)]
         command: snapshot::SnapshotCommand,
     },
-    #[structopt(name = "update_repo")]
+    #[structopt(name = "update-repo")]
     /// Update Agent repo files
     UpdateRepoFile(update_repo_file::UpdateRepoFileHosts),
 
@@ -54,17 +55,34 @@ pub enum App {
     #[structopt(name = "debugql", setting = structopt::clap::AppSettings::Hidden)]
     /// Direct GraphQL Access (for testing and debug)
     DebugQl(api::GraphQlCommand),
+
+    #[structopt(name = "shell-completion", setting = structopt::clap::AppSettings::Hidden)]
+    /// Generate shell completion script
+    Shell {
+        shell: Shell,
+        #[structopt(short = "e", long = "executable", default_value = "iml")]
+        exe: String,
+        #[structopt(short = "o", long = "output")]
+        output: Option<String>,
+    },
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     iml_tracing::init();
 
-    let matches = App::from_args();
+    let name = selfname(None).unwrap_or_else(|| "iml".to_string());
+
+    let matches = App::from_clap(&App::clap().bin_name(&name).name(&name).get_matches());
 
     tracing::debug!("Matching args {:?}", matches);
 
-    dotenv::from_path("/var/lib/chroma/iml-settings.conf").expect("Could not load cli env");
+    match matches {
+        App::Shell { .. } => (),
+        _ => {
+            dotenv::from_path("/var/lib/chroma/iml-settings.conf").expect("Could not load cli env")
+        }
+    }
 
     let r = match matches {
         App::DebugApi(command) => api_cli(command).await,
@@ -74,6 +92,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         App::Snapshot { command } => snapshot_cli(command).await,
         App::Stratagem { command } => stratagem_cli(command).await,
         App::UpdateRepoFile(config) => update_repo_file_cli(config).await,
+        App::Shell { shell, exe, output } => {
+            if let Some(out) = output {
+                let mut o = std::fs::File::create(out)?;
+                App::clap().gen_completions_to(exe, shell, &mut o);
+            } else {
+                App::clap().gen_completions_to(exe, shell, &mut std::io::stdout());
+            };
+            Ok(())
+        }
     };
 
     if let Err(e) = r {

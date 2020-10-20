@@ -8,13 +8,17 @@ use crate::{
     timer::{configure_snapshot_timer, remove_snapshot_timer},
 };
 use chrono::{DateTime, Utc};
-use futures::{TryFutureExt, TryStreamExt};
+use futures::{
+    future::{join_all, try_join_all},
+    TryFutureExt, TryStreamExt,
+};
+use iml_manager_env::get_report_path;
 use iml_postgres::{sqlx, sqlx::postgres::types::PgInterval, PgPool};
 use iml_rabbit::Pool;
 use iml_wire_types::{
     graphql_duration::GraphQLDuration,
     snapshot::{ReserveUnit, Snapshot, SnapshotInterval, SnapshotRetention},
-    Command, EndpointName, Job,
+    Command, EndpointName, Job, StratagemReport,
 };
 use itertools::Itertools;
 use juniper::{
@@ -27,6 +31,7 @@ use std::{
     ops::Deref,
     sync::Arc,
 };
+use tokio::fs;
 use warp::Filter;
 
 #[derive(juniper::GraphQLObject)]
@@ -276,19 +281,8 @@ impl QueryRoot {
     async fn get_fs_cluster_hosts(
         context: &Context,
         fs_name: String,
-    ) -> juniper::FieldResult<Vec<Vec<i32>>> {
-        let xs = get_fs_target_resources(&context.pg_pool, Some(fs_name))
-            .await?
-            .into_iter()
-            .group_by(|x| x.cluster_id);
-
-        let xs = xs.into_iter().fold(vec![], |mut acc, (_, xs)| {
-            let xs: HashSet<i32> = xs.map(|x| x.cluster_hosts).flatten().collect();
-
-            acc.push(xs.into_iter().collect());
-
-            acc
-        });
+    ) -> juniper::FieldResult<Vec<Vec<String>>> {
+        let xs = get_fs_cluster_hosts(&context.pg_pool, fs_name).await?;
 
         Ok(xs)
     }
@@ -477,6 +471,32 @@ impl QueryRoot {
         .await?;
 
         Ok(xs)
+    }
+
+    /// List completed Stratagem reports that currently reside on the manager node.
+    /// Note: All report names must be valid unicode.
+    async fn stratagem_reports(_context: &Context) -> juniper::FieldResult<Vec<StratagemReport>> {
+        let paths = tokio::fs::read_dir(get_report_path()).await?;
+
+        let file_paths = paths
+            .map_ok(|x| x.file_name().to_string_lossy().to_string())
+            .try_collect::<Vec<String>>()
+            .await?
+            .into_iter()
+            .map(|filename| {
+                fs::canonicalize(get_report_path().join(filename.clone()))
+                    .map_ok(|file_path| (file_path, filename))
+            });
+
+        let items = try_join_all(file_paths)
+            .await?
+            .into_iter()
+            .map(|(file_path, filename)| (file_path.to_string_lossy().to_string(), filename))
+            .map(get_stratagem_files);
+
+        let items = try_join_all(items).await?;
+
+        Ok(items)
     }
 }
 
@@ -824,6 +844,24 @@ impl MutationRoot {
 
         Ok(true)
     }
+
+    /// Delete a stratagem report
+    #[graphql(arguments(filename(description = "The report filename to delete")))]
+    async fn delete_stratagem_report(
+        _context: &Context,
+        filename: String,
+    ) -> juniper::FieldResult<bool> {
+        let report_base = get_report_path();
+        let path = tokio::fs::canonicalize(report_base.join(filename)).await?;
+
+        if !path.starts_with(report_base) {
+            return Err(FieldError::new("Invalid path", Value::null()));
+        }
+
+        tokio::fs::remove_file(path).await?;
+
+        Ok(true)
+    }
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
@@ -881,7 +919,7 @@ pub(crate) fn endpoint(
 ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
     let graphql_route = warp::path!("graphql")
         .and(warp::post())
-        .and(schema_filter)
+        .and(schema_filter.clone())
         .and(ctx_filter)
         .and(warp::body::json())
         .and_then(graphql);
@@ -890,7 +928,12 @@ pub(crate) fn endpoint(
         .and(warp::get())
         .map(|| warp::reply::html(graphiql_source("graphql", None)));
 
-    graphql_route.or(graphiql_route)
+    let graphql_schema_route = warp::path!("graphql_schema")
+        .and(warp::get())
+        .and(schema_filter)
+        .map(|schema: Arc<Schema>| schema.as_schema_language());
+
+    graphql_route.or(graphiql_route).or(graphql_schema_route)
 }
 
 async fn get_fs_target_resources(
@@ -943,6 +986,36 @@ async fn get_fs_target_resources(
             .await?;
 
     Ok(xs)
+}
+
+async fn get_fs_cluster_hosts(
+    pool: &PgPool,
+    fs_name: String,
+) -> Result<Vec<Vec<String>>, ImlApiError> {
+    let xs = get_fs_target_resources(pool, Some(fs_name))
+        .await?
+        .into_iter()
+        .group_by(|x| x.cluster_id);
+
+    let xs: Vec<Vec<i32>> = xs.into_iter().fold(vec![], |mut acc, (_, xs)| {
+        let xs: HashSet<i32> = xs.map(|x| x.cluster_hosts).flatten().collect();
+
+        acc.push(xs.into_iter().collect());
+
+        acc
+    });
+    let xs = xs.into_iter().map(|idset| async move {
+        let fqdns = idset
+            .into_iter()
+            .map(|x| async move { fqdn_by_host_id(pool, x).await });
+        join_all(fqdns)
+            .await
+            .into_iter()
+            .filter_map(|x| x.ok())
+            .collect()
+    });
+
+    Ok(join_all(xs).await)
 }
 
 async fn get_banned_targets(pool: &PgPool) -> Result<Vec<BannedTargetResource>, ImlApiError> {
@@ -1026,18 +1099,34 @@ async fn active_mgs_host_fqdn(
     tracing::trace!("Maybe active MGS host id: {:?}", maybe_active_mgs_host_id);
 
     if let Some(active_mgs_host_id) = maybe_active_mgs_host_id {
-        let active_mgs_host_fqdn = sqlx::query!(
-            r#"
-                SELECT fqdn FROM chroma_core_managedhost WHERE id=$1 and not_deleted = 't'
-            "#,
-            active_mgs_host_id
-        )
-        .fetch_one(pool)
-        .await?
-        .fqdn;
+        let active_mgs_host_fqdn = fqdn_by_host_id(pool, active_mgs_host_id).await?;
 
         Ok(Some(active_mgs_host_fqdn))
     } else {
         Ok(None)
     }
+}
+
+async fn fqdn_by_host_id(pool: &PgPool, id: i32) -> Result<String, iml_postgres::sqlx::Error> {
+    let fqdn = sqlx::query!(
+        r#"SELECT fqdn FROM chroma_core_managedhost WHERE id=$1 and not_deleted = 't'"#,
+        id
+    )
+    .fetch_one(pool)
+    .await?
+    .fqdn;
+
+    Ok(fqdn)
+}
+
+async fn get_stratagem_files(
+    (file_path, filename): (String, String),
+) -> juniper::FieldResult<StratagemReport> {
+    let attr = fs::metadata(file_path.to_string()).await?;
+
+    Ok(StratagemReport {
+        filename,
+        modify_time: attr.modified()?.into(),
+        size: attr.len() as i32,
+    })
 }

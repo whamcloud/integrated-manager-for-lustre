@@ -246,7 +246,7 @@ pub enum StratagemClientCommand {
         /// remote fs path
         target_fs: String,
 
-        #[structopt(parse(from_os_str))]
+        #[structopt(parse(from_os_str), min_values = 1, required = true)]
         files: Vec<PathBuf>,
     },
 
@@ -261,7 +261,7 @@ pub enum StratagemClientCommand {
         /// destination s3 bucket
         target: String,
 
-        #[structopt(parse(from_os_str))]
+        #[structopt(parse(from_os_str), min_values = 1, required = true)]
         files: Vec<PathBuf>,
     },
 }
@@ -533,6 +533,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 target_fs,
                 files,
             } => {
+                if action == action_filesync::ActionType::Pull {
+                    eprintln!("Pull is not available as an option");
+                    exit(exitcode::USAGE);
+                }
                 let llapi =
                     search_rootpath(files[0].clone().into_os_string().into_string().unwrap())
                         .await?;
@@ -544,7 +548,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let fids: Vec<_> = fids.into_iter().map(Result::unwrap).collect();
                 let errors: Vec<_> = errors.into_iter().map(Result::unwrap_err).collect();
                 if !errors.is_empty() {
-                    tracing::error!("files not found, ignoring: {:?}", errors);
+                    eprintln!("files not found, ignoring: {:?}", errors);
                 }
                 let fidlist: Vec<FidItem> = fids
                     .into_iter()
@@ -558,8 +562,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     action,
                 };
 
-                let _result =
+                let result =
                     action_filesync::process_fids((llapi.mntpt(), task_args, fidlist)).await;
+
+                match result {
+                    Ok(reslist) => {
+                        if reslist.is_empty() {
+                            println!("success");
+                            exit(0);
+                        }
+
+                        for err in reslist.iter() {
+                            eprintln!(
+                                "Failed to sync {} {}",
+                                llapi.fid2path(&err.fid).unwrap_or(err.fid.to_string()),
+                                std::io::Error::from_raw_os_error(err.errno.into())
+                            );
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("filesync failed {}", e);
+                        exit(exitcode::SOFTWARE);
+                    }
+                }
             }
             StratagemClientCommand::CloudSync {
                 action,
@@ -577,7 +602,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let fids: Vec<_> = fids.into_iter().map(Result::unwrap).collect();
                 let errors: Vec<_> = errors.into_iter().map(Result::unwrap_err).collect();
                 if !errors.is_empty() {
-                    tracing::error!("files not found, ignoring: {:?}", errors);
+                    eprintln!("files not found, ignoring: {:?}", errors);
                 }
                 let fidlist: Vec<FidItem> = fids
                     .into_iter()
@@ -591,12 +616,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     action,
                 };
 
-                if action_cloudsync::process_fids((llapi.mntpt(), task_args, fidlist))
-                    .await
-                    .is_err()
-                {
-                    tracing::error!("Filesync failed");
-                    exit(exitcode::IOERR);
+                let result =
+                    action_cloudsync::process_fids((llapi.mntpt(), task_args, fidlist)).await;
+                match result {
+                    Ok(reslist) => {
+                        if reslist.is_empty() {
+                            println!("success");
+                            exit(0);
+                        }
+
+                        for err in reslist.iter() {
+                            eprintln!(
+                                "Failed to sync {} {}",
+                                llapi.fid2path(&err.fid).unwrap_or(err.fid.to_string()),
+                                std::io::Error::from_raw_os_error(err.errno.into())
+                            );
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("cloudsync failed {}", e);
+                        exit(exitcode::SOFTWARE)
+                    }
                 }
             }
         },

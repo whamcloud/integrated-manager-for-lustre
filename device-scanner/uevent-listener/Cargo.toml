@@ -3,10 +3,10 @@ authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
 license = "MIT"
 name = "uevent-listener"
-version = "0.1.0"
+version = "0.2.0"
 
 [dependencies]
-device-types = {path = "../device-types", version = "0.2.0"}
+device-types = {path = "../device-types", version = "0.3.0"}
 im = {version = "15.0", features = ["serde"]}
 serde_json = "1.0"
 

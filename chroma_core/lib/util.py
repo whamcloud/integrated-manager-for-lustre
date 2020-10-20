@@ -235,13 +235,6 @@ def runningInDocker():
     return False
 
 
-def get_api_session_request(api_user, api_key):
-    s = requests.Session()
-    s.headers.update({"AUTHORIZATION": "ApiKey {}:{}".format(api_user, api_key)})
-
-    return s
-
-
 def post_data_to_tcp_or_socket(post_data):
     if runningInDocker():
         return requests.post("http://{}:{}".format(settings.PROXY_HOST, settings.ACTION_RUNNER_PORT), json=post_data)

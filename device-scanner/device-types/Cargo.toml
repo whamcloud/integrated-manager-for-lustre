@@ -4,7 +4,7 @@ description = "shared device types used throughout device-scanner and IML"
 edition = "2018"
 license = "MIT"
 name = "device-types"
-version = "0.2.0"
+version = "0.3.0"
 
 [dependencies]
 im = {version = "15.0", features = ["serde"]}
@@ -14,5 +14,4 @@ tracing = "0.1"
 
 [dev-dependencies]
 insta = "0.15"
-pretty_assertions = "0.6.1"
 serde_json = "1.0"

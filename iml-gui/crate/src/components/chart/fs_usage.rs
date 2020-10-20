@@ -110,10 +110,10 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                     let result: &InfluxResult = &influx_data.results[0];
 
                     if let Some(series) = &(*result).series {
-                        let bytes_total = series[0].values[0].1;
-                        let bytes_free = series[0].values[0].2;
-                        let bytes_avail = series[0].values[0].3;
-                        let bytes_used = bytes_total - bytes_free;
+                        let bytes_total: f64 = series[0].values[0].1;
+                        let bytes_free: f64 = series[0].values[0].2;
+                        let bytes_avail: f64 = series[0].values[0].3;
+                        let bytes_used: f64 = bytes_total - bytes_free;
 
                         model.metric_data = Some(FsUsage {
                             bytes_used,
@@ -121,7 +121,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                             bytes_total,
                         });
 
-                        model.percent_used = bytes_used / bytes_total;
+                        model.percent_used = (bytes_used / (bytes_used + bytes_avail) * 100.0f64).ceil();
                     }
                 }
                 Err(e) => {

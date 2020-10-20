@@ -3,16 +3,15 @@
 // license that can be found in the LICENSE file.
 
 use chrono_humanize::{Accuracy, HumanTime, Tense};
-use console::{style, Term};
+use console::style;
 use futures::{Future, FutureExt};
 use iml_wire_types::{
     snapshot::{ReserveUnit, Snapshot, SnapshotInterval, SnapshotRetention},
-    Command, Filesystem, Host, OstPool, ServerProfile, StratagemConfiguration,
+    Command, Filesystem, Host, OstPool, ServerProfile, StratagemConfiguration, StratagemReport,
 };
 use indicatif::ProgressBar;
 use number_formatter::{format_bytes, format_number};
 use prettytable::{Row, Table};
-use spinners::{Spinner, Spinners};
 use std::{fmt::Display, io, str::FromStr};
 use structopt::StructOpt;
 
@@ -22,22 +21,6 @@ pub fn wrap_fut<T>(msg: &str, fut: impl Future<Output = T>) -> impl Future<Outpu
     pb.set_message(msg);
 
     fut.inspect(move |_| pb.finish_and_clear())
-}
-
-pub fn start_spinner(msg: &str) -> impl FnOnce(Option<String>) {
-    let sp = Spinner::new(Spinners::Dots9, style(msg).dim().to_string());
-
-    move |msg_opt| match msg_opt {
-        Some(msg) => {
-            sp.message(msg);
-        }
-        None => {
-            sp.stop();
-            if let Err(e) = Term::stdout().clear_line() {
-                tracing::debug!("Could not clear current line {}", e);
-            };
-        }
-    }
 }
 
 pub fn format_cmd_state(cmd: &Command) -> String {
@@ -96,19 +79,20 @@ where
 }
 
 pub fn usage(
-    free: Option<u64>,
+    used: Option<u64>,
     total: Option<u64>,
     formatter: fn(f64, Option<usize>) -> String,
 ) -> String {
-    match (free, total) {
-        (Some(free), Some(total)) => format!(
-            "{} / {}",
-            formatter(total as f64 - free as f64, Some(0)),
-            formatter(total as f64, Some(0))
-        ),
-        (None, Some(total)) => format!("Calculating ... / {}", formatter(total as f64, Some(0))),
-        _ => "Calculating ...".to_string(),
-    }
+    format!(
+        "{} / {}",
+        used.map(|u| formatter(u as f64, Some(0)))
+            .as_deref()
+            .unwrap_or("---"),
+        total
+            .map(|t| formatter(t as f64, Some(0)))
+            .as_deref()
+            .unwrap_or("---")
+    )
 }
 
 pub trait IsEmpty {
@@ -198,6 +182,16 @@ impl IntoTable for Vec<SnapshotRetention> {
                         .unwrap_or_else(|| "---".to_string()),
                 ]
             }),
+        )
+    }
+}
+
+impl IntoTable for Vec<StratagemReport> {
+    fn into_table(self) -> Table {
+        generate_table(
+            &["Filename", "Size", "Modify Time"],
+            self.into_iter()
+                .map(|r| vec![r.filename, r.size.to_string(), r.modify_time.to_rfc2822()]),
         )
     }
 }

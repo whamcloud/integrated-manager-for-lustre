@@ -284,7 +284,7 @@ pub fn get_use_stratagem() -> bool {
 }
 
 pub fn get_use_snapshots() -> bool {
-    string_to_bool(get_var("USE_SNAPSHOTS"))
+    string_to_bool(env::var("USE_SNAPSHOTS").unwrap_or_else(|_| "false".to_string()))
 }
 
 pub fn get_action_runner_http() -> String {

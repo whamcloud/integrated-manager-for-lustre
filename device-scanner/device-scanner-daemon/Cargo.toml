@@ -4,11 +4,11 @@ description = "device-scanner-daemon builds an in-memory representation of devic
 edition = "2018"
 license = "MIT"
 name = "device-scanner-daemon"
-version = "2.0.0"
+version = "2.1.0"
 
 [dependencies]
 bytes = {version = "0.5", features = ["serde"]}
-device-types = {path = "../device-types", version = "0.2.0"}
+device-types = {path = "../device-types", version = "0.3.0"}
 futures = "0.3"
 im = {version = "15.0", features = ["serde"]}
 libzfs-types = "0.1.2"

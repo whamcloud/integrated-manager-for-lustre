@@ -6,16 +6,18 @@ use crate::{
     api_utils::{create_command, get_hosts, wait_for_cmds_success, SendCmd, SendJob},
     display_utils::{display_cancelled, display_error, wrap_fut},
     error::ImlManagerCliError,
+    parse_hosts,
 };
 use iml_wire_types::Host;
 use std::collections::BTreeSet;
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
+#[structopt(setting = structopt::clap::AppSettings::ColoredHelp)]
 pub struct UpdateRepoFileHosts {
-    /// The host(s) to update. Takes a hostlist expression
-    #[structopt(short = "h", long = "hosts")]
-    hosts: String,
+    /// The hosts to update, e. g. mds[1,2].local
+    #[structopt(required = true, min_values = 1)]
+    hosts: Vec<String>,
 }
 
 fn filter_known_hosts<'a, 'b>(
@@ -40,7 +42,7 @@ pub struct HostId {
 }
 
 pub async fn update_repo_file_cli(config: UpdateRepoFileHosts) -> Result<(), ImlManagerCliError> {
-    let r = hostlist_parser::parse(&config.hosts)?;
+    let r = parse_hosts(&config.hosts)?;
 
     tracing::debug!("Parsed hosts {:?}", r);
 
@@ -50,7 +52,7 @@ pub async fn update_repo_file_cli(config: UpdateRepoFileHosts) -> Result<(), Iml
 
     for x in r.iter() {
         if !has_host(&xs, &x) {
-            display_cancelled(format!("Host {} unknown to IML.", x));
+            display_cancelled(format!("Unknown host: {}", x));
         }
     }
 
@@ -68,7 +70,7 @@ pub async fn update_repo_file_cli(config: UpdateRepoFileHosts) -> Result<(), Iml
                 args: HostId { host_id: x.id },
             })
             .collect(),
-        message: "Update IML Agent Repo files".into(),
+        message: "Update Agent Repo files".into(),
     };
 
     let cmd = wrap_fut("Updating Repo files...", create_command(cmd)).await?;

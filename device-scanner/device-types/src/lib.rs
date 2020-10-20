@@ -8,10 +8,6 @@ pub mod devices;
 pub mod udev;
 pub mod uevent;
 
-#[cfg(test)]
-#[macro_use]
-extern crate pretty_assertions;
-
 use std::{
     cmp::Ordering,
     collections::BTreeSet,

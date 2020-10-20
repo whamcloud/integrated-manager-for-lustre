@@ -3003,6 +3003,26 @@
       ]
     }
   },
+  "b35da5f6c785076d4e7b578ebce9678f7eae5d220145121b19661344ad4705f6": {
+    "query": "SELECT fqdn FROM chroma_core_managedhost WHERE id=$1 and not_deleted = 't'",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "fqdn",
+          "type_info": "Varchar"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      },
+      "nullable": [
+        false
+      ]
+    }
+  },
   "b4865dbd455de729bbadd116bf6bf72108582704f5d559691c3821a54290bb0c": {
     "query": "\n        SELECT\n            index,\n            element_name,\n            health_state as \"health_state: _\",\n            health_state_reason,\n            child_health_state as \"child_health_state: _\",\n            model,\n            position,\n            enclosure_type as \"enclosure_type: _\",\n            canister_location,\n            storage_system\n        FROM chroma_core_sfaenclosure",
     "describe": {
@@ -4025,26 +4045,6 @@
         ]
       },
       "nullable": []
-    }
-  },
-  "f7cb59fe7a6bc5dde5fe7f15025161aa8d6e7ba933bb963fcfe8d9afeee26945": {
-    "query": "\n                SELECT fqdn FROM chroma_core_managedhost WHERE id=$1 and not_deleted = 't'\n            ",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "fqdn",
-          "type_info": "Varchar"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "Int4"
-        ]
-      },
-      "nullable": [
-        false
-      ]
     }
   },
   "f8cd2baf66e0d74fea5babd851be21a3badca94a53aee6bac038141cece53646": {

@@ -17,12 +17,7 @@ use structopt::StructOpt;
 pub enum IntervalCommand {
     /// List snapshots intervals
     List {
-        /// Set the display type
-        ///
-        /// The display type can be one of the following:
-        /// tabular: display content in a table format
-        /// json: return data in json format
-        /// yaml: return data in yaml format
+        /// Display type: json, yaml, tabular
         #[structopt(short = "d", long = "display", default_value = "tabular")]
         display_type: DisplayType,
     },
@@ -49,12 +44,7 @@ pub enum IntervalCommand {
 pub enum RetentionCommand {
     /// List snapshots retention rules
     List {
-        /// Set the display type
-        ///
-        /// The display type can be one of the following:
-        /// tabular: display content in a table format
-        /// json: return data in json format
-        /// yaml: return data in yaml format
+        /// Display type: json, yaml, tabular
         #[structopt(short = "d", long = "display", default_value = "tabular")]
         display_type: DisplayType,
     },
@@ -62,7 +52,7 @@ pub enum RetentionCommand {
     Create {
         /// Filesystem to create a snapshot retention rule for
         filesystem: String,
-        // Delete the oldest snapshot when available space falls below this value
+        /// Delete the oldest snapshot when available space falls below this value
         reserve_value: u32,
         /// The unit of measurement associated with the reserve_value (%, GiB or TiB)
         reserve_unit: snapshot::ReserveUnit,
@@ -89,12 +79,7 @@ pub enum SnapshotCommand {
     Unmount(snapshot::Unmount),
     /// List snapshots
     List {
-        /// Set the display type
-        ///
-        /// The display type can be one of the following:
-        /// tabular: display content in a table format
-        /// json: return data in json format
-        /// yaml: return data in yaml format
+        /// Display type: json, yaml, tabular
         #[structopt(short = "d", long = "display", default_value = "tabular")]
         display_type: DisplayType,
         /// The filesystem to list snapshots for
