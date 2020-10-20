@@ -549,8 +549,7 @@ impl QueryRoot {
         Ok(LogResponse {
             data: xs,
             meta: Meta {
-                // FIXME: Convert to i32 in some other way?
-                total_count: total_count.try_into().unwrap(),
+                total_count: total_count.try_into()?,
             },
         })
     }
