@@ -113,7 +113,7 @@ class ManagedFilesystem(StatefulObject):
         """Return: Array(Array(ManagedHost)) """
         from chroma_core.lib.graphql import graphql_query
 
-        query = '{ getFsClusterHosts(fsName: "{}") }'.format(self.name)
+        query = '{{ getFsClusterHosts(fsName: "{}") }}'.format(self.name)
 
         return graphql_query(query)["getFsClusterHosts"]
 
