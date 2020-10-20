@@ -9,14 +9,18 @@ version = "0.2.0"
 name = "mount-emitter"
 path = "src/bin/mount_emitter.rs"
 
+[[bin]]
+name = "swap-emitter"
+path = "src/bin/swap_emitter.rs"
+
 [dependencies]
 device-types = {path = "../device-types", version = "0.3.0"}
-futures = "0.1"
+futures = "0.3"
 serde_json = "1.0"
-tokio = "0.1"
-tokio-file-unix = "0.5.1"
+thiserror = "1.0"
+tokio = {version = "0.3", default-features = false, features = ["macros", "io-std", "io-util", "net", "process", "time", "rt-multi-thread"]}
+tracing = "0.1"
+tracing-subscriber = "0.2"
 
 [dev-dependencies]
 insta = "0.11"
-pretty_assertions = "0.6.1"
-tokio-mockstream = "1.1"

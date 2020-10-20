@@ -43,8 +43,8 @@ cp uevent-listener %{buildroot}%{_bindir}
 cp mount-emitter.service %{buildroot}%{_unitdir}
 cp mount-populator.service %{buildroot}%{_unitdir}
 cp swap-emitter.service %{buildroot}%{_unitdir}
-cp swap-emitter.timer %{buildroot}%{_unitdir}
 cp mount-emitter %{buildroot}%{_bindir}
+cp swap-emitter %{buildroot}%{_bindir}
 
 mkdir -p %{buildroot}%{_libexecdir}/zfs/zed.d
 cp pool_create-scanner %{buildroot}%{_libexecdir}/zfs/zed.d
@@ -75,7 +75,6 @@ cp 99-iml-zed-enhancer.rules %{buildroot}%{_sysconfdir}/udev/rules.d
 %attr(0644,root,root)%{_unitdir}/device-scanner.service
 %attr(0644,root,root)%{_unitdir}/mount-emitter.service
 %attr(0644,root,root)%{_unitdir}/mount-populator.service
-%attr(0644,root,root)%{_unitdir}/swap-emitter.timer
 %attr(0644,root,root)%{_unitdir}/swap-emitter.service
 %attr(0644,root,root)%{_unitdir}/zed-enhancer.service
 %attr(0644,root,root)%{_unitdir}/zed-enhancer.socket
@@ -87,6 +86,7 @@ cp 99-iml-zed-enhancer.rules %{buildroot}%{_sysconfdir}/udev/rules.d
 %attr(0755,root,root)%{_bindir}/device-scanner-daemon
 %attr(0755,root,root)%{_bindir}/uevent-listener
 %attr(0755,root,root)%{_bindir}/mount-emitter
+%attr(0755,root,root)%{_bindir}/swap-emitter
 %attr(0755,root,root)%{_bindir}/zed-enhancer
 %attr(0755,root,root)%{_libexecdir}/zfs/zed.d/*
 %{_sysconfdir}/zfs/zed.d/*
@@ -95,7 +95,7 @@ cp 99-iml-zed-enhancer.rules %{buildroot}%{_sysconfdir}/udev/rules.d
 %post
 systemctl preset device-scanner.socket
 systemctl preset mount-emitter.service
-systemctl preset swap-emitter.timer
+systemctl preset swap-emitter.service
 systemctl preset zed-populator.service
 systemctl preset zed-enhancer.socket
 systemctl preset zed-enhancer.service
@@ -109,7 +109,6 @@ systemctl preset zed-enhancer.service
 %systemd_preun block-device-populator.service
 %systemd_preun zed-populator.service
 %systemd_preun mount-populator.service
-%systemd_preun swap-emitter.timer
 %systemd_preun swap-emitter.service
 %systemd_preun zed-enhancer.socket
 %systemd_preun zed-enhancer.service

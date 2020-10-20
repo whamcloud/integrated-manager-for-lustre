@@ -6,6 +6,7 @@ expression: xs
     Target {
         state: "mounted",
         name: "mdt1",
+        dev_path: None,
         active_host_id: Some(
             1,
         ),
@@ -23,6 +24,9 @@ expression: xs
     Target {
         state: "mounted",
         name: "ost1",
+        dev_path: Some(
+            "/dev/mapper/mpathz",
+        ),
         active_host_id: Some(
             3,
         ),

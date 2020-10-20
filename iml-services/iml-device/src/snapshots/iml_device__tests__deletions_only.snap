@@ -6,6 +6,7 @@ expression: xs
     Target {
         state: "unmounted",
         name: "mdt1",
+        dev_path: None,
         active_host_id: None,
         host_ids: [
             2,
