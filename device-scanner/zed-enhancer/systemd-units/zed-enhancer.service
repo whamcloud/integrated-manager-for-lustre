@@ -9,6 +9,8 @@ After=device-scanner.socket
 [Service]
 Restart=on-failure
 Environment=RUST_LOG=info
+# Reconfigure the daemon and rescan the directory for enabled ZEDLETs:
+ExecStartPre=/bin/bash -c '! systemctl --quiet is-active zfs-zed.service || systemctl kill --signal HUP zfs-zed.service'
 ExecStart=/usr/bin/zed-enhancer
 StandardOutput=journal
 StandardError=journal
