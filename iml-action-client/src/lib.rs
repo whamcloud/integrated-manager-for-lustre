@@ -53,13 +53,13 @@ pub struct Client {
     uri: Arc<hyper::Uri>,
 }
 
-impl Client {
+impl Default for Client {
     /// Create a new client instance
     ///
     /// # Panics
     ///
     /// Panics if internal action runner URI cannot be parsed to a `hyper::Uri`.
-    pub fn new() -> Self {
+    fn default() -> Self {
         let (inner, uri) = if running_in_docker() {
             (
                 ClientInner::Http(hyper::Client::new()),
@@ -77,6 +77,9 @@ impl Client {
             uri: Arc::new(uri),
         }
     }
+}
+
+impl Client {
     /// Invoke the given action plugin on the given `host`
     ///
     /// *Note*: There is no way to cancel this fn, use `invoke_rust_agent_cancelable`

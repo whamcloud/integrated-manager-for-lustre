@@ -333,7 +333,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let active_clients = Arc::new(Mutex::new(HashSet::new()));
     let mut interval = time::interval(DELAY);
 
-    let action_client = Client::new();
+    let action_client = Client::default();
 
     // Task Runner Loop
     loop {
