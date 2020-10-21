@@ -1503,6 +1503,76 @@
       "nullable": []
     }
   },
+  "4f007668067e5b731945f12d4c529986aa2657d37db70f41b6f77e9f4814ce19": {
+    "query": "\n            SELECT state, name, active_host_id, host_ids, filesystems, uuid, mount_path, dev_path, fs_type::text from target t\n            ORDER BY\n                CASE WHEN $3 = 'asc' THEN t.name END ASC,\n                CASE WHEN $3 = 'desc' THEN t.name END DESC\n            OFFSET $1 LIMIT $2",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "state",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 1,
+          "name": "name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "active_host_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 3,
+          "name": "host_ids",
+          "type_info": "Int4Array"
+        },
+        {
+          "ordinal": 4,
+          "name": "filesystems",
+          "type_info": "TextArray"
+        },
+        {
+          "ordinal": 5,
+          "name": "uuid",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 6,
+          "name": "mount_path",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 7,
+          "name": "dev_path",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 8,
+          "name": "fs_type",
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Int8",
+          "Text"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+        true,
+        true,
+        null
+      ]
+    }
+  },
   "4f16874f4506c43628a3d68844fbe89fd9bd59cd18503fd0597ef083abe989f1": {
     "query": "\n            SELECT id FROM corosync_cluster\n            WHERE corosync_nodes = $1::corosync_node_key[]\n        ",
     "describe": {
@@ -2067,66 +2137,6 @@
       },
       "nullable": [
         false
-      ]
-    }
-  },
-  "7c433739308a525cdead14f9b38d0da9d5ad14df3ce97eeb1b85a28c2635f209": {
-    "query": "select * from target",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "state",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 1,
-          "name": "name",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 2,
-          "name": "active_host_id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 3,
-          "name": "host_ids",
-          "type_info": "Int4Array"
-        },
-        {
-          "ordinal": 4,
-          "name": "filesystems",
-          "type_info": "TextArray"
-        },
-        {
-          "ordinal": 5,
-          "name": "uuid",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 6,
-          "name": "mount_path",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 7,
-          "name": "dev_path",
-          "type_info": "Text"
-        }
-      ],
-      "parameters": {
-        "Left": []
-      },
-      "nullable": [
-        false,
-        false,
-        true,
-        false,
-        false,
-        false,
-        true,
-        true
       ]
     }
   },
@@ -4005,6 +4015,72 @@
         true,
         true,
         false
+      ]
+    }
+  },
+  "e182adb910ec6e8c2fb0db0faf2f5e4eba138bb19200cb3950d5d9c840e08284": {
+    "query": "select state, name, active_host_id, host_ids, filesystems, uuid, mount_path, dev_path, fs_type::text from target",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "state",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 1,
+          "name": "name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "active_host_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 3,
+          "name": "host_ids",
+          "type_info": "Int4Array"
+        },
+        {
+          "ordinal": 4,
+          "name": "filesystems",
+          "type_info": "TextArray"
+        },
+        {
+          "ordinal": 5,
+          "name": "uuid",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 6,
+          "name": "mount_path",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 7,
+          "name": "dev_path",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 8,
+          "name": "fs_type",
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+        true,
+        true,
+        null
       ]
     }
   },

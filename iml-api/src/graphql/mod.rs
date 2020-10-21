@@ -80,6 +80,8 @@ struct Target {
     uuid: String,
     /// Where this target is mounted
     mount_path: Option<String>,
+    /// The filesystem type associated with this target
+    fs_type: String,
 }
 
 #[derive(juniper::GraphQLObject)]
@@ -199,53 +201,15 @@ impl QueryRoot {
         fs_name: Option<String>,
         exclude_unmounted: Option<bool>,
     ) -> juniper::FieldResult<Vec<Target>> {
-        let dir = dir.unwrap_or_default();
-
-        if let Some(ref fs_name) = fs_name {
-            let _ = fs_id_by_name(&context.pg_pool, &fs_name).await?;
-        }
-
-        let xs: Vec<Target> = sqlx::query_as!(
-            Target,
-            r#"
-                SELECT * from target t
-                ORDER BY
-                    CASE WHEN $3 = 'ASC' THEN t.name END ASC,
-                    CASE WHEN $3 = 'DESC' THEN t.name END DESC
-                OFFSET $1 LIMIT $2"#,
-            offset.unwrap_or(0) as i64,
-            limit.map(|x| x as i64),
-            dir.deref()
+        let xs = get_targets(
+            &context.pg_pool,
+            limit,
+            offset,
+            dir,
+            fs_name,
+            exclude_unmounted.unwrap_or_default(),
         )
-        .fetch_all(&context.pg_pool)
-        .await?
-        .into_iter()
-        .filter(|x| match &fs_name {
-            Some(fs) => x.filesystems.contains(&fs),
-            None => true,
-        })
-        .filter(|x| match exclude_unmounted {
-            Some(true) => x.state != "unmounted",
-            Some(false) | None => true,
-        })
-        .collect();
-
-        let target_resources = get_fs_target_resources(&context.pg_pool, None).await?;
-
-        let xs: Vec<Target> = xs
-            .into_iter()
-            .map(|mut x| {
-                let resource = target_resources
-                    .iter()
-                    .find(|resource| resource.name == x.name);
-
-                if let Some(resource) = resource {
-                    x.host_ids = resource.cluster_hosts.clone();
-                }
-
-                x
-            })
-            .collect();
+        .await?;
 
         Ok(xs)
     }
@@ -1278,4 +1242,76 @@ fn create_task_job<'a>(task_id: i32) -> SendJob<'a, HashMap<String, serde_json::
             .into_iter()
             .collect(),
     }
+}
+
+async fn get_targets(
+    pool: &PgPool,
+    limit: Option<i32>,
+    offset: Option<i32>,
+    dir: Option<SortDir>,
+    fs_name: Option<String>,
+    exclude_unmounted: bool,
+) -> juniper::FieldResult<Vec<Target>> {
+    let dir = dir.unwrap_or_default();
+
+    if let Some(ref fs_name) = fs_name {
+        let _ = fs_id_by_name(&context.pg_pool, &fs_name).await?;
+    }
+
+    let xs: Vec<Target> = sqlx::query!(
+        r#"
+            SELECT state, name, active_host_id, host_ids, filesystems, uuid, mount_path, dev_path, fs_type::text from target t
+            ORDER BY
+                CASE WHEN $3 = 'asc' THEN t.name END ASC,
+                CASE WHEN $3 = 'desc' THEN t.name END DESC
+            OFFSET $1 LIMIT $2"#,
+        offset.unwrap_or(0) as i64,
+        limit.map(|x| x as i64),
+        dir.deref()
+    )
+    .fetch(pool)
+    .map_ok(|x| {
+        Target {
+            state: x.state,
+            name: x.name,
+            active_host_id: x.active_host_id,
+            host_ids: x.host_ids,
+            filesystems: x.filesystems,
+            uuid: x.uuid,
+            mount_path: x.mount_path,
+            dev_path: x.dev_path,
+            fs_type: x.fs_type.unwrap_or_else(|| "ldiskfs".to_string()).into()
+        }
+    })
+    .try_collect::<Vec<Target>>()
+    .await?
+    .into_iter()
+    .filter(|x| match &fs_name {
+        Some(fs) => x.filesystems.contains(&fs),
+        None => true,
+    })
+    .filter(|x| match exclude_unmounted {
+        true => x.state != "unmounted",
+        false => true,
+    })
+    .collect();
+
+    let target_resources = get_fs_target_resources(&pool, None).await?;
+
+    let xs: Vec<Target> = xs
+        .into_iter()
+        .map(|mut x| {
+            let resource = target_resources
+                .iter()
+                .find(|resource| resource.name == x.name);
+
+            if let Some(resource) = resource {
+                x.host_ids = resource.cluster_hosts.clone();
+            }
+
+            x
+        })
+        .collect();
+
+    Ok(xs)
 }
