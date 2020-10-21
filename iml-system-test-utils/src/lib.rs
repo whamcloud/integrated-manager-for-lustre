@@ -719,14 +719,14 @@ pub async fn test_stratagem_taskqueue(config: Config) -> Result<Config, TestErro
             keep_failed: false,
             actions: vec!["stratagem.warning".into()],
             pairs: vec![KeyValue {
-                key: "repot_name".into(),
+                key: "report_name".into(),
                 value: "test-taskfile.txt".into(),
             }],
             needs_cleanup: false,
         },
     );
 
-    ssh::graphql_call::<_, task::create::Resp>(&config, &q).await?;
+    ssh::graphql_call::<_, iml_graphql_queries::Response<task::create::Resp>>(&config, &q).await?;
 
     // TODO wait for command to complete
     delay_for(Duration::from_secs(20)).await;

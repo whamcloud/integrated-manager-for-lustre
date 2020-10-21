@@ -314,6 +314,7 @@ pub async fn graphql_call<T: serde::Serialize, R: serde::de::DeserializeOwned>(
         .await?
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
         .spawn()?;
 
     let ssh_stdin = ssh_child.stdin.as_mut().expect("Could not get stdin");
@@ -322,15 +323,23 @@ pub async fn graphql_call<T: serde::Serialize, R: serde::de::DeserializeOwned>(
     let out = ssh_child.wait_with_checked_output().await?;
 
     let stdout = String::from_utf8_lossy(&out.stdout);
+    let stderr = String::from_utf8_lossy(&out.stderr);
 
     if !out.status.success() {
         return Err(TestError::Assert(format!(
             "Error during graphql_call. Code: {:?}, Output: {}, Error: {}",
             out.status.code(),
             &stdout,
-            String::from_utf8_lossy(&out.stderr)
+            &stderr
         )));
     }
+
+    tracing::debug!(
+        "Graphql Resp: Code: {:?}, Output; {}, Error: {}",
+        out.status.code(),
+        stdout,
+        stderr
+    );
 
     let x = serde_json::from_str(&stdout)?;
 
