@@ -4,7 +4,6 @@
 
 use crate::error::ImlManagerCliError;
 use console::Term;
-use iml_graphql_queries::Query;
 use iml_manager_client::Url;
 use structopt::{clap::arg_enum, StructOpt};
 use tokio::io::{stdin, AsyncReadExt};
@@ -33,14 +32,11 @@ pub struct ApiCommand {
     body: Option<String>,
 }
 
+/// Graphql body to send or "-" to read from stdin.
+/// Must conform to sending a POST request (https://graphql.org/learn/serving-over-http/#post-request).
 #[derive(Debug, StructOpt)]
 pub struct GraphQlCommand {
-    #[structopt(possible_values = &ApiMethod::variants(), case_insensitive = true)]
-    method: ApiMethod,
-
-    query: String,
-
-    variables: Option<String>,
+    body: String,
 }
 
 pub async fn api_cli(command: ApiCommand) -> Result<(), ImlManagerCliError> {
@@ -52,19 +48,16 @@ pub async fn api_cli(command: ApiCommand) -> Result<(), ImlManagerCliError> {
 pub async fn graphql_cli(command: GraphQlCommand) -> Result<(), ImlManagerCliError> {
     let uri = iml_manager_client::create_url("/graphql")?;
 
-    let query = Query {
-        query: command.query,
-        variables: command.variables,
-    };
-
-    api_command(command.method, uri, serde_json::to_string(&query).ok()).await
+    api_command(ApiMethod::Post, uri, command.body).await
 }
 
 async fn api_command(
     method: ApiMethod,
     uri: Url,
-    body: Option<String>,
+    body: impl Into<Option<String>>,
 ) -> Result<(), ImlManagerCliError> {
+    let body = body.into();
+
     let term = Term::stdout();
     let client = iml_manager_client::get_client()?;
 

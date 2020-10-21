@@ -28,7 +28,7 @@ pub enum IntervalCommand {
         barrier: bool,
         /// Filesystem to add a snapshot interval for
         filesystem: String,
-        /// Snapshot interval in human form, e. g. 1 hour
+        /// Snapshot interval in human form, e. g. 1hour
         #[structopt(required = true, min_values = 1)]
         interval: Vec<String>,
     },

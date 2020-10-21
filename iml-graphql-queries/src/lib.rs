@@ -4,6 +4,7 @@
 
 pub mod snapshot;
 pub mod stratagem;
+pub mod task;
 
 use std::fmt;
 

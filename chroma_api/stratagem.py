@@ -133,36 +133,9 @@ def validate_target_mount(bundle):
         return {"code": "mdt0_not_mounted", "message": "MDT0 must be mounted in order to run stratagem."}
 
 
-def validate_mdt_profile(bundle):
-    (r, fs_id) = get_fs_id(bundle)
-    if isinstance(r, dict):
-        return r
-
-    # At least Mdt 0 should be mounted, or stratagem cannot run.
-    target_mount_ids = get_target_mount_ids(fs_id, bundle)
-
-    host_ids = ManagedTargetMount.objects.filter(id__in=target_mount_ids).values_list("host_id", flat=True).distinct()
-
-    installed_profiles = (
-        ManagedHost.objects.filter(id__in=host_ids).values_list("server_profile_id", flat=True).distinct()
-    )
-
-    if not all(map(lambda name: name in ["stratagem_server", "exascaler_server"], installed_profiles)):
-        return {
-            "code": "stratagem_server_profile_not_installed",
-            "message": "'stratagem_server' or 'exascaler_server' profile must be installed on all MDT servers.",
-        }
-
-
 class RunStratagemValidation(Validation):
     def is_valid(self, bundle, request=None):
-        return (
-            validate_duration(bundle)
-            or validate_filesystem(bundle)
-            or validate_target_mount(bundle)
-            or validate_mdt_profile(bundle)
-            or {}
-        )
+        return validate_duration(bundle) or validate_filesystem(bundle) or validate_target_mount(bundle) or {}
 
 
 class StratagemConfigurationValidation(RunStratagemValidation):
@@ -261,47 +234,6 @@ class StratagemConfigurationResource(StatefulModelResource):
     @validate
     def obj_create(self, bundle, **kwargs):
         command_id = JobSchedulerClient.configure_stratagem(bundle.data)
-
-        try:
-            command = Command.objects.get(pk=command_id)
-        except ObjectDoesNotExist:
-            command = None
-
-        raise custom_response(self, bundle.request, http.HttpAccepted, {"command": dehydrate_command(command)})
-
-
-class RunStratagemResource(Resource):
-    filesystem = fields.CharField(attribute="filesystem_id", null=False)
-    report_duration = fields.CharField(attribute="report_duration", null=True)
-    purge_duration = fields.CharField(attribute="purge_duration", null=True)
-
-    def hydrate_report_duration(self, val):
-        return long(val)
-
-    def hydrate_purge_duration(self, val):
-        return long(val)
-
-    class Meta:
-        list_allowed_methods = ["post"]
-        detail_allowed_methods = []
-        resource_name = "run_stratagem"
-        authorization = PatchedDjangoAuthorization()
-        authentication = AnonymousAuthentication()
-        object_class = dict
-        validation = RunStratagemValidation()
-
-    def get_resource_uri(self, bundle=None, url_name=None):
-        return Resource.get_resource_uri(self)
-
-    @validate
-    def obj_create(self, bundle, **kwargs):
-        (_, fs_id) = get_fs_id(bundle)
-
-        mdts = list(
-            ManagedMdt.objects.filter(filesystem_id=fs_id, active_mount_id__isnull=False).values_list("id", flat=True)
-        )
-
-        command_id = JobSchedulerClient.run_stratagem(mdts, fs_id, bundle.data)
 
         try:
             command = Command.objects.get(pk=command_id)

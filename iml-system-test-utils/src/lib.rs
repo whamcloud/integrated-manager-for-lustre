@@ -9,7 +9,8 @@ pub mod vagrant;
 use async_trait::async_trait;
 use futures::future::try_join_all;
 use iml_cmd::{CheckedChildExt, CheckedCommandExt};
-use iml_wire_types::Branding;
+use iml_graphql_queries::task;
+use iml_wire_types::{task::KeyValue, task::TaskArgs, Branding};
 use ssh::create_iml_diagnostics;
 use std::{collections::HashMap, env, path::PathBuf, process::Stdio, str, time::Duration};
 use tokio::{
@@ -25,6 +26,8 @@ pub enum TestError {
     CmdError(#[from] iml_cmd::CmdError),
     #[error("ASSERT FAILED: {0}")]
     Assert(String),
+    #[error(transparent)]
+    SerdeJsonError(#[from] serde_json::Error),
 }
 
 impl From<std::io::Error> for TestError {
@@ -58,30 +61,6 @@ pub enum TestState {
     ServersDeployed,
     FsCreated,
 }
-
-pub const STRATAGEM_SERVER_PROFILE: &str = r#"{
-    "ui_name": "Stratagem Policy Engine Server",
-    "ui_description": "A server running the Stratagem Policy Engine",
-    "managed": false,
-    "worker": false,
-    "name": "stratagem_server",
-    "initial_state": "monitored",
-    "ntp": false,
-    "corosync": false,
-    "corosync2": false,
-    "pacemaker": false,
-    "repolist": [
-      "base"
-    ],
-    "packages": [],
-    "validation": [
-      {
-        "description": "A server running the Stratagem Policy Engine",
-        "test": "distro_version < 8 and distro_version >= 7"
-      }
-    ]
-  }
-  "#;
 
 pub const STRATAGEM_CLIENT_PROFILE: &str = r#"{
     "ui_name": "Stratagem Client Node",
@@ -732,20 +711,27 @@ pub async fn test_stratagem_taskqueue(config: Config) -> Result<Config, TestErro
     .await?;
 
     // Create Task
-    let cmd = r#"iml debugapi post task -"#;
-    let task = br#"{"filesystem": 1, "name": "testfile", "state": "created", "keep_failed": false, "actions": [ "stratagem.warning" ], "single_runner": true, "args": { "report_name": "test-taskfile.txt" } }"#;
-    let mut ssh_child = ssh::ssh_exec_cmd(config.manager_ip, &cmd)
-        .await?
-        .stdin(Stdio::piped())
-        .stdout(Stdio::inherit())
-        .spawn()?;
+    let q = task::create::build(
+        "fs",
+        TaskArgs {
+            name: "testfile".into(),
+            single_runner: true,
+            keep_failed: false,
+            actions: vec!["stratagem.warning".into()],
+            pairs: vec![KeyValue {
+                key: "report_name".into(),
+                value: "test-taskfile.txt".into(),
+            }],
+            needs_cleanup: false,
+        },
+    );
 
-    let ssh_stdin = ssh_child.stdin.as_mut().unwrap();
-    ssh_stdin.write_all(task).await?;
-    ssh_child.wait_with_checked_output().await?;
+    ssh::graphql_call::<_, iml_graphql_queries::Response<task::create::Resp>>(&config, &q).await?;
+
+    // TODO wait for command to complete
+    delay_for(Duration::from_secs(20)).await;
 
     // send fid
-
     let cmd = r#"socat - unix-connect:/run/iml/postman-testfile.sock"#;
     let fid = format!(
         "{{ \"fid\": \"{}\" }}",
@@ -762,11 +748,10 @@ pub async fn test_stratagem_taskqueue(config: Config) -> Result<Config, TestErro
     ssh_stdin.write_all(fid.as_bytes()).await?;
     ssh_child.wait_with_checked_output().await?;
 
-    // @@ wait for fid to process by checking Task
+    // TODO wait for fid to process by checking Task
     delay_for(Duration::from_secs(20)).await;
 
     // check output on manager
-
     if let Ok((_, output)) = ssh::ssh_exec(
         config.manager_ip,
         "iml debugapi get report/test-taskfile.txt",
@@ -787,13 +772,6 @@ pub async fn test_stratagem_taskqueue(config: Config) -> Result<Config, TestErro
 // Returns list of server profile file names
 async fn configure_extra_profile(vagrant_path: &PathBuf) -> Result<Vec<String>, TestError> {
     let mut rc = vec![];
-    // Register Stratagem Server Profile
-    let mut profile_path = vagrant_path.clone();
-    profile_path.push("stratagem-server.profile");
-    rc.push("stratagem-server.profile".into());
-
-    let mut file = File::create(&profile_path).await?;
-    file.write_all(STRATAGEM_SERVER_PROFILE.as_bytes()).await?;
 
     // Register Stratagem Client Profile
     let mut profile_path = vagrant_path.clone();
@@ -889,8 +867,10 @@ mod tests {
         let client_servers = config.client_servers();
 
         let xs = vec![
-            ("stratagem_server".into(), mds_servers),
-            ("base_monitored".into(), oss_servers),
+            (
+                "base_monitored".into(),
+                mds_servers.into_iter().chain(oss_servers).collect(),
+            ),
             ("stratagem_client".into(), client_servers),
         ]
         .into_iter()

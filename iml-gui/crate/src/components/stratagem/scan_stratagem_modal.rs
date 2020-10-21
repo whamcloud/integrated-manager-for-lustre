@@ -5,29 +5,29 @@
 use crate::{
     components::{
         command_modal, font_awesome, modal,
-        stratagem::{duration_picker, validation, StratagemScan},
+        stratagem::{duration_picker, validation},
     },
     extensions::{MergeAttrs as _, NodeExt as _},
     generated::css_classes::C,
     key_codes, GMsg, RequestExt,
 };
-use iml_wire_types::CmdWrapper;
+use iml_graphql_queries::{stratagem, Response};
 use seed::{prelude::*, *};
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 #[derive(Default)]
 pub struct Model {
     pub modal: modal::Model,
     pub report_duration: duration_picker::Model,
     pub purge_duration: duration_picker::Model,
-    pub fs_id: i32,
+    pub fsname: String,
     pub scanning: bool,
 }
 
 impl Model {
-    pub fn new(fs_id: i32) -> Self {
+    pub fn new(fsname: String) -> Self {
         Self {
-            fs_id,
+            fsname,
             ..Default::default()
         }
     }
@@ -38,7 +38,7 @@ pub enum Msg {
     ReportDurationPicker(duration_picker::Msg),
     PurgeDurationPicker(duration_picker::Msg),
     SubmitScan,
-    Scanned(Box<fetch::ResponseDataResult<CmdWrapper>>),
+    Scanned(fetch::ResponseDataResult<Response<stratagem::fast_file_scan::Resp>>),
     Modal(modal::Msg),
     Noop,
 }
@@ -55,25 +55,34 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         }
         Msg::SubmitScan => {
             model.scanning = true;
-            let data = StratagemScan {
-                filesystem: model.fs_id,
-                report_duration: model.report_duration.value_as_ms(),
-                purge_duration: model.purge_duration.value_as_ms(),
-            };
 
-            let req = fetch::Request::api_call("run_stratagem")
-                .with_auth()
-                .method(fetch::Method::Post)
-                .send_json(&data);
+            let query = stratagem::fast_file_scan::build(
+                &model.fsname,
+                model
+                    .report_duration
+                    .value_as_ms()
+                    .map(Duration::from_millis)
+                    .map(|x| humantime::format_duration(x).to_string()),
+                model
+                    .purge_duration
+                    .value_as_ms()
+                    .map(Duration::from_millis)
+                    .map(|x| humantime::format_duration(x).to_string()),
+            );
 
-            orders.perform_cmd(req.fetch_json_data(|x| Msg::Scanned(Box::new(x))));
+            let req = fetch::Request::graphql_query(&query);
+
+            orders.perform_cmd(req.fetch_json_data(|x| Msg::Scanned(x)));
         }
         Msg::Scanned(x) => {
-            match *x {
-                Ok(x) => {
-                    let x = command_modal::Input::Commands(vec![Arc::new(x.command)]);
+            match x {
+                Ok(Response::Data(x)) => {
+                    let x = command_modal::Input::Commands(vec![Arc::new(x.data.stratagem.run_fast_file_scan)]);
 
                     orders.send_g_msg(GMsg::OpenCommandModal(x));
+                }
+                Ok(Response::Errors(e)) => {
+                    error!("An error has occurred during Stratagem scan: ", e);
                 }
                 Err(err) => {
                     error!("An error has occurred during Stratagem scan: ", err);
