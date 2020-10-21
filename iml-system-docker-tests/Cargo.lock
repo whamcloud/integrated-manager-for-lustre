@@ -281,6 +281,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "iml-graphql-queries"
+version = "0.2.0"
+dependencies = [
+ "humantime",
+ "iml-wire-types",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "iml-system-docker-tests"
 version = "0.4.0"
 dependencies = [
@@ -302,8 +312,10 @@ dependencies = [
  "futures",
  "iml-cmd",
  "iml-fs",
+ "iml-graphql-queries",
  "iml-wire-types",
  "petgraph",
+ "serde",
  "serde_json",
  "thiserror",
  "tokio",

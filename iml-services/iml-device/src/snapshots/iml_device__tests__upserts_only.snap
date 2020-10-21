@@ -20,6 +20,9 @@ expression: xs
         mount_path: Some(
             "/mnt/mdt1",
         ),
+        fs_type: Some(
+            Ldiskfs,
+        ),
     },
     Target {
         state: "mounted",
@@ -39,6 +42,9 @@ expression: xs
         uuid: "567890",
         mount_path: Some(
             "/mnt/ost1",
+        ),
+        fs_type: Some(
+            Ldiskfs,
         ),
     },
 ]

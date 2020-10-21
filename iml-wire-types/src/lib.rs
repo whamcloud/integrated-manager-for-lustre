@@ -2107,12 +2107,54 @@ pub struct LustreClient {
     pub mountpoints: Vec<String>,
 }
 
+#[cfg_attr(feature = "graphql", derive(juniper::GraphQLEnum))]
+#[cfg_attr(feature = "postgres-interop", derive(sqlx::Type))]
+#[cfg_attr(feature = "postgres-interop", sqlx(rename = "fs_type"))]
+#[cfg_attr(feature = "postgres-interop", sqlx(rename_all = "lowercase"))]
+#[derive(PartialEq, Eq, Clone, Debug, serde::Serialize, serde::Deserialize, Ord, PartialOrd)]
+pub enum FsType {
+    Zfs,
+    Ldiskfs,
+}
+
+impl TryFrom<&str> for FsType {
+    type Error = &'static str;
+
+    fn try_from(x: &str) -> Result<Self, Self::Error> {
+        match x {
+            "ldiskfs" => Ok(Self::Ldiskfs),
+            "zfs" => Ok(Self::Zfs),
+            _ => Err("Invalid fs type."),
+        }
+    }
+}
+
+impl TryFrom<String> for FsType {
+    type Error = &'static str;
+
+    fn try_from(x: String) -> Result<Self, Self::Error> {
+        Self::try_from(x.as_str())
+    }
+}
+
+impl fmt::Display for FsType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let label = match self {
+            Self::Ldiskfs => "ldiskfs",
+            Self::Zfs => "zfs",
+        };
+
+        write!(f, "{}", label)
+    }
+}
+
 #[derive(Debug, Eq, Clone, serde::Serialize, serde::Deserialize)]
 pub struct LdevEntry {
     pub primary: String,
     pub failover: Option<String>,
     pub label: String,
     pub device: String,
+    pub fs_type: Option<FsType>,
 }
 
 impl From<&str> for LdevEntry {
@@ -2122,7 +2164,7 @@ impl From<&str> for LdevEntry {
         Self {
             primary: (*parts
                 .get(0)
-                .unwrap_or_else(|| panic!("LdevEntry must specify a primary server.")))
+                .expect("LdevEntry must specify a primary server."))
             .to_string(),
             failover: parts.get(1).map_or_else(
                 || panic!("LdevEntry must specify a failover server or '-'."),
@@ -2134,27 +2176,38 @@ impl From<&str> for LdevEntry {
                     }
                 },
             ),
-            label: (*parts
-                .get(2)
-                .unwrap_or_else(|| panic!("LdevEntry must specify a label.")))
-            .to_string(),
-            device: (*parts
-                .get(3)
-                .unwrap_or_else(|| panic!("LdevEntry must specify a device.")))
-            .to_string(),
+            label: (*parts.get(2).expect("LdevEntry must specify a label.")).to_string(),
+            device: (*parts.get(3).expect("LdevEntry must specify a device.")).to_string(),
+            fs_type: FsType::try_from(
+                (*parts.get(3).expect("LdevEntry must specify a device."))
+                    .split(':')
+                    .next()
+                    .expect("get fs_type"),
+            )
+            .ok(),
         }
     }
 }
 
 impl fmt::Display for LdevEntry {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let device = if self.device.starts_with("zfs:") || self.device.starts_with("ldiskfs:") {
+            self.device.to_string()
+        } else if self.fs_type == Some(FsType::Zfs) {
+            format!("zfs:{}", self.device)
+        } else if self.fs_type == Some(FsType::Ldiskfs) {
+            format!("ldiskfs:{}", self.device)
+        } else {
+            self.device.to_string()
+        };
+
         write!(
             f,
             "{} {} {} {}",
             self.primary,
             self.failover.as_deref().unwrap_or("-"),
             self.label,
-            self.device
+            device
         )
     }
 }
