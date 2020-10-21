@@ -1,5 +1,6 @@
 use crate::*;
 use futures::{Future, FutureExt};
+use iml_wire_types::FsType;
 use petgraph::{
     graph::{DiGraph, EdgeIndex, NodeIndex},
     prelude::*,
@@ -117,8 +118,8 @@ pub fn get_snapshot_name_for_state(config: &Config, state: TestState) -> snapsho
                 SnapshotName::StratagemCreated
             } else {
                 match config.fs_type {
-                    FsType::LDISKFS => SnapshotName::LdiskfsCreated,
-                    FsType::ZFS => SnapshotName::ZfsCreated,
+                    FsType::Ldiskfs => SnapshotName::LdiskfsCreated,
+                    FsType::Zfs => SnapshotName::ZfsCreated,
                 }
             }
         }
@@ -380,8 +381,8 @@ pub fn get_active_snapshots<'a>(
         get_snapshots_from_graph(graph, &stratagem_filter)
     } else {
         match config.fs_type {
-            FsType::LDISKFS => get_snapshots_from_graph(graph, &ldiskfs_filter),
-            FsType::ZFS => get_snapshots_from_graph(graph, &zfs_filter),
+            FsType::Ldiskfs => get_snapshots_from_graph(graph, &ldiskfs_filter),
+            FsType::Zfs => get_snapshots_from_graph(graph, &zfs_filter),
         }
     }
 }
@@ -395,8 +396,8 @@ pub fn get_active_test_path(
         get_test_path(graph, start_node, &stratagem_filter)
     } else {
         match config.fs_type {
-            FsType::LDISKFS => get_test_path(graph, start_node, &ldiskfs_filter),
-            FsType::ZFS => get_test_path(graph, start_node, &zfs_filter),
+            FsType::Ldiskfs => get_test_path(graph, start_node, &ldiskfs_filter),
+            FsType::Zfs => get_test_path(graph, start_node, &zfs_filter),
         }
     }
 }

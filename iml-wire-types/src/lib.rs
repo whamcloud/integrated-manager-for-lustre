@@ -2010,12 +2010,53 @@ pub struct LustreClient {
     pub mountpoints: Vec<String>,
 }
 
+#[cfg_attr(feature = "postgres-interop", derive(sqlx::Type))]
+#[cfg_attr(feature = "postgres-interop", sqlx(rename = "fs_type"))]
+#[cfg_attr(feature = "postgres-interop", sqlx(rename_all = "lowercase"))]
+#[derive(PartialEq, Eq, Clone, Debug, serde::Serialize, serde::Deserialize, Ord, PartialOrd)]
+pub enum FsType {
+    Zfs,
+    Ldiskfs,
+}
+
+impl From<&str> for FsType {
+    fn from(x: &str) -> Self {
+        match x {
+            "ldiskfs" => Self::Ldiskfs,
+            "zfs" => Self::Zfs,
+            _ => Self::Ldiskfs,
+        }
+    }
+}
+
+impl From<String> for FsType {
+    fn from(x: String) -> Self {
+        match x.as_str() {
+            "ldiskfs" => Self::Ldiskfs,
+            "zfs" => Self::Zfs,
+            _ => Self::Ldiskfs,
+        }
+    }
+}
+
+impl fmt::Display for FsType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let label = match self {
+            Self::Ldiskfs => "ldiskfs",
+            Self::Zfs => "zfs",
+        };
+
+        write!(f, "{}", label)
+    }
+}
+
 #[derive(Debug, Eq, Clone, serde::Serialize, serde::Deserialize)]
 pub struct LdevEntry {
     pub primary: String,
     pub failover: Option<String>,
     pub label: String,
     pub device: String,
+    pub fs_type: FsType,
 }
 
 impl From<&str> for LdevEntry {
@@ -2045,19 +2086,34 @@ impl From<&str> for LdevEntry {
                 .get(3)
                 .unwrap_or_else(|| panic!("LdevEntry must specify a device.")))
             .to_string(),
+            fs_type: (*parts
+                .get(3)
+                .unwrap_or_else(|| panic!("LdevEntry must specify a device.")))
+            .split(':')
+            .next()
+            .unwrap_or_else(|| "ldiskfs")
+            .into(),
         }
     }
 }
 
 impl fmt::Display for LdevEntry {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let device = if self.device.starts_with("zfs:") || self.device.starts_with("ldiskfs:") {
+            self.device.to_string()
+        } else if self.fs_type == FsType::Zfs {
+            format!("zfs:{}", self.device)
+        } else {
+            format!("ldiskfs:{}", self.device)
+        };
+
         write!(
             f,
             "{} {} {} {}",
             self.primary,
             self.failover.as_deref().unwrap_or("-"),
             self.label,
-            self.device
+            device
         )
     }
 }

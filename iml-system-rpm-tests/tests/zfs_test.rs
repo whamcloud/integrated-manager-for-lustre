@@ -4,6 +4,7 @@
 
 use iml_system_rpm_tests::run_fs_test;
 use iml_system_test_utils::*;
+use iml_wire_types::FsType;
 
 #[tokio::test]
 async fn test_zfs_setup() -> Result<(), TestError> {
@@ -13,7 +14,7 @@ async fn test_zfs_setup() -> Result<(), TestError> {
             ("base_monitored".into(), config.storage_servers()),
             ("base_client".into(), config.client_servers()),
         ],
-        fs_type: FsType::ZFS,
+        fs_type: FsType::Zfs,
         ..config
     };
 

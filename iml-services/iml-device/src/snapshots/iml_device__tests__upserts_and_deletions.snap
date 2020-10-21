@@ -18,6 +18,7 @@ expression: xs
         mount_path: Some(
             "/mnt/mdt1",
         ),
+        fs_type: Ldiskfs,
     },
     Target {
         state: "mounted",
@@ -36,6 +37,7 @@ expression: xs
         mount_path: Some(
             "/mnt/mdt2",
         ),
+        fs_type: Ldiskfs,
     },
     Target {
         state: "mounted",
@@ -54,5 +56,6 @@ expression: xs
         mount_path: Some(
             "/mnt/ost1",
         ),
+        fs_type: Ldiskfs,
     },
 ]

@@ -10,13 +10,13 @@ use device_types::{
     mount::Mount,
 };
 pub use error::ImlDeviceError;
-use futures::{future::try_join_all, lock::Mutex};
+use futures::{future::try_join_all, lock::Mutex, TryStreamExt};
 use im::HashSet;
 use iml_change::*;
 use iml_influx::{Client, InfluxClientExt as _, Precision};
 use iml_postgres::sqlx::{self, PgPool};
 use iml_tracing::tracing;
-use iml_wire_types::Fqdn;
+use iml_wire_types::{Fqdn, FsType};
 use std::{
     collections::{BTreeMap, BTreeSet, HashMap},
     sync::Arc,
@@ -63,8 +63,22 @@ pub async fn create_cache(pool: &PgPool) -> Result<Cache, ImlDeviceError> {
 }
 
 pub async fn create_target_cache(pool: &PgPool) -> Result<Vec<Target>, ImlDeviceError> {
-    let xs: Vec<Target> = sqlx::query_as!(Target, "select * from target")
-        .fetch_all(pool)
+    let xs: Vec<Target> = sqlx::query!("select state, name, active_host_id, host_ids, filesystems, uuid, mount_path, dev_path, fs_type::text from target")
+        .fetch(pool)
+        .map_ok(|x| {
+            Target {
+                state: x.state,
+                name: x.name,
+                active_host_id: x.active_host_id,
+                host_ids: x.host_ids,
+                filesystems: x.filesystems,
+                uuid: x.uuid,
+                mount_path: x.mount_path,
+                dev_path: x.dev_path,
+                fs_type: x.fs_type.unwrap_or_else(|| "ldiskfs".to_string()).into(),
+            }
+        })
+        .try_collect()
         .await?;
 
     Ok(xs)
@@ -369,13 +383,16 @@ pub fn find_targets<'a>(
 
             let s = s.split('=').nth(1)?;
 
-            Some((fqdn, &x.target, &x.source, s))
+            let osd = x.opts.0.split(',').find(|x| x.starts_with("osd="))?;
+            let osd = osd.split('=').nth(1)?;
+
+            Some((fqdn, &x.target, &x.source, s, osd))
         })
         .collect();
 
     let xs: Vec<_> = xs
         .into_iter()
-        .filter_map(|(fqdn, mntpnt, dev, target)| {
+        .filter_map(|(fqdn, mntpnt, dev, target, osd)| {
             let dev_tree = x.get(&fqdn)?;
 
             let device = dev_tree.find_device_by_devpath(dev)?;
@@ -384,13 +401,13 @@ pub fn find_targets<'a>(
 
             let fs_uuid = device.get_fs_uuid()?;
 
-            Some((fqdn, mntpnt, dev_id, dev, fs_uuid, target))
+            Some((fqdn, mntpnt, dev_id, dev, fs_uuid, target, osd))
         })
         .collect();
 
     let xs: Vec<_> = xs
         .into_iter()
-        .filter_map(|(fqdn, mntpnt, dev_id, dev_path, fs_uuid, target)| {
+        .filter_map(|(fqdn, mntpnt, dev_id, dev_path, fs_uuid, target, osd)| {
             let ys: Vec<_> = device_index
                 .0
                 .iter()
@@ -418,34 +435,41 @@ pub fn find_targets<'a>(
                 fs_uuid,
                 dev_path,
                 target,
+                osd,
             ))
         })
         .collect();
 
     xs.into_iter()
-        .map(|(fqdn, ids, mntpnt, fs_uuid, dev_path, target)| Target {
-            state: "mounted".into(),
-            active_host_id: Some(*fqdn),
-            host_ids: ids,
-            dev_path: Some(dev_path.0.to_string_lossy().to_string()),
-            filesystems: target_to_fs_map
-                .get(target)
-                .map(|xs| {
-                    xs.iter()
-                        .filter(|(host, _)| {
-                            host_map
-                                .get(host)
-                                .unwrap_or_else(|| panic!("Couldn't get host {}", host.0))
-                                == fqdn
-                        })
-                        .map(|(_, fs)| fs.clone())
-                        .collect::<Vec<String>>()
-                })
-                .unwrap_or_default(),
-            name: target.into(),
-            uuid: fs_uuid.into(),
-            mount_path: Some(mntpnt.0.to_string_lossy().to_string()),
-        })
+        .map(
+            |(fqdn, ids, mntpnt, fs_uuid, dev_path, target, osd)| Target {
+                state: "mounted".into(),
+                active_host_id: Some(*fqdn),
+                host_ids: ids,
+                dev_path: Some(dev_path.0.to_string_lossy().to_string()),
+                filesystems: target_to_fs_map
+                    .get(target)
+                    .map(|xs| {
+                        xs.iter()
+                            .filter(|(host, _)| {
+                                host_map
+                                    .get(host)
+                                    .unwrap_or_else(|| panic!("Couldn't get host {}", host.0))
+                                    == fqdn
+                            })
+                            .map(|(_, fs)| fs.clone())
+                            .collect::<Vec<String>>()
+                    })
+                    .unwrap_or_default(),
+                name: target.into(),
+                uuid: fs_uuid.into(),
+                mount_path: Some(mntpnt.0.to_string_lossy().to_string()),
+                fs_type: match osd.contains("zfs") {
+                    true => "zfs".into(),
+                    false => "ldiskfs".into(),
+                },
+            },
+        )
         .collect()
 }
 
@@ -459,6 +483,7 @@ pub struct Target {
     pub filesystems: Vec<String>,
     pub uuid: String,
     pub mount_path: Option<String>,
+    pub fs_type: FsType,
 }
 
 impl Identifiable for Target {
@@ -632,6 +657,7 @@ mod tests {
                 filesystems: vec!["fs1".to_string()],
                 uuid: "123456".into(),
                 mount_path: Some("/mnt/mdt1".into()),
+                fs_type: FsType::Ldiskfs,
             },
             Target {
                 state: "mounted".into(),
@@ -642,6 +668,7 @@ mod tests {
                 filesystems: vec!["fs1".to_string()],
                 uuid: "567890".into(),
                 mount_path: Some("/mnt/ost1".into()),
+                fs_type: FsType::Ldiskfs,
             },
         ];
 
@@ -663,6 +690,7 @@ mod tests {
             filesystems: vec!["fs1".to_string()],
             uuid: "123456".into(),
             mount_path: Some("/mnt/mdt1".into()),
+            fs_type: FsType::Ldiskfs,
         };
 
         let deletions = Deletions(vec![&t]);
@@ -677,6 +705,7 @@ mod tests {
                 filesystems: vec!["fs1".to_string()],
                 uuid: "654321".into(),
                 mount_path: Some("/mnt/mdt2".into()),
+                fs_type: FsType::Ldiskfs,
             },
             Target {
                 state: "mounted".into(),
@@ -687,6 +716,7 @@ mod tests {
                 filesystems: vec!["fs1".to_string()],
                 uuid: "567890".into(),
                 mount_path: Some("/mnt/ost1".into()),
+                fs_type: FsType::Ldiskfs,
             },
         ];
 
@@ -708,6 +738,7 @@ mod tests {
             filesystems: vec!["fs1".into()],
             uuid: "123456".into(),
             mount_path: Some("/mnt/mdt1".into()),
+            fs_type: FsType::Ldiskfs,
         };
 
         let deletions = Deletions(vec![&t]);
