@@ -10,7 +10,7 @@ use async_trait::async_trait;
 use futures::future::try_join_all;
 use iml_cmd::{CheckedChildExt, CheckedCommandExt};
 use iml_graphql_queries::task;
-use iml_wire_types::{task::KeyValue, task::TaskArgs, Branding};
+use iml_wire_types::{task::KeyValue, task::TaskArgs, Branding, FsType};
 use ssh::create_iml_diagnostics;
 use std::{collections::HashMap, env, path::PathBuf, process::Stdio, str, time::Duration};
 use tokio::{
@@ -46,12 +46,6 @@ pub enum TestType {
 pub enum NtpServer {
     HostOnly,
     Adm,
-}
-
-#[derive(Clone)]
-pub enum FsType {
-    LDISKFS,
-    ZFS,
 }
 
 pub enum TestState {
@@ -220,7 +214,7 @@ impl Default for Config {
             branding: Branding::default(),
             test_type: TestType::Rpm,
             ntp_server: NtpServer::Adm,
-            fs_type: FsType::LDISKFS,
+            fs_type: FsType::Ldiskfs,
         }
     }
 }
@@ -623,8 +617,8 @@ pub async fn install_fs(config: Config) -> Result<Config, TestError> {
 
 pub async fn create_fs(config: Config) -> Result<Config, TestError> {
     match config.fs_type {
-        FsType::LDISKFS => create_monitored_ldiskfs(&config).await?,
-        FsType::ZFS => create_monitored_zfs(&config).await?,
+        FsType::Ldiskfs => create_monitored_ldiskfs(&config).await?,
+        FsType::Zfs => create_monitored_zfs(&config).await?,
     };
 
     wait_for_ntp(&config).await?;
@@ -637,8 +631,8 @@ pub async fn create_fs(config: Config) -> Result<Config, TestError> {
 
 async fn mount_fs(config: &Config) -> Result<usize, TestError> {
     let (count, provisioner) = match config.fs_type {
-        FsType::LDISKFS => (2, "mount-ldiskfs-fs,mount-ldiskfs-fs2"),
-        FsType::ZFS => (1, "mount-zfs-fs"),
+        FsType::Ldiskfs => (2, "mount-ldiskfs-fs,mount-ldiskfs-fs2"),
+        FsType::Zfs => (1, "mount-zfs-fs"),
     };
 
     let xs = config.storage_servers().into_iter().map(|x| {
