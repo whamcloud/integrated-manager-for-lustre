@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use futures::{future::join_all, lock::Mutex, FutureExt, TryFutureExt};
-use iml_action_client::invoke_rust_agent;
+use iml_action_client::Client;
 use iml_manager_env::get_pool_limit;
 use iml_postgres::{
     get_db_pool,
@@ -110,6 +110,7 @@ async fn worker_fqdn(
 }
 
 async fn send_work(
+    action_client: &Client,
     pg_pool: &PgPool,
     fqdn: &str,
     fsname: &str,
@@ -211,7 +212,7 @@ async fn send_work(
     // send fids to actions runner
     // action names on Agents are "action.ACTION_NAME"
     for action in task.actions.iter().map(|a| format!("action.{}", a)) {
-        match invoke_rust_agent(fqdn, &action, &args).await {
+        match action_client.invoke_rust_agent(fqdn, &action, &args).await {
             Err(e) => {
                 tracing::info!("Failed to send {} to {}: {:?}", &action, fqdn, e);
 
@@ -295,13 +296,19 @@ async fn send_work(
     Ok(completed as i64)
 }
 
-async fn run_tasks(fqdn: &str, worker: &LustreClient, xs: Vec<Task>, pool: &PgPool) {
+async fn run_tasks(
+    action_client: &Client,
+    fqdn: &str,
+    worker: &LustreClient,
+    xs: Vec<Task>,
+    pool: &PgPool,
+) {
     let fsname = &worker.filesystem;
     let host_id = worker.host_id;
 
     let xs = xs.into_iter().map(|task| async move {
         for _ in 0..10_u8 {
-            let rc = send_work(&pool, &fqdn, &fsname, &task, host_id)
+            let rc = send_work(action_client, &pool, &fqdn, &fsname, &task, host_id)
                 .inspect_err(|e| tracing::warn!("send_work({}) failed {:?}", task.name, e))
                 .await?;
 
@@ -325,6 +332,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let pg_pool = get_db_pool(*POOL_LIMIT).await?;
     let active_clients = Arc::new(Mutex::new(HashSet::new()));
     let mut interval = time::interval(DELAY);
+
+    let action_client = Client::new();
 
     // Task Runner Loop
     loop {
@@ -360,6 +369,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let pg_pool = pg_pool.clone();
             let active_clients = Arc::clone(&active_clients);
             let worker_id = worker.id;
+            let action_client = action_client.clone();
 
             async move {
                 let tasks = tasks_per_worker(&pg_pool, &worker).await?;
@@ -367,7 +377,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
                 tracing::debug!("Starting run tasks for {}", &fqdn);
 
-                run_tasks(&fqdn, &worker, tasks, &pg_pool).await;
+                run_tasks(&action_client, &fqdn, &worker, tasks, &pg_pool).await;
 
                 tracing::debug!("Completed run tasks for {}", &fqdn);
 
