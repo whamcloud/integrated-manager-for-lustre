@@ -17,11 +17,10 @@ use iml_rabbit::{ImlRabbitError, Pool};
 use iml_wire_types::{
     db::LogMessageRecord,
     graphql_duration::GraphQLDuration,
-    logs::LogResponse,
-    logs::Meta,
+    logs::{LogResponse, Meta},
     snapshot::{ReserveUnit, Snapshot, SnapshotInterval, SnapshotRetention},
     task::Task,
-    Command, EndpointName, Job, LogMessage, LogSeverity, MessageClass, SortDir, StratagemReport,
+    Command, EndpointName, Job, LogMessage, LogSeverity, MessageClass, SortDir,
 };
 use itertools::Itertools;
 use juniper::{
@@ -120,6 +119,12 @@ struct BannedResource {
     weight: i32,
     /// Is master only
     master_only: bool,
+}
+
+#[derive(Debug, serde::Serialize)]
+pub struct SendJob<'a, T> {
+    pub class_name: &'a str,
+    pub args: T,
 }
 
 pub(crate) struct QueryRoot;
@@ -578,6 +583,7 @@ fn parse_snapshot_name(name: &str) -> Option<SnapshotIntervalName> {
 }
 
 pub(crate) struct MutationRoot;
+
 #[juniper::graphql_object(Context = Context)]
 impl MutationRoot {
     fn stratagem(&self) -> stratagem::StratagemMutation {
