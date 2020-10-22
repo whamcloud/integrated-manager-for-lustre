@@ -262,7 +262,7 @@ Vagrant.configure('2') do |config|
   #
   (1..2).each do |i|
     config.vm.define "mds#{i}" do |mds|
-      mds.vm.hostname = "mds#{i}.local"
+      mds.vm.hostname = "mds#{i}"
 
       mds.vm.provider 'virtualbox' do |vbx|
         vbx.name = "mds#{i}"
@@ -506,7 +506,7 @@ Vagrant.configure('2') do |config|
     config.vm.define "oss#{i}",
                      autostart: i <= 2 do |oss|
 
-      oss.vm.hostname = "oss#{i}.local"
+      oss.vm.hostname = "oss#{i}"
 
       oss.vm.provider 'virtualbox' do |vbx|
         vbx.name = "oss#{i}"
