@@ -42,7 +42,7 @@ stream-cancel = "0.6"
 strfmt = "0.1.6"
 structopt = "0.3"
 thiserror = "1.0"
-tokio = {version = "0.2", features = ["fs", "io-util", "process", "macros", "net", "rt-threaded"]}
+tokio = {version = "0.2", features = ["fs", "io-util", "process", "macros", "net", "rt-threaded", "time"]}
 tokio-util = {version = "0.3", features = ["codec"]}
 tracing = "0.1"
 url = "2.1"
