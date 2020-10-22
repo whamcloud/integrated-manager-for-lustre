@@ -1920,24 +1920,6 @@
       "nullable": []
     }
   },
-  "664d0c17acb625d51e033c999e13460067137311087a92ec5140d6f1b316c080": {
-    "query": "SELECT chroma_core_logmessage_id_seq.last_value FROM chroma_core_logmessage_id_seq;",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "last_value",
-          "type_info": "Int8"
-        }
-      ],
-      "parameters": {
-        "Left": []
-      },
-      "nullable": [
-        false
-      ]
-    }
-  },
   "681d997bb965a228c0aa75d93d09faefe5412daaf3e7bda3630df319fb9edabb": {
     "query": "select * from django_content_type",
     "describe": {
@@ -2497,6 +2479,24 @@
         false,
         false,
         false,
+        true
+      ]
+    }
+  },
+  "8a7e849cf7654907787343223c017f302c514e4728439d79ff4f91fca17e1ebb": {
+    "query": "SELECT total_rows FROM rowcount WHERE table_name = 'chroma_core_logmessage';",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "total_rows",
+          "type_info": "Int8"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
         true
       ]
     }

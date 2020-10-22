@@ -490,9 +490,7 @@ impl QueryRoot {
         message_class: Option<Vec<MessageClass>>,
         severity: Option<LogSeverity>,
     ) -> juniper::FieldResult<LogResponse> {
-        tracing::info!("dir: {:?}", dir);
         let dir = dir.unwrap_or_default();
-        tracing::info!("dir: {:?}", dir);
 
         let start_datetime = start_datetime
             .map(|s| s.parse::<chrono::DateTime<Utc>>())
@@ -545,11 +543,12 @@ impl QueryRoot {
             .collect::<Result<_, _>>()?;
 
         let total_count = sqlx::query!(
-            "SELECT chroma_core_logmessage_id_seq.last_value FROM chroma_core_logmessage_id_seq;"
+            "SELECT total_rows FROM rowcount WHERE table_name = 'chroma_core_logmessage';"
         )
         .fetch_one(&context.pg_pool)
         .await?
-        .last_value;
+        .total_rows
+        .ok_or_else(|| FieldError::new("Number of rows doesn't fit in i32", Value::null()))?;
 
         Ok(LogResponse {
             data: xs,
