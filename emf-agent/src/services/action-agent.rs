@@ -4,6 +4,7 @@
 
 use emf_agent::{
     action_plugins::create_registry,
+    action_plugins::postoffice::{unlock_file, UnlockOp},
     agent_error::{EmfAgentError, RequiredError},
     env,
     util::{wait_for_termination, FQDN},
@@ -40,6 +41,9 @@ static STATE_MACHINE_SERVICE: Lazy<String> = Lazy::new(|| {
 #[tokio::main]
 async fn main() -> Result<(), EmfAgentError> {
     emf_tracing::init();
+
+    // ensure postoffice lock file is removed on restart
+    let _ = unlock_file(UnlockOp::Drop).await;
 
     let instance_id = Uuid::new_v4().to_string();
 
