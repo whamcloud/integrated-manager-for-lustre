@@ -245,8 +245,11 @@ fn after_mount(url: Url, orders: &mut impl Orders<Msg, GMsg>) -> AfterMount<Mode
 pub fn routes(url: Url) -> Option<Msg> {
     let pth = url.get_path();
 
-    // Urls which start with `static` are files => treat them as external links.
-    if pth.starts_with(&[STATIC_PATH.into()]) || pth.starts_with(&[HELP_PATH.into()]) {
+    // Some URLs are files => treat them as external links.
+    if pth.starts_with(&[STATIC_PATH.into()])
+        || pth.starts_with(&[HELP_PATH.into()])
+        || pth.starts_with(&["api".into(), "report".into()])
+    {
         return None;
     }
     Some(Msg::RouteChanged(url))
@@ -364,7 +367,9 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         }
         Msg::LoadPage => {
             if model.loading.loaded() && !model.page.is_active(&model.route) {
-                if model.route == Route::Snapshots && !model.conf.use_snapshots {
+                if (model.route == Route::Snapshots && !model.conf.use_snapshots)
+                    || (model.route == Route::Stratagem && !model.conf.use_stratagem)
+                {
                     model.route = Route::NotFound;
                 }
 
@@ -1012,6 +1017,13 @@ fn view(model: &Model) -> Vec<Node<Msg>> {
             page::snapshot::view(x, &model.records, model.auth.get_session())
                 .els()
                 .map_msg(page::Msg::Snapshots),
+        )
+        .els(),
+        Page::Stratagem(x) => main_panels(
+            model,
+            page::stratagem::view(x, model.auth.get_session())
+                .els()
+                .map_msg(page::Msg::Stratagem),
         )
         .els(),
     };

@@ -10,9 +10,9 @@ mod list_retention;
 mod take;
 
 use crate::{
-    components::restrict,
     components::{
-        attrs, font_awesome, font_awesome_outline, form, paging, panel, resource_links, table, tooltip, Placement,
+        attrs, font_awesome, font_awesome_outline, form, paging, panel, resource_links, restrict, table, tooltip,
+        Placement,
     },
     extensions::{MergeAttrs as _, NodeExt as _},
     generated::css_classes::C,

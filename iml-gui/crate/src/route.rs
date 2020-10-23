@@ -67,6 +67,7 @@ pub enum Route<'a> {
     Volume(RouteId<'a>),
     SfaEnclosure(RouteId<'a>),
     Snapshots,
+    Stratagem,
 }
 
 impl<'a> Route<'a> {
@@ -97,6 +98,7 @@ impl<'a> Route<'a> {
             Self::Volume(id) => vec!["volumes", id],
             Self::SfaEnclosure(id) => vec!["sfa_enclosure", id],
             Self::Snapshots => vec!["snapshots"],
+            Self::Stratagem => vec!["stratagem"],
         };
 
         if let Some(base) = crate::UI_BASE.as_ref() {
@@ -179,6 +181,7 @@ impl<'a> From<Url> for Route<'a> {
                 None => Self::NotFound,
             },
             Some("snapshots") => Self::Snapshots,
+            Some("stratagem") => Self::Stratagem,
             _ => Self::NotFound,
         }
     }
