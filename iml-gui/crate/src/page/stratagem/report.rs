@@ -128,7 +128,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         Msg::Reports(x) => {
             match x {
                 Ok(Response::Data(d)) => {
-                    model.rows = d.data.stratagem_reports;
+                    model.rows = d.data.stratagem.stratagem_reports;
                     orders
                         .proxy(Msg::Page)
                         .send_msg(paging::Msg::SetTotal(model.rows.len()));

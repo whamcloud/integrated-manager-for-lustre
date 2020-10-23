@@ -4,7 +4,7 @@
 
 use crate::GMsg;
 use iml_wire_types::Session;
-use seed::{prelude::*, *};
+use seed::prelude::*;
 
 pub mod report;
 
