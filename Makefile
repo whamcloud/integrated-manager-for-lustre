@@ -43,8 +43,8 @@ local:
 check:
 	black --check ./
 	cargo fmt --all -- --check
-	PQ_LIB_DIR=/usr/pgsql-9.6/lib cargo check --locked --all-targets
-	PQ_LIB_DIR=/usr/pgsql-9.6/lib cargo clippy -- -W warnings
+	cargo check --locked --all-targets
+	cargo clippy -- -W warnings
 	cargo check --locked --manifest-path iml-system-rpm-tests/Cargo.toml --tests
 	cargo clippy --manifest-path iml-system-rpm-tests/Cargo.toml --tests -- -W warnings
 	cargo check --locked --manifest-path iml-system-docker-tests/Cargo.toml --tests
@@ -87,7 +87,9 @@ nuke_db:
 	createdb -O $(DB_USER) $(DB_NAME)
 
 migrate_db:
+	psql chroma -c "CREATE EXTENSION IF NOT EXISTS btree_gist;"
 	@./manage.py migrate
+	cargo sqlx migrate run
 
 
 nuke_logs:

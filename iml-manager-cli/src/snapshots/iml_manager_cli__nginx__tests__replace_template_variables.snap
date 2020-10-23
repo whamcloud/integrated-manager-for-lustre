@@ -67,9 +67,8 @@ server {
     ssl_trusted_certificate /var/lib/chroma/authority.crt;
     ssl_client_certificate /var/lib/chroma/authority.crt;
     ssl_verify_client optional;
-    ssl_protocols TLSv1.2;
+    ssl_protocols TLSv1.2 TLSv1.3;
     ssl_prefer_server_ciphers on;
-    ssl_ciphers 'ECDHE-RSA-AES128-GCM-SHA256:!DH+3DES:!ADH:!AECDH:!RC4:!aNULL:!MD5';
 
     ssl_session_cache shared:SSL:10m;
     ssl_session_timeout 180m;
@@ -196,16 +195,34 @@ server {
         gzip_types application/json;
     }
 
-    location /api/task {
+    location /graphql_schema {
         proxy_set_header Host $http_host;
         auth_request /auth;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-Server $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_pass http://127.0.0.1:8004/task;
+        proxy_pass http://127.0.0.1:8004/graphql_schema;
+    }
+
+    location /graphql {
+        proxy_set_header Host $http_host;
+        auth_request /auth;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Server $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_pass http://127.0.0.1:8004/graphql;
 
         gzip on;
         gzip_types application/json;
+    }
+
+    location /graphiql {
+        proxy_set_header Host $http_host;
+        auth_request /auth;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Server $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_pass http://127.0.0.1:8004/graphiql;
     }
 
     location /api {
@@ -389,8 +406,6 @@ server {
         proxy_set_header Http-Host $http_host;
         proxy_pass http://unix:/var/run/iml-update-handler.sock;
     }
-
-    
 }
 
 # We should be able to use `alias` / `root` with `try_files`

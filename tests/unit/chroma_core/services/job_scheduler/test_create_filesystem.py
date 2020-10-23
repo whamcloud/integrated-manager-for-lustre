@@ -8,8 +8,7 @@ from tests.unit.chroma_core.helpers import load_default_profile
 
 
 class TestOrderedTargets(IMLUnitTestCase):
-    """ Check that the target ordering works correctly across volumes
-    """
+    """Check that the target ordering works correctly across volumes"""
 
     def setUp(self):
         super(TestOrderedTargets, self).setUp()

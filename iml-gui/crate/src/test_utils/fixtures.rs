@@ -15,6 +15,9 @@ pub(crate) fn get_cache() -> Cache {
   "sfa_job": {},
   "sfa_power_supply": {},
   "sfa_controller": {},
+  "snapshot": {},
+  "snapshot_interval": {},
+  "snapshot_retention": {},
   "active_alert": {
     "577": {
       "_message": "Updates are ready for server oss1.local",
@@ -546,7 +549,8 @@ pub(crate) fn get_cache() -> Cache {
       "host_id": 1,
       "immutable_state": false,
       "not_deleted": true,
-      "content_type_id": 52
+      "content_type_id": 52,
+      "state_modified_at": "1990-12-31T23:59:60Z"
     },
     "2": {
       "id": 2,
@@ -554,7 +558,8 @@ pub(crate) fn get_cache() -> Cache {
       "host_id": 2,
       "immutable_state": false,
       "not_deleted": true,
-      "content_type_id": 52
+      "content_type_id": 52,
+      "state_modified_at": "1990-12-31T23:59:60Z"
     },
     "3": {
       "id": 3,
@@ -562,7 +567,8 @@ pub(crate) fn get_cache() -> Cache {
       "host_id": 3,
       "immutable_state": false,
       "not_deleted": true,
-      "content_type_id": 52
+      "content_type_id": 52,
+      "state_modified_at": "1990-12-31T23:59:60Z"
     },
     "4": {
       "id": 4,
@@ -570,7 +576,8 @@ pub(crate) fn get_cache() -> Cache {
       "host_id": 4,
       "immutable_state": false,
       "not_deleted": true,
-      "content_type_id": 52
+      "content_type_id": 52,
+      "state_modified_at": "1990-12-31T23:59:60Z"
     },
     "11": {
       "id": 11,
@@ -578,7 +585,8 @@ pub(crate) fn get_cache() -> Cache {
       "host_id": 11,
       "immutable_state": false,
       "not_deleted": true,
-      "content_type_id": 52
+      "content_type_id": 52,
+      "state_modified_at": "1990-12-31T23:59:60Z"
     }
   },
   "managed_target_mount": {

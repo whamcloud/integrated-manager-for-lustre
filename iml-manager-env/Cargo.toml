@@ -1,8 +1,8 @@
 [package]
-name = "iml-manager-env"
-version = "0.3.0"
 authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
+name = "iml-manager-env"
+version = "0.4.0"
 
 [dependencies]
 lazy_static = "1.4.0"

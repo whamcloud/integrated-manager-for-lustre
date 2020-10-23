@@ -61,32 +61,9 @@ pub enum Command {
     Enable,
 }
 
-enum State {
-    Disabled,
-    Enabled(Box<Config>),
-}
-
 pub struct Model {
+    use_stratagem: bool,
     fs: Arc<Filesystem>,
-    state: State,
-    stratagem_config: Option<Arc<StratagemConfiguration>>,
-}
-
-impl Model {
-    pub fn new(fs: Arc<Filesystem>) -> Self {
-        Self {
-            state: State::Disabled,
-            fs,
-            stratagem_config: None,
-        }
-    }
-}
-
-pub fn filesystem_locked(fs: &Filesystem, locks: &Locks) -> bool {
-    locks.get(&fs.composite_id().to_string()).is_some()
-}
-
-pub struct Config {
     inode_table: inode_table::Model,
     grafana_vars: BTreeMap<String, String>,
     pub scan_duration_picker: duration_picker::Model,
@@ -97,9 +74,37 @@ pub struct Config {
     pub disabled: bool,
     pub target_config: TargetConfig,
     pub scan_stratagem_button: scan_stratagem_button::Model,
+    stratagem_config: Option<Arc<StratagemConfiguration>>,
 }
 
-impl Config {
+impl Model {
+    pub fn new(use_stratagem: bool, fs: Arc<Filesystem>) -> Self {
+        let mut grafana_vars = BTreeMap::new();
+        grafana_vars.insert("fs_name".into(), fs.name.clone());
+
+        Self {
+            use_stratagem,
+            inode_table: inode_table::Model::new(&fs.name),
+            grafana_vars,
+            scan_duration_picker: duration_picker::Model::default(),
+            report_duration_picker: duration_picker::Model::default(),
+            purge_duration_picker: duration_picker::Model::default(),
+            id: None,
+            destroyed: false,
+            disabled: false,
+            target_config: Default::default(),
+            scan_stratagem_button: scan_stratagem_button::Model::new(fs.name.to_string()),
+            fs,
+            stratagem_config: None,
+        }
+    }
+}
+
+pub fn filesystem_locked(fs: &Filesystem, locks: &Locks) -> bool {
+    locks.get(&fs.composite_id().to_string()).is_some()
+}
+
+impl Model {
     fn config_valid(&self) -> bool {
         self.scan_duration_picker.validation_message.is_none()
             && self.report_duration_picker.validation_message.is_none()
@@ -135,44 +140,22 @@ pub enum Msg {
     ReportDurationPicker(duration_picker::Msg),
     PurgeDurationPicker(duration_picker::Msg),
     SendCommand(Command),
-    CheckStratagem,
-    EnableStratagem,
-    DisableStratagem,
     CmdSent(Box<fetch::FetchObject<CmdWrapper>>),
     ScanStratagemButton(scan_stratagem_button::Msg),
     Noop,
 }
 
-fn can_enable(fs: &Arc<Filesystem>, cache: &ArcCache) -> bool {
-    let server_resources: Vec<_> = fs
-        .mdts
-        .iter()
-        .flat_map(|x| x.failover_servers.iter().chain(std::iter::once(&x.primary_server)))
-        .collect();
-
-    let servers: Vec<_> = cache
-        .host
-        .values()
-        .filter(|x| server_resources.contains(&&x.resource_uri))
-        .collect();
-
-    !servers.is_empty()
-        && servers
-            .into_iter()
-            .all(|x| x.server_profile.name == "stratagem_server" || x.server_profile.name == "exascaler_server")
-}
-
-fn handle_stratagem_config_update(config: &mut Config, conf: &Arc<StratagemConfiguration>) {
+fn handle_stratagem_config_update(config: &mut Model, conf: &Arc<StratagemConfiguration>) {
     config.id = Some(conf.id);
 
-    duration_picker::calculate_value_and_unit(&mut config.scan_duration_picker, conf.interval);
+    duration_picker::calculate_value_and_unit(&mut config.scan_duration_picker, conf.interval as u64);
 
     match conf.report_duration {
         None => {
             config.report_duration_picker.value = None;
         }
         Some(x) => {
-            duration_picker::calculate_value_and_unit(&mut config.report_duration_picker, x);
+            duration_picker::calculate_value_and_unit(&mut config.report_duration_picker, x as u64);
         }
     }
 
@@ -181,13 +164,13 @@ fn handle_stratagem_config_update(config: &mut Config, conf: &Arc<StratagemConfi
             config.purge_duration_picker.value = None;
         }
         Some(x) => {
-            duration_picker::calculate_value_and_unit(&mut config.purge_duration_picker, x);
+            duration_picker::calculate_value_and_unit(&mut config.purge_duration_picker, x as u64);
         }
     }
 
-    if conf.interval == config.target_config.interval
-        && conf.report_duration == config.target_config.report_duration
-        && conf.purge_duration == config.target_config.purge_duration
+    if conf.interval as u64 == config.target_config.interval
+        && conf.report_duration.map(|x| x as u64) == config.target_config.report_duration
+        && conf.purge_duration.map(|x| x as u64) == config.target_config.purge_duration
     {
         config.disabled = false;
     }
@@ -199,214 +182,156 @@ fn handle_stratagem_config_update(config: &mut Config, conf: &Arc<StratagemConfi
     );
 }
 
-pub(crate) fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
-    if let State::Enabled(config) = &mut model.state {
-        match msg {
-            Msg::InodeTable(x) => inode_table::update(x, &mut config.inode_table, &mut orders.proxy(Msg::InodeTable)),
-            Msg::ScanDurationPicker(msg) => {
-                duration_picker::update(msg, &mut config.scan_duration_picker);
-                validation::validate(
-                    &mut config.scan_duration_picker,
-                    &mut config.report_duration_picker,
-                    &mut config.purge_duration_picker,
-                );
-            }
-            Msg::ReportDurationPicker(msg) => {
-                duration_picker::update(msg, &mut config.report_duration_picker);
-                validation::validate(
-                    &mut config.scan_duration_picker,
-                    &mut config.report_duration_picker,
-                    &mut config.purge_duration_picker,
-                );
-            }
-            Msg::PurgeDurationPicker(msg) => {
-                duration_picker::update(msg, &mut config.purge_duration_picker);
-                validation::validate(
-                    &mut config.scan_duration_picker,
-                    &mut config.report_duration_picker,
-                    &mut config.purge_duration_picker,
-                );
-            }
-            Msg::CheckStratagem => {
-                if !can_enable(&model.fs, cache) {
-                    orders.send_msg(Msg::DisableStratagem);
-                }
-            }
-            Msg::DisableStratagem => {
-                model.state = State::Disabled;
-            }
-            Msg::EnableStratagem => {}
-            Msg::SendCommand(cmd) => {
-                config.disabled = true;
-
-                match cmd {
-                    Command::Update => {
-                        if let Some(x) = config.get_stratagem_update_config(model.fs.id) {
-                            config.target_config = TargetConfig {
-                                interval: x.interval,
-                                report_duration: x.report_duration,
-                                purge_duration: x.purge_duration,
-                            };
-
-                            orders.perform_cmd(
-                                update_stratagem_button::update_stratagem(x)
-                                    .map_ok(|x| Msg::CmdSent(Box::new(x)))
-                                    .map_err(|x| Msg::CmdSent(Box::new(x))),
-                            );
-                        }
-                    }
-                    Command::Enable => {
-                        let m = config.create_enable_stratagem_model(model.fs.id);
-                        if let Some(x) = m {
-                            config.target_config = TargetConfig {
-                                interval: x.interval,
-                                report_duration: x.report_duration,
-                                purge_duration: x.purge_duration,
-                            };
-
-                            orders.perform_cmd(
-                                enable_stratagem_button::enable_stratagem(x)
-                                    .map_ok(|x| Msg::CmdSent(Box::new(x)))
-                                    .map_err(|x| Msg::CmdSent(Box::new(x))),
-                            );
-                        }
-                    }
-                    Command::Delete => {
-                        if let Some(x) = config.id {
-                            orders.perform_cmd(
-                                delete_stratagem_button::delete_stratagem(x)
-                                    .map_ok(|x| Msg::CmdSent(Box::new(x)))
-                                    .map_err(|x| Msg::CmdSent(Box::new(x))),
-                            );
-                        }
-                    }
-                }
-            }
-            Msg::CmdSent(fetch_object) => match fetch_object.response() {
-                Ok(x) => {
-                    let x = command_modal::Input::Commands(vec![Arc::new(x.data.command)]);
-
-                    orders.send_g_msg(GMsg::OpenCommandModal(x));
-                }
-                Err(fail_reason) => {
-                    config.disabled = false;
-                    error!("Fetch error", fail_reason);
-                }
-            },
-            Msg::SetStratagemConfig(conf) => {
-                let id = model.fs.id;
-                let matching_conf = conf.into_iter().find(|c| c.filesystem_id == id);
-
-                if let Some(conf) = matching_conf {
-                    handle_stratagem_config_update(config, &conf);
-                }
-            }
-            Msg::UpdateStratagemConfig(conf) => {
-                handle_stratagem_config_update(config, &conf);
-            }
-            Msg::DeleteStratagemConfig => {
-                config.id = None;
-                config.scan_duration_picker.value = None;
-                config.report_duration_picker.value = None;
-                config.purge_duration_picker.value = None;
-                config.disabled = false;
-                validation::validate(
-                    &mut config.scan_duration_picker,
-                    &mut config.report_duration_picker,
-                    &mut config.purge_duration_picker,
-                );
-            }
-            Msg::ScanStratagemButton(msg) => {
-                scan_stratagem_button::update(
-                    msg,
-                    &mut config.scan_stratagem_button,
-                    &mut orders.proxy(Msg::ScanStratagemButton),
-                );
-            }
-            Msg::Noop => {}
+pub(crate) fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
+    match msg {
+        Msg::InodeTable(x) => inode_table::update(x, &mut model.inode_table, &mut orders.proxy(Msg::InodeTable)),
+        Msg::ScanDurationPicker(msg) => {
+            duration_picker::update(msg, &mut model.scan_duration_picker);
+            validation::validate(
+                &mut model.scan_duration_picker,
+                &mut model.report_duration_picker,
+                &mut model.purge_duration_picker,
+            );
         }
-    } else {
-        match msg {
-            Msg::CheckStratagem => {
-                if can_enable(&model.fs, cache) {
-                    orders.send_msg(Msg::EnableStratagem);
-                }
-            }
-            Msg::EnableStratagem => {
-                let mut grafana_vars = BTreeMap::new();
-                grafana_vars.insert("fs_name".into(), model.fs.name.clone());
-
-                let mut cfg = Config {
-                    inode_table: inode_table::Model::new(&model.fs.name),
-                    grafana_vars,
-                    scan_duration_picker: duration_picker::Model::default(),
-                    report_duration_picker: duration_picker::Model::default(),
-                    purge_duration_picker: duration_picker::Model::default(),
-                    id: None,
-                    destroyed: false,
-                    disabled: false,
-                    target_config: Default::default(),
-                    scan_stratagem_button: scan_stratagem_button::Model::new(model.fs.id),
-                };
-
-                if let Some(conf) = &model.stratagem_config {
-                    handle_stratagem_config_update(&mut cfg, conf);
-                }
-
-                validation::validate(
-                    &mut cfg.scan_duration_picker,
-                    &mut cfg.report_duration_picker,
-                    &mut cfg.purge_duration_picker,
-                );
-
-                model.state = State::Enabled(Box::new(cfg));
-
-                orders.proxy(Msg::InodeTable).send_msg(inode_table::Msg::FetchInodes);
-            }
-            Msg::SetStratagemConfig(conf) => {
-                let id = model.fs.id;
-                model.stratagem_config = conf.into_iter().find(|c| c.filesystem_id == id);
-            }
-            _ => {}
+        Msg::ReportDurationPicker(msg) => {
+            duration_picker::update(msg, &mut model.report_duration_picker);
+            validation::validate(
+                &mut model.scan_duration_picker,
+                &mut model.report_duration_picker,
+                &mut model.purge_duration_picker,
+            );
         }
+        Msg::PurgeDurationPicker(msg) => {
+            duration_picker::update(msg, &mut model.purge_duration_picker);
+            validation::validate(
+                &mut model.scan_duration_picker,
+                &mut model.report_duration_picker,
+                &mut model.purge_duration_picker,
+            );
+        }
+        Msg::SendCommand(cmd) => {
+            model.disabled = true;
+
+            match cmd {
+                Command::Update => {
+                    if let Some(x) = model.get_stratagem_update_config(model.fs.id) {
+                        model.target_config = TargetConfig {
+                            interval: x.interval,
+                            report_duration: x.report_duration,
+                            purge_duration: x.purge_duration,
+                        };
+
+                        orders.perform_cmd(
+                            update_stratagem_button::update_stratagem(x)
+                                .map_ok(|x| Msg::CmdSent(Box::new(x)))
+                                .map_err(|x| Msg::CmdSent(Box::new(x))),
+                        );
+                    }
+                }
+                Command::Enable => {
+                    let m = model.create_enable_stratagem_model(model.fs.id);
+                    if let Some(x) = m {
+                        model.target_config = TargetConfig {
+                            interval: x.interval,
+                            report_duration: x.report_duration,
+                            purge_duration: x.purge_duration,
+                        };
+
+                        orders.perform_cmd(
+                            enable_stratagem_button::enable_stratagem(x)
+                                .map_ok(|x| Msg::CmdSent(Box::new(x)))
+                                .map_err(|x| Msg::CmdSent(Box::new(x))),
+                        );
+                    }
+                }
+                Command::Delete => {
+                    if let Some(x) = model.id {
+                        orders.perform_cmd(
+                            delete_stratagem_button::delete_stratagem(x)
+                                .map_ok(|x| Msg::CmdSent(Box::new(x)))
+                                .map_err(|x| Msg::CmdSent(Box::new(x))),
+                        );
+                    }
+                }
+            }
+        }
+        Msg::CmdSent(fetch_object) => match fetch_object.response() {
+            Ok(x) => {
+                let x = command_modal::Input::Commands(vec![Arc::new(x.data.command)]);
+
+                orders.send_g_msg(GMsg::OpenCommandModal(x));
+            }
+            Err(fail_reason) => {
+                model.disabled = false;
+                error!("Fetch error", fail_reason);
+            }
+        },
+        Msg::SetStratagemConfig(conf) => {
+            let id = model.fs.id;
+            model.stratagem_config = conf.into_iter().find(|c| c.filesystem_id == id);
+
+            validation::validate(
+                &mut model.scan_duration_picker,
+                &mut model.report_duration_picker,
+                &mut model.purge_duration_picker,
+            );
+        }
+        Msg::UpdateStratagemConfig(conf) => {
+            handle_stratagem_config_update(model, &conf);
+        }
+        Msg::DeleteStratagemConfig => {
+            model.id = None;
+            model.scan_duration_picker.value = None;
+            model.report_duration_picker.value = None;
+            model.purge_duration_picker.value = None;
+            model.disabled = false;
+            validation::validate(
+                &mut model.scan_duration_picker,
+                &mut model.report_duration_picker,
+                &mut model.purge_duration_picker,
+            );
+        }
+        Msg::ScanStratagemButton(msg) => {
+            scan_stratagem_button::update(
+                msg,
+                &mut model.scan_stratagem_button,
+                &mut orders.proxy(Msg::ScanStratagemButton),
+            );
+        }
+        Msg::Noop => {}
     }
 }
 
 pub(crate) fn view(model: &Model, all_locks: &Locks) -> Node<Msg> {
-    match &model.state {
-        State::Disabled => empty![],
-        State::Enabled(config) => {
-            let locked = filesystem_locked(&model.fs, all_locks);
-
-            let last_scan = format!(
-                "Last Scanned: {}",
-                config
-                    .inode_table
-                    .last_known_scan
-                    .as_ref()
-                    .unwrap_or(&"---".to_string())
-            );
-
-            div![
-                stratagem_config(config, locked),
-                scan_stratagem_button::view(&config.scan_stratagem_button).map_msg(Msg::ScanStratagemButton),
-                inode_table::view(&config.inode_table).map_msg(Msg::InodeTable),
-                caption_wrapper(
-                    "inode Usage Distribution",
-                    Some(&last_scan),
-                    stratagem_chart(grafana_chart::create_chart_params(2, "1m", config.grafana_vars.clone()))
-                ),
-                caption_wrapper(
-                    "Space Usage Distribution",
-                    Some(&last_scan),
-                    stratagem_chart(grafana_chart::create_chart_params(3, "1m", config.grafana_vars.clone()))
-                ),
-            ]
-        }
+    if !model.use_stratagem {
+        return empty![];
     }
+
+    let locked = filesystem_locked(&model.fs, all_locks);
+
+    let last_scan = format!(
+        "Last Scanned: {}",
+        model.inode_table.last_known_scan.as_ref().unwrap_or(&"---".to_string())
+    );
+
+    div![
+        stratagem_config(model, locked),
+        scan_stratagem_button::view(&model.scan_stratagem_button).map_msg(Msg::ScanStratagemButton),
+        inode_table::view(&model.inode_table).map_msg(Msg::InodeTable),
+        caption_wrapper(
+            "inode Usage Distribution",
+            Some(&last_scan),
+            stratagem_chart(grafana_chart::create_chart_params(2, "1m", model.grafana_vars.clone()))
+        ),
+        caption_wrapper(
+            "Space Usage Distribution",
+            Some(&last_scan),
+            stratagem_chart(grafana_chart::create_chart_params(3, "1m", model.grafana_vars.clone()))
+        ),
+    ]
 }
 
-fn stratagem_config(model: &Config, locked: bool) -> Node<Msg> {
+fn stratagem_config(model: &Model, locked: bool) -> Node<Msg> {
     div![
         class![
             C.bg_white,
@@ -454,7 +379,7 @@ fn caption_wrapper<T>(caption: &str, comment: Option<&str>, children: impl View<
     ]
 }
 
-pub fn config_view(model: &Config, locked: bool) -> Node<Msg> {
+pub fn config_view(model: &Model, locked: bool) -> Node<Msg> {
     let input_cls = class![
         C.appearance_none,
         C.focus__outline_none,
@@ -528,4 +453,16 @@ pub fn config_view(model: &Config, locked: bool) -> Node<Msg> {
     }
 
     div![class![C.grid, C.grid_cols_2, C.gap_2, C.p_3], configuration_component]
+}
+
+pub fn init(cache: &ArcCache, model: &Model, orders: &mut impl Orders<Msg, GMsg>) {
+    if !model.use_stratagem {
+        return;
+    }
+
+    orders.send_msg(Msg::SetStratagemConfig(
+        cache.stratagem_config.values().cloned().collect(),
+    ));
+
+    orders.proxy(Msg::InodeTable).send_msg(inode_table::Msg::FetchInodes);
 }

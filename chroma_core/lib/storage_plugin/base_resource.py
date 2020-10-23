@@ -144,7 +144,7 @@ class BaseStorageResource(object):
 
     def format_all(self):
         """Return a list of 2-tuples for names and human readable
-           values for all resource attributes (i.e. _storage_dict)"""
+        values for all resource attributes (i.e. _storage_dict)"""
         for k in self._storage_dict.keys():
             yield k, self.format(k)
 
@@ -283,7 +283,7 @@ class BaseStorageResource(object):
 
     def validate(self):
         """Call validate() on the BaseResourceAttribute for all _storage_dict items, and
-           ensure that all non-optional BaseResourceAttributes have a value in _storage_dict"""
+        ensure that all non-optional BaseResourceAttributes have a value in _storage_dict"""
         for k, v in self._storage_dict.items():
             if k in self._meta.storage_attributes:
                 self._meta.storage_attributes[k].validate(v)
@@ -294,7 +294,7 @@ class BaseStorageResource(object):
 
     def get_parent(self, parent_klass):
         """Return one member of self._parents of class 'parent_klass'.  Raises
-           an exception if there are multiple matches or no matches."""
+        an exception if there are multiple matches or no matches."""
         parents_filtered = [p for p in self._parents if isinstance(p, parent_klass)]
         if not parents_filtered:
             raise RuntimeError("No parents of class %s" % parent_klass)

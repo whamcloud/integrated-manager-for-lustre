@@ -4,6 +4,7 @@
 
 use futures::{lock::Mutex, FutureExt, TryFutureExt, TryStreamExt};
 use iml_manager_client::get_client;
+use iml_postgres::get_db_pool;
 use iml_warp_drive::{
     cache::{populate_from_api, populate_from_db, SharedCache},
     error, listen,
@@ -79,9 +80,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing::info!("Started listening to NOTIFY events");
 
     {
-        let mut c = shared_client.lock().await;
+        let pool = get_db_pool(2).await?;
 
-        populate_from_db(Arc::clone(&api_cache_state3), &mut c).await?;
+        populate_from_db(Arc::clone(&api_cache_state3), &pool).await?;
     }
 
     let pool = iml_rabbit::connect_to_rabbit(1);

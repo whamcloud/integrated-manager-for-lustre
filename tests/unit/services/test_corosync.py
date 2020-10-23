@@ -103,7 +103,7 @@ class CorosyncTestCase(IMLUnitTestCase):
 
 
 class CorosyncTests(CorosyncTestCase):
-    """ Test that receiving messages from the corosync plugin
+    """Test that receiving messages from the corosync plugin
 
     Points to test:
     1.  The service remembers the most recent update per node

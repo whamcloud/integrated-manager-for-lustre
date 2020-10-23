@@ -27,6 +27,7 @@ pub(crate) mod date;
 pub(crate) mod datepicker;
 pub(crate) mod duration_picker;
 pub(crate) mod font_awesome;
+pub(crate) mod form;
 pub(crate) mod grafana_chart;
 pub(crate) mod loading;
 pub(crate) mod lock_indicator;
@@ -40,7 +41,7 @@ pub(crate) use activity_indicator::{update_activity_health, ActivityHealth};
 pub(crate) use alert_indicator::alert_indicator;
 pub(crate) use arrow::arrow;
 pub(crate) use font_awesome::{font_awesome, font_awesome_outline};
-pub use logo::{ddn_logo, ddn_logo_lettering, whamcloud_logo};
+pub use logo::{ai_200x, ai_400x, ai_7990x, ddn_logo, ddn_logo_lettering, exa5, whamcloud_logo};
 
 #[derive(Debug, Clone, Copy)]
 pub enum Placement {

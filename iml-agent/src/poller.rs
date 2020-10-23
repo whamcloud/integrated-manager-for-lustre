@@ -9,10 +9,7 @@ use crate::{
         session::{Sessions, State},
     },
 };
-use futures::{
-    future::{self, Either},
-    Future, FutureExt, TryFutureExt,
-};
+use futures::{future, Future, FutureExt, TryFutureExt};
 use iml_wire_types::PluginName;
 use std::{
     ops::DerefMut,
@@ -35,32 +32,42 @@ fn handle_state(
     tracing::trace!("handling state for {:?}: {:?}, ", name, state);
 
     match state {
-        State::Active(a) if a.instant <= now => {
+        State::Active(a) if a.instant <= now && a.in_flight.is_none() => {
+            tracing::trace!("starting poll for {:?}:", name);
+
             let (rx, fut) = a.session.poll();
 
             a.in_flight = Some(rx);
             let id = a.session.id.clone();
 
-            Either::Left(
-                fut.and_then(move |x| async move {
-                    if let Some((seq, name, id, output)) = x {
-                        agent_client.send_data(id, name, seq, output).await?;
-                    }
+            fut.and_then(move |x| async move {
+                if let Some((seq, name, id, output)) = x {
+                    agent_client.send_data(id, name, seq, output).await?;
+                }
 
-                    Ok(())
-                })
-                .then(move |r| async move {
-                    match r {
-                        Ok(_) => {
-                            sessions.reset_active(&name).await;
-                            Ok(())
-                        }
-                        Err(_) => sessions.terminate_session(&name, &id).await,
+                Ok(())
+            })
+            .then(move |r| async move {
+                match r {
+                    Ok(_) => {
+                        sessions.reset_active(&name).await;
+                        Ok(())
                     }
-                }),
-            )
+                    Err(_) => sessions.terminate_session(&name, &id).await,
+                }
+            })
+            .boxed()
         }
-        _ => Either::Right(future::ok(())),
+        State::Active(a) if a.instant + a.session.deadline() <= now && a.in_flight.is_some() => {
+            tracing::trace!("Dropping poll for {:?}; deadline exceeded", name);
+
+            async move {
+                sessions.reset_active(&name).await;
+                Ok(())
+            }
+            .boxed()
+        }
+        _ => future::ok(()).boxed(),
     }
 }
 

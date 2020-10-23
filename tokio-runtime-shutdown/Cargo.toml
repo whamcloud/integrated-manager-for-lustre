@@ -1,13 +1,13 @@
 [package]
-name = "tokio-runtime-shutdown"
-version = "0.3.0"
 authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
+name = "tokio-runtime-shutdown"
+version = "0.4.0"
 
 [dependencies]
-stream-cancel = "0.5"
 futures = "0.3"
+stream-cancel = "0.5"
 
 [dev-dependencies]
-tokio-test = "0.2"
 tokio = "0.2"
+tokio-test = "0.2"

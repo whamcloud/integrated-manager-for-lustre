@@ -82,6 +82,17 @@ pub fn get_client() -> Result<Client, ImlManagerClientError> {
         .map_err(ImlManagerClientError::Reqwest)
 }
 
+/// Given a path, constructs a url
+pub fn create_url(path: impl ToString) -> Result<Url, ImlManagerClientError> {
+    let path = path.to_string();
+
+    let url = Url::parse(&iml_manager_env::get_manager_url())?
+        .join("/")?
+        .join(path.trim_start_matches('/'))?;
+
+    Ok(url)
+}
+
 /// Given a path, constructs a full API url
 pub fn create_api_url(path: impl ToString) -> Result<Url, ImlManagerClientError> {
     let mut path = path.to_string();
@@ -196,6 +207,31 @@ pub async fn post(
     tracing::debug!("Resp: {:?}", resp);
 
     Ok(resp)
+}
+
+/// Performs a POST request to the GraphQL endpoint
+pub async fn graphql<T: DeserializeOwned + Debug>(
+    client: Client,
+    query: impl serde::Serialize + Debug,
+) -> Result<T, ImlManagerClientError> {
+    let url = Url::parse(&iml_manager_env::get_manager_url())?.join("/graphql")?;
+
+    tracing::debug!("Sending GraphQL query: {:?}", query);
+
+    let text = client
+        .post(url)
+        .json(&query)
+        .send()
+        .await?
+        .error_for_status()?
+        .text()
+        .await?;
+
+    tracing::debug!("GraphQL resp: {:?}", text);
+
+    let json = serde_json::from_str(&text)?;
+
+    Ok(json)
 }
 
 /// Performs a PUT to the given API path

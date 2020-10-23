@@ -25,7 +25,7 @@ class TestInsecureUrls(NginxTestCase):
 
     def test_http_redirect(self):
         """Test that connections on the HTTP scheme are redirected
-           to the HTTPS url"""
+        to the HTTPS url"""
 
         response = requests.get(
             "http://localhost:%s/" % settings.HTTPS_FRONTEND_PORT, verify=False, allow_redirects=False

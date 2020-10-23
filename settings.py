@@ -44,7 +44,9 @@ HTTP_API_PROXY_PASS = "http://{}:{}".format(PROXY_HOST, HTTP_API_PORT)
 
 IML_API_PORT = 8004
 
-IML_API_PROXY_PASS = "http://{}:{}".format(PROXY_HOST, IML_API_PORT)
+IML_API_HOST = os.getenv("IML_API_HOST", PROXY_HOST)
+
+IML_API_PROXY_PASS = "http://{}:{}".format(IML_API_HOST, IML_API_PORT)
 
 WARP_DRIVE_PORT = 8890
 
@@ -90,9 +92,9 @@ GRAFANA_PROXY_PASS = "http://{}:{}".format(PROXY_HOST, GRAFANA_PORT)
 
 TIMER_PORT = 8892
 
-TIMER_PROXY_PASS = "http://{}:{}".format(PROXY_HOST, TIMER_PORT)
+TIMER_SERVER_FQDN = os.getenv("TIMER_SERVER_FQDN", PROXY_HOST)
 
-INCLUDES = ""
+TIMER_PROXY_PASS = "http://{}:{}".format(TIMER_SERVER_FQDN, TIMER_PORT)
 
 BRANDING = os.getenv("BRANDING", "Whamcloud")
 

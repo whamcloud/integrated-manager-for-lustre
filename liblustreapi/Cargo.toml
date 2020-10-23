@@ -1,12 +1,13 @@
 [package]
-name = "liblustreapi"
-version = "0.3.0"
 authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
+name = "liblustreapi"
+version = "0.4.0"
 
 [dependencies]
-libc = "0.2.64"
 errno = "0.2"
+libc = "0.2.76"
+libloading = "0.6.3"
+liblustreapi-types = {path = "../liblustreapi-types", version = "0.4"}
+thiserror = "1"
 tracing = "0.1"
-libloading = "0.5"
-liblustreapi-types = { path = "../liblustreapi-types", version = "0.3"}

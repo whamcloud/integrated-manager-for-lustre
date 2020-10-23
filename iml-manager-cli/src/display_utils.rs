@@ -2,13 +2,16 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use console::{style, Term};
+use chrono_humanize::{Accuracy, HumanTime, Tense};
+use console::style;
 use futures::{Future, FutureExt};
-use iml_wire_types::{Command, Filesystem, Host, OstPool, ServerProfile, StratagemConfiguration};
+use iml_wire_types::{
+    snapshot::{ReserveUnit, Snapshot, SnapshotInterval, SnapshotRetention},
+    Command, Filesystem, Host, OstPool, ServerProfile, StratagemConfiguration, StratagemReport,
+};
 use indicatif::ProgressBar;
 use number_formatter::{format_bytes, format_number};
 use prettytable::{Row, Table};
-use spinners::{Spinner, Spinners};
 use std::{fmt::Display, io, str::FromStr};
 use structopt::StructOpt;
 
@@ -18,22 +21,6 @@ pub fn wrap_fut<T>(msg: &str, fut: impl Future<Output = T>) -> impl Future<Outpu
     pb.set_message(msg);
 
     fut.inspect(move |_| pb.finish_and_clear())
-}
-
-pub fn start_spinner(msg: &str) -> impl FnOnce(Option<String>) {
-    let sp = Spinner::new(Spinners::Dots9, style(msg).dim().to_string());
-
-    move |msg_opt| match msg_opt {
-        Some(msg) => {
-            sp.message(msg);
-        }
-        None => {
-            sp.stop();
-            if let Err(e) = Term::stdout().clear_line() {
-                tracing::debug!("Could not clear current line {}", e);
-            };
-        }
-    }
 }
 
 pub fn format_cmd_state(cmd: &Command) -> String {
@@ -92,19 +79,20 @@ where
 }
 
 pub fn usage(
-    free: Option<u64>,
+    used: Option<u64>,
     total: Option<u64>,
     formatter: fn(f64, Option<usize>) -> String,
 ) -> String {
-    match (free, total) {
-        (Some(free), Some(total)) => format!(
-            "{} / {}",
-            formatter(total as f64 - free as f64, Some(0)),
-            formatter(total as f64, Some(0))
-        ),
-        (None, Some(total)) => format!("Calculating ... / {}", formatter(total as f64, Some(0))),
-        _ => "Calculating ...".to_string(),
-    }
+    format!(
+        "{} / {}",
+        used.map(|u| formatter(u as f64, Some(0)))
+            .as_deref()
+            .unwrap_or("---"),
+        total
+            .map(|t| formatter(t as f64, Some(0)))
+            .as_deref()
+            .unwrap_or("---")
+    )
 }
 
 pub trait IsEmpty {
@@ -119,6 +107,93 @@ impl<T> IsEmpty for Vec<T> {
 
 pub trait IntoTable {
     fn into_table(self) -> Table;
+}
+
+impl IntoTable for Vec<Snapshot> {
+    fn into_table(self) -> Table {
+        generate_table(
+            &[
+                "Filesystem",
+                "Snapshot",
+                "Creation Time",
+                "State",
+                "Comment",
+            ],
+            self.into_iter().map(|s| {
+                vec![
+                    s.filesystem_name,
+                    s.snapshot_name,
+                    s.create_time.to_rfc2822(),
+                    match s.mounted {
+                        Some(true) => "mounted",
+                        Some(false) => "unmounted",
+                        None => "---",
+                    }
+                    .to_string(),
+                    s.comment.unwrap_or_else(|| "---".to_string()),
+                ]
+            }),
+        )
+    }
+}
+
+impl IntoTable for Vec<SnapshotInterval> {
+    fn into_table(self) -> Table {
+        generate_table(
+            &["Id", "Filesystem", "Interval", "Use Barrier", "Last Run"],
+            self.into_iter().map(|i| {
+                vec![
+                    i.id.to_string(),
+                    i.filesystem_name,
+                    chrono::Duration::from_std(i.interval.0)
+                        .map(HumanTime::from)
+                        .map(|x| x.to_text_en(Accuracy::Precise, Tense::Present))
+                        .unwrap_or_else(|_| "---".to_string()),
+                    i.use_barrier.to_string(),
+                    i.last_run
+                        .map(|t| t.to_rfc2822())
+                        .unwrap_or_else(|| "---".to_string()),
+                ]
+            }),
+        )
+    }
+}
+
+impl IntoTable for Vec<SnapshotRetention> {
+    fn into_table(self) -> Table {
+        generate_table(
+            &["Id", "Filesystem", "Reserve", "Keep", "Last Run"],
+            self.into_iter().map(|r| {
+                vec![
+                    r.id.to_string(),
+                    r.filesystem_name,
+                    format!(
+                        "{} {}",
+                        r.reserve_value,
+                        match r.reserve_unit {
+                            ReserveUnit::Percent => "%",
+                            ReserveUnit::Gibibytes => "GiB",
+                            ReserveUnit::Tebibytes => "TiB",
+                        }
+                    ),
+                    r.keep_num.to_string(),
+                    r.last_run
+                        .map(|t| t.to_rfc2822())
+                        .unwrap_or_else(|| "---".to_string()),
+                ]
+            }),
+        )
+    }
+}
+
+impl IntoTable for Vec<StratagemReport> {
+    fn into_table(self) -> Table {
+        generate_table(
+            &["Filename", "Size", "Modify Time"],
+            self.into_iter()
+                .map(|r| vec![r.filename, r.size.to_string(), r.modify_time.to_rfc2822()]),
+        )
+    }
 }
 
 impl IntoTable for Vec<Host> {

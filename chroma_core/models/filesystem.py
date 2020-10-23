@@ -109,6 +109,14 @@ class ManagedFilesystem(StatefulObject):
         # (http://stackoverflow.com/questions/4764110/django-template-cant-loop-defaultdict)
         return dict(servers)
 
+    def get_server_groups(self):
+        """Return: Array(Array(ManagedHost)) """
+        from chroma_core.lib.graphql import graphql_query
+
+        query = '{{ getFsClusterHosts(fsName: "{}") }}'.format(self.name)
+
+        return graphql_query(query)["getFsClusterHosts"]
+
     def get_pools(self):
         return OstPool.objects.filter(filesystem=self)
 

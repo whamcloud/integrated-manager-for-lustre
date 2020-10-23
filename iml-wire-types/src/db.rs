@@ -4,19 +4,11 @@
 
 use crate::CompositeId;
 use crate::ToCompositeId;
-use crate::{EndpointName, Fqdn, Label};
+use crate::{EndpointName, Label};
 use chrono::{offset::Utc, DateTime};
-pub use iml_orm::sfa::{EnclosureType, HealthState, JobState, JobType, MemberState, SubTargetType};
+#[cfg(feature = "postgres-interop")]
+use std::str::FromStr;
 use std::{collections::BTreeSet, fmt, ops::Deref, path::PathBuf};
-
-#[cfg(feature = "postgres-interop")]
-use bytes::BytesMut;
-#[cfg(feature = "postgres-interop")]
-use postgres_types::{to_sql_checked, FromSql, IsNull, ToSql, Type};
-#[cfg(feature = "postgres-interop")]
-use std::{convert::TryInto, io, str::FromStr};
-#[cfg(feature = "postgres-interop")]
-use tokio_postgres::Row;
 
 pub trait Id {
     /// Returns the `Id` (`i32`).
@@ -71,17 +63,6 @@ pub const CONTENT_TYPE_TABLE_NAME: TableName = TableName("django_content_type");
 impl Name for ContentTypeRecord {
     fn table_name() -> TableName<'static> {
         CONTENT_TYPE_TABLE_NAME
-    }
-}
-
-#[cfg(feature = "postgres-interop")]
-impl From<Row> for ContentTypeRecord {
-    fn from(row: Row) -> Self {
-        ContentTypeRecord {
-            id: row.get::<_, i32>("id"),
-            app_label: row.get("app_label"),
-            model: row.get("model"),
-        }
     }
 }
 
@@ -173,7 +154,7 @@ impl Name for FsRecord {
 pub struct VolumeRecord {
     pub id: i32,
     pub storage_resource_id: Option<i32>,
-    pub size: Option<u64>,
+    pub size: Option<i64>,
     pub label: String,
     pub filesystem_type: Option<String>,
     pub not_deleted: Option<bool>,
@@ -200,21 +181,6 @@ impl Name for VolumeRecord {
     }
 }
 
-#[cfg(feature = "postgres-interop")]
-impl From<Row> for VolumeRecord {
-    fn from(row: Row) -> Self {
-        VolumeRecord {
-            id: row.get::<_, i32>("id"),
-            size: row.get::<_, Option<i64>>("size").map(|x| x as u64),
-            label: row.get("label"),
-            filesystem_type: row.get("filesystem_type"),
-            usable_for_lustre: row.get("usable_for_lustre"),
-            not_deleted: row.get("not_deleted"),
-            storage_resource_id: row.get::<_, Option<i32>>("storage_resource_id"),
-        }
-    }
-}
-
 /// Record from the `chroma_core_volumenode` table
 #[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
 pub struct VolumeNodeRecord {
@@ -224,8 +190,7 @@ pub struct VolumeNodeRecord {
     pub path: String,
     pub storage_resource_id: Option<i32>,
     pub primary: bool,
-    #[serde(rename = "use")]
-    pub _use: bool,
+    pub r#use: bool,
     pub not_deleted: Option<bool>,
 }
 
@@ -267,22 +232,6 @@ impl Name for VolumeNodeRecord {
     }
 }
 
-#[cfg(feature = "postgres-interop")]
-impl From<Row> for VolumeNodeRecord {
-    fn from(row: Row) -> Self {
-        VolumeNodeRecord {
-            id: row.get::<_, i32>("id"),
-            volume_id: row.get::<_, i32>("volume_id"),
-            host_id: row.get::<_, i32>("host_id"),
-            path: row.get("path"),
-            storage_resource_id: row.get::<_, Option<i32>>("storage_resource_id"),
-            primary: row.get("primary"),
-            _use: row.get("use"),
-            not_deleted: row.get("not_deleted"),
-        }
-    }
-}
-
 /// Record from the `chroma_core_managedtargetmount` table
 #[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
 pub struct ManagedTargetMountRecord {
@@ -304,21 +253,6 @@ impl Id for ManagedTargetMountRecord {
 impl NotDeleted for ManagedTargetMountRecord {
     fn not_deleted(&self) -> bool {
         not_deleted(self.not_deleted)
-    }
-}
-
-#[cfg(feature = "postgres-interop")]
-impl From<Row> for ManagedTargetMountRecord {
-    fn from(row: Row) -> Self {
-        ManagedTargetMountRecord {
-            id: row.get::<_, i32>("id"),
-            host_id: row.get::<_, i32>("host_id"),
-            mount_point: row.get("mount_point"),
-            volume_node_id: row.get::<_, i32>("volume_node_id"),
-            primary: row.get("primary"),
-            target_id: row.get::<_, i32>("target_id"),
-            not_deleted: row.get("not_deleted"),
-        }
     }
 }
 
@@ -398,19 +332,6 @@ impl NotDeleted for OstPoolRecord {
     }
 }
 
-#[cfg(feature = "postgres-interop")]
-impl From<Row> for OstPoolRecord {
-    fn from(row: Row) -> Self {
-        OstPoolRecord {
-            id: row.get::<_, i32>("id"),
-            name: row.get("name"),
-            filesystem_id: row.get::<_, i32>("filesystem_id"),
-            not_deleted: row.get("not_deleted"),
-            content_type_id: row.get::<_, Option<i32>>("content_type_id"),
-        }
-    }
-}
-
 pub const OSTPOOL_TABLE_NAME: TableName = TableName("chroma_core_ostpool");
 
 impl Name for OstPoolRecord {
@@ -442,17 +363,6 @@ pub struct OstPoolOstsRecord {
 impl Id for OstPoolOstsRecord {
     fn id(&self) -> i32 {
         self.id
-    }
-}
-
-#[cfg(feature = "postgres-interop")]
-impl From<Row> for OstPoolOstsRecord {
-    fn from(row: Row) -> Self {
-        OstPoolOstsRecord {
-            id: row.get::<_, i32>("id"),
-            ostpool_id: row.get::<_, i32>("ostpool_id"),
-            managedost_id: row.get::<_, i32>("managedost_id"),
-        }
     }
 }
 
@@ -610,32 +520,13 @@ impl Name for AlertStateRecord {
 pub struct StratagemConfiguration {
     pub id: i32,
     pub filesystem_id: i32,
-    pub interval: u64,
-    pub report_duration: Option<u64>,
-    pub purge_duration: Option<u64>,
+    pub interval: i64,
+    pub report_duration: Option<i64>,
+    pub purge_duration: Option<i64>,
     pub immutable_state: bool,
     pub not_deleted: Option<bool>,
     pub state: String,
-}
-
-#[cfg(feature = "postgres-interop")]
-impl From<Row> for StratagemConfiguration {
-    fn from(row: Row) -> Self {
-        StratagemConfiguration {
-            id: row.get::<_, i32>("id"),
-            filesystem_id: row.get::<_, i32>("filesystem_id"),
-            interval: row.get::<_, i64>("interval") as u64,
-            report_duration: row
-                .get::<_, Option<i64>>("report_duration")
-                .map(|x| x as u64),
-            purge_duration: row
-                .get::<_, Option<i64>>("purge_duration")
-                .map(|x| x as u64),
-            immutable_state: row.get("immutable_state"),
-            not_deleted: row.get("not_deleted"),
-            state: row.get("state"),
-        }
-    }
+    pub state_modified_at: DateTime<Utc>,
 }
 
 impl Id for StratagemConfiguration {
@@ -680,20 +571,7 @@ pub struct LnetConfigurationRecord {
     pub immutable_state: bool,
     pub not_deleted: Option<bool>,
     pub content_type_id: Option<i32>,
-}
-
-#[cfg(feature = "postgres-interop")]
-impl From<Row> for LnetConfigurationRecord {
-    fn from(row: Row) -> Self {
-        LnetConfigurationRecord {
-            id: row.get::<_, i32>("id"),
-            state: row.get("state"),
-            host_id: row.get::<_, i32>("host_id"),
-            immutable_state: row.get("immutable_state"),
-            not_deleted: row.get("not_deleted"),
-            content_type_id: row.get::<_, Option<i32>>("content_type_id"),
-        }
-    }
+    pub state_modified_at: DateTime<Utc>,
 }
 
 impl Id for LnetConfigurationRecord {
@@ -745,37 +623,6 @@ impl Name for LnetConfigurationRecord {
 )]
 pub struct DeviceId(String);
 
-#[cfg(feature = "postgres-interop")]
-impl ToSql for DeviceId {
-    fn to_sql(
-        &self,
-        ty: &Type,
-        w: &mut BytesMut,
-    ) -> Result<IsNull, Box<dyn std::error::Error + Sync + Send>> {
-        <&str as ToSql>::to_sql(&&*self.0, ty, w)
-    }
-
-    fn accepts(ty: &Type) -> bool {
-        <&str as ToSql>::accepts(ty)
-    }
-
-    to_sql_checked!();
-}
-
-#[cfg(feature = "postgres-interop")]
-impl<'a> FromSql<'a> for DeviceId {
-    fn from_sql(
-        ty: &Type,
-        raw: &'a [u8],
-    ) -> Result<DeviceId, Box<dyn std::error::Error + Sync + Send>> {
-        FromSql::from_sql(ty, raw).map(DeviceId)
-    }
-
-    fn accepts(ty: &Type) -> bool {
-        <String as FromSql>::accepts(ty)
-    }
-}
-
 impl Deref for DeviceId {
     type Target = String;
 
@@ -795,75 +642,8 @@ impl Deref for DeviceIds {
     }
 }
 
-#[cfg(feature = "postgres-interop")]
-impl ToSql for DeviceIds {
-    fn to_sql(
-        &self,
-        ty: &Type,
-        w: &mut BytesMut,
-    ) -> Result<IsNull, Box<dyn std::error::Error + Sync + Send>> {
-        let xs = self.0.iter().collect::<Vec<_>>();
-        <&[&DeviceId] as ToSql>::to_sql(&&*xs, ty, w)
-    }
-
-    fn accepts(ty: &Type) -> bool {
-        <&[&DeviceId] as ToSql>::accepts(ty)
-    }
-
-    to_sql_checked!();
-}
-
-#[cfg(feature = "postgres-interop")]
-impl<'a> FromSql<'a> for DeviceIds {
-    fn from_sql(
-        ty: &Type,
-        raw: &'a [u8],
-    ) -> Result<DeviceIds, Box<dyn std::error::Error + Sync + Send>> {
-        <Vec<DeviceId> as FromSql>::from_sql(ty, raw).map(|xs| DeviceIds(xs.into_iter().collect()))
-    }
-
-    fn accepts(ty: &Type) -> bool {
-        <Vec<DeviceId> as FromSql>::accepts(ty)
-    }
-}
-
 #[derive(Debug, PartialEq, Eq)]
 pub struct Size(pub u64);
-
-#[cfg(feature = "postgres-interop")]
-impl ToSql for Size {
-    fn to_sql(
-        &self,
-        ty: &Type,
-        w: &mut BytesMut,
-    ) -> Result<IsNull, Box<dyn std::error::Error + Sync + Send>> {
-        <&str as ToSql>::to_sql(&&*self.0.to_string(), ty, w)
-    }
-
-    fn accepts(ty: &Type) -> bool {
-        <&str as ToSql>::accepts(ty)
-    }
-
-    to_sql_checked!();
-}
-
-#[cfg(feature = "postgres-interop")]
-impl<'a> FromSql<'a> for Size {
-    fn from_sql(
-        ty: &Type,
-        raw: &'a [u8],
-    ) -> Result<Size, Box<dyn std::error::Error + Sync + Send>> {
-        <String as FromSql>::from_sql(ty, raw).and_then(|x| {
-            x.parse::<u64>()
-                .map(Size)
-                .map_err(|e| -> Box<dyn std::error::Error + Sync + Send> { Box::new(e) })
-        })
-    }
-
-    fn accepts(ty: &Type) -> bool {
-        <String as FromSql>::accepts(ty)
-    }
-}
 
 /// The current type of Devices we support
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize)]
@@ -893,88 +673,6 @@ impl std::fmt::Display for DeviceType {
     }
 }
 
-#[cfg(feature = "postgres-interop")]
-impl ToSql for DeviceType {
-    fn to_sql(
-        &self,
-        ty: &Type,
-        w: &mut BytesMut,
-    ) -> Result<IsNull, Box<dyn std::error::Error + Sync + Send>> {
-        <String as ToSql>::to_sql(&format!("{}", self), ty, w)
-    }
-
-    fn accepts(ty: &Type) -> bool {
-        <String as ToSql>::accepts(ty)
-    }
-
-    to_sql_checked!();
-}
-
-#[cfg(feature = "postgres-interop")]
-impl<'a> FromSql<'a> for DeviceType {
-    fn from_sql(
-        ty: &Type,
-        raw: &'a [u8],
-    ) -> Result<DeviceType, Box<dyn std::error::Error + Sync + Send>> {
-        FromSql::from_sql(ty, raw).and_then(|x| match x {
-            "scsi" => Ok(DeviceType::ScsiDevice),
-            "partition" => Ok(DeviceType::Partition),
-            "mdraid" => Ok(DeviceType::MdRaid),
-            "mpath" => Ok(DeviceType::Mpath),
-            "vg" => Ok(DeviceType::VolumeGroup),
-            "lv" => Ok(DeviceType::LogicalVolume),
-            "zpool" => Ok(DeviceType::Zpool),
-            "dataset" => Ok(DeviceType::Dataset),
-            _ => {
-                let e: Box<dyn std::error::Error + Sync + Send> = Box::new(io::Error::new(
-                    io::ErrorKind::InvalidInput,
-                    "Unknown DeviceType variant",
-                ));
-
-                Err(e)
-            }
-        })
-    }
-
-    fn accepts(ty: &Type) -> bool {
-        <String as FromSql>::accepts(ty)
-    }
-}
-
-/// A device (Block or Virtual).
-/// These should be unique per cluster
-#[derive(Debug, PartialEq, Eq)]
-pub struct Device {
-    pub id: DeviceId,
-    pub size: Size,
-    pub usable_for_lustre: bool,
-    pub device_type: DeviceType,
-    pub parents: DeviceIds,
-    pub children: DeviceIds,
-}
-
-pub const DEVICE_TABLE_NAME: TableName = TableName("chroma_core_device");
-
-impl Name for Device {
-    fn table_name() -> TableName<'static> {
-        DEVICE_TABLE_NAME
-    }
-}
-
-#[cfg(feature = "postgres-interop")]
-impl From<Row> for Device {
-    fn from(row: Row) -> Self {
-        Device {
-            id: row.get("id"),
-            size: row.get("size"),
-            usable_for_lustre: row.get("usable_for_lustre"),
-            device_type: row.get("device_type"),
-            parents: row.get("parents"),
-            children: row.get("children"),
-        }
-    }
-}
-
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct Command {
     pub id: i32,
@@ -996,62 +694,8 @@ impl Deref for Paths {
     }
 }
 
-#[cfg(feature = "postgres-interop")]
-impl ToSql for Paths {
-    fn to_sql(
-        &self,
-        ty: &Type,
-        w: &mut BytesMut,
-    ) -> Result<IsNull, Box<dyn std::error::Error + Sync + Send>> {
-        let xs = self.iter().map(|x| x.to_string_lossy()).collect::<Vec<_>>();
-        <&[std::borrow::Cow<'_, str>] as ToSql>::to_sql(&&*xs, ty, w)
-    }
-
-    fn accepts(ty: &Type) -> bool {
-        <&[std::borrow::Cow<'_, str>] as ToSql>::accepts(ty)
-    }
-
-    to_sql_checked!();
-}
-
-#[cfg(feature = "postgres-interop")]
-impl<'a> FromSql<'a> for Paths {
-    fn from_sql(
-        ty: &Type,
-        raw: &'a [u8],
-    ) -> Result<Paths, Box<dyn std::error::Error + Sync + Send>> {
-        <Vec<String> as FromSql>::from_sql(ty, raw)
-            .map(|xs| Paths(xs.into_iter().map(PathBuf::from).collect()))
-    }
-
-    fn accepts(ty: &Type) -> bool {
-        <Vec<String> as FromSql>::accepts(ty)
-    }
-}
-
 #[derive(Debug, PartialEq, Eq)]
 pub struct MountPath(pub Option<PathBuf>);
-
-#[cfg(feature = "postgres-interop")]
-impl ToSql for MountPath {
-    fn to_sql(
-        &self,
-        ty: &Type,
-        w: &mut BytesMut,
-    ) -> Result<IsNull, Box<dyn std::error::Error + Sync + Send>> {
-        <&Option<String> as ToSql>::to_sql(
-            &&self.0.clone().map(|x| x.to_string_lossy().into_owned()),
-            ty,
-            w,
-        )
-    }
-
-    fn accepts(ty: &Type) -> bool {
-        <&Option<String> as ToSql>::accepts(ty)
-    }
-
-    to_sql_checked!();
-}
 
 #[cfg(feature = "postgres-interop")]
 impl Deref for MountPath {
@@ -1059,47 +703,6 @@ impl Deref for MountPath {
 
     fn deref(&self) -> &Self::Target {
         &self.0
-    }
-}
-
-/// A pointer to a `Device` present on a host.
-/// Stores mount_path and paths to reach the pointed to `Device`.
-#[derive(Debug, PartialEq, Eq)]
-pub struct DeviceHost {
-    pub device_id: DeviceId,
-    pub fqdn: Fqdn,
-    pub local: bool,
-    pub paths: Paths,
-    pub mount_path: MountPath,
-    pub fs_type: Option<String>,
-    pub fs_label: Option<String>,
-    pub fs_uuid: Option<String>,
-}
-
-pub const DEVICE_HOST_TABLE_NAME: TableName = TableName("chroma_core_devicehost");
-
-impl Name for DeviceHost {
-    fn table_name() -> TableName<'static> {
-        DEVICE_HOST_TABLE_NAME
-    }
-}
-
-#[cfg(feature = "postgres-interop")]
-impl From<Row> for DeviceHost {
-    fn from(row: Row) -> Self {
-        DeviceHost {
-            device_id: row.get("device_id"),
-            fqdn: Fqdn(row.get::<_, String>("fqdn")),
-            local: row.get("local"),
-            paths: row.get("paths"),
-            mount_path: MountPath(
-                row.get::<_, Option<String>>("mount_path")
-                    .map(PathBuf::from),
-            ),
-            fs_type: row.get::<_, Option<String>>("fs_type"),
-            fs_label: row.get::<_, Option<String>>("fs_label"),
-            fs_uuid: row.get::<_, Option<String>>("fs_uuid"),
-        }
     }
 }
 
@@ -1130,22 +733,6 @@ impl Id for AuthUserRecord {
     }
 }
 
-#[cfg(feature = "postgres-interop")]
-impl From<Row> for AuthUserRecord {
-    fn from(row: Row) -> Self {
-        Self {
-            id: row.get::<_, i32>("id"),
-            is_superuser: row.get("is_superuser"),
-            username: row.get("username"),
-            first_name: row.get("first_name"),
-            last_name: row.get("last_name"),
-            email: row.get("email"),
-            is_staff: row.get("is_staff"),
-            is_active: row.get("is_active"),
-        }
-    }
-}
-
 /// Record from the `auth_user_groups` table
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct AuthUserGroupRecord {
@@ -1165,17 +752,6 @@ impl Name for AuthUserGroupRecord {
 impl Id for AuthUserGroupRecord {
     fn id(&self) -> i32 {
         self.id
-    }
-}
-
-#[cfg(feature = "postgres-interop")]
-impl From<Row> for AuthUserGroupRecord {
-    fn from(row: Row) -> Self {
-        Self {
-            id: row.get::<_, i32>("id"),
-            user_id: row.get::<_, i32>("user_id"),
-            group_id: row.get::<_, i32>("group_id"),
-        }
     }
 }
 
@@ -1200,21 +776,12 @@ impl Id for AuthGroupRecord {
     }
 }
 
-#[cfg(feature = "postgres-interop")]
-impl From<Row> for AuthGroupRecord {
-    fn from(row: Row) -> Self {
-        Self {
-            id: row.get::<_, i32>("id"),
-            name: row.get("name"),
-        }
-    }
-}
-
 /// Record from the `chroma_core_pacemakerconfiguration` table
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct PacemakerConfigurationRecord {
     pub id: i32,
     pub state: String,
+    pub state_modified_at: DateTime<Utc>,
     pub immutable_state: bool,
     pub not_deleted: Option<bool>,
     pub content_type_id: Option<i32>,
@@ -1266,31 +833,19 @@ impl ToCompositeId for &PacemakerConfigurationRecord {
     }
 }
 
-#[cfg(feature = "postgres-interop")]
-impl From<Row> for PacemakerConfigurationRecord {
-    fn from(row: Row) -> Self {
-        Self {
-            id: row.get::<_, i32>("id"),
-            state: row.get("state"),
-            immutable_state: row.get("immutable_state"),
-            not_deleted: row.get("not_deleted"),
-            content_type_id: row.get::<_, Option<i32>>("content_type_id"),
-            host_id: row.get::<_, i32>("host_id"),
-        }
-    }
-}
-
 /// Record from the `chroma_core_corosyncconfiguration` table
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct CorosyncConfigurationRecord {
     pub id: i32,
     pub state: String,
+    pub state_modified_at: DateTime<Utc>,
     pub immutable_state: bool,
     pub not_deleted: Option<bool>,
     pub mcast_port: Option<i32>,
     pub corosync_reported_up: bool,
     pub content_type_id: Option<i32>,
     pub host_id: i32,
+    pub record_type: String,
 }
 
 pub const COROSYNC_CONFIGURATION_TABLE_NAME: TableName =
@@ -1335,345 +890,5 @@ impl ToCompositeId for CorosyncConfigurationRecord {
 impl ToCompositeId for &CorosyncConfigurationRecord {
     fn composite_id(&self) -> CompositeId {
         CompositeId(self.content_type_id.unwrap(), self.id)
-    }
-}
-
-#[cfg(feature = "postgres-interop")]
-impl From<Row> for CorosyncConfigurationRecord {
-    fn from(row: Row) -> Self {
-        Self {
-            id: row.get::<_, i32>("id"),
-            state: row.get("state"),
-            immutable_state: row.get("immutable_state"),
-            not_deleted: row.get("not_deleted"),
-            mcast_port: row.get::<_, Option<i32>>("mcast_port"),
-            corosync_reported_up: row.get("corosync_reported_up"),
-            content_type_id: row.get::<_, Option<i32>>("content_type_id"),
-            host_id: row.get::<_, i32>("host_id"),
-        }
-    }
-}
-
-/// Record from the `chroma_core_sfastoragesystem` table
-#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq)]
-pub struct SfaStorageSystem {
-    pub id: i32,
-    pub child_health_state: HealthState,
-    pub health_state_reason: String,
-    pub health_state: HealthState,
-    pub uuid: String,
-    pub platform: String,
-}
-
-pub const SFA_STORAGE_SYSTEM_TABLE_NAME: TableName = TableName("chroma_core_sfastoragesystem");
-
-impl Name for SfaStorageSystem {
-    fn table_name() -> TableName<'static> {
-        SFA_STORAGE_SYSTEM_TABLE_NAME
-    }
-}
-
-impl Id for SfaStorageSystem {
-    fn id(&self) -> i32 {
-        self.id
-    }
-}
-
-impl Label for SfaStorageSystem {
-    fn label(&self) -> &str {
-        "SFA Storage System"
-    }
-}
-
-#[cfg(feature = "postgres-interop")]
-impl From<Row> for SfaStorageSystem {
-    fn from(row: Row) -> Self {
-        Self {
-            id: row.get::<_, i32>("id"),
-            child_health_state: row
-                .get::<_, i16>("child_health_state")
-                .try_into()
-                .unwrap_or_default(),
-            health_state_reason: row.get("health_state_reason"),
-            health_state: row
-                .get::<_, i16>("health_state")
-                .try_into()
-                .unwrap_or_default(),
-            uuid: row.get("uuid"),
-            platform: row.get("platform"),
-        }
-    }
-}
-
-pub const SFA_ENCLOSURE_TABLE_NAME: TableName = TableName("chroma_core_sfaenclosure");
-
-#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq)]
-pub struct SfaEnclosure {
-    pub id: i32,
-    pub index: i32,
-    pub element_name: String,
-    pub health_state: HealthState,
-    pub health_state_reason: String,
-    pub child_health_state: HealthState,
-    pub model: String,
-    pub position: i16,
-    pub enclosure_type: EnclosureType,
-    pub canister_location: String,
-    pub storage_system: String,
-}
-
-impl Name for SfaEnclosure {
-    fn table_name() -> TableName<'static> {
-        SFA_ENCLOSURE_TABLE_NAME
-    }
-}
-
-impl Id for SfaEnclosure {
-    fn id(&self) -> i32 {
-        self.id
-    }
-}
-
-impl Label for SfaEnclosure {
-    fn label(&self) -> &str {
-        "SFA enclosure"
-    }
-}
-
-#[cfg(feature = "postgres-interop")]
-impl From<Row> for SfaEnclosure {
-    fn from(row: Row) -> Self {
-        Self {
-            id: row.get::<_, i32>("id"),
-            index: row.get::<_, i32>("index"),
-            element_name: row.get("element_name"),
-            health_state: row
-                .get::<_, i16>("health_state")
-                .try_into()
-                .unwrap_or_default(),
-            health_state_reason: row.get("health_state_reason"),
-            child_health_state: row
-                .get::<_, i16>("child_health_state")
-                .try_into()
-                .unwrap_or_default(),
-            model: row.get("model"),
-            position: row.get::<_, i16>("position"),
-            enclosure_type: row
-                .get::<_, i16>("enclosure_type")
-                .try_into()
-                .unwrap_or_default(),
-            storage_system: row.get("storage_system"),
-            canister_location: row.get("canister_location"),
-        }
-    }
-}
-
-pub const SFA_DISK_DRIVE_TABLE_NAME: TableName = TableName("chroma_core_sfadiskdrive");
-
-#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq)]
-pub struct SfaDiskDrive {
-    pub id: i32,
-    pub index: i32,
-    pub enclosure_index: i32,
-    pub failed: bool,
-    pub slot_number: i32,
-    pub health_state: HealthState,
-    pub health_state_reason: String,
-    /// Specifies the member index of the disk drive.
-    /// If the disk drive is not a member of a pool, this value will be not be set.
-    pub member_index: Option<i16>,
-    /// Specifies the state of the disk drive relative to a containing pool.
-    pub member_state: MemberState,
-    pub storage_system: String,
-}
-
-impl Name for SfaDiskDrive {
-    fn table_name() -> TableName<'static> {
-        SFA_DISK_DRIVE_TABLE_NAME
-    }
-}
-
-impl Id for SfaDiskDrive {
-    fn id(&self) -> i32 {
-        self.id
-    }
-}
-
-impl Label for SfaDiskDrive {
-    fn label(&self) -> &str {
-        "SFA Disk Drive"
-    }
-}
-
-#[cfg(feature = "postgres-interop")]
-impl From<Row> for SfaDiskDrive {
-    fn from(row: Row) -> Self {
-        Self {
-            id: row.get::<_, i32>("id"),
-            index: row.get::<_, i32>("index"),
-            failed: row.get("failed"),
-            health_state_reason: row.get("health_state_reason"),
-            health_state: row
-                .get::<_, i16>("health_state")
-                .try_into()
-                .unwrap_or_default(),
-            member_index: row.get::<_, Option<i16>>("member_index"),
-            member_state: row
-                .get::<_, i16>("member_state")
-                .try_into()
-                .unwrap_or_default(),
-            enclosure_index: row.get::<_, i32>("enclosure_index"),
-            slot_number: row.get::<_, i32>("slot_number"),
-            storage_system: row.get("storage_system"),
-        }
-    }
-}
-
-pub const SFA_JOB_TABLE_NAME: TableName = TableName("chroma_core_sfajob");
-
-#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq)]
-pub struct SfaJob {
-    pub id: i32,
-    pub index: i32,
-    pub sub_target_index: Option<i32>,
-    pub sub_target_type: Option<SubTargetType>,
-    pub job_type: JobType,
-    pub state: JobState,
-    pub storage_system: String,
-}
-
-impl Name for SfaJob {
-    fn table_name() -> TableName<'static> {
-        SFA_JOB_TABLE_NAME
-    }
-}
-
-impl Id for SfaJob {
-    fn id(&self) -> i32 {
-        self.id
-    }
-}
-
-impl Label for SfaJob {
-    fn label(&self) -> &str {
-        "SFA Job"
-    }
-}
-
-#[cfg(feature = "postgres-interop")]
-impl From<Row> for SfaJob {
-    fn from(row: Row) -> Self {
-        Self {
-            id: row.get::<_, i32>("id"),
-            index: row.get::<_, i32>("index"),
-            sub_target_index: row.get::<_, Option<i32>>("sub_target_index"),
-            sub_target_type: row
-                .get::<_, Option<i16>>("sub_target_type")
-                .map(|x| x.try_into().unwrap_or_default()),
-            job_type: row.get::<_, i16>("job_type").try_into().unwrap_or_default(),
-            state: row.get::<_, i16>("state").try_into().unwrap_or_default(),
-            storage_system: row.get("storage_system"),
-        }
-    }
-}
-
-pub const SFA_POWER_SUPPLY_TABLE_NAME: TableName = TableName("chroma_core_sfapowersupply");
-
-#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq)]
-pub struct SfaPowerSupply {
-    pub id: i32,
-    pub index: i32,
-    pub enclosure_index: i32,
-    pub health_state: HealthState,
-    pub health_state_reason: String,
-    pub position: i16,
-    pub storage_system: String,
-}
-
-impl Name for SfaPowerSupply {
-    fn table_name() -> TableName<'static> {
-        SFA_POWER_SUPPLY_TABLE_NAME
-    }
-}
-
-impl Id for SfaPowerSupply {
-    fn id(&self) -> i32 {
-        self.id
-    }
-}
-
-impl Label for SfaPowerSupply {
-    fn label(&self) -> &str {
-        "SFA Power Supply"
-    }
-}
-
-#[cfg(feature = "postgres-interop")]
-impl From<Row> for SfaPowerSupply {
-    fn from(row: Row) -> Self {
-        Self {
-            id: row.get::<_, i32>("id"),
-            index: row.get::<_, i32>("index"),
-            health_state: row
-                .get::<_, i16>("health_state")
-                .try_into()
-                .unwrap_or_default(),
-            health_state_reason: row.get("health_state_reason"),
-            enclosure_index: row.get::<_, i32>("enclosure_index"),
-            position: row.get::<_, i16>("position"),
-            storage_system: row.get("storage_system"),
-        }
-    }
-}
-
-pub const SFA_CONTROLLER_TABLE_NAME: TableName = TableName("chroma_core_sfacontroller");
-
-#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq)]
-pub struct SfaController {
-    pub id: i32,
-    pub index: i32,
-    pub enclosure_index: i32,
-    pub health_state: HealthState,
-    pub health_state_reason: String,
-    pub child_health_state: HealthState,
-    pub storage_system: String,
-}
-
-impl Name for SfaController {
-    fn table_name() -> TableName<'static> {
-        SFA_CONTROLLER_TABLE_NAME
-    }
-}
-
-impl Id for SfaController {
-    fn id(&self) -> i32 {
-        self.id
-    }
-}
-
-impl Label for SfaController {
-    fn label(&self) -> &str {
-        "SFA Controller"
-    }
-}
-
-#[cfg(feature = "postgres-interop")]
-impl From<Row> for SfaController {
-    fn from(row: Row) -> Self {
-        Self {
-            id: row.get::<_, i32>("id"),
-            index: row.get::<_, i32>("index"),
-            enclosure_index: row.get::<_, i32>("enclosure_index"),
-            health_state: row
-                .get::<_, i16>("health_state")
-                .try_into()
-                .unwrap_or_default(),
-            health_state_reason: row.get("health_state_reason"),
-            child_health_state: row
-                .get::<_, i16>("child_health_state")
-                .try_into()
-                .unwrap_or_default(),
-            storage_system: row.get("storage_system"),
-        }
     }
 }

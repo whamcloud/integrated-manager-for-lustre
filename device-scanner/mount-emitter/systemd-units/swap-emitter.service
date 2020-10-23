@@ -1,6 +1,15 @@
 [Unit]
 Description=IML Swap Emitter
+PartOf=device-scanner.target
+After=local-fs.target
+After=device-scanner.socket
 
 [Service]
-ExecStart=/bin/bash -c 'exec /usr/bin/findmnt -P -s -e -t swap | /usr/bin/mount-emitter'
-Type=oneshot
+Restart=always
+Environment=RUST_LOG=info
+ExecStart=/usr/bin/swap-emitter
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=device-scanner.target

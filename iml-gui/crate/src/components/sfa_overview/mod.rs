@@ -14,7 +14,7 @@ use crate::{
 };
 use enclosures::{expansions, ss200nv, ss9012};
 use iml_wire_types::{
-    db::{HealthState, SfaController, SfaDiskDrive, SfaEnclosure, SfaPowerSupply, SfaStorageSystem},
+    sfa::{HealthState, SfaController, SfaDiskDrive, SfaEnclosure, SfaPowerSupply, SfaStorageSystem},
     warp_drive::{ArcCache, ArcRecord, RecordId},
 };
 use seed::{prelude::*, *};
@@ -410,7 +410,7 @@ fn head_enclosure_view<T>(head_enclosure: &HeadEnclosure, cramped: bool) -> Node
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
     match msg {
         Msg::ResizeObserved(xs) => {
-            if let Some(x) = xs.iter().next().and_then(|x| x.content_rect()) {
+            if let Some(x) = xs.get(0).and_then(|x| x.content_rect()) {
                 let last_cramp = model.cramped;
 
                 if x.width() <= 600. {

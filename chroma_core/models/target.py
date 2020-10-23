@@ -35,7 +35,7 @@ class NotAFileSystemMember(Exception):
 
 class FilesystemMember(models.Model):
     """A Mountable for a particular filesystem, such as
-       MDT, OST or Client"""
+    MDT, OST or Client"""
 
     filesystem = models.ForeignKey("ManagedFilesystem", on_delete=CASCADE)
     index = models.IntegerField()
@@ -441,7 +441,7 @@ class ManagedTarget(StatefulObject):
         return issubclass(type(self), FilesystemMember)
 
     def mkfs_override_options(self, filesystemtype, mkfs_options):
-        """ Allows a ManagedTarget to modify the mkfs_options as required.
+        """Allows a ManagedTarget to modify the mkfs_options as required.
         :return: A list of additional options for mkfs as in those things that appear after --mkfsoptions
         """
         return mkfs_options
@@ -573,7 +573,7 @@ class ManagedMgs(ManagedTarget):
 
 class TargetRecoveryInfo(models.Model):
     """Record of what we learn from /sys/fs/lustre/*/*/recovery_status
-       for a running target"""
+    for a running target"""
 
     #: JSON-encoded dict parsed from /sys
     recovery_status = models.TextField()

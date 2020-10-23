@@ -364,6 +364,10 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         }
         Msg::LoadPage => {
             if model.loading.loaded() && !model.page.is_active(&model.route) {
+                if model.route == Route::Snapshots && !model.conf.use_snapshots {
+                    model.route = Route::NotFound;
+                }
+
                 model.page = (&model.records, &model.conf, &model.route).into();
                 orders.send_msg(Msg::UpdatePageTitle);
                 model.page.init(&model.records, &mut orders.proxy(Msg::Page));
@@ -439,7 +443,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 .proxy(Msg::Page)
                 .proxy(page::Msg::Filesystem)
                 .proxy(page::filesystem::Msg::Stratagem)
-                .send_msg(stratagem::Msg::CheckStratagem)
                 .send_msg(stratagem::Msg::SetStratagemConfig(
                     model.records.stratagem_config.values().cloned().collect(),
                 ));
@@ -474,12 +477,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                             model.records.pacemaker_configuration.clone(),
                             model.records.corosync_configuration.clone(),
                         ));
-
-                    orders
-                        .proxy(Msg::Page)
-                        .proxy(page::Msg::Filesystem)
-                        .proxy(page::filesystem::Msg::Stratagem)
-                        .send_msg(stratagem::Msg::CheckStratagem);
                 }
                 warp_drive::RecordId::Filesystem(x) => {
                     orders
@@ -497,12 +494,6 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                         .proxy(Msg::Page)
                         .proxy(page::Msg::Mgts)
                         .send_msg(page::mgts::Msg::RemoveTarget(x));
-
-                    orders
-                        .proxy(Msg::Page)
-                        .proxy(page::Msg::Filesystem)
-                        .proxy(page::filesystem::Msg::Stratagem)
-                        .send_msg(stratagem::Msg::CheckStratagem);
                 }
                 warp_drive::RecordId::ActiveAlert(_) => {
                     let old = model.activity_health;
@@ -599,11 +590,7 @@ fn handle_record_change(
         warp_drive::RecordChange::Update(record) => {
             let record = ArcRecord::from(record);
 
-            model
-                .page
-                .update_record(record.clone(), &model.records, &mut orders.proxy(Msg::Page));
-
-            match record {
+            match record.clone() {
                 ArcRecord::ActiveAlert(x) => {
                     let msg = x.message.clone();
 
@@ -655,12 +642,6 @@ fn handle_record_change(
                             model.records.pacemaker_configuration.clone(),
                             model.records.corosync_configuration.clone(),
                         ));
-
-                    orders
-                        .proxy(Msg::Page)
-                        .proxy(page::Msg::Filesystem)
-                        .proxy(page::filesystem::Msg::Stratagem)
-                        .send_msg(stratagem::Msg::CheckStratagem);
                 }
                 ArcRecord::ManagedTargetMount(x) => {
                     model.records.managed_target_mount.insert(x.id, x);
@@ -694,14 +675,17 @@ fn handle_record_change(
                 ArcRecord::SfaController(x) => {
                     model.records.sfa_controller.insert(x.id, Arc::clone(&x));
                 }
+                ArcRecord::Snapshot(x) => {
+                    model.records.snapshot.insert(x.id, Arc::clone(&x));
+                }
+                ArcRecord::SnapshotInterval(x) => {
+                    model.records.snapshot_interval.insert(x.id, Arc::clone(&x));
+                }
+                ArcRecord::SnapshotRetention(x) => {
+                    model.records.snapshot_retention.insert(x.id, Arc::clone(&x));
+                }
                 ArcRecord::StratagemConfig(x) => {
                     model.records.stratagem_config.insert(x.id, Arc::clone(&x));
-
-                    orders
-                        .proxy(Msg::Page)
-                        .proxy(page::Msg::Filesystem)
-                        .proxy(page::filesystem::Msg::Stratagem)
-                        .send_msg(stratagem::Msg::CheckStratagem);
 
                     orders
                         .proxy(Msg::Page)
@@ -727,12 +711,6 @@ fn handle_record_change(
                         .proxy(Msg::Page)
                         .proxy(page::Msg::Target)
                         .send_msg(page::target::Msg::UpdateTarget(Arc::clone(&x)));
-
-                    orders
-                        .proxy(Msg::Page)
-                        .proxy(page::Msg::Filesystem)
-                        .proxy(page::filesystem::Msg::Stratagem)
-                        .send_msg(stratagem::Msg::CheckStratagem);
 
                     orders
                         .proxy(Msg::Page)
@@ -771,6 +749,10 @@ fn handle_record_change(
                     model.records.pacemaker_configuration.insert(x.id, x);
                 }
             }
+
+            model
+                .page
+                .update_record(record, &model.records, &mut orders.proxy(Msg::Page));
         }
         warp_drive::RecordChange::Delete(record_id) => {
             match record_id {
@@ -1023,6 +1005,13 @@ fn view(model: &Model) -> Vec<Node<Msg>> {
             page::sfa_enclosure::view(&model.records, x)
                 .els()
                 .map_msg(page::Msg::SfaEnclosure),
+        )
+        .els(),
+        Page::Snapshots(x) => main_panels(
+            model,
+            page::snapshot::view(x, &model.records, model.auth.get_session())
+                .els()
+                .map_msg(page::Msg::Snapshots),
         )
         .els(),
     };

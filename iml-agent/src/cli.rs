@@ -4,17 +4,18 @@
 
 use console::{style, Term};
 use iml_agent::action_plugins::{
-    check_kernel, check_stonith, high_availability, kernel_module, lamigo, lpurge, ltuer, lustre,
+    check_kernel, check_stonith, high_availability, kernel_module, lamigo, lpurge, lustre,
     ntp::{action_configure, is_ntp_configured},
     ostpool, package, postoffice,
     stratagem::{
-        action_purge, action_warning,
+        action_cloudsync, action_filesync, action_purge, action_warning,
         server::{
             generate_cooked_config, stream_fidlists, trigger_scan, Counter, StratagemCounters,
         },
     },
 };
-use iml_wire_types::{client, snapshot};
+use iml_agent::lustre::search_rootpath;
+use iml_wire_types::{client, snapshot, FidItem};
 use liblustreapi as llapi;
 use prettytable::{cell, row, Table};
 use spinners::{Spinner, Spinners};
@@ -210,7 +211,7 @@ pub struct FidInput {
     fsname: String,
 
     #[structopt(name = "FIDS")]
-    /// List of FIDs to purge
+    /// List of FIDs to operate on
     fidlist: Vec<String>,
 }
 
@@ -232,6 +233,36 @@ pub enum StratagemClientCommand {
     Purge {
         #[structopt(flatten)]
         fidopts: FidInput,
+    },
+
+    #[structopt(name = "filesync")]
+    /// Run FileSync action
+    FileSync {
+        #[structopt()]
+        /// push or pull
+        action: action_filesync::ActionType,
+
+        #[structopt(short = "r", long = "remote")]
+        /// remote fs path
+        target_fs: String,
+
+        #[structopt(parse(from_os_str), min_values = 1, required = true)]
+        files: Vec<PathBuf>,
+    },
+
+    #[structopt(name = "cloudsync")]
+    /// Run CloudSync action
+    CloudSync {
+        #[structopt()]
+        /// push or pull
+        action: action_cloudsync::ActionType,
+
+        #[structopt(short = "d")]
+        /// destination s3 bucket
+        target: String,
+
+        #[structopt(parse(from_os_str), min_values = 1, required = true)]
+        files: Vec<PathBuf>,
     },
 }
 
@@ -271,6 +302,21 @@ pub enum MountCommand {
     Unmount(client::Unmount),
 }
 
+#[derive(Debug, StructOpt)]
+pub enum HighAvailability {
+    #[structopt(name = "check")]
+    Check,
+
+    #[structopt(name = "list")]
+    List,
+
+    #[structopt(name = "start")]
+    Start { resource: String },
+
+    #[structopt(name = "stop")]
+    Stop { resource: String },
+}
+
 #[derive(StructOpt, Debug)]
 #[structopt(name = "iml-agent", setting = structopt::clap::AppSettings::ColoredHelp)]
 /// The Integrated Manager for Lustre Agent CLI
@@ -295,11 +341,11 @@ pub enum App {
         command: PoolCommand,
     },
 
-    #[structopt(name = "check_ha")]
-    CheckHA,
-
-    #[structopt(name = "ha_list")]
-    HAResources,
+    #[structopt(name = "ha")]
+    HA {
+        #[structopt(subcommand)]
+        command: HighAvailability,
+    },
 
     #[structopt(name = "ntp")]
     NtpClient {
@@ -324,18 +370,6 @@ pub enum App {
     Mount {
         #[structopt(subcommand)]
         command: MountCommand,
-    },
-
-    #[structopt(name = "create_ltuer_conf")]
-    CreateLtuerConf {
-        #[structopt(name = "MAILBOX_PATH")]
-        mailbox_path: String,
-
-        #[structopt(name = "FS_NAME")]
-        fs_name: String,
-
-        #[structopt(name = "COLD_POOL")]
-        cold_pool: String,
     },
 
     #[structopt(name = "kernel_module")]
@@ -494,6 +528,117 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     exit(exitcode::IOERR);
                 }
             }
+            StratagemClientCommand::FileSync {
+                action,
+                target_fs,
+                files,
+            } => {
+                if action == action_filesync::ActionType::Pull {
+                    eprintln!("Pull is not available as an option");
+                    exit(exitcode::USAGE);
+                }
+                let llapi =
+                    search_rootpath(files[0].clone().into_os_string().into_string().unwrap())
+                        .await?;
+
+                let (fids, errors): (Vec<_>, Vec<_>) = files
+                    .into_iter()
+                    .map(|file| llapi.path2fid(&file))
+                    .partition(Result::is_ok);
+                let fids: Vec<_> = fids.into_iter().map(Result::unwrap).collect();
+                let errors: Vec<_> = errors.into_iter().map(Result::unwrap_err).collect();
+                if !errors.is_empty() {
+                    eprintln!("files not found, ignoring: {:?}", errors);
+                }
+                let fidlist: Vec<FidItem> = fids
+                    .into_iter()
+                    .map(|fid| FidItem {
+                        fid: fid.clone(),
+                        data: fid.into(),
+                    })
+                    .collect();
+                let task_args = action_filesync::TaskArgs {
+                    remote: target_fs,
+                    action,
+                };
+
+                let result =
+                    action_filesync::process_fids((llapi.mntpt(), task_args, fidlist)).await;
+
+                match result {
+                    Ok(reslist) => {
+                        if reslist.is_empty() {
+                            println!("success");
+                            exit(0);
+                        }
+
+                        for err in reslist.iter() {
+                            eprintln!(
+                                "Failed to sync {} {}",
+                                llapi.fid2path(&err.fid).unwrap_or(err.fid.to_string()),
+                                std::io::Error::from_raw_os_error(err.errno.into())
+                            );
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("filesync failed {}", e);
+                        exit(exitcode::SOFTWARE);
+                    }
+                }
+            }
+            StratagemClientCommand::CloudSync {
+                action,
+                target,
+                files,
+            } => {
+                let llapi =
+                    search_rootpath(files[0].clone().into_os_string().into_string().unwrap())
+                        .await?;
+
+                let (fids, errors): (Vec<_>, Vec<_>) = files
+                    .into_iter()
+                    .map(|file| llapi.path2fid(&file))
+                    .partition(Result::is_ok);
+                let fids: Vec<_> = fids.into_iter().map(Result::unwrap).collect();
+                let errors: Vec<_> = errors.into_iter().map(Result::unwrap_err).collect();
+                if !errors.is_empty() {
+                    eprintln!("files not found, ignoring: {:?}", errors);
+                }
+                let fidlist: Vec<FidItem> = fids
+                    .into_iter()
+                    .map(|fid| FidItem {
+                        fid: fid.clone(),
+                        data: fid.into(),
+                    })
+                    .collect();
+                let task_args = action_cloudsync::TaskArgs {
+                    remote: target,
+                    action,
+                };
+
+                let result =
+                    action_cloudsync::process_fids((llapi.mntpt(), task_args, fidlist)).await;
+                match result {
+                    Ok(reslist) => {
+                        if reslist.is_empty() {
+                            println!("success");
+                            exit(0);
+                        }
+
+                        for err in reslist.iter() {
+                            eprintln!(
+                                "Failed to sync {} {}",
+                                llapi.fid2path(&err.fid).unwrap_or(err.fid.to_string()),
+                                std::io::Error::from_raw_os_error(err.errno.into())
+                            );
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("cloudsync failed {}", e);
+                        exit(exitcode::SOFTWARE)
+                    }
+                }
+            }
         },
         App::StratagemServer { command } => match command {
             StratagemCommand::Scan {
@@ -552,24 +697,44 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
         },
-        App::CheckHA => match high_availability::check_ha(()).await {
-            Ok((cs, pm, pc)) => {
-                let mut table = Table::new();
-                table.add_row(row!["Name", "Config", "Service"]);
-                table.add_row(row!["corosync", cs.config, cs.service]);
-                table.add_row(row!["pacemaker", pm.config, pm.service]);
-                table.add_row(row!["pcsd", pc.config, pc.service]);
-                table.printstd();
-            }
-            Err(e) => eprintln!("{:?}", e),
-        },
-        App::HAResources => match high_availability::get_ha_resource_list(()).await {
-            Ok(v) => {
-                for e in v {
-                    println!("{}", serde_json::to_string(&e).unwrap())
+        App::HA { command } => match command {
+            HighAvailability::Check => match high_availability::check_ha(()).await {
+                Ok((cs, pm, pc)) => {
+                    let mut table = Table::new();
+                    table.add_row(row!["Name", "Config", "Service"]);
+                    table.add_row(row!["corosync", cs.config, cs.service]);
+                    table.add_row(row!["pacemaker", pm.config, pm.service]);
+                    table.add_row(row!["pcsd", pc.config, pc.service]);
+                    table.printstd();
+                }
+                Err(e) => {
+                    eprintln!("{:?}", e);
+                    exit(exitcode::SOFTWARE);
+                }
+            },
+            HighAvailability::List => match high_availability::get_ha_resource_list(()).await {
+                Ok(v) => {
+                    for e in v {
+                        println!("{}", serde_json::to_string(&e).unwrap())
+                    }
+                }
+                Err(e) => {
+                    eprintln!("Failed to list resources: {:?}", e);
+                    exit(exitcode::SOFTWARE);
+                }
+            },
+            HighAvailability::Start { resource } => {
+                if let Err(e) = high_availability::start_resource(resource).await {
+                    eprintln!("{:?}", e);
+                    exit(exitcode::SOFTWARE);
                 }
             }
-            Err(e) => eprintln!("{:?}", e),
+            HighAvailability::Stop { resource } => {
+                if let Err(e) = high_availability::stop_resource(resource).await {
+                    eprintln!("{:?}", e);
+                    exit(exitcode::SOFTWARE);
+                }
+            }
         },
         App::NtpClient { command } => match command {
             NtpClientCommand::Configure { server } => {
@@ -693,16 +858,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 exit(exitcode::SOFTWARE);
             }
         }
-        App::CreateLtuerConf {
-            mailbox_path,
-            fs_name,
-            cold_pool,
-        } => {
-            if let Err(e) = ltuer::create_ltuer_conf((mailbox_path, fs_name, cold_pool)).await {
-                eprintln!("{:?}", e);
-                exit(exitcode::SOFTWARE);
-            }
-        }
         App::KernelModule { command } => {
             if let Err(e) = match command {
                 KernelModuleCommand::Loaded { module } => kernel_module::loaded(module)
@@ -723,7 +878,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
         App::LAmigo { c } => {
-            if let Err(e) = lamigo::create_lamigo_service_unit(c).await {
+            if let Err(e) = lamigo::create_lamigo_conf(c).await {
                 eprintln!("{}", e);
                 exit(exitcode::SOFTWARE);
             }

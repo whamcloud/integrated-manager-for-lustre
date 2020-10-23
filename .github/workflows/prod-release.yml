@@ -2,7 +2,7 @@ name: prod-release
 on:
   push:
     tags:
-      - v*rust-r6.1
+      - v*rust-r6.2
 jobs:
   push_rust_iml:
     name: Push to Copr prod
@@ -16,7 +16,7 @@ jobs:
         env:
           PROD: true
           OWNER: managerforlustre
-          PROJECT: manager-for-lustre-6.1
+          PROJECT: manager-for-lustre-6.2
           PACKAGE: rust-iml
           SPEC: rust-iml.spec
           WORKSPACE: ${{ github.workspace }}
@@ -35,7 +35,7 @@ jobs:
         env:
           PROD: true
           OWNER: managerforlustre
-          PROJECT: manager-for-lustre-6.1
+          PROJECT: manager-for-lustre-6.2
           PACKAGE: rust-iml-gui
           SPEC: iml-gui/rust-iml-gui.spec
           SRPM_TASK: iml-gui-srpm
@@ -43,7 +43,7 @@ jobs:
           KEY: ${{ secrets.key }}
           IV: ${{ secrets.iv }}
   push_device_scanner:
-    name: Push to Copr devel (device-scanner)
+    name: Push to Copr prod (device-scanner)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
@@ -54,7 +54,7 @@ jobs:
         env:
           PROD: true
           OWNER: managerforlustre
-          PROJECT: manager-for-lustre-6.1
+          PROJECT: manager-for-lustre-6.2
           PACKAGE: iml-device-scanner
           SPEC: device-scanner/iml-device-scanner.spec
           SRPM_TASK: device-scanner-srpm
@@ -69,6 +69,11 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v1
 
+      - name: Fetch older docker-compose
+        run: |
+          sudo curl -L "https://github.com/docker/compose/releases/download/1.26.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose
+
       - name: Build the iml images
         working-directory: ./docker
         run: |
@@ -81,7 +86,7 @@ jobs:
         env:
           PROD: true
           OWNER: managerforlustre
-          PROJECT: manager-for-lustre-6.1
+          PROJECT: manager-for-lustre-6.2
           PACKAGE: iml-docker
           SRPM_TASK: iml-docker-srpm
           SPEC: iml-docker.spec

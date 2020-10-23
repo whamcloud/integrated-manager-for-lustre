@@ -183,9 +183,13 @@ pub fn get_timer_port() -> String {
     get_var("TIMER_PORT")
 }
 
+pub fn get_timer_fqdn() -> String {
+    get_var("TIMER_SERVER_FQDN")
+}
+
 /// Get the timer address from the env or panic
 pub fn get_timer_addr() -> SocketAddr {
-    to_socket_addr(&get_server_host(), &get_timer_port())
+    to_socket_addr(&get_timer_fqdn(), &get_timer_port())
 }
 
 /// Get the influxdb port from the env or panic
@@ -193,9 +197,13 @@ pub fn get_influxdb_port() -> String {
     get_var("INFLUXDB_PORT")
 }
 
+pub fn get_influxdb_server_fqdn() -> String {
+    get_var("INFLUXDB_SERVER_FQDN")
+}
+
 /// Get the influxdb address from the env or panic
 pub fn get_influxdb_addr() -> SocketAddr {
-    to_socket_addr(&get_server_host(), &get_influxdb_port())
+    to_socket_addr(&get_influxdb_server_fqdn(), &get_influxdb_port())
 }
 
 /// Get the metrics influxdb database name
@@ -234,12 +242,23 @@ pub fn get_db_host() -> Option<String> {
     empty_str_to_none(get_var("DB_HOST"))
 }
 
+pub fn get_db_port() -> Option<u16> {
+    env::var("DB_PORT").ok().map(|l| l.parse().ok()).flatten()
+}
+
 pub fn get_db_name() -> Option<String> {
     empty_str_to_none(get_var("DB_NAME"))
 }
 
 pub fn get_db_password() -> Option<String> {
     empty_str_to_none(get_var("DB_PASSWORD"))
+}
+
+pub fn get_pool_limit() -> Option<u32> {
+    env::var("POOL_LIMIT")
+        .ok()
+        .map(|l| l.parse().ok())
+        .flatten()
 }
 
 /// Get the report port from the env or panic
@@ -262,6 +281,10 @@ pub fn get_branding() -> String {
 
 pub fn get_use_stratagem() -> bool {
     string_to_bool(get_var("USE_STRATAGEM"))
+}
+
+pub fn get_use_snapshots() -> bool {
+    string_to_bool(env::var("USE_SNAPSHOTS").unwrap_or_else(|_| "false".to_string()))
 }
 
 pub fn get_action_runner_http() -> String {

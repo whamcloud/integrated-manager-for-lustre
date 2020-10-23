@@ -12,7 +12,7 @@ pub fn used_to_color(used: f64) -> &'static str {
     if used.is_nan() {
         C.text_gray_500
     } else {
-        match (used.round() as u64) * 100 {
+        match used.round() as u64 {
             75..=100 => C.text_red_500,
             50..=74 => C.text_yellow_500,
             0..=49 => C.text_green_500,
@@ -24,7 +24,7 @@ pub fn used_to_color(used: f64) -> &'static str {
 pub fn view<'a, T>(x: impl Into<Option<(f64, &'a str)>>) -> Node<T> {
     match x.into() {
         Some((used, color)) => {
-            let stroke_length = (1.0 - used) * CIRCUMFERENCE;
+            let stroke_length = (100.0f64 - used) / 100.0f64 * CIRCUMFERENCE;
 
             svg![
                 class![C.stroke_current, C.fill_current],
@@ -80,7 +80,7 @@ pub fn view<'a, T>(x: impl Into<Option<(f64, &'a str)>>) -> Node<T> {
                           At::DominantBaseline => "central",
                           At::TextAnchor => "middle"
                         },
-                        tspan![format!("{}", (100.0 * used) as u16)],
+                        tspan![format!("{}", used as u16)],
                         tspan![class![C.text_gray_400], "%"]
                     ]
                 ],

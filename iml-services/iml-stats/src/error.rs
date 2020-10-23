@@ -10,7 +10,7 @@ pub enum ImlStatsError {
     #[error(transparent)]
     ImlServiceQueueError(#[from] ImlServiceQueueError),
     #[error(transparent)]
-    InfluxDbError(#[from] influx_db_client::Error),
+    ImlInfluxError(#[from] iml_influx::Error),
     #[error(transparent)]
     SystemTimeError(#[from] std::time::SystemTimeError),
     #[error(transparent)]

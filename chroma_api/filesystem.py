@@ -400,7 +400,10 @@ class FilesystemResource(ConfParamResource):
 
 class OstPoolResource(ChromaModelResource):
     osts = fields.ToManyField(
-        "chroma_api.target.TargetResource", "osts", null=True, help_text="List of OSTs in this Pool",
+        "chroma_api.target.TargetResource",
+        "osts",
+        null=True,
+        help_text="List of OSTs in this Pool",
     )
     filesystem = fields.ToOneField("chroma_api.filesystem.FilesystemResource", "filesystem")
 

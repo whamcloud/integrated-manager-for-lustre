@@ -4,7 +4,12 @@
 
 pub mod client;
 pub mod db;
+pub mod graphql_duration;
+pub mod high_availability;
+pub mod sfa;
 pub mod snapshot;
+pub mod stratagem;
+pub mod task;
 pub mod warp_drive;
 
 use chrono::{DateTime, Utc};
@@ -462,6 +467,7 @@ pub struct Conf {
     pub is_release: bool,
     pub branding: Branding,
     pub use_stratagem: bool,
+    pub use_snapshots: bool,
     pub monitor_sfa: bool,
 }
 
@@ -475,6 +481,7 @@ impl Default for Conf {
             is_release: false,
             branding: Branding::default(),
             use_stratagem: false,
+            use_snapshots: false,
             monitor_sfa: false,
         }
     }
@@ -667,6 +674,7 @@ pub struct CmdWrapper {
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+#[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
 pub struct Command {
     pub cancelled: bool,
     pub complete: bool,
@@ -1309,6 +1317,18 @@ impl EndpointName for StratagemConfiguration {
     }
 }
 
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+#[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
+/// Information about a stratagem report
+pub struct StratagemReport {
+    /// The filename of the stratagem report
+    pub filename: String,
+    /// When the report was last modified
+    pub modify_time: DateTime<Utc>,
+    /// The size of the report in bytes
+    pub size: i32,
+}
+
 /// An `AlertType` record from `api/alert_type`.
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Eq, PartialEq)]
 pub struct AlertType {
@@ -1523,6 +1543,96 @@ pub struct ResourceAgentInfo {
     pub agent: ResourceAgentType,
     pub id: String,
     pub args: HashMap<String, String>,
+    pub ops: PacemakerOperations,
+}
+
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum OrderingKind {
+    Mandatory,
+    Optional,
+    Serialize,
+}
+
+impl fmt::Display for OrderingKind {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.pad(&format!("{:?}", self))
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum PacemakerScore {
+    Infinity,
+    Value(i32),
+    NegInfinity,
+}
+
+impl fmt::Display for PacemakerScore {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match &self {
+            PacemakerScore::Value(v) => write!(f, "{}", v),
+            PacemakerScore::Infinity => write!(f, "INFINITY"),
+            PacemakerScore::NegInfinity => write!(f, "-INFINITY"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum PacemakerKindOrScore {
+    Kind(OrderingKind),
+    Score(PacemakerScore),
+}
+
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct PacemakerOperations {
+    // Time to wait for Resource to start
+    pub start: Option<String>,
+    // Time of monitor interval
+    pub monitor: Option<String>,
+    // Time to wait for Resource to stop
+    pub stop: Option<String>,
+}
+
+impl PacemakerOperations {
+    pub fn new(
+        start: impl Into<Option<String>>,
+        monitor: impl Into<Option<String>>,
+        stop: impl Into<Option<String>>,
+    ) -> Self {
+        Self {
+            start: start.into(),
+            monitor: monitor.into(),
+            stop: stop.into(),
+        }
+    }
+}
+
+/// Information about pacemaker resource agents
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum ResourceConstraint {
+    Ordering {
+        id: String,
+        first: String,
+        then: String,
+        // While the documentation only lists Kind the xml schema
+        // (constraints-2.9.rng) shows Kind or Score being valid
+        kind: Option<PacemakerKindOrScore>,
+    },
+    Location {
+        id: String,
+        rsc: String,
+        node: String,
+        score: PacemakerScore,
+    },
+    Colocation {
+        id: String,
+        rsc: String,
+        with_rsc: String,
+        score: PacemakerScore,
+    },
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -1773,25 +1883,6 @@ pub struct FidItem {
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
-pub struct Task {
-    pub id: i32,
-    pub name: String,
-    pub start: DateTime<Utc>,
-    pub finish: Option<DateTime<Utc>>,
-    pub state: String,
-    pub fids_total: i64,
-    pub fids_completed: i64,
-    pub fids_failed: i64,
-    pub data_transfered: i64,
-    pub single_runner: bool,
-    pub keep_failed: bool,
-    pub actions: Vec<String>,
-    pub args: serde_json::Value,
-    pub filesystem_id: i32,
-    pub running_on_id: Option<i32>,
-}
-
-#[derive(serde::Serialize, serde::Deserialize)]
 pub struct LustreClient {
     pub id: i32,
     pub state_modified_at: DateTime<Utc>,

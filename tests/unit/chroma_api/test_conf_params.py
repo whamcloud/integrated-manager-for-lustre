@@ -87,7 +87,7 @@ class TestTargetPostValidation(ChromaApiTestCase):
 
     def test_wrong_type(self):
         """Test validation of a field which is a legitimate value for the key,
-         but the key is not appropriate for this object -- setting an MDT option on an OST"""
+        but the key is not appropriate for this object -- setting an MDT option on an OST"""
         response = self._new_ost_with_params({"lov.qos_prio_free": "50"})
         self.assertHttpBadRequest(response)
         errors = self.deserialize(response)

@@ -2,11 +2,15 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{display_utils, error::ImlManagerCliError};
-use futures::{future, FutureExt, TryFutureExt};
+use crate::{
+    display_utils::{self, display_cmd_state, wrap_fut},
+    error::ImlManagerCliError,
+};
+use futures::{channel::mpsc, future, FutureExt, StreamExt, TryFutureExt};
+use iml_command_utils::{wait_for_cmds_progress, Progress};
 use iml_wire_types::{ApiList, AvailableAction, Command, EndpointName, FlatQuery, Host};
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
-use std::{collections::HashMap, fmt::Debug, iter, time::Duration};
+use std::{collections::HashMap, fmt::Debug, time::Duration};
 use tokio::{task::spawn_blocking, time::delay_for};
 
 #[derive(serde::Serialize)]
@@ -62,6 +66,16 @@ pub async fn wait_for_cmd(cmd: Command) -> Result<Command, ImlManagerCliError> {
     }
 }
 
+/// Waits for command completion and prints a spinner during progression.
+/// When completed, prints the final command state
+pub async fn wait_for_cmd_display(cmd: Command) -> Result<Command, ImlManagerCliError> {
+    let cmd = wrap_fut(&cmd.message.to_string(), wait_for_cmd(cmd)).await?;
+
+    display_cmd_state(&cmd);
+
+    Ok(cmd)
+}
+
 /// Waits for command completion and prints progress messages
 /// This *does not* error on command failure, it only tracks command
 /// completion
@@ -84,44 +98,35 @@ pub async fn wait_for_cmds(cmds: &[Command]) -> Result<Vec<Command>, ImlManagerC
         cmd_spinners.insert(cmd.id, pb);
     }
 
-    let mut settled_commands = vec![];
-
     let fut = spawn_blocking(move || m.join())
-        .map(|x| x.map_err(|e| e.into()).and_then(std::convert::identity));
+        .err_into::<ImlManagerCliError>()
+        .map(|x| x.and_then(|x| x.map_err(|e| e.into())));
 
-    let fut2 = async {
-        loop {
-            if cmd_spinners.is_empty() {
-                tracing::debug!("All commands complete. Returning");
-                return Ok::<_, ImlManagerCliError>(());
-            }
+    let (tx, rx) = mpsc::unbounded();
 
-            delay_for(Duration::from_millis(1000)).await;
-
-            let query: Vec<_> = cmd_spinners
-                .keys()
-                .map(|x| ["id__in".into(), x.to_string()])
-                .chain(iter::once(["limit".into(), "0".into()]))
-                .collect();
-
-            let cmds: ApiList<Command> = get(Command::endpoint_name(), query).await?;
-
-            for cmd in cmds.objects {
-                if cmd_finished(&cmd) {
-                    let pb = cmd_spinners.remove(&cmd.id).unwrap();
-                    pb.finish_with_message(&display_utils::format_cmd_state(&cmd));
-                    settled_commands.push(cmd);
-                } else {
-                    let pb = cmd_spinners.get(&cmd.id).unwrap();
+    let fut2 = rx
+        .fold(cmd_spinners, |mut cmd_spinners, x| {
+            match x {
+                Progress::Update(x) => {
+                    let pb = cmd_spinners.get(&x).unwrap();
                     pb.inc(1);
                 }
+                Progress::Complete(x) => {
+                    let pb = cmd_spinners.remove(&x.id).unwrap();
+                    pb.finish_with_message(&display_utils::format_cmd_state(&x));
+                }
             }
-        }
-    };
 
-    future::try_join(fut.err_into(), fut2).await?;
+            future::ready(cmd_spinners)
+        })
+        .never_error()
+        .err_into::<ImlManagerCliError>();
 
-    Ok(settled_commands)
+    let fut3 = wait_for_cmds_progress(cmds, Some(tx)).err_into::<ImlManagerCliError>();
+
+    let (_, _, xs) = future::try_join3(fut, fut2, fut3).await?;
+
+    Ok(xs)
 }
 
 /// Waits for command completion and prints progress messages.
@@ -172,6 +177,16 @@ pub async fn get<T: serde::de::DeserializeOwned + std::fmt::Debug>(
     let client = iml_manager_client::get_client()?;
 
     iml_manager_client::get(client, endpoint, query)
+        .await
+        .map_err(|e| e.into())
+}
+
+pub async fn graphql<T: serde::de::DeserializeOwned + std::fmt::Debug>(
+    query: impl serde::Serialize + Debug,
+) -> Result<T, ImlManagerCliError> {
+    let client = iml_manager_client::get_client()?;
+
+    iml_manager_client::graphql(client, query)
         .await
         .map_err(|e| e.into())
 }

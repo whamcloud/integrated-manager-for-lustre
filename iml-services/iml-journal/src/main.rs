@@ -4,9 +4,10 @@
 
 use futures::TryStreamExt;
 use iml_journal::{execute_handlers, get_message_class, ImlJournalError};
+use iml_manager_env::get_pool_limit;
 use iml_postgres::{
     get_db_pool,
-    sqlx::{self, PgPool},
+    sqlx::{self, Done, PgPool},
 };
 use iml_service_queue::service_queue::consume_data;
 use iml_tracing::tracing;
@@ -19,33 +20,30 @@ lazy_static! {
     static ref DBLOG_LW: i64 = iml_manager_env::get_dblog_lw() as i64;
 }
 
-async fn purge_excess(pool: &PgPool, num_rows: i64) -> Result<i64, ImlJournalError> {
+// Default pool limit if not overridden by POOL_LIMIT
+const DEFAULT_POOL_LIMIT: u32 = 2;
+
+async fn purge_excess(pool: &PgPool, mut num_rows: i64) -> Result<i64, ImlJournalError> {
     if num_rows <= *DBLOG_HW {
         return Ok(num_rows);
     }
 
-    let mut num_remove: i64 = num_rows - *DBLOG_LW;
-
-    while num_remove > 0 {
-        let xs = sqlx::query!(
+    while *DBLOG_LW < num_rows {
+        let x = sqlx::query!(
             r#"
                 DELETE FROM chroma_core_logmessage
                 WHERE id in ( 
                     SELECT id FROM chroma_core_logmessage ORDER BY id LIMIT $1
                 )
-                RETURNING id"#,
-            std::cmp::min(10_000, num_remove)
+            "#,
+            std::cmp::min(10_000, num_rows - *DBLOG_LW)
         )
-        .fetch_all(pool)
-        .await?;
+        .execute(pool)
+        .await?
+        .rows_affected();
 
-        num_remove -= xs.len() as i64;
-
-        tracing::info!(
-            "Purged {} rows, {} remain for purging",
-            xs.len(),
-            num_remove
-        );
+        num_rows -= x as i64;
+        tracing::info!("Purged {} rows, current known row count is {}", x, num_rows);
     }
 
     Ok(num_rows)
@@ -57,7 +55,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     tracing::info!("Starting");
 
-    let pool = get_db_pool(5).await?;
+    let pool = get_db_pool(get_pool_limit().unwrap_or(DEFAULT_POOL_LIMIT)).await?;
 
     let rabbit_pool = iml_rabbit::connect_to_rabbit(1);
 
@@ -150,8 +148,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             &x.4,
             &x.5
         )
-            .execute(&pool)
-            .await?;
+        .execute(&pool)
+        .await?;
     }
 
     Ok(())

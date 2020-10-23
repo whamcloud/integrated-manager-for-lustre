@@ -33,7 +33,9 @@ class Migration(migrations.Migration):
                     ),
                 ),
             ],
-            options={"ordering": ["id"],},
+            options={
+                "ordering": ["id"],
+            },
             bases=("chroma_core.job",),
         ),
         migrations.CreateModel(
@@ -68,7 +70,9 @@ class Migration(migrations.Migration):
                     ),
                 ),
             ],
-            options={"ordering": ["id"],},
+            options={
+                "ordering": ["id"],
+            },
             bases=("chroma_core.job",),
         ),
         migrations.CreateModel(
@@ -122,5 +126,8 @@ class Migration(migrations.Migration):
             name="task",
             field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to="chroma_core.Task"),
         ),
-        migrations.AlterUniqueTogether(name="task", unique_together=set([("name",)]),),
+        migrations.AlterUniqueTogether(
+            name="task",
+            unique_together=set([("name",)]),
+        ),
     ]

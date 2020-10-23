@@ -2,14 +2,17 @@
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
 
+import json
 import logging
 import os
+import requests
 
 from os import path
 from toolz.functoolz import pipe, partial, flip
-from settings import SERVER_HTTP_URL
+from settings import SERVER_HTTP_URL, TIMER_PROXY_PASS
 from django.db import models
 from django.db.models import CASCADE, Q
+from django.contrib.postgres import fields
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.models.jobs import StatefulObject
 from chroma_core.models.utils import DeletableMetaclass
@@ -23,7 +26,7 @@ from chroma_core.lib.stratagem import (
     aggregate_points,
     submit_aggregated_data,
 )
-from chroma_core.lib.util import CommandLine, runningInDocker, get_api_session_request
+from chroma_core.lib.util import CommandLine, runningInDocker
 
 from chroma_core.models import Job
 from chroma_core.models import StateChangeJob, StateLock, StepResult, LustreClientMount
@@ -106,20 +109,12 @@ def service_file(fid):
 
 
 class ConfigureStratagemTimerStep(Step, CommandLine):
-    def calc_duration(self, duration, units):
-        if units is None:
-            return str(duration)
-        elif units in ("s", "seconds"):
-            return "{}s".format(duration / 1000)
-
-    def get_run_stratagem_command(self, cmd, config, units):
+    def get_run_stratagem_command(self, cmd, config):
         iml_cmd = "{} --filesystem {}".format(cmd, config.filesystem.id)
         if config.report_duration is not None and config.report_duration >= 0:
-            duration = self.calc_duration(config.report_duration, units)
-            iml_cmd += " --report {}".format(duration)
+            iml_cmd += " --report {}s".format(config.report_duration / 1000)
         if config.purge_duration is not None and config.purge_duration >= 0:
-            duration = self.calc_duration(config.purge_duration, units)
-            iml_cmd += " --purge {}".format(duration)
+            iml_cmd += " --purge {}s".format(config.purge_duration / 1000)
 
         return iml_cmd
 
@@ -128,13 +123,12 @@ class ConfigureStratagemTimerStep(Step, CommandLine):
         # Create systemd timer
 
         config = kwargs["config"]
+
+        iml_cmd = self.get_run_stratagem_command("/usr/bin/iml stratagem scan", config)
+
         interval_in_seconds = config.interval / 1000
-
-        if runningInDocker():
-            iml_cmd = self.get_run_stratagem_command("/usr/bin/start-stratagem-scan", config, None)
-
-            # Create timer file
-            timer_config = """# This file is part of IML
+        # Create timer file
+        timer_config = """# This file is part of IML
 # This file will be overwritten automatically
 
 [Unit]
@@ -149,71 +143,35 @@ Persistent=true
 [Install]
 WantedBy=timers.target
 """.format(
-                config.filesystem.id, interval_in_seconds, interval_in_seconds
-            )
+            config.filesystem.id, interval_in_seconds, interval_in_seconds
+        )
 
-            service_config = """# This file is part of IML
+        service_config = """# This file is part of IML
 # This file will be overwritten automatically
 
 [Unit]
 Description=Start Stratagem run on {}
+{}
 
 [Service]
 Type=oneshot
 EnvironmentFile=/var/lib/chroma/iml-settings.conf
 ExecStart={}
 """.format(
-                config.filesystem.id, iml_cmd
-            )
+            config.filesystem.id, "After=iml-manager.target" if not runningInDocker() else "", iml_cmd
+        )
 
-            post_data = {"config_id": str(config.id), "timer_config": timer_config, "service_config": service_config}
+        post_data = {
+            "config_id": str(config.id),
+            "file_prefix": "iml-stratagem",
+            "timer_config": timer_config,
+            "service_config": service_config,
+        }
 
-            api_key = os.getenv("API_KEY")
-            api_user = os.getenv("API_USER")
-            s = get_api_session_request(api_user, api_key)
-            result = s.put("{}/timer/configure/".format(SERVER_HTTP_URL), json=post_data, verify=False)
+        result = requests.put("{}/configure/".format(TIMER_PROXY_PASS), json=post_data)
 
-            if not result.ok:
-                raise RuntimeError(result.reason)
-        else:
-            iml_cmd = self.get_run_stratagem_command("/usr/bin/iml stratagem scan", config, "s")
-
-            with open(timer_file(config.id), "w") as fn:
-                fn.write(
-                    """#  This file is part of IML
-#  This file will be overwritten automatically
-[Unit]
-Description=Start Stratagem run on {}
-
-[Timer]
-OnActiveSec={}
-OnUnitActiveSec={}
-Persistent=true
-
-[Install]
-WantedBy=timers.target
-""".format(
-                        config.filesystem.id, interval_in_seconds, interval_in_seconds
-                    )
-                )
-
-            with open(service_file(config.id), "w") as fn:
-                fn.write(
-                    """#  This file is part of IML
-#  This file will be overwritten automatically
-[Unit]
-Description=Start Stratagem run on {}
-After=iml-manager.target
-
-[Service]
-Type=oneshot
-ExecStart={}
-""".format(
-                        config.filesystem.id, iml_cmd
-                    )
-                )
-            self.try_shell(["systemctl", "daemon-reload"])
-            self.try_shell(["systemctl", "enable", "--now", "{}.timer".format(unit_name(config.id))])
+        if not result.ok:
+            raise RuntimeError(result.reason)
 
 
 class UnconfigureStratagemTimerStep(Step, CommandLine):
@@ -223,10 +181,7 @@ class UnconfigureStratagemTimerStep(Step, CommandLine):
         config = kwargs["config"]
 
         if runningInDocker():
-            api_key = os.getenv("API_KEY")
-            api_user = os.getenv("API_USER")
-            s = get_api_session_request(api_user, api_key)
-            result = s.delete("{}/timer/unconfigure/{}".format(SERVER_HTTP_URL, config.id), verify=False)
+            result = requests.delete("{}/unconfigure/iml-stratagem/{}".format(TIMER_PROXY_PASS, config.id))
 
             if not result.ok:
                 raise RuntimeError(result.reason)
@@ -363,110 +318,23 @@ class RemoveStratagemJob(StateChangeJob):
 
 class RunStratagemStep(Step):
     def run(self, args):
-        host = args["host"]
-        path = args["path"]
-        target_name = args["target_name"]
-        report_duration = args["report_duration"]
-        purge_duration = args["purge_duration"]
+        pass
 
-        def calc_warn_duration(report_duration, purge_duration):
-            if report_duration is not None and purge_duration is not None:
-                return "&& != type S_IFDIR && < atime - sys_time {} > atime - sys_time {}".format(
-                    report_duration, purge_duration
-                )
 
-            return "&& != type S_IFDIR < atime - sys_time {}".format(report_duration or 0)
+class BuildScanReportStep(Step):
+    def run(self, args):
+        scan_result = args["prev_result"]
+        fs_name = args["fs_name"]
 
-        def get_body(mount_point, report_duration, purge_duration):
-            rule_map = {
-                "fids_expiring_soon": report_duration is not None and "warn_fids",
-                "fids_expired": purge_duration is not None and "purge_fids",
-            }
+        _, stratagem_result, _ = scan_result
 
-            groups = ["size_distribution", "user_distribution"] + filter(bool, rule_map.values())
+        # Send stratagem_results to time series database
+        influx_entries = parse_stratagem_results_to_influx(temp_stratagem_measurement, fs_name, stratagem_result)
+        job_log.debug("influx_entries: {}".format(influx_entries))
 
-            additional_groups = filter(
-                lambda group, rule_map=rule_map: rule_map.get(group.get("rules")[0].get("argument")),
-                [
-                    {
-                        "name": "warn_fids",
-                        "rules": [
-                            {
-                                "action": "LAT_SHELL_CMD_FID",
-                                "expression": calc_warn_duration(report_duration, purge_duration),
-                                "argument": "fids_expiring_soon",
-                                "counter_name": "fids_expiring_soon",
-                            }
-                        ],
-                    },
-                    {
-                        "name": "purge_fids",
-                        "rules": [
-                            {
-                                "action": "LAT_SHELL_CMD_FID",
-                                "expression": "&& != type S_IFDIR < atime - sys_time {}".format(purge_duration),
-                                "argument": "fids_expired",
-                                "counter_name": "fids_expired",
-                            }
-                        ],
-                    },
-                ],
-            )
+        record_stratagem_point("\n".join(influx_entries))
 
-            return {
-                "flist_type": "none",
-                "summarize_size": True,
-                "device": {"path": path, "groups": groups},
-                "groups": [
-                    {
-                        "rules": [
-                            {
-                                "action": "LAT_COUNTER_INC",
-                                "expression": "&& < size 1048576 != type S_IFDIR",
-                                "argument": "SIZE < 1M",
-                            },
-                            {
-                                "action": "LAT_COUNTER_INC",
-                                "expression": "&& >= size 1048576000000 != type S_IFDIR",
-                                "argument": "SIZE >= 1T",
-                            },
-                            {
-                                "action": "LAT_COUNTER_INC",
-                                "expression": "&& >= size 1048576000 != type S_IFDIR",
-                                "argument": "SIZE >= 1G",
-                            },
-                            {
-                                "action": "LAT_COUNTER_INC",
-                                "expression": "&& >= size 1048576 != type S_IFDIR",
-                                "argument": "1M <= SIZE < 1G",
-                            },
-                        ],
-                        "name": "size_distribution",
-                    },
-                    {
-                        "rules": [
-                            {
-                                "action": "LAT_ATTR_CLASSIFY",
-                                "expression": "!= type S_IFDIR",
-                                "argument": "uid",
-                                "counter_name": "top_inode_users",
-                            }
-                        ],
-                        "name": "user_distribution",
-                    },
-                ]
-                + additional_groups,
-            }
-
-        def generate_output_from_results(result):
-            return u"\u2713 Scan finished for target {}.\nResults located in {}".format(target_name, result[0])
-
-        body = get_body(path, report_duration, purge_duration)
-        result = self.invoke_rust_agent_expect_result(host, "start_scan_stratagem", body)
-
-        self.log(generate_output_from_results(result))
-
-        return result
+        return args["prev_result"]
 
 
 class StreamFidlistStep(Step):
@@ -474,15 +342,8 @@ class StreamFidlistStep(Step):
         scan_result = args["prev_result"]
         host = args["host"]
         unique_id = args["uuid"]
-        fs_name = args["fs_name"]
 
-        _, stratagem_result, mailbox_files = scan_result
-
-        # Send stratagem_results to time series database
-        influx_entries = parse_stratagem_results_to_influx(temp_stratagem_measurement, fs_name, stratagem_result)
-        job_log.debug("influx_entries: {}".format(influx_entries))
-
-        record_stratagem_point("\n".join(influx_entries))
+        _, _, mailbox_files = scan_result
 
         mailbox_files = map(lambda xs: (xs[0], "{}-{}".format(unique_id, xs[1])), mailbox_files)
         result = self.invoke_rust_agent_expect_result(host, "stream_fidlists_stratagem", mailbox_files)
@@ -513,32 +374,71 @@ class ClearOldStratagemDataStep(Step):
         clear_scan_results("DROP MEASUREMENT temp_stratagem_scan")
 
 
+class FastFileScanMdtJob(Job):
+    fqdn = models.CharField(max_length=256, null=False, help_text="MDT host to perform scan on")
+    uuid = models.CharField(max_length=64, null=False)
+    fsname = models.CharField(max_length=8, null=False)
+    config = fields.JSONField(null=False)
+
+    @classmethod
+    def long_description(self):
+        return "Scanning MDT"
+
+    def description(self):
+        return "Scan with the given config on the given host"
+
+    def create_locks(self):
+        return [StateLock(job=self, locked_item=ManagedFilesystem.objects.get(name=self.fsname), write=False)]
+
+    def get_steps(self):
+        return [
+            (ScanMdtStep, {"host": self.fqdn, "config": self.config}),
+            (BuildScanReportStep, {"fs_name": self.fsname}),
+            (StreamFidlistStep, {"host": self.fqdn, "uuid": self.uuid, "fs_name": self.fsname}),
+        ]
+
+
+class ScanMdtJob(Job):
+    fqdn = models.CharField(max_length=256, null=False, help_text="MDT host to perform scan on")
+    uuid = models.CharField(max_length=64, null=False)
+    fsname = models.CharField(max_length=8, null=False)
+    config = fields.JSONField(null=False)
+
+    @classmethod
+    def long_description(self):
+        return "Scanning MDT"
+
+    def description(self):
+        return "Scan with the given config on the given host"
+
+    def create_locks(self):
+        return [StateLock(job=self, locked_item=ManagedFilesystem.objects.find(name=self.fsname), write=False)]
+
+    def get_steps(self):
+        return [
+            (ScanMdtStep, {"host": self.fqdn, "config": self.config}),
+            (StreamFidlistStep, {"host": self.fqdn, "uuid": self.uuid, "fs_name": self.fsname}),
+        ]
+
+
+class ScanMdtStep(Step):
+    def run(self, args):
+        return self.invoke_rust_agent_expect_result(args["host"], "start_scan_stratagem", args["config"])
+
+
 class RunStratagemJob(Job):
     filesystem = models.ForeignKey("ManagedFilesystem", null=False, on_delete=CASCADE)
     mdt_id = models.IntegerField()
     uuid = models.CharField(max_length=64, null=False, default="")
     report_duration = models.BigIntegerField(null=True)
     purge_duration = models.BigIntegerField(null=True)
+    search_expression = models.TextField(null=True, default="")
+    action = models.TextField(default="")
     fqdn = models.CharField(max_length=255, null=False, default="")
     target_name = models.CharField(max_length=64, null=False, default="")
     filesystem_type = models.CharField(max_length=32, null=False, default="")
     target_mount_point = models.CharField(max_length=512, null=False, default="")
     device_path = models.CharField(max_length=512, null=False, default="")
-
-    def __init__(self, *args, **kwargs):
-        if "mdt_id" not in kwargs or "uuid" not in kwargs:
-            super(RunStratagemJob, self).__init__(*args, **kwargs)
-        else:
-            mdt = ManagedMdt.objects.get(id=kwargs["mdt_id"])
-            active_mount = mdt.active_mount
-
-            kwargs["fqdn"] = active_mount.host.fqdn
-            kwargs["target_name"] = mdt.name
-            kwargs["filesystem_type"] = mdt.volume.filesystem_type
-            kwargs["target_mount_point"] = active_mount.mount_point
-            kwargs["device_path"] = active_mount.volume_node.path
-
-            super(RunStratagemJob, self).__init__(*args, **kwargs)
 
     class Meta:
         app_label = "chroma_core"
@@ -550,33 +450,6 @@ class RunStratagemJob(Job):
 
     def description(self):
         return self.long_description(self)
-
-    def create_locks(self):
-        locks = super(RunStratagemJob, self).create_locks()
-        locks.append(StateLock(job=self, locked_item=self.filesystem, write=False))
-
-        return locks
-
-    def get_steps(self):
-
-        if self.filesystem_type.lower() == "zfs":
-            path = self.target_mount_point
-        else:
-            path = self.device_path
-
-        return [
-            (
-                RunStratagemStep,
-                {
-                    "host": self.fqdn,
-                    "path": path,
-                    "target_name": self.target_name,
-                    "report_duration": self.report_duration,
-                    "purge_duration": self.purge_duration,
-                },
-            ),
-            (StreamFidlistStep, {"host": self.fqdn, "uuid": self.uuid, "fs_name": self.filesystem.name}),
-        ]
 
 
 class AggregateStratagemResultsStep(Step):

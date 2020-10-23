@@ -62,6 +62,43 @@ li {
   unicode-bidi: isolate;
 }
 
+/* Placeholders until https://github.com/tailwindcss/tailwindcss/issues/1354 is fixed */
+
+.justify-self-start {
+  justify-self: start;
+}
+
+.justify-self-center {
+  justify-self: center;
+}
+
+.justify-self-end {
+  justify-self: end;
+}
+
+/* Toggle Component */
+
+input[type="checkbox"].toggle {
+  transition-duration: 300ms;
+  transition-property: border-color, color;
+  transition-timing-function: ease;
+}
+
+input[type="checkbox"].toggle::after {
+  background-color: currentcolor;
+  border-radius: 10px;
+  content: "";
+  display: block;
+  transform: translateX(0);
+  transition: transform 300ms ease;
+  width: 50%;
+  height: 100%;
+}
+
+input[type="checkbox"].toggle:checked::after {
+  transform: translateX(100%);
+}
+
 .spin {
   animation: spin 2s linear infinite;
 }
@@ -88,17 +125,4 @@ li {
   to {
     transform: rotate(1turn);
   }
-}
-
-/* Placeholders until https://github.com/tailwindcss/tailwindcss/issues/1354 is fixed */
-.justify-self-start {
-  justify-self: start;
-}
-
-.justify-self-center {
-  justify-self: center;
-}
-
-.justify-self-end {
-  justify-self: end;
 }

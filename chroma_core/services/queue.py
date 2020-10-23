@@ -89,8 +89,8 @@ class AgentRxQueue(ServiceQueue):
 
     def __init__(self, plugin):
         """Specialization of ServiceQueue for receiving messages from agents:
-            the callback invoked depends on the message_type.  Instead of
-            setting the queue name, set the plugin name."""
+        the callback invoked depends on the message_type.  Instead of
+        setting the queue name, set the plugin name."""
         super(AgentRxQueue, self).__init__()
         self.name = "agent_%s_rx" % plugin
 

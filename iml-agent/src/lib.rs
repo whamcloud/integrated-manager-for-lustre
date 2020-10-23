@@ -9,6 +9,7 @@ pub mod agent_error;
 pub mod daemon_plugins;
 pub mod env;
 pub mod fidlist;
+pub mod high_availability;
 pub mod http_comms;
 pub mod lustre;
 pub mod poller;

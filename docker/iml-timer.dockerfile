@@ -1,10 +1,12 @@
 FROM rust-iml-base as builder
 
-FROM imlteam/systemd-base:6.2.0-dev
+FROM imlteam/systemd-base:6.2.0
 COPY --from=builder /build/target/release/iml-timer /bin/
-COPY --from=builder /build/target/release/start-stratagem-scan /bin/
-COPY docker/iml-timer/iml-timer.service /etc/systemd/system/
+COPY --from=builder /build/target/release/iml /usr/bin
+COPY docker/iml-timer/iml-timer.service /usr/lib/systemd/system/
+COPY docker/wait-for-settings.sh /usr/local/bin/
 
 RUN systemctl enable iml-timer
 
+ENTRYPOINT ["wait-for-settings.sh"]
 CMD ["/usr/sbin/init"]

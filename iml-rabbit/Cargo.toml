@@ -2,14 +2,14 @@
 authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
 name = "iml-rabbit"
-version = "0.3.0"
+version = "0.4.0"
 
 [dependencies]
-deadpool-lapin = {git = "https://github.com/bikeshedder/deadpool", default-features = false}
+deadpool-lapin = {version = "0.6", default-features = false}
 futures = "0.3"
-iml-manager-env = {path = "../iml-manager-env", version = "0.3"}
-iml-wire-types = {path = "../iml-wire-types", version = "0.3"}
-lapin = {version = "1.2", default-features = false, features = ["rustls"]}
+iml-manager-env = {path = "../iml-manager-env", version = "0.4"}
+iml-wire-types = {path = "../iml-wire-types", version = "0.4"}
+lapin = {version = "=1.2.8", default-features = false, features = ["rustls"]}
 serde_json = "1"
 thiserror = "1.0"
 tokio-amqp = {version = "0.1", default-features = false}

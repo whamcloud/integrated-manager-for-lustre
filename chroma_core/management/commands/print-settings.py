@@ -46,7 +46,10 @@ class Command(BaseCommand):
             "UPDATE_HANDLER_PROXY_PASS": settings.UPDATE_HANDLER_PROXY_PASS,
             "GRAFANA_PORT": settings.GRAFANA_PORT,
             "GRAFANA_PROXY_PASS": settings.GRAFANA_PROXY_PASS,
+            "INFLUXDB_SERVER_FQDN": settings.INFLUXDB_SERVER_FQDN,
             "INFLUXDB_PROXY_PASS": settings.INFLUXDB_PROXY_PASS,
+            "TIMER_PORT": settings.TIMER_PORT,
+            "TIMER_SERVER_FQDN": settings.TIMER_SERVER_FQDN,
             "TIMER_PROXY_PASS": settings.TIMER_PROXY_PASS,
             "ALLOW_ANONYMOUS_READ": json.dumps(settings.ALLOW_ANONYMOUS_READ),
             "BUILD": settings.BUILD,
@@ -77,7 +80,6 @@ class Command(BaseCommand):
             "AMQP_BROKER_URL": settings.BROKER_URL,
             "BRANDING": settings.BRANDING,
             "USE_STRATAGEM": settings.USE_STRATAGEM,
-            "INCLUDES": settings.INCLUDES,
             "DBLOG_HW": settings.DBLOG_HW,
             "DBLOG_LW": settings.DBLOG_LW,
         }

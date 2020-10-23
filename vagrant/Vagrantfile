@@ -130,13 +130,17 @@ Vagrant.configure('2') do |config|
   config.vm.define 'adm', primary: true do |adm|
     adm.vm.hostname = 'adm.local'
 
+    adm.vm.network 'forwarded_port', guest: 5432, host: 8432
     adm.vm.network 'forwarded_port', guest: 443, host: 8443
     adm.vm.network 'forwarded_port', guest: 7443, host: 7443
+    adm.vm.network 'forwarded_port', guest: 5672, host: 8672
 
     # Admin / management network
     provision_mgmt_net adm, '10'
 
     provision_fence_agents adm
+
+    provision_clush adm
 
     create_iml_diagnostics adm
 
@@ -144,8 +148,9 @@ Vagrant.configure('2') do |config|
                            '/integrated-manager-for-lustre/',
                            type: 'rsync',
                            rsync__exclude: [
-                              '_topdir',
+                              '_topdir/',
                               '.cargo/',
+                              '.env',
                               '.git/',
                               'iml-gui/crate/.cargo/',
                               'iml-gui/crate/target/',
@@ -203,6 +208,14 @@ Vagrant.configure('2') do |config|
                      path: 'scripts/install_iml.sh',
                      args: 'https://github.com/whamcloud/integrated-manager-for-lustre/releases/download/v6.1.0/chroma_support.repo'
 
+    # Install IML 6.2 onto the admin node
+    # Using the mfl 6.2 repo
+    adm.vm.provision 'install-iml-6.2',
+                     type: 'shell',
+                     run: 'never',
+                     path: 'scripts/install_iml.sh',
+                     args: 'https://github.com/whamcloud/integrated-manager-for-lustre/releases/download/v6.2.0/chroma_support.repo'
+
     # Install IML 4.0.10.x onto the admin node
     # Using the mfl 4.0.10 copr repo
     adm.vm.provision 'install-iml-4.0.10',
@@ -249,7 +262,7 @@ Vagrant.configure('2') do |config|
   #
   (1..2).each do |i|
     config.vm.define "mds#{i}" do |mds|
-      mds.vm.hostname = "mds#{i}.local"
+      mds.vm.hostname = "mds#{i}"
 
       mds.vm.provider 'virtualbox' do |vbx|
         vbx.name = "mds#{i}"
@@ -277,6 +290,8 @@ Vagrant.configure('2') do |config|
       provision_mpath mds
 
       provision_fence_agents mds
+
+      provision_clush mds
 
       cleanup_storage_server mds
 
@@ -491,7 +506,7 @@ Vagrant.configure('2') do |config|
     config.vm.define "oss#{i}",
                      autostart: i <= 2 do |oss|
 
-      oss.vm.hostname = "oss#{i}.local"
+      oss.vm.hostname = "oss#{i}"
 
       oss.vm.provider 'virtualbox' do |vbx|
         vbx.name = "oss#{i}"
@@ -520,6 +535,8 @@ Vagrant.configure('2') do |config|
       provision_mpath oss
 
       provision_fence_agents oss
+
+      provision_clush oss
 
       cleanup_storage_server oss
 
@@ -845,6 +862,8 @@ Vagrant.configure('2') do |config|
 
       configure_ntp_docker c
 
+      provision_clush c
+
       c.vm.provision 'install-iml-local',
             type: 'shell',
             run: 'never',
@@ -954,6 +973,21 @@ def provision_fence_agents(config)
     yum install -y fence-agents-vbox
     yum -y copr disable managerforlustre/manager-for-lustre-devel
   SHELL
+end
+
+def provision_clush(config)
+  config.vm.provision 'clush', type: 'shell', inline: <<-SHELL
+    yum install -y epel-release
+    yum clean all
+    yum install -y clustershell
+  SHELL
+
+  config.vm.provision "file",
+                       source: "./local.cfg",
+                       destination: "/tmp/local.cfg"
+
+  config.vm.provision "shell",
+                      inline: "mv /tmp/local.cfg /etc/clustershell/groups.d/local.cfg"
 end
 
 def cleanup_storage_server(config)

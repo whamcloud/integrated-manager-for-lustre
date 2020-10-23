@@ -4,12 +4,15 @@
 
 use crate::{
     auth, breakpoints,
-    components::{breadcrumbs, ddn_logo, ddn_logo_lettering, font_awesome, restrict, whamcloud_logo},
+    components::{
+        ai_200x, ai_400x, ai_7990x, breadcrumbs, ddn_logo, ddn_logo_lettering, exa5, font_awesome, restrict,
+        whamcloud_logo,
+    },
     generated::css_classes::C,
     MergeAttrs, Model, Msg, Route, SessionExt,
     Visibility::*,
 };
-use iml_wire_types::{Branding, GroupType};
+use iml_wire_types::{Branding, DdnBranding, GroupType};
 use seed::{prelude::*, *};
 
 fn menu_icon<T>(icon_name: &str) -> Node<T> {
@@ -19,7 +22,7 @@ fn menu_icon<T>(icon_name: &str) -> Node<T> {
     )
 }
 
-fn nav_manage_dropdown(open: bool) -> Node<Msg> {
+fn nav_manage_dropdown(open: bool, use_snapshots: bool) -> Node<Msg> {
     if !open {
         return empty![];
     }
@@ -75,12 +78,22 @@ fn nav_manage_dropdown(open: bool) -> Node<Msg> {
                     At::Href => Route::Mgt.to_href(),
                 },
             ],
+            if use_snapshots {
+                li![
+                    a![&cls, "Snapshots"],
+                    attrs! {
+                        At::Href => Route::Snapshots.to_href(),
+                    },
+                ]
+            } else {
+                empty![]
+            },
             li![
                 a![&cls, "Users"],
                 attrs! {
                     At::Href => Route::Users.to_href(),
                 },
-            ],
+            ]
         ]
     ]
 }
@@ -142,7 +155,7 @@ fn main_menu_items(model: &Model) -> Node<Msg> {
                         ),
                     ],
                 ],
-                nav_manage_dropdown(model.manage_menu_state.is_open()),
+                nav_manage_dropdown(model.manage_menu_state.is_open(), model.conf.use_snapshots),
             ]
         ),
     ]
@@ -193,7 +206,13 @@ fn logo_nav_view<T>(branding: Branding) -> Node<T> {
             ddn_logo_full(),
             span![
                 class![C.font_semibold, C.text_2xl, C.tracking_tight, C.ml_2],
-                ddn_brand.to_string()
+                match ddn_brand {
+                    DdnBranding::AI200X => ai_200x().merge_attrs(class![C.h_8, C.mr_1]),
+                    DdnBranding::AI400X => ai_400x().merge_attrs(class![C.h_8, C.mr_1]),
+                    DdnBranding::AI7990X => ai_7990x().merge_attrs(class![C.h_8, C.mr_1]),
+                    DdnBranding::Exascaler => exa5().merge_attrs(class![C.h_8, C.mr_1]),
+                    _ => plain![ddn_brand.to_string()],
+                }
             ],
         ),
     };

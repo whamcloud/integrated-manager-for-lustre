@@ -10,7 +10,6 @@ pub mod kernel_module;
 pub mod lamigo;
 pub mod ldev;
 pub mod lpurge;
-pub mod ltuer;
 pub mod lustre;
 pub mod ntp;
 pub mod ostpool;

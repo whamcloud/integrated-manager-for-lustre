@@ -1154,7 +1154,10 @@ class JobScheduler(object):
                         }
                     )
 
-                command_id = self.CommandPlan.command_run_jobs(cmds, help_text["creating_ostpool"],)
+                command_id = self.CommandPlan.command_run_jobs(
+                    cmds,
+                    help_text["creating_ostpool"],
+                )
 
         self.progress.advance()
         return ostpool.id, command_id
@@ -1189,7 +1192,10 @@ class JobScheduler(object):
             cmds = []
             for ost in ostpool.osts.all():
                 cmds.append(
-                    {"class_name": "RemoveOstPoolJob", "args": {"pool": ostpool, "ost": ost},}
+                    {
+                        "class_name": "RemoveOstPoolJob",
+                        "args": {"pool": ostpool, "ost": ost},
+                    }
                 )
 
             cmds.append(
@@ -1854,78 +1860,6 @@ class JobScheduler(object):
             True,
         )
 
-    def run_stratagem(self, mdts, fs_id, stratagem_data):
-        unique_id = uuid.uuid4()
-        filesystem = ManagedFilesystem.objects.get(id=fs_id)
-        task_list = []
-
-        run_stratagem_list = [{"class_name": "ClearOldStratagemDataJob", "args": {}}]
-        if stratagem_data.get("report_duration"):
-            task_data = {
-                "filesystem": filesystem,
-                "name": "{}-warn_fids-fids_expiring_soon".format(unique_id),
-                "start": django.utils.timezone.now(),
-                "state": "created",
-                "single_runner": False,
-                "keep_failed": False,
-                "args": {"report_name": "expiring_fids-{}-{}.txt".format(filesystem.name, unique_id)},
-                "actions": ["stratagem.warning"],
-            }
-            task = Task.objects.create(**task_data)
-            task_list.append(task)
-
-            run_stratagem_list.append({"class_name": "CreateTaskJob", "args": {"task": task}})
-
-        if stratagem_data.get("purge_duration"):
-            task_data = {
-                "filesystem": filesystem,
-                "name": "{}-purge_fids-fids_expired".format(unique_id),
-                "start": django.utils.timezone.now(),
-                "state": "created",
-                "keep_failed": False,
-                "actions": ["stratagem.purge"],
-            }
-            task = Task.objects.create(**task_data)
-            task_list.append(task)
-
-            run_stratagem_list.append({"class_name": "CreateTaskJob", "args": {"task": task}})
-
-        run_stratagem_list += map(
-            lambda mdt_id: {
-                "class_name": "RunStratagemJob",
-                "args": {
-                    "mdt_id": mdt_id,
-                    "uuid": unique_id,
-                    "report_duration": stratagem_data.get("report_duration"),
-                    "purge_duration": stratagem_data.get("purge_duration"),
-                    "filesystem": filesystem,
-                    "depends_on_job_range": range(0, len(run_stratagem_list)),
-                },
-            },
-            mdts,
-        )
-
-        run_stratagem_list.append(
-            {
-                "class_name": "AggregateStratagemResultsJob",
-                "args": {
-                    "depends_on_job_range": range(len(run_stratagem_list) - len(mdts), len(run_stratagem_list)),
-                    "fs_name": filesystem.name,
-                },
-            }
-        )
-
-        # Remove tasks after they are done
-        list_len = len(run_stratagem_list)
-        for task in task_list:
-            run_stratagem_list.append(
-                {"class_name": "RemoveTaskJob", "args": {"task": task, "depends_on_job_range": range(0, list_len)}}
-            )
-
-        command = self.run_jobs(run_stratagem_list, help_text["run_stratagem_for_all"])
-
-        return command
-
     def update_stratagem(self, stratagem_data):
         with self._lock:
             (configuration_data, managed_filesystem, matches) = self._get_stratagem_configuration(stratagem_data)
@@ -1949,34 +1883,3 @@ class JobScheduler(object):
             "Updating Stratagem",
             True,
         )
-
-    def create_task(self, task_data):
-        log.debug("Creating task from: %s" % task_data)
-        with self._lock:
-            filesystem = ObjectCache.get_by_id(ManagedFilesystem, int(task_data["filesystem"]))
-            task_data["filesystem"] = filesystem
-            if not "start" in task_data:
-                task_data["start"] = django.utils.timezone.now()
-
-            with transaction.atomic():
-                task = Task.objects.create(**task_data)
-
-                cmds = [{"class_name": "CreateTaskJob", "args": {"task": task}}]
-
-                command_id = self.CommandPlan.command_run_jobs(cmds, help_text["create_task"],)
-
-        self.progress.advance()
-        return task.id, command_id
-
-    def remove_task(self, task_id):
-        log.debug("Removing task %d" % task_id)
-        with self._lock:
-            task = Task.objects.get(pk=task_id)
-
-            with transaction.atomic():
-                cmds = [{"class_name": "RemoveTaskJob", "args": {"task": task}}]
-
-                command_id = self.CommandPlan.command_run_jobs(cmds, help_text["create_task"],)
-
-        self.progress.advance()
-        return task.id, command_id

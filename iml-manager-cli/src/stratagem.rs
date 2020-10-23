@@ -3,17 +3,18 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    api_utils::{delete, first, get, post, put, wait_for_cmd},
-    display_utils::{display_cmd_state, start_spinner, DisplayType, IntoDisplayType as _},
+    api_utils::{delete, first, get, graphql, post, wait_for_cmd_display},
+    display_utils::{wrap_fut, DisplayType, IntoDisplayType as _},
     error::{
         DurationParseError, ImlManagerCliError, RunStratagemCommandResult,
         RunStratagemValidationError,
     },
 };
 use console::Term;
+use iml_graphql_queries::stratagem as stratagem_queries;
 use iml_manager_client::ImlManagerClientError;
 use iml_wire_types::{ApiList, CmdWrapper, EndpointName, Filesystem, StratagemConfiguration};
-use structopt::StructOpt;
+use structopt::{clap::arg_enum, StructOpt};
 
 #[derive(Debug, StructOpt)]
 pub enum StratagemCommand {
@@ -22,41 +23,62 @@ pub enum StratagemCommand {
     Scan(StratagemScanData),
     /// Configure Stratagem scanning interval
     #[structopt(name = "interval")]
-    StratagemInterval(StratagemInterval),
+    Interval(IntervalCommand),
+    /// Kickoff a Stratagem Filesync
+    #[structopt(name = "filesync")]
+    Filesync(StratagemFilesyncData),
+    /// Kickoff a Stratagem Cloudsync
+    #[structopt(name = "cloudsync")]
+    Cloudsync(StratagemCloudsyncData),
+    /// Work with Stratagem reports
+    #[structopt(name = "report")]
+    Report {
+        #[structopt(subcommand)]
+        command: Option<ReportCommand>,
+    },
 }
 
 #[derive(Debug, StructOpt)]
-pub enum StratagemInterval {
-    /// List all existing Stratagem intervals
+pub enum ReportCommand {
+    /// List all existing Stratagem reports (default)
     #[structopt(name = "list")]
     List {
-        /// Set the display type
-        ///
-        /// The display type can be one of the following:
-        /// tabular: display content in a table format
-        /// json: return data in json format
-        /// yaml: return data in yaml format
+        /// Display type: json, yaml, tabular
         #[structopt(short = "d", long = "display", default_value = "tabular")]
         display_type: DisplayType,
     },
-    /// Add a new Stratagem interval
-    #[structopt(name = "add")]
-    Add(StratagemIntervalConfig),
-    /// Update an existing Stratagem interval
-    #[structopt(name = "update")]
-    Update(StratagemIntervalConfig),
+    /// Delete Stratagem reports
+    #[structopt(name = "remove")]
+    Delete {
+        /// Report name to delete
+        #[structopt(required = true, min_values = 1)]
+        name: Vec<String>,
+    },
+}
+
+#[derive(Debug, StructOpt)]
+pub enum IntervalCommand {
+    /// List all existing Stratagem intervals
+    #[structopt(name = "list")]
+    List {
+        /// Display type: json, yaml, tabular
+        #[structopt(short = "d", long = "display", default_value = "tabular")]
+        display_type: DisplayType,
+    },
+    /// Create Stratagem scan interval
+    #[structopt(name = "create")]
+    Create(IntervalCommandConfig),
     /// Remove a Stratagem interval
     #[structopt(name = "remove")]
     Remove(StratagemRemoveData),
 }
 
 #[derive(Debug, StructOpt, serde::Serialize)]
-pub struct StratagemIntervalConfig {
+pub struct IntervalCommandConfig {
     /// Filesystem to configure
-    #[structopt(short = "f", long = "filesystem")]
     filesystem: String,
     /// Interval to scan
-    #[structopt(short = "i", long = "interval", parse(try_from_str = parse_duration))]
+    #[structopt(parse(try_from_str = parse_duration))]
     interval: u64,
     /// The report duration
     #[structopt(short = "r", long = "report", parse(try_from_str = parse_duration))]
@@ -69,21 +91,64 @@ pub struct StratagemIntervalConfig {
 #[derive(Debug, StructOpt, serde::Serialize)]
 pub struct StratagemRemoveData {
     /// Filesystem to unconfigure
-    #[structopt(short = "f", long = "filesystem")]
-    name: String,
+    filesystem: String,
 }
 
 #[derive(serde::Serialize, StructOpt, Debug)]
 pub struct StratagemScanData {
     /// The name of the filesystem to scan
-    #[structopt(short = "f", long = "filesystem")]
     filesystem: String,
-    /// The report duration
-    #[structopt(short = "r", long = "report", parse(try_from_str = parse_duration))]
-    report_duration: Option<u64>,
-    /// The purge duration
-    #[structopt(short = "p", long = "purge", parse(try_from_str = parse_duration))]
-    purge_duration: Option<u64>,
+    /// The report duration, specified as a humantime string
+    /// EX: 1hour
+    #[structopt(short = "r", long = "report", min_values = 1)]
+    report_duration: Option<Vec<String>>,
+    /// The purge duration, specified as a humantime string
+    /// EX: 1hour
+    #[structopt(short = "p", long = "purge", min_values = 1)]
+    purge_duration: Option<Vec<String>>,
+}
+
+arg_enum! {
+    #[derive(Debug, serde::Serialize, serde::Deserialize, Clone, Copy)]
+    #[serde(rename_all = "lowercase")]
+    pub enum FilesyncAction {
+    Push,
+    }
+}
+
+arg_enum! {
+    #[derive(Debug, serde::Serialize, serde::Deserialize, Clone, Copy)]
+    #[serde(rename_all = "lowercase")]
+    pub enum CloudsyncAction {
+    Push,
+    Pull,
+    }
+}
+
+#[derive(serde::Serialize, StructOpt, Debug)]
+pub struct StratagemFilesyncData {
+    /// The name of the filesystem to scan
+    filesystem: String,
+    /// The remote filesystem
+    #[structopt(short = "r", long = "remote")]
+    remote: String,
+    /// Match expression
+    #[structopt(short = "e", long = "expression")]
+    expression: String,
+}
+
+#[derive(serde::Serialize, StructOpt, Debug)]
+pub struct StratagemCloudsyncData {
+    /// action, either push or pull
+    action: CloudsyncAction,
+    /// The name of the filesystem to scan
+    filesystem: String,
+    /// The s3 instance
+    #[structopt(short = "r", long = "remote")]
+    remote: String,
+    /// Match expression
+    #[structopt(short = "e", long = "expression")]
+    expression: String,
 }
 
 fn parse_duration(src: &str) -> Result<u64, ImlManagerCliError> {
@@ -170,94 +235,133 @@ fn list_stratagem_configurations(
     term.write_line(&x).unwrap();
 }
 
-pub async fn stratagem_cli(command: StratagemCommand) -> Result<(), ImlManagerCliError> {
-    match command {
-        StratagemCommand::Scan(data) => {
-            let r = post("run_stratagem", data).await?;
+async fn report_cli(cmd: ReportCommand) -> Result<(), ImlManagerCliError> {
+    match cmd {
+        ReportCommand::List { display_type } => {
+            let query = stratagem_queries::list_reports::build();
 
-            tracing::debug!("resp {:?}", r);
+            let resp: iml_graphql_queries::Response<stratagem_queries::list_reports::Resp> =
+                graphql(query).await?;
+            let reports = Result::from(resp)?.data.stratagem.stratagem_reports;
+
+            let x = reports.into_display_type(display_type);
+
+            let term = Term::stdout();
+            term.write_line(&x).unwrap();
+
+            Ok(())
+        }
+        ReportCommand::Delete { name } => {
+            for n in name {
+                let query = stratagem_queries::delete_report::build(n);
+
+                let _resp: iml_graphql_queries::Response<stratagem_queries::delete_report::Resp> =
+                    graphql(query).await?;
+            }
+            Ok(())
+        }
+    }
+}
+
+async fn interval_cli(cmd: IntervalCommand) -> Result<(), ImlManagerCliError> {
+    match cmd {
+        IntervalCommand::List { display_type } => {
+            let r: ApiList<StratagemConfiguration> = wrap_fut(
+                "Finding existing intervals...",
+                get(
+                    StratagemConfiguration::endpoint_name(),
+                    serde_json::json!({ "limit": 0 }),
+                ),
+            )
+            .await?;
+
+            if r.objects.is_empty() {
+                println!("No Stratagem intervals found");
+            } else {
+                list_stratagem_configurations(r.objects, display_type);
+            }
+            Ok(())
+        }
+        IntervalCommand::Create(c) => {
+            let r = post(StratagemConfiguration::endpoint_name(), c).await?;
 
             let CmdWrapper { command } = handle_cmd_resp(r).await?;
 
-            let stop_spinner = start_spinner(&command.message);
-
-            let command = wait_for_cmd(command).await?;
-
-            stop_spinner(None);
-
-            display_cmd_state(&command);
+            wait_for_cmd_display(command).await?;
+            Ok(())
         }
-        StratagemCommand::StratagemInterval(x) => match x {
-            StratagemInterval::List { display_type } => {
-                let stop_spinner = start_spinner("Finding existing intervals...");
+        IntervalCommand::Remove(StratagemRemoveData { filesystem }) => {
+            let x = get_stratagem_config_by_fs_name(&filesystem).await?;
 
-                let r: ApiList<StratagemConfiguration> = get(
-                    StratagemConfiguration::endpoint_name(),
-                    serde_json::json!({ "limit": 0 }),
-                )
-                .await?;
+            let r = delete(
+                &format!("{}/{}", StratagemConfiguration::endpoint_name(), x.id),
+                Vec::<(String, String)>::new(),
+            )
+            .await?;
 
-                stop_spinner(None);
+            let CmdWrapper { command } = handle_cmd_resp(r).await?;
 
-                if r.objects.is_empty() {
-                    println!("No Stratagem intervals found");
-                    return Ok(());
-                }
+            wait_for_cmd_display(command).await?;
+            Ok(())
+        }
+    }
+}
 
-                list_stratagem_configurations(r.objects, display_type);
-            }
-            StratagemInterval::Add(c) => {
-                let r = post(StratagemConfiguration::endpoint_name(), c).await?;
+pub async fn stratagem_cli(command: StratagemCommand) -> Result<(), ImlManagerCliError> {
+    match command {
+        StratagemCommand::Scan(data) => {
+            let query = stratagem_queries::fast_file_scan::build(
+                &data.filesystem,
+                data.report_duration.map(|xs| xs.join(" ")),
+                data.purge_duration.map(|xs| xs.join(" ")),
+            );
 
-                let CmdWrapper { command } = handle_cmd_resp(r).await?;
+            let resp: iml_graphql_queries::Response<stratagem_queries::fast_file_scan::Resp> =
+                graphql(query).await?;
 
-                let stop_spinner = start_spinner(&command.message);
+            let command = Result::from(resp)?.data.stratagem.run_fast_file_scan;
 
-                let command = wait_for_cmd(command).await?;
+            wait_for_cmd_display(command).await?;
+        }
+        StratagemCommand::Filesync(data) => {
+            let query = stratagem_queries::filesync::build(
+                &data.filesystem,
+                data.remote,
+                data.expression,
+                "push",
+            );
 
-                stop_spinner(None);
+            let resp: iml_graphql_queries::Response<stratagem_queries::filesync::Resp> =
+                graphql(query).await?;
 
-                display_cmd_state(&command);
-            }
-            StratagemInterval::Update(c) => {
-                let x = get_stratagem_config_by_fs_name(&c.filesystem).await?;
+            let command = Result::from(resp)?.data.stratagem.run_filesync;
 
-                let r = put(
-                    &format!("{}/{}", StratagemConfiguration::endpoint_name(), x.id),
-                    c,
-                )
-                .await?;
+            wait_for_cmd_display(command).await?;
+        }
+        StratagemCommand::Cloudsync(data) => {
+            let query = stratagem_queries::cloudsync::build(
+                &data.filesystem,
+                data.remote,
+                data.expression,
+                data.action,
+            );
 
-                let CmdWrapper { command } = handle_cmd_resp(r).await?;
+            let resp: iml_graphql_queries::Response<stratagem_queries::cloudsync::Resp> =
+                graphql(query).await?;
 
-                let stop_spinner = start_spinner(&command.message);
+            let command = Result::from(resp)?.data.stratagem.run_cloudsync;
 
-                let command = wait_for_cmd(command).await?;
+            tracing::debug!("run_cloudsync: {:?}", command);
 
-                stop_spinner(None);
-
-                display_cmd_state(&command);
-            }
-            StratagemInterval::Remove(StratagemRemoveData { name }) => {
-                let x = get_stratagem_config_by_fs_name(&name).await?;
-
-                let r = delete(
-                    &format!("{}/{}", StratagemConfiguration::endpoint_name(), x.id),
-                    Vec::<(String, String)>::new(),
-                )
-                .await?;
-
-                let CmdWrapper { command } = handle_cmd_resp(r).await?;
-
-                let stop_spinner = start_spinner(&command.message);
-
-                let command = wait_for_cmd(command).await?;
-
-                stop_spinner(None);
-
-                display_cmd_state(&command);
-            }
-        },
+            wait_for_cmd_display(command).await?;
+        }
+        StratagemCommand::Interval(cmd) => interval_cli(cmd).await?,
+        StratagemCommand::Report { command } => {
+            report_cli(command.unwrap_or(ReportCommand::List {
+                display_type: DisplayType::Tabular,
+            }))
+            .await?
+        }
     };
 
     Ok(())

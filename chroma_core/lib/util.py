@@ -22,7 +22,7 @@ SECONDSTOMICROSECONDS = 1000000
 
 def all_subclasses(obj):
     """Used to introspect all descendents of a class.  Used because metaclasses
-       are a PITA when doing multiple inheritance"""
+    are a PITA when doing multiple inheritance"""
     sc_recr = []
     for sc_obj in obj.__subclasses__():
         sc_recr.append(sc_obj)
@@ -208,13 +208,13 @@ class CommandLine(object):
 
 def normalize_nids(nid_list):
     """Cope with the Lustre and users sometimes calling tcp0 'tcp' to allow
-       direct comparisons between NIDs"""
+    direct comparisons between NIDs"""
     return [normalize_nid(n) for n in nid_list]
 
 
 def normalize_nid(string):
     """Cope with the Lustre and users sometimes calling tcp0 'tcp' to allow
-       direct comparisons between NIDs"""
+    direct comparisons between NIDs"""
     if not re.search(r"\d+$", string):
         string += "0"
 
@@ -233,13 +233,6 @@ def runningInDocker():
             if fields[1] == "docker":
                 return True
     return False
-
-
-def get_api_session_request(api_user, api_key):
-    s = requests.Session()
-    s.headers.update({"AUTHORIZATION": "ApiKey {}:{}".format(api_user, api_key)})
-
-    return s
 
 
 def post_data_to_tcp_or_socket(post_data):

@@ -10,12 +10,14 @@
 //! Each plugin is wrapped in a session which provides a connection guarantee with the IML manager.
 
 pub mod action_runner;
+pub mod corosync;
 pub mod daemon_plugin;
 pub mod device;
 pub mod journal;
 pub mod ntp;
 pub mod ostpool;
 pub mod postoffice;
+pub mod snapshot;
 pub mod stats;
 
 pub use daemon_plugin::{

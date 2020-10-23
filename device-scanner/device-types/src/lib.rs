@@ -8,10 +8,6 @@ pub mod devices;
 pub mod udev;
 pub mod uevent;
 
-#[cfg(test)]
-#[macro_use]
-extern crate pretty_assertions;
-
 use std::{
     cmp::Ordering,
     collections::BTreeSet,
@@ -58,7 +54,7 @@ pub fn get_vdev_paths(vdev: &libzfs_types::VDev) -> BTreeSet<DevicePath> {
                 .map(|x| format!("/dev/disk/by-id/{}", x))
                 .map(std::convert::Into::into)
                 .or_else(|| {
-                    log::warn!(
+                    tracing::warn!(
                         "VDev::Disk.dev_id not found, using VDev::Disk.path {:?}",
                         path
                     );

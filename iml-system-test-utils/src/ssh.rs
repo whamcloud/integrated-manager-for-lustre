@@ -4,6 +4,7 @@
 use crate::{Config, TestError};
 use futures::future::{try_join_all, TryFutureExt};
 use iml_cmd::{CheckedChildExt, CheckedCommandExt};
+use iml_graphql_queries::Query;
 use std::{
     process::{Output, Stdio},
     str,
@@ -300,4 +301,47 @@ pub async fn add_servers(host: &str, profile: &str, hosts: Vec<String>) -> Resul
     .await?;
 
     Ok(())
+}
+
+pub async fn graphql_call<T: serde::Serialize, R: serde::de::DeserializeOwned>(
+    config: &Config,
+    query: &Query<T>,
+) -> Result<R, TestError> {
+    let body = serde_json::to_string(query)?;
+    let body = body.as_bytes();
+
+    let mut ssh_child = ssh_exec_cmd(config.manager_ip, "iml debugql -")
+        .await?
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()?;
+
+    let ssh_stdin = ssh_child.stdin.as_mut().expect("Could not get stdin");
+    ssh_stdin.write_all(body).await?;
+
+    let out = ssh_child.wait_with_checked_output().await?;
+
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let stderr = String::from_utf8_lossy(&out.stderr);
+
+    if !out.status.success() {
+        return Err(TestError::Assert(format!(
+            "Error during graphql_call. Code: {:?}, Output: {}, Error: {}",
+            out.status.code(),
+            &stdout,
+            &stderr
+        )));
+    }
+
+    tracing::debug!(
+        "Graphql Resp: Code: {:?}, Output; {}, Error: {}",
+        out.status.code(),
+        stdout,
+        stderr
+    );
+
+    let x = serde_json::from_str(&stdout)?;
+
+    Ok(x)
 }

@@ -5,12 +5,18 @@
 mod action;
 mod command;
 mod error;
-mod task;
+mod graphql;
+mod timer;
 
+use iml_manager_env::get_pool_limit;
 use iml_postgres::get_db_pool;
 use iml_rabbit::{self, create_connection_filter};
 use iml_wire_types::Conf;
+use std::sync::Arc;
 use warp::Filter;
+
+// Default pool limit if not overridden by POOL_LIMIT
+const DEFAULT_POOL_LIMIT: u32 = 5;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -26,20 +32,33 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         is_release: iml_manager_env::get_is_release(),
         branding: iml_manager_env::get_branding().into(),
         use_stratagem: iml_manager_env::get_use_stratagem(),
+        use_snapshots: iml_manager_env::get_use_snapshots(),
         monitor_sfa: iml_manager_env::get_sfa_endpoints().is_some(),
     };
 
-    let pool = iml_rabbit::connect_to_rabbit(2);
+    let rabbit_pool = iml_rabbit::connect_to_rabbit(2);
 
-    let conn_filter = create_connection_filter(pool);
+    let conn_filter = create_connection_filter(rabbit_pool.clone());
 
-    let pool = get_db_pool(5).await?;
-    let db_pool_filter = warp::any().map(move || pool.clone());
+    let pg_pool = get_db_pool(get_pool_limit().unwrap_or(DEFAULT_POOL_LIMIT)).await?;
+
+    let schema = Arc::new(graphql::Schema::new(
+        graphql::QueryRoot,
+        graphql::MutationRoot,
+        juniper::EmptySubscription::new(),
+    ));
+    let schema_filter = warp::any().map(move || Arc::clone(&schema));
+
+    let ctx = Arc::new(graphql::Context {
+        pg_pool,
+        rabbit_pool,
+    });
+    let ctx_filter = warp::any().map(move || Arc::clone(&ctx));
 
     let routes = warp::path("conf")
         .map(move || warp::reply::json(&conf))
         .or(action::endpoint(conn_filter.clone()))
-        .or(task::endpoint(conn_filter, db_pool_filter));
+        .or(graphql::endpoint(schema_filter, ctx_filter));
 
     tracing::info!("Starting on {:?}", addr);
 

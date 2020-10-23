@@ -37,25 +37,28 @@ substs: $(SUBSTS)
 srpm:
 	mkdir -p ${TMPDIR}/_topdir/{SOURCES,SPECS}
 	mkdir -p ${TMPDIR}/release/rust-iml
-	PQ_LIB_DIR=/usr/pgsql-9.6/lib cargo build --release
-	cp ${TARGET}/release/iml-{action-runner,agent,agent-comms,agent-daemon,api,device,journal,mailbox,ntp,ostpool,postoffice,report,sfa,stats,task-runner,warp-drive} \
-		iml-agent-comms.service \
-		iml-mailbox.service \
-		iml-postoffice.service \
-		iml-ostpool.service \
-		iml-report.service \
-		iml-api.service \
-		iml-rust-stats.service \
-		iml-device.service \
-		iml-task-runner.service \
-		iml-journal.service \
+	cargo build --release
+	cp ${TARGET}/release/iml-{action-runner,agent,agent-comms,agent-daemon,api,corosync,device,journal,mailbox,ntp,ostpool,postoffice,report,sfa,snapshot,stats,task-runner,warp-drive,timer} \
 		iml-action-runner.service \
 		iml-action-runner.socket \
+		iml-agent-comms.service \
 		iml-agent/systemd-units/* \
-		iml-warp-drive/systemd-units/* \
-		iml-report.conf \
+		iml-api.service \
+		iml-device.service \
+		iml-journal.service \
+		iml-mailbox.service \
 		iml-ntp.service \
+		iml-ostpool.service \
+		iml-postoffice.service \
+		iml-report.conf \
+		iml-report.service \
+		iml-rust-corosync.service \
+		iml-rust-stats.service \
 		iml-sfa.service \
+		iml-snapshot.service \
+		iml-task-runner.service \
+		iml-timer.service \
+		iml-warp-drive/systemd-units/* \
 		${TMPDIR}/release/rust-iml
 	cp ${TARGET}/release/iml ${TMPDIR}/release/rust-iml
 	cp ${TARGET}/release/iml-config ${TMPDIR}/release/rust-iml
@@ -135,7 +138,7 @@ iml-gui-srpm:
 	cp -rf ${TMPDIR}/_topdir ${BUILDROOT}/
 	cp -f ${TMPDIR}/_topdir/SRPMS/*.rpm $(outdir)
 
-device-scanner-srpm: 
+device-scanner-srpm:
 	mkdir -p ${TMPDIR}/_topdir/{SOURCES,SPECS}
 	mkdir -p ${TMPDIR}/release/iml-device-scanner
 
@@ -146,6 +149,7 @@ device-scanner-srpm:
 		${TARGET}/release/device-scanner-daemon \
 		${TARGET}/release/{history_event,pool_create,pool_destroy,pool_export,pool_import,vdev_add}-scanner \
 		${TARGET}/release/mount-emitter \
+		${TARGET}/release/swap-emitter \
 		${TARGET}/release/uevent-listener \
 		${TARGET}/release/zed-enhancer \
 		${TMPDIR}/release/iml-device-scanner

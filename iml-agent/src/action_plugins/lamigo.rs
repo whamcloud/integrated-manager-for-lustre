@@ -34,24 +34,33 @@ pub struct Config {
     min_age: u32,
 
     #[structopt(long)]
-    /// Lustre device to be mounted, e.g. `192.168.0.100@tcp0:/spfs`
+    /// Local mountpoint of lustre client
     mountpoint: String,
 
     #[structopt(long)]
-    /// IML mailbox name, e.g. `mailbox1`, where `lamigo` will write FIDs
-    mailbox: String,
+    /// IML mailbox name, e.g. `mailbox1`, where `lamigo` will write FIDs for mirror extend
+    mailbox_extend: String,
+
+    #[structopt(long)]
+    /// IML mailbox name, e.g. `mailbox2`, where `lamigo` will write FIDs for mirror resync
+    mailbox_resync: String,
+
+    #[structopt(long)]
+    heatfn: Option<u32>,
 }
 
 impl Config {
-    fn generate_unit(&self, mailbox: String) -> String {
+    fn generate_unit(&self, mailbox_extend: String, mailbox_resync: String) -> String {
         format!(
             "mdt={fs}-MDT{mdt:04x}\n\
-             mountpoint={mountpoint}\n\
+             mount={mountpoint}\n\
              user={user}\n\
              min-age={age}\n\
              src={fast}\n\
              tgt={slow}\n\
-             iml-socket={mailbox}\n\
+             iml-ex-socket={extend}\n\
+             iml-re-socket={resync}\n\
+             heatfn={heatfn}\n\
              ",
             fs = self.fs,
             mdt = self.mdt,
@@ -60,7 +69,13 @@ impl Config {
             age = self.min_age,
             fast = self.hot_pool,
             slow = self.cold_pool,
-            mailbox = mailbox,
+            extend = mailbox_extend,
+            resync = mailbox_resync,
+            heatfn = if let Some(val) = self.heatfn {
+                format!("{}", val)
+            } else {
+                "none".into()
+            },
         )
     }
 }
@@ -75,34 +90,11 @@ fn expand_path_fmt(path_fmt: &str, c: &Config) -> strfmt::Result<String> {
     vars.insert("hot_pool".to_string(), &c.hot_pool);
     vars.insert("cold_pool".to_string(), &c.cold_pool);
     vars.insert("min_age".to_string(), &min_age_str);
-    vars.insert("mailbox".to_string(), &c.mailbox);
     strfmt::strfmt(&path_fmt, &vars)
 }
 
 fn format_lamigo_conf_file(c: &Config, path_fmt: &str) -> Result<PathBuf, ImlAgentError> {
     Ok(PathBuf::from(expand_path_fmt(path_fmt, &c)?))
-}
-
-fn format_lamigo_unit_file(c: &Config) -> PathBuf {
-    PathBuf::from(format!(
-        "/etc/systemd/system/lamigo-{}-MDT{:04x}.service",
-        c.fs, c.mdt
-    ))
-}
-
-fn format_lamigo_unit_contents(c: &Config, path_fmt: &str) -> Result<String, ImlAgentError> {
-    Ok(format!(
-        "[Unit]\n\
-         Description=Run lamigo service for {fs}-MDT{mdt:04x}\n\
-         \n\
-         [Service]\n\
-         ExecStartPre=/usr/bin/lfs df {mountpoint}\n\
-         ExecStart=/usr/bin/lamigo -f {conf}\n",
-        mountpoint = c.mountpoint,
-        conf = format_lamigo_conf_file(c, path_fmt)?.to_string_lossy(),
-        fs = c.fs,
-        mdt = c.mdt,
-    ))
 }
 
 async fn write(file: PathBuf, cnt: String) -> Result<(), ImlAgentError> {
@@ -112,23 +104,20 @@ async fn write(file: PathBuf, cnt: String) -> Result<(), ImlAgentError> {
     fs::write(file, cnt.as_bytes()).err_into().await
 }
 
-pub async fn create_lamigo_service_unit(c: Config) -> Result<(), ImlAgentError> {
+pub async fn create_lamigo_conf(c: Config) -> Result<(), ImlAgentError> {
     let path_fmt = env::get_var("LAMIGO_CONF_PATH");
 
     let path = format_lamigo_conf_file(&c, &path_fmt)?;
-    let cnt = c.generate_unit(env::mailbox_sock(&c.mailbox));
-    write(path, cnt).await?;
-
-    let path = format_lamigo_unit_file(&c);
-    let cnt = format_lamigo_unit_contents(&c, &path_fmt)?;
+    let cnt = c.generate_unit(
+        env::mailbox_sock(&c.mailbox_extend),
+        env::mailbox_sock(&c.mailbox_resync),
+    );
     write(path, cnt).await
 }
 
 #[cfg(test)]
 mod lamigo_tests {
     use super::*;
-    use insta::assert_display_snapshot;
-    use std::env;
 
     #[test]
     fn test_expand_path_fmt() {
@@ -140,7 +129,9 @@ mod lamigo_tests {
             cold_pool: "SLOW_POOL".into(),
             min_age: 35353,
             mountpoint: "/mnt/spfs".into(),
-            mailbox: "mailbox".into(),
+            mailbox_extend: "mailbox-extend".into(),
+            mailbox_resync: "mailbox-resync".into(),
+            heatfn: None,
         };
         let fmt1 = "/etc/systemd/system/lamigo-{fs}-{mdt}.service";
         assert_eq!(
@@ -168,31 +159,14 @@ mod lamigo_tests {
             cold_pool: "SLOW_POOL".into(),
             min_age: 35353,
             mountpoint: "/mnt/spfs".into(),
-            mailbox: "mailbox".into(),
+            mailbox_extend: "mailbox-extend".into(),
+            mailbox_resync: "mailbox-resync".into(),
+            heatfn: None,
         };
 
         assert_eq!(
             format_lamigo_conf_file(&config, "/etc/lamigo/{fs}-{mdt}.conf").unwrap(),
             PathBuf::from("/etc/lamigo/LU_TEST1-MDT0010.conf")
         )
-    }
-
-    #[tokio::test]
-    async fn test_works() {
-        let config = Config {
-            fs: "LU_TEST2".into(),
-            mdt: 17,
-            user: "nick".into(),
-            min_age: 35353,
-            mailbox: "mailbox2".into(),
-            mountpoint: "/mnt/spfs".into(),
-            hot_pool: "FAST_POOL".into(),
-            cold_pool: "SLOW_POOL".into(),
-        };
-
-        let content = format_lamigo_unit_contents(&config, "/etc/lamigo/{fs}-{mdt}.conf")
-            .expect("cannot generate unit");
-
-        assert_display_snapshot!(content);
     }
 }

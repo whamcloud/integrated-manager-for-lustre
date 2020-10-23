@@ -4,7 +4,7 @@ BuildRequires: systemd
 %global crate iml
 
 Name: rust-%{crate}
-Version: 0.3.0
+Version: 0.4.0
 # Release Start
 Release: 1%{?dist}
 # Release End
@@ -28,39 +28,45 @@ ExclusiveArch: x86_64
 %install
 mkdir -p %{buildroot}%{_bindir}
 cp iml %{buildroot}%{_bindir}
-cp iml-config %{buildroot}%{_bindir}
+cp iml-action-runner %{buildroot}%{_bindir}
 cp iml-agent %{buildroot}%{_bindir}
+cp iml-agent-comms %{buildroot}%{_bindir}
 cp iml-agent-daemon %{buildroot}%{_bindir}
 cp iml-api %{buildroot}%{_bindir}
-cp iml-ostpool %{buildroot}%{_bindir}
+cp iml-config %{buildroot}%{_bindir}
+cp iml-corosync %{buildroot}%{_bindir}
 cp iml-device %{buildroot}%{_bindir}
 cp iml-journal %{buildroot}%{_bindir}
-cp iml-stats %{buildroot}%{_bindir}
-cp iml-agent-comms %{buildroot}%{_bindir}
-cp iml-action-runner %{buildroot}%{_bindir}
-cp iml-task-runner %{buildroot}%{_bindir}
-cp iml-warp-drive %{buildroot}%{_bindir}
 cp iml-mailbox %{buildroot}%{_bindir}
 cp iml-ntp %{buildroot}%{_bindir}
+cp iml-ostpool %{buildroot}%{_bindir}
 cp iml-postoffice %{buildroot}%{_bindir}
 cp iml-report %{buildroot}%{_bindir}
 cp iml-sfa %{buildroot}%{_bindir}
+cp iml-snapshot %{buildroot}%{_bindir}
+cp iml-stats %{buildroot}%{_bindir}
+cp iml-task-runner %{buildroot}%{_bindir}
+cp iml-warp-drive %{buildroot}%{_bindir}
+cp iml-timer %{buildroot}%{_bindir}
 mkdir -p %{buildroot}%{_unitdir}
+cp iml-action-runner.{socket,service} %{buildroot}%{_unitdir}
+cp iml-agent-comms.service %{buildroot}%{_unitdir}
 cp iml-api.service %{buildroot}%{_unitdir}
+cp iml-rust-corosync.service %{buildroot}%{_unitdir}
 cp iml-device.service %{buildroot}%{_unitdir}
 cp iml-journal.service %{buildroot}%{_unitdir}
-cp iml-ostpool.service %{buildroot}%{_unitdir}
-cp iml-rust-stats.service %{buildroot}%{_unitdir}
-cp iml-agent-comms.service %{buildroot}%{_unitdir}
-cp iml-task-runner.service %{buildroot}%{_unitdir}
-cp iml-action-runner.{socket,service} %{buildroot}%{_unitdir}
-cp rust-iml-agent.{service,path} %{buildroot}%{_unitdir}
-cp iml-warp-drive.service %{buildroot}%{_unitdir}
 cp iml-mailbox.service %{buildroot}%{_unitdir}
 cp iml-ntp.service %{buildroot}%{_unitdir}
+cp iml-ostpool.service %{buildroot}%{_unitdir}
 cp iml-postoffice.service %{buildroot}%{_unitdir}
 cp iml-report.service %{buildroot}%{_unitdir}
+cp iml-rust-stats.service %{buildroot}%{_unitdir}
 cp iml-sfa.service %{buildroot}%{_unitdir}
+cp iml-snapshot.service %{buildroot}%{_unitdir}
+cp iml-task-runner.service %{buildroot}%{_unitdir}
+cp iml-warp-drive.service %{buildroot}%{_unitdir}
+cp iml-timer.service %{buildroot}%{_unitdir}
+cp rust-iml-agent.{service,path} %{buildroot}%{_unitdir}
 mkdir -p %{buildroot}%{_tmpfilesdir}
 cp iml-report.conf %{buildroot}%{_tmpfilesdir}
 cp tmpfiles.conf %{buildroot}%{_tmpfilesdir}/iml-agent.conf
@@ -68,6 +74,10 @@ mkdir -p %{buildroot}%{_presetdir}
 cp 00-rust-iml-agent.preset %{buildroot}%{_presetdir}
 mkdir -p %{buildroot}%{_sysconfdir}/iml/
 cp settings.conf %{buildroot}%{_sysconfdir}/iml/iml-agent.conf
+mkdir -p %{buildroot}%{_sysconfdir}/bash_completion.d
+%{buildroot}%{_bindir}/iml shell-completion bash -e iml -o %{buildroot}%{_sysconfdir}/bash_completion.d/iml
+mkdir -p %{buildroot}%{_datadir}/zsh/site-functions
+%{buildroot}%{_bindir}/iml shell-completion zsh -e iml -o %{buildroot}%{_datadir}/zsh/site-functions/_iml
 
 %package cli
 Summary: IML manager CLI
@@ -79,6 +89,28 @@ Group: System Environment/Libraries
 
 %files cli
 %{_bindir}/iml
+
+%package cli-bash-completion
+Summary: IML manager CLI (bash completion script)
+License: MIT
+Group: System Environment/Libraries
+
+%description cli-bash-completion
+%{summary}
+
+%files cli-bash-completion
+%{_sysconfdir}/bash_completion.d/iml
+
+%package cli-zsh-completion
+Summary: IML manager CLI (zsh completion script)
+License: MIT
+Group: System Environment/Libraries
+
+%description cli-zsh-completion
+%{summary}
+
+%files cli-zsh-completion
+%{_datadir}/zsh/site-functions/_iml
 
 %package config-cli
 Summary: IML manager Config CLI
@@ -96,7 +128,7 @@ Summary: IML Agent Daemon and CLI
 License: MIT
 Group: System Environment/Libraries
 Requires: systemd-journal-gateway
-Requires: iml-device-scanner >= 4.0
+Requires: iml-device-scanner >= 5.0
 Obsoletes: iml-device-scanner-proxy
 
 %description agent
@@ -385,6 +417,28 @@ Group: System Environment/Libraries
 %{_bindir}/iml-sfa
 %attr(0644,root,root)%{_unitdir}/iml-sfa.service
 
+%package snapshot
+Summary: Consumer of snapshot listing
+License: MIT
+Group: System Environment/Libraries
+Requires: rust-iml-agent-comms
+
+%description snapshot
+%{summary}
+
+%post snapshot
+%systemd_post iml-snapshot.service
+
+%preun snapshot
+%systemd_preun iml-snapshot.service
+
+%postun snapshot
+%systemd_postun_with_restart iml-snapshot.service
+
+%files snapshot
+%{_bindir}/iml-snapshot
+%attr(0644,root,root)%{_unitdir}/iml-snapshot.service
+
 %package device
 Summary: Consumer of IML Agent device push queue
 License: MIT
@@ -429,8 +483,54 @@ Requires: rust-iml-agent-comms
 %{_bindir}/iml-journal
 %attr(0644,root,root)%{_unitdir}/iml-journal.service
 
+%package corosync
+Summary: Consumer of corosync updates
+License: MIT
+Group: System Environment/Libraries
+Requires: rust-iml-agent-comms
+
+%description corosync
+%{summary}
+
+%post corosync
+%systemd_post iml-rust-corosync.service
+
+%preun corosync
+%systemd_preun iml-rust-corosync.service
+
+%postun corosync
+%systemd_postun_with_restart iml-rust-corosync.service
+
+%files corosync
+%{_bindir}/iml-corosync
+%attr(0644,root,root)%{_unitdir}/iml-rust-corosync.service
+
+%package timer
+Summary: Timer service to schedule tasks on specified intervals
+License: MIT
+Group: System Environment/Libraries
+
+%description timer
+%{summary}
+
+%post timer
+%systemd_post iml-timer.service
+
+%preun timer
+%systemd_preun iml-timer.service
+
+%postun timer
+%systemd_postun_with_restart iml-timer.service
+
+%files timer
+%{_bindir}/iml-timer
+%attr(0644,root,root)%{_unitdir}/iml-timer.service
+
 %changelog
-* Wed Sep 18 2019 Will Johnson <wjohnson@whamcloud.com> - 0.2.0-1 
+* Thu Sep 17 2020 Will Johnson <wjohnson@whamcloud.com> - 0.3.0-1
+- Add timer service
+
+* Wed Sep 18 2019 Will Johnson <wjohnson@whamcloud.com> - 0.2.0-1
 - Add ntp service
 
 * Wed Mar 6 2019 Joe Grund <jgrund@whamcloud.com> - 0.1.0-1

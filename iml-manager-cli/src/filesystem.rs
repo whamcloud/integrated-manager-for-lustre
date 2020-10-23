@@ -24,12 +24,7 @@ pub enum FilesystemCommand {
     /// List all configured filesystems
     #[structopt(name = "list")]
     List {
-        /// Set the display type
-        ///
-        /// The display type can be one of the following:
-        /// tabular: display content in a table format
-        /// json: return data in json format
-        /// yaml: return data in yaml format
+        /// Display type: json, yaml, tabular
         #[structopt(short = "d", long = "display", default_value = "tabular")]
         display_type: DisplayType,
     },
@@ -51,6 +46,10 @@ pub enum FilesystemCommand {
         #[structopt(short, long)]
         hosts: Option<String>,
     },
+}
+
+fn option_sub(a: Option<u64>, b: Option<u64>) -> Option<u64> {
+    Some(a?.saturating_sub(b?))
 }
 
 async fn detect_filesystem(hosts: Option<String>) -> Result<(), ImlManagerCliError> {
@@ -158,12 +157,20 @@ pub async fn filesystem_cli(command: FilesystemCommand) -> Result<(), ImlManager
             let mut table = Table::new();
             table.add_row(Row::from(&["Name".to_string(), fs.label]));
             table.add_row(Row::from(&[
-                "Space".to_string(),
-                usage(st.bytes_free, st.bytes_total, format_bytes),
+                "Space Used/Avail".to_string(),
+                usage(
+                    option_sub(st.bytes_total, st.bytes_free),
+                    st.bytes_avail,
+                    format_bytes,
+                ),
             ]));
             table.add_row(Row::from(&[
-                "Inodes".to_string(),
-                usage(st.files_free, st.files_total, format_number),
+                "Inodes Used/Avail".to_string(),
+                usage(
+                    option_sub(st.files_total, st.files_free),
+                    st.files_total,
+                    format_number,
+                ),
             ]));
             table.add_row(Row::from(&["State".to_string(), fs.state]));
             table.add_row(Row::from(&[

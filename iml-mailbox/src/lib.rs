@@ -6,7 +6,7 @@ use bytes::Buf;
 use futures::{stream::BoxStream, Stream, StreamExt, TryFutureExt, TryStreamExt};
 use iml_postgres::sqlx::{self, PgPool};
 use iml_tracing::tracing;
-use iml_wire_types::{db::LustreFid, Task};
+use iml_wire_types::{db::LustreFid, task::Task};
 use serde_json::json;
 use std::{collections::HashMap, str::FromStr};
 use thiserror::Error;
@@ -108,7 +108,7 @@ async fn insert_lines(
     pool: &PgPool,
 ) -> Result<(), MailboxError> {
     let x = lines
-        .into_iter()
+        .iter()
         .fold((vec![], vec![], vec![], vec![]), |mut acc, (fid, value)| {
             acc.0.push(fid.seq);
             acc.1.push(fid.oid);

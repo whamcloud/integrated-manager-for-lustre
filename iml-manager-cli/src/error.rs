@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use iml_orm::tokio_diesel;
+use iml_postgres::sqlx;
 use iml_wire_types::Command;
 use thiserror::Error;
 
@@ -60,18 +60,20 @@ impl std::error::Error for DurationParseError {}
 pub enum ImlManagerCliError {
     ApiError(String),
     ClientRequestError(#[from] iml_manager_client::ImlManagerClientError),
+    CmdUtilError(#[from] iml_command_utils::CmdUtilError),
     CombineEasyError(combine::stream::easy::Errors<char, &'static str, usize>),
     DoesNotExist(&'static str),
     FailedCommandError(Vec<Command>),
     FromUtf8Error(#[from] std::string::FromUtf8Error),
-    ImlOrmError(#[from] iml_orm::ImlOrmError),
+    Infallible(#[from] std::convert::Infallible),
+    ImlGraphqlQueriesErrors(#[from] iml_graphql_queries::Errors),
     IntParseError(#[from] std::num::ParseIntError),
     IoError(#[from] std::io::Error),
     ParseDurationError(#[from] DurationParseError),
     ReqwestError(#[from] reqwest::Error),
     RunStratagemValidationError(#[from] RunStratagemValidationError),
     SerdeJsonError(#[from] serde_json::error::Error),
-    TokioDieselAsyncError(#[from] tokio_diesel::AsyncError),
+    SqlxError(#[from] sqlx::Error),
     TokioJoinError(#[from] tokio::task::JoinError),
     TokioTimerError(#[from] tokio::time::Error),
 }
@@ -81,6 +83,7 @@ impl std::fmt::Display for ImlManagerCliError {
         match *self {
             ImlManagerCliError::ApiError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::ClientRequestError(ref err) => write!(f, "{}", err),
+            ImlManagerCliError::CmdUtilError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::CombineEasyError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::DoesNotExist(ref err) => write!(f, "{} does not exist", err),
             ImlManagerCliError::FailedCommandError(ref xs) => {
@@ -92,14 +95,17 @@ impl std::fmt::Display for ImlManagerCliError {
                 write!(f, "{}", failed_msg)
             }
             ImlManagerCliError::FromUtf8Error(ref err) => write!(f, "{}", err),
-            ImlManagerCliError::ImlOrmError(ref err) => write!(f, "{}", err),
+            ImlManagerCliError::ImlGraphqlQueriesErrors(ref err) => write!(f, "{}", err),
+            ImlManagerCliError::Infallible(_) => {
+                write!(f, "A (supposedly) impossible situation has occurred")
+            }
             ImlManagerCliError::IntParseError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::IoError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::ParseDurationError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::ReqwestError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::RunStratagemValidationError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::SerdeJsonError(ref err) => write!(f, "{}", err),
-            ImlManagerCliError::TokioDieselAsyncError(ref err) => write!(f, "{}", err),
+            ImlManagerCliError::SqlxError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::TokioJoinError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::TokioTimerError(ref err) => write!(f, "{}", err),
         }

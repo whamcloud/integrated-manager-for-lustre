@@ -2,37 +2,15 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use async_trait::async_trait;
-use future::Either;
-use futures::{future, Future, TryFutureExt};
-use iml_orm::{
-    sfa::{
-        SfaClassError, SfaController, SfaDiskDrive, SfaEnclosure, SfaJob, SfaPowerSupply,
-        SfaStorageSystem,
-    },
-    tokio_diesel::{AsyncError, AsyncRunQueryDsl as _},
-    AsyncRunQueryDslPostgres, Changeable, DbPool, Executable, GetChanges as _, Identifiable,
-    Upserts,
-};
+use futures::{future, Future};
+use iml_change::{Changeable, Changes, Deletions, GetChanges as _, Upserts};
+use iml_postgres::{get_db_pool, PgPool};
 use iml_request_retry::{retry_future, RetryAction};
+use iml_sfa::{db, ImlSfaError, SfaClassExt as _};
 use iml_tracing::tracing;
-use std::{convert::TryInto as _, fmt::Debug, time::Duration};
-use thiserror::Error;
+use std::{fmt::Debug, time::Duration};
 use tokio::time;
 use url::Url;
-use wbem_client::{resp::Instance, Client, ClientExt};
-
-#[derive(Error, Debug)]
-enum ImlSfaError {
-    #[error(transparent)]
-    WbemClient(#[from] wbem_client::WbemClientError),
-    #[error(transparent)]
-    SfaClass(#[from] SfaClassError),
-    #[error(transparent)]
-    Async(#[from] AsyncError),
-    #[error(transparent)]
-    ImlOrm(#[from] iml_orm::ImlOrmError),
-}
 
 fn retry_fn<F, T, E>(endpoints: &[Url], f: impl Fn(u32) -> F) -> impl Future<Output = Result<T, E>>
 where
@@ -56,8 +34,6 @@ where
 async fn main() -> Result<(), ImlSfaError> {
     iml_tracing::init();
 
-    let pool = iml_orm::pool()?;
-
     let endpoints = iml_manager_env::get_sfa_endpoints();
 
     let endpoints = match endpoints {
@@ -71,25 +47,19 @@ async fn main() -> Result<(), ImlSfaError> {
 
     let client = wbem_client::get_client(true)?;
 
+    let pool = get_db_pool(2).await?;
+
     let mut interval = time::interval(Duration::from_secs(5));
 
-    let mut old_drives = SfaDiskDrive::all()
-        .load_async::<SfaDiskDrive>(&pool)
-        .await?;
+    let mut old_drives = db::disk_drive::all(&pool).await?;
 
-    let mut old_enclosures = SfaEnclosure::all()
-        .load_async::<SfaEnclosure>(&pool)
-        .await?;
+    let mut old_enclosures = db::enclosure::all(&pool).await?;
 
-    let mut old_jobs = SfaJob::all().load_async::<SfaJob>(&pool).await?;
+    let mut old_jobs = db::job::all(&pool).await?;
 
-    let mut old_power_supplies = SfaPowerSupply::all()
-        .load_async::<SfaPowerSupply>(&pool)
-        .await?;
+    let mut old_power_supplies = db::power_supply::all(&pool).await?;
 
-    let mut old_controllers = SfaController::all()
-        .load_async::<SfaController>(&pool)
-        .await?;
+    let mut old_controllers = db::controller::all(&pool).await?;
 
     loop {
         interval.tick().await;
@@ -131,47 +101,42 @@ async fn main() -> Result<(), ImlSfaError> {
         tracing::trace!("SfaPowerSupply {:?}", new_power_supplies);
         tracing::trace!("SfaController {:?}", new_controllers);
 
-        let (enclosure_upsert, enclosure_remove) = diff_items(
-            &new_enclosures,
-            &old_enclosures,
-            &pool,
-            SfaEnclosure::batch_upsert,
-            SfaEnclosure::batch_delete,
+        let (enclosure_upsert, enclosure_remove) = build_changes(
+            db::enclosure::batch_upsert,
+            db::enclosure::batch_delete,
+            new_enclosures.get_changes(&old_enclosures),
+            pool.clone(),
         );
 
-        let (drive_upsert, drive_remove) = diff_items(
-            &new_drives,
-            &old_drives,
-            &pool,
-            SfaDiskDrive::batch_upsert,
-            SfaDiskDrive::batch_delete,
+        let (drive_upsert, drive_remove) = build_changes(
+            db::disk_drive::batch_upsert,
+            db::disk_drive::batch_delete,
+            new_drives.get_changes(&old_drives),
+            pool.clone(),
         );
 
-        let (job_upsert, job_remove) = diff_items(
-            &new_jobs,
-            &old_jobs,
-            &pool,
-            SfaJob::batch_upsert,
-            SfaJob::batch_delete,
+        let (job_upsert, job_remove) = build_changes(
+            db::job::batch_upsert,
+            db::job::batch_delete,
+            new_jobs.get_changes(&old_jobs),
+            pool.clone(),
         );
 
-        let (power_supply_upsert, power_supply_remove) = diff_items(
-            &new_power_supplies,
-            &old_power_supplies,
-            &pool,
-            SfaPowerSupply::batch_upsert,
-            SfaPowerSupply::batch_delete,
+        let (power_supply_upsert, power_supply_remove) = build_changes(
+            db::power_supply::batch_upsert,
+            db::power_supply::batch_delete,
+            new_power_supplies.get_changes(&old_power_supplies),
+            pool.clone(),
         );
 
-        let (controller_upsert, controller_remove) = diff_items(
-            &new_controllers,
-            &old_controllers,
-            &pool,
-            SfaController::batch_upsert,
-            SfaController::batch_delete,
+        let (controller_upsert, controller_remove) = build_changes(
+            db::controller::batch_upsert,
+            db::controller::batch_delete,
+            new_controllers.get_changes(&old_controllers),
+            pool.clone(),
         );
 
-        SfaStorageSystem::upsert(x).execute_async(&pool).await?;
+        db::storage_system::upsert(x, &pool).await?;
 
         enclosure_upsert.await?;
 
@@ -205,153 +170,39 @@ async fn main() -> Result<(), ImlSfaError> {
     }
 }
 
-type UpsertFn<'a, T, R> = fn(Upserts<&'a T>) -> R;
-type DeleteFn<'a, T, R> = fn(Vec<&'a T>) -> R;
-
-fn diff_items<
+fn build_changes<
     'a,
-    T: Identifiable + Changeable,
-    R1: AsyncRunQueryDslPostgres + Executable + 'a,
-    R2: AsyncRunQueryDslPostgres + Executable + 'a,
+    T: Changeable,
+    F: Future<Output = Result<(), ImlSfaError>> + 'a,
+    F2: Future<Output = Result<(), ImlSfaError>> + 'a,
 >(
-    new: &'a Vec<T>,
-    old: &'a Vec<T>,
-    pool: &'a DbPool,
-    upsert_fn: UpsertFn<'a, T, R1>,
-    delete_fn: DeleteFn<'a, T, R2>,
+    upsert_fn: fn(Upserts<&'a T>, pool: PgPool) -> F,
+    delete_fn: fn(Deletions<&'a T>, pool: PgPool) -> F2,
+    changes: Changes<'a, T>,
+    pool: PgPool,
 ) -> (
     impl Future<Output = Result<(), ImlSfaError>> + 'a,
     impl Future<Output = Result<(), ImlSfaError>> + 'a,
 ) {
-    let (upsert, remove) = new.get_changes(&old);
+    let (upserts, deletions) = changes;
 
-    let upserts = if let Some(upsert) = upsert {
-        tracing::debug!("{} changed Enclosures, performing Upsert", upsert.0.len());
-        Either::Left(
-            upsert_fn(upsert)
-                .execute_async(pool)
-                .map_ok(drop)
-                .err_into(),
-        )
-    } else {
-        Either::Right(future::ok(()))
+    let pool2 = pool.clone();
+
+    let a = async move {
+        if let Some(x) = upserts {
+            upsert_fn(x, pool).await?;
+        };
+
+        Ok(())
     };
 
-    let removals = if let Some(remove) = remove {
-        tracing::debug!("{} removed Items, performing Deletion", remove.0.len());
+    let b = async move {
+        if let Some(x) = deletions {
+            delete_fn(x, pool2).await?;
+        }
 
-        Either::Left(
-            delete_fn(remove.0)
-                .execute_async(pool)
-                .map_ok(drop)
-                .err_into(),
-        )
-    } else {
-        Either::Right(future::ok(()))
+        Ok(())
     };
 
-    (upserts, removals)
-}
-
-#[async_trait(?Send)]
-trait SfaClassExt: ClientExt {
-    async fn fetch_sfa_storage_system(&self, url: Url) -> Result<SfaStorageSystem, ImlSfaError>;
-    async fn fetch_sfa_enclosures(&self, url: Url) -> Result<Vec<SfaEnclosure>, ImlSfaError>;
-    async fn fetch_sfa_disk_drives(&self, url: Url) -> Result<Vec<SfaDiskDrive>, ImlSfaError>;
-    async fn fetch_sfa_jobs(&self, url: Url) -> Result<Vec<SfaJob>, ImlSfaError>;
-    async fn fetch_sfa_power_supply(&self, url: Url) -> Result<Vec<SfaPowerSupply>, ImlSfaError>;
-    async fn fetch_sfa_controllers(&self, url: Url) -> Result<Vec<SfaController>, ImlSfaError>;
-}
-
-#[async_trait(?Send)]
-impl SfaClassExt for Client {
-    async fn fetch_sfa_storage_system(&self, url: Url) -> Result<SfaStorageSystem, ImlSfaError> {
-        let x = self
-            .get_instance(url, "root/ddn", "DDN_SFAStorageSystem")
-            .await?;
-
-        let x: SfaStorageSystem = x.try_into()?;
-
-        Ok(x)
-    }
-    async fn fetch_sfa_enclosures(&self, url: Url) -> Result<Vec<SfaEnclosure>, ImlSfaError> {
-        let x = self.fetch_sfa_storage_system(url.clone());
-
-        let ys = self
-            .enumerate_instances(url, "root/ddn", "DDN_SFAEnclosure")
-            .err_into();
-
-        let (x, ys) = future::try_join(x, ys).await?;
-
-        let ys = Vec::<Instance>::from(ys)
-            .into_iter()
-            .map(|y| (x.uuid.clone(), y).try_into())
-            .collect::<Result<Vec<_>, _>>()?;
-
-        Ok(ys)
-    }
-    async fn fetch_sfa_disk_drives(&self, url: Url) -> Result<Vec<SfaDiskDrive>, ImlSfaError> {
-        let x = self.fetch_sfa_storage_system(url.clone());
-
-        let ys = self
-            .enumerate_instances(url, "root/ddn", "DDN_SFADiskDrive")
-            .err_into();
-
-        let (x, ys) = future::try_join(x, ys).await?;
-
-        let ys = Vec::<Instance>::from(ys)
-            .into_iter()
-            .map(|y| (x.uuid.clone(), y).try_into())
-            .collect::<Result<Vec<_>, _>>()?;
-
-        Ok(ys)
-    }
-    async fn fetch_sfa_jobs(&self, url: Url) -> Result<Vec<SfaJob>, ImlSfaError> {
-        let x = self.fetch_sfa_storage_system(url.clone());
-
-        let ys = self
-            .enumerate_instances(url, "root/ddn", "DDN_SFAJob")
-            .err_into();
-
-        let (x, ys) = future::try_join(x, ys).await?;
-
-        let ys = Vec::<Instance>::from(ys)
-            .into_iter()
-            .map(|y| (x.uuid.clone(), y).try_into())
-            .collect::<Result<Vec<_>, _>>()?;
-
-        Ok(ys)
-    }
-    async fn fetch_sfa_power_supply(&self, url: Url) -> Result<Vec<SfaPowerSupply>, ImlSfaError> {
-        let x = self.fetch_sfa_storage_system(url.clone());
-
-        let ys = self
-            .enumerate_instances(url, "root/ddn", "DDN_SFAPowerSupply")
-            .err_into();
-
-        let (x, ys) = future::try_join(x, ys).await?;
-
-        let ys = Vec::<Instance>::from(ys)
-            .into_iter()
-            .map(|y| (x.uuid.clone(), y).try_into())
-            .collect::<Result<Vec<_>, _>>()?;
-
-        Ok(ys)
-    }
-    async fn fetch_sfa_controllers(&self, url: Url) -> Result<Vec<SfaController>, ImlSfaError> {
-        let x = self.fetch_sfa_storage_system(url.clone());
-
-        let ys = self
-            .enumerate_instances(url, "root/ddn", "DDN_SFAController")
-            .err_into();
-
-        let (x, ys) = future::try_join(x, ys).await?;
-
-        let ys = Vec::<Instance>::from(ys)
-            .into_iter()
-            .map(|y| (x.uuid.clone(), y).try_into())
-            .collect::<Result<Vec<_>, _>>()?;
-
-        Ok(ys)
-    }
+    (a, b)
 }

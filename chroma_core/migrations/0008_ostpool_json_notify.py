@@ -10,7 +10,10 @@ from chroma_core.migrations import (
 )
 
 
-tables = map(build_tables, ["ostpool", "ostpool_osts"],)
+tables = map(
+    build_tables,
+    ["ostpool", "ostpool_osts"],
+)
 
 forward_trigger_list = map(forward_trigger_template, tables)
 forward_trigger_str = join(forward_trigger_list)

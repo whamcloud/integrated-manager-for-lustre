@@ -5,10 +5,12 @@
 use crate::{
     action_plugins::{
         check_kernel, check_stonith, firewall_cmd, high_availability, kernel_module, lamigo, ldev,
-        lpurge, ltuer, lustre,
+        lpurge, lustre,
         ntp::{action_configure, is_ntp_configured},
         ostpool, package, postoffice,
-        stratagem::{action_purge, action_warning, server},
+        stratagem::{
+            action_cloudsync, action_filesync, action_mirror, action_purge, action_warning, server,
+        },
     },
     lustre::lctl,
 };
@@ -43,6 +45,8 @@ pub fn create_registry() -> action_plugins::Actions {
         .add_plugin("mount_many", lustre::client::mount_many)
         .add_plugin("unmount", lustre::client::unmount)
         .add_plugin("unmount_many", lustre::client::unmount_many)
+        .add_plugin("ha_resource_start", high_availability::start_resource)
+        .add_plugin("ha_resource_stop", high_availability::stop_resource)
         .add_plugin("crm_attribute", high_availability::crm_attribute)
         .add_plugin(
             "change_mcast_port",
@@ -63,19 +67,23 @@ pub fn create_registry() -> action_plugins::Actions {
         .add_plugin("snapshot_unmount", lustre::snapshot::unmount)
         .add_plugin("postoffice_add", postoffice::route_add)
         .add_plugin("postoffice_remove", postoffice::route_remove)
-        .add_plugin("create_lpurge_conf", lpurge::create_lpurge_conf)
-        .add_plugin("create_lamigo_service", lamigo::create_lamigo_service_unit)
         .add_plugin(
             "configure_ntp",
             action_configure::update_and_write_new_config,
         )
         .add_plugin("is_ntp_configured", is_ntp_configured::is_ntp_configured)
-        .add_plugin("create_ltuer_conf", ltuer::create_ltuer_conf)
         .add_plugin("create_ldev_conf", ldev::create)
+        // HotPools
+        .add_plugin("create_lpurge_conf", lpurge::create_lpurge_conf)
+        .add_plugin("create_lamigo_conf", lamigo::create_lamigo_conf)
         // Task Actions
+        .add_plugin("action.mirror.extend", action_mirror::process_extend_fids)
+        .add_plugin("action.mirror.resync", action_mirror::process_resync_fids)
+        .add_plugin("action.mirror.split", action_mirror::process_split_fids)
         .add_plugin("action.stratagem.warning", action_warning::process_fids)
-        .add_plugin("action.stratagem.purge", action_purge::process_fids);
-
+        .add_plugin("action.stratagem.purge", action_purge::process_fids)
+        .add_plugin("action.stratagem.filesync", action_filesync::process_fids)
+        .add_plugin("action.stratagem.cloudsync", action_cloudsync::process_fids);
     info!("Loaded the following ActionPlugins:");
 
     for ActionName(key) in map.keys() {

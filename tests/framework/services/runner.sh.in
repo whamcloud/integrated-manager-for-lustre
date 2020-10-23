@@ -3,7 +3,7 @@
 yum install -y epel-release
 yum clean all
 yum install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm
-yum install -y git python-virtualenv python-setuptools python-devel gcc make graphviz-devel postgresql96-server postgresql96-devel postgresql96-contrib rabbitmq-server telnet python-ethtool erlang-inets patch gcc-c++ systemd-devel python-pip curl libcurl-devel nss openssl-devel cargo
+yum install -y git python-virtualenv python-setuptools python-devel gcc make graphviz-devel postgresql96-server postgresql96-contrib rabbitmq-server telnet python-ethtool erlang-inets patch gcc-c++ systemd-devel python-pip python2-pbr curl libcurl-devel nss openssl-devel cargo
 systemctl enable rabbitmq-server
 
 export PATH=$PATH:/usr/lib/rabbitmq/bin/
@@ -77,7 +77,6 @@ cd /usr/share/chroma-manager
 
 python ./manage.py dev_setup
 
-export PQ_LIB_DIR=/usr/pgsql-9.6/lib
 env $(python manage.py print-settings 2> /dev/null | xargs) cargo run --bin iml-config nginx generate-config --path /integrated-manager-for-lustre/chroma-manager.conf.template --output /etc/nginx/conf.d/chroma-manager.conf
 
 PYTHONPATH=. nosetests tests/services/ --stop

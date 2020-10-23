@@ -14,7 +14,7 @@ class ChromaApi(Api):
 
     def get_resource_uri(self, obj):
         """Resolve the class of ``obj`` to a Resource and
-           call its get_resource_uri function."""
+        call its get_resource_uri function."""
         try:
             return self._cache[obj.__class__].get_resource_uri(obj)
         except KeyError:
@@ -104,7 +104,6 @@ api.register(chroma_api.lnet_configuration.LNetConfigurationResource())
 api.register(chroma_api.corosync.CorosyncConfigurationResource())
 api.register(chroma_api.pacemaker.PacemakerConfigurationResource())
 api.register(chroma_api.stratagem.StratagemConfigurationResource())
-api.register(chroma_api.stratagem.RunStratagemResource())
 api.register(chroma_api.ntp.NtpConfigurationResource())
 api.register(chroma_api.ticket.TicketResource())
 
