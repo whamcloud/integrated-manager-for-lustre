@@ -1221,8 +1221,7 @@
     "sfa_storage_system": {},
     "sfa_controller": {},
     "snapshot": {},
-    "snapshot_interval": {},
-    "snapshot_retention": {},
+    "snapshot_policy": {},
     "stratagem_config": {},
     "target": {
         "19": {
