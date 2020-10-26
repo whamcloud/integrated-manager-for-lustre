@@ -3,9 +3,11 @@
 // license that can be found in the LICENSE file.
 
 mod add_interval;
+mod create_policy;
 mod create_retention;
 mod list;
 mod list_interval;
+mod list_policy;
 mod list_retention;
 mod take;
 
@@ -36,6 +38,8 @@ pub struct Model {
     list: list::Model,
     add_interval: add_interval::Model,
     create_retention: create_retention::Model,
+    create_policy: create_policy::Model,
+    list_policy: list_policy::Model,
 }
 
 impl RecordChange<Msg> for Model {
@@ -55,7 +59,13 @@ impl RecordChange<Msg> for Model {
         self.create_retention
             .update_record(record.clone(), cache, &mut orders.proxy(Msg::CreatRetention));
 
-        self.take.update_record(record, cache, &mut orders.proxy(Msg::Take));
+        self.take
+            .update_record(record.clone(), cache, &mut orders.proxy(Msg::Take));
+
+        self.list_policy
+            .update_record(record.clone(), cache, &mut orders.proxy(Msg::ListPolicy));
+        self.create_policy
+            .update_record(record, cache, &mut orders.proxy(Msg::CreatePolicy));
     }
     fn remove_record(&mut self, record: RecordId, cache: &ArcCache, orders: &mut impl Orders<Msg, GMsg>) {
         self.list.remove_record(record, cache, &mut orders.proxy(Msg::List));
@@ -73,6 +83,11 @@ impl RecordChange<Msg> for Model {
             .remove_record(record, cache, &mut orders.proxy(Msg::CreatRetention));
 
         self.take.remove_record(record, cache, &mut orders.proxy(Msg::Take));
+
+        self.list_policy
+            .remove_record(record, cache, &mut orders.proxy(Msg::ListPolicy));
+        self.create_policy
+            .remove_record(record, cache, &mut orders.proxy(Msg::CreatePolicy));
     }
     fn set_records(&mut self, cache: &ArcCache, orders: &mut impl Orders<Msg, GMsg>) {
         self.list.set_records(cache, &mut orders.proxy(Msg::List));
@@ -90,6 +105,10 @@ impl RecordChange<Msg> for Model {
             .set_records(cache, &mut orders.proxy(Msg::CreatRetention));
 
         self.take.set_records(cache, &mut orders.proxy(Msg::Take));
+
+        self.list_policy.set_records(cache, &mut orders.proxy(Msg::ListPolicy));
+        self.create_policy
+            .set_records(cache, &mut orders.proxy(Msg::CreatePolicy));
     }
 }
 
@@ -101,6 +120,8 @@ pub enum Msg {
     List(list::Msg),
     AddInterval(add_interval::Msg),
     CreatRetention(create_retention::Msg),
+    CreatePolicy(create_policy::Msg),
+    ListPolicy(list_policy::Msg),
 }
 
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
@@ -122,6 +143,12 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         }
         Msg::CreatRetention(msg) => {
             create_retention::update(msg, &mut model.create_retention, &mut orders.proxy(Msg::CreatRetention));
+        }
+        Msg::CreatePolicy(msg) => {
+            create_policy::update(msg, &mut model.create_policy, &mut orders.proxy(Msg::CreatePolicy));
+        }
+        Msg::ListPolicy(msg) => {
+            list_policy::update(msg, &mut model.list_policy, &mut orders.proxy(Msg::ListPolicy));
         }
     }
 }
@@ -162,6 +189,15 @@ pub fn view(model: &Model, cache: &ArcCache, session: Option<&Session>) -> impl 
         },
         create_retention_btn(session),
         create_retention::view(&model.create_retention).map_msg(Msg::CreatRetention),
+        if cache.snapshot_policy.is_empty() {
+            empty![]
+        } else {
+            list_policy::view(&model.list_policy, cache, session)
+                .map_msg(Msg::ListPolicy)
+                .merge_attrs(class![C.my_6])
+        },
+        create_policy_btn(session),
+        create_policy::view(&model.create_policy).map_msg(Msg::CreatePolicy),
         list::view(&model.list, cache).map_msg(Msg::List)
     ]
 }
@@ -216,6 +252,31 @@ fn create_retention_btn(session: Option<&Session>) -> Node<Msg> {
             font_awesome(class![C.h_3, C.w_3, C.mr_1, C.inline], "plus"),
             "Create Snapshot Retention Policy",
             simple_ev(Ev::Click, create_retention::Msg::Open).map_msg(Msg::CreatRetention)
+        ],
+    )
+}
+
+fn create_policy_btn(session: Option<&Session>) -> Node<Msg> {
+    restrict::view(
+        session,
+        GroupType::FilesystemAdministrators,
+        button![
+            class![
+                C.bg_blue_500,
+                C.duration_300,
+                C.flex,
+                C.hover__bg_blue_400,
+                C.items_center,
+                C.mb_6,
+                C.px_6,
+                C.py_2,
+                C.rounded_sm,
+                C.text_white,
+                C.transition_colors
+            ],
+            font_awesome(class![C.h_3, C.w_3, C.mr_1, C.inline], "plus"),
+            "Create Automatic Snapshot Policy",
+            simple_ev(Ev::Click, create_policy::Msg::Open).map_msg(Msg::CreatePolicy)
         ],
     )
 }
