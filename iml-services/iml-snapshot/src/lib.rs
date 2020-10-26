@@ -3,6 +3,7 @@ use iml_manager_client::ImlManagerClientError;
 use tokio::time::Instant;
 
 pub mod client_monitor;
+pub mod policy;
 pub mod retention;
 
 #[derive(thiserror::Error, Debug)]

@@ -60,7 +60,7 @@ pub const SNAPSHOT_TABLE_NAME: TableName = TableName("snapshot");
 
 #[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
 #[derive(serde::Deserialize, serde::Serialize, Clone, PartialEq, Debug)]
-/// A Snapshot interval
+/// A Snapshot interval. TODO: Delete after SnapshotPolicy is settled
 pub struct SnapshotInterval {
     /// The configuration id
     pub id: i32,
@@ -70,7 +70,7 @@ pub struct SnapshotInterval {
     pub use_barrier: bool,
     /// The interval configuration
     pub interval: GraphQLDuration,
-    // Last known run
+    /// Last known run
     pub last_run: Option<DateTime<Utc>>,
 }
 
@@ -84,6 +84,7 @@ pub const SNAPSHOT_INTERVAL_TABLE_NAME: TableName = TableName("snapshot_interval
 
 #[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
 #[derive(serde::Deserialize, serde::Serialize, Clone, PartialEq, Debug)]
+/// A Snapshot retention policy. TODO: Delete after SnapshotPolicy is settled
 pub struct SnapshotRetention {
     pub id: i32,
     pub filesystem_name: String,
@@ -130,6 +131,62 @@ impl FromStr for ReserveUnit {
         }
     }
 }
+
+#[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
+#[derive(serde::Deserialize, serde::Serialize, Eq, Clone, Debug)]
+/// Automatic snapshot policy
+pub struct SnapshotPolicy {
+    /// The configuration id
+    pub id: i32,
+    /// The filesystem name
+    pub filesystem: String,
+    /// The interval configuration
+    pub interval: GraphQLDuration,
+    /// Use a write barrier
+    pub barrier: bool,
+    /// Number of recent snapshots to keep
+    pub keep: i32,
+    /// Then, number of days to keep the most recent snapshot of each day
+    pub daily: i32,
+    /// Then, number of weeks to keep the most recent snapshot of each week
+    pub weekly: i32,
+    /// Then, number of months to keep the most recent snapshot of each months
+    pub monthly: i32,
+    /// Last known run
+    pub last_run: Option<DateTime<Utc>>,
+}
+
+impl PartialEq for SnapshotPolicy {
+    fn eq(&self, other: &Self) -> bool {
+        self.filesystem == other.filesystem
+            && self.interval == other.interval
+            && self.barrier == other.barrier
+            && self.keep == other.keep
+            && self.daily == other.daily
+            && self.weekly == other.weekly
+            && self.monthly == other.monthly
+    }
+}
+
+impl std::hash::Hash for SnapshotPolicy {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.filesystem.hash(state);
+        self.interval.hash(state);
+        self.barrier.hash(state);
+        self.keep.hash(state);
+        self.daily.hash(state);
+        self.weekly.hash(state);
+        self.monthly.hash(state);
+    }
+}
+
+impl Id for SnapshotPolicy {
+    fn id(&self) -> i32 {
+        self.id
+    }
+}
+
+pub const SNAPSHOT_POLICY_TABLE_NAME: TableName = TableName("snapshot_policy");
 
 #[derive(serde::Deserialize, Debug)]
 #[cfg_attr(feature = "cli", derive(StructOpt))]

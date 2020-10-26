@@ -68,6 +68,53 @@ pub enum RetentionCommand {
 }
 
 #[derive(Debug, StructOpt)]
+pub enum PolicyCommand {
+    /// List snapshot policies (default)
+    List {
+        /// Display type: json, yaml, tabular
+        #[structopt(short = "d", long = "display", default_value = "tabular")]
+        display_type: DisplayType,
+    },
+    /// Create or update snapshot policy
+    Create {
+        /// Filesystem to create a snapshot policy for
+        filesystem: String,
+        /// Automatic snapshot interval in human form, e. g. 1hour
+        #[structopt()]
+        interval: String,
+        /// Use barrier when creating snapshots
+        #[structopt(short = "b", long = "barrier")]
+        barrier: bool,
+        /// Number of recent snapshots to keep
+        #[structopt(short = "k", long = "keep")]
+        keep: i32,
+        /// Number of days when keep the most recent snapshot of each day
+        #[structopt(short = "d", long = "daily")]
+        daily: Option<i32>,
+        /// Number of weeks when keep the most recent snapshot of each week
+        #[structopt(short = "w", long = "weekly")]
+        weekly: Option<i32>,
+        /// Number of months when keep the most recent snapshot of each month
+        #[structopt(short = "m", long = "monthly")]
+        monthly: Option<i32>,
+    },
+    /// Remove snapshot policies
+    Remove {
+        /// Filesystem names to remove policies for
+        #[structopt(required = true, min_values = 1)]
+        filesystem: Vec<String>,
+    },
+}
+
+impl Default for PolicyCommand {
+    fn default() -> Self {
+        PolicyCommand::List {
+            display_type: DisplayType::Tabular,
+        }
+    }
+}
+
+#[derive(Debug, StructOpt)]
 pub enum SnapshotCommand {
     /// Create a snapshot
     Create(snapshot::Create),
@@ -89,6 +136,11 @@ pub enum SnapshotCommand {
     Interval(IntervalCommand),
     /// Snapshot retention rules operations
     Retention(RetentionCommand),
+    /// Automatic snapshot policies operations
+    Policy {
+        #[structopt(subcommand)]
+        command: Option<PolicyCommand>,
+    },
 }
 
 async fn interval_cli(cmd: IntervalCommand) -> Result<(), ImlManagerCliError> {
@@ -181,6 +233,60 @@ async fn retention_cli(cmd: RetentionCommand) -> Result<(), ImlManagerCliError> 
     }
 }
 
+async fn policy_cli(cmd: PolicyCommand) -> Result<(), ImlManagerCliError> {
+    match cmd {
+        PolicyCommand::List { display_type } => {
+            let query = snapshot_queries::policy::list::build();
+
+            let resp: iml_graphql_queries::Response<snapshot_queries::policy::list::Resp> =
+                graphql(query).await?;
+            let policies = Result::from(resp)?.data.snapshot_policies;
+
+            let x = policies.into_display_type(display_type);
+
+            let term = Term::stdout();
+            term.write_line(&x).unwrap();
+
+            Ok(())
+        }
+        PolicyCommand::Create {
+            filesystem,
+            interval,
+            barrier,
+            keep,
+            daily,
+            weekly,
+            monthly,
+        } => {
+            let query =
+                snapshot_queries::policy::create::build(snapshot_queries::policy::create::Vars {
+                    filesystem,
+                    interval,
+                    barrier: Some(barrier),
+                    keep,
+                    daily,
+                    weekly,
+                    monthly,
+                });
+
+            let _resp: iml_graphql_queries::Response<snapshot_queries::policy::create::Resp> =
+                graphql(query).await?;
+
+            Ok(())
+        }
+        PolicyCommand::Remove { filesystem } => {
+            for fs in filesystem {
+                let query = snapshot_queries::policy::remove::build(fs);
+
+                let _resp: iml_graphql_queries::Response<snapshot_queries::policy::remove::Resp> =
+                    graphql(query).await?;
+            }
+
+            Ok(())
+        }
+    }
+}
+
 pub async fn snapshot_cli(command: SnapshotCommand) -> Result<(), ImlManagerCliError> {
     match command {
         SnapshotCommand::List {
@@ -240,5 +346,6 @@ pub async fn snapshot_cli(command: SnapshotCommand) -> Result<(), ImlManagerCliE
         }
         SnapshotCommand::Interval(cmd) => interval_cli(cmd).await,
         SnapshotCommand::Retention(cmd) => retention_cli(cmd).await,
+        SnapshotCommand::Policy { command } => policy_cli(command.unwrap_or_default()).await,
     }
 }

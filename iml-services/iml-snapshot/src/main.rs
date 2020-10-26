@@ -8,7 +8,7 @@ use iml_manager_client::{Client as ManagerClient, Url};
 use iml_manager_env::{get_influxdb_addr, get_influxdb_metrics_db, get_pool_limit};
 use iml_postgres::{get_db_pool, sqlx};
 use iml_service_queue::service_queue::consume_data;
-use iml_snapshot::{client_monitor::tick, retention::handle_retention_rules, MonitorState};
+use iml_snapshot::{client_monitor::tick, policy, retention::handle_retention_rules, MonitorState};
 use iml_tracing::tracing;
 use iml_wire_types::snapshot;
 use std::collections::HashMap;
@@ -30,8 +30,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         consume_data::<HashMap<String, Vec<snapshot::Snapshot>>>(&ch, "rust_agent_snapshot_rx");
 
     let pool = get_db_pool(get_pool_limit().unwrap_or(DEFAULT_POOL_LIMIT)).await?;
-    let pool_2 = pool.clone();
-    let pool_3 = pool.clone();
 
     let manager_client: ManagerClient = iml_manager_client::get_client()?;
 
@@ -43,6 +41,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     sqlx::migrate!("../../migrations").run(&pool).await?;
 
+    let pool_2 = pool.clone();
     tokio::spawn(async move {
         let mut interval = interval(Duration::from_secs(60));
         let mut snapshot_client_counts: HashMap<i32, MonitorState> = HashMap::new();
@@ -56,10 +55,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     tokio::spawn(handle_retention_rules(
-        manager_client,
+        manager_client.clone(),
         influx_client,
-        pool_3.clone(),
+        pool.clone(),
     ));
+
+    tokio::spawn(policy::main(manager_client, pool.clone()));
 
     while let Some((fqdn, snap_map)) = s.try_next().await? {
         for (fs_name, snapshots) in snap_map {

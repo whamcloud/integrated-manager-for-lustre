@@ -689,6 +689,9 @@ fn handle_record_change(
                 ArcRecord::SnapshotRetention(x) => {
                     model.records.snapshot_retention.insert(x.id, Arc::clone(&x));
                 }
+                ArcRecord::SnapshotPolicy(x) => {
+                    model.records.snapshot_policy.insert(x.id, Arc::clone(&x));
+                }
                 ArcRecord::StratagemConfig(x) => {
                     model.records.stratagem_config.insert(x.id, Arc::clone(&x));
 
