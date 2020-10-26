@@ -11,7 +11,7 @@ use crate::{
         StratagemConfiguration, TargetRecord, VolumeNodeRecord, VolumeRecord,
     },
     sfa::{SfaController, SfaDiskDrive, SfaEnclosure, SfaJob, SfaPowerSupply, SfaStorageSystem},
-    snapshot::{SnapshotInterval, SnapshotRecord, SnapshotRetention},
+    snapshot::{SnapshotPolicy, SnapshotRecord},
     Alert, CompositeId, EndpointNameSelf, Filesystem, Host, Label, LockChange, ToCompositeId,
 };
 use im::{HashMap, HashSet};
@@ -110,8 +110,7 @@ pub struct Cache {
     pub sfa_storage_system: HashMap<i32, SfaStorageSystem>,
     pub sfa_controller: HashMap<i32, SfaController>,
     pub snapshot: HashMap<i32, SnapshotRecord>,
-    pub snapshot_interval: HashMap<i32, SnapshotInterval>,
-    pub snapshot_retention: HashMap<i32, SnapshotRetention>,
+    pub snapshot_policy: HashMap<i32, SnapshotPolicy>,
     pub stratagem_config: HashMap<i32, StratagemConfiguration>,
     pub target: HashMap<i32, ManagedTargetRecord>,
     pub target_record: HashMap<i32, TargetRecord>,
@@ -143,8 +142,7 @@ pub struct ArcCache {
     pub sfa_power_supply: HashMap<i32, Arc<SfaPowerSupply>>,
     pub sfa_controller: HashMap<i32, Arc<SfaController>>,
     pub snapshot: HashMap<i32, Arc<SnapshotRecord>>,
-    pub snapshot_interval: HashMap<i32, Arc<SnapshotInterval>>,
-    pub snapshot_retention: HashMap<i32, Arc<SnapshotRetention>>,
+    pub snapshot_policy: HashMap<i32, Arc<SnapshotPolicy>>,
     pub stratagem_config: HashMap<i32, Arc<StratagemConfiguration>>,
     pub target: HashMap<i32, Arc<ManagedTargetRecord>>,
     pub target_record: HashMap<i32, Arc<TargetRecord>>,
@@ -204,14 +202,9 @@ impl Cache {
                 .remove(&id)
                 .map(Record::StratagemConfig),
             RecordId::Snapshot(id) => self.snapshot.remove(&id).map(Record::Snapshot),
-            RecordId::SnapshotInterval(id) => self
-                .snapshot_interval
-                .remove(&id)
-                .map(Record::SnapshotInterval),
-            RecordId::SnapshotRetention(id) => self
-                .snapshot_retention
-                .remove(&id)
-                .map(Record::SnapshotRetention),
+            RecordId::SnapshotPolicy(id) => {
+                self.snapshot_policy.remove(&id).map(Record::SnapshotPolicy)
+            }
             RecordId::Target(id) => self.target.remove(&id).map(Record::Target),
             RecordId::TargetRecord(id) => self.target_record.remove(&id).map(Record::TargetRecord),
             RecordId::User(id) => self.user.remove(&id).map(Record::User),
@@ -280,11 +273,8 @@ impl Cache {
             Record::Snapshot(x) => {
                 self.snapshot.insert(x.id, x);
             }
-            Record::SnapshotInterval(x) => {
-                self.snapshot_interval.insert(x.id(), x);
-            }
-            Record::SnapshotRetention(x) => {
-                self.snapshot_retention.insert(x.id(), x);
+            Record::SnapshotPolicy(x) => {
+                self.snapshot_policy.insert(x.id(), x);
             }
             Record::StratagemConfig(x) => {
                 self.stratagem_config.insert(x.id(), x);
@@ -348,8 +338,7 @@ impl ArcCache {
             RecordId::SfaPowerSupply(id) => self.sfa_power_supply.remove(&id).is_some(),
             RecordId::SfaController(id) => self.sfa_controller.remove(&id).is_some(),
             RecordId::Snapshot(id) => self.snapshot.remove(&id).is_some(),
-            RecordId::SnapshotInterval(id) => self.snapshot_interval.remove(&id).is_some(),
-            RecordId::SnapshotRetention(id) => self.snapshot_retention.remove(&id).is_some(),
+            RecordId::SnapshotPolicy(id) => self.snapshot_policy.remove(&id).is_some(),
             RecordId::StratagemConfig(id) => self.stratagem_config.remove(&id).is_some(),
             RecordId::Target(id) => self.target.remove(&id).is_some(),
             RecordId::TargetRecord(id) => self.target_record.remove(&id).is_some(),
@@ -419,11 +408,8 @@ impl ArcCache {
             Record::Snapshot(x) => {
                 self.snapshot.insert(x.id, Arc::new(x));
             }
-            Record::SnapshotInterval(x) => {
-                self.snapshot_interval.insert(x.id, Arc::new(x));
-            }
-            Record::SnapshotRetention(x) => {
-                self.snapshot_retention.insert(x.id(), Arc::new(x));
+            Record::SnapshotPolicy(x) => {
+                self.snapshot_policy.insert(x.id(), Arc::new(x));
             }
             Record::StratagemConfig(x) => {
                 self.stratagem_config.insert(x.id(), Arc::new(x));
@@ -501,8 +487,7 @@ impl From<&Cache> for ArcCache {
             sfa_power_supply: hashmap_to_arc_hashmap(&cache.sfa_power_supply),
             sfa_controller: hashmap_to_arc_hashmap(&cache.sfa_controller),
             snapshot: hashmap_to_arc_hashmap(&cache.snapshot),
-            snapshot_interval: hashmap_to_arc_hashmap(&cache.snapshot_interval),
-            snapshot_retention: hashmap_to_arc_hashmap(&cache.snapshot_retention),
+            snapshot_policy: hashmap_to_arc_hashmap(&cache.snapshot_policy),
             stratagem_config: hashmap_to_arc_hashmap(&cache.stratagem_config),
             target: hashmap_to_arc_hashmap(&cache.target),
             target_record: hashmap_to_arc_hashmap(&cache.target_record),
@@ -536,8 +521,7 @@ impl From<&ArcCache> for Cache {
             sfa_power_supply: arc_hashmap_to_hashmap(&cache.sfa_power_supply),
             sfa_controller: arc_hashmap_to_hashmap(&cache.sfa_controller),
             snapshot: arc_hashmap_to_hashmap(&cache.snapshot),
-            snapshot_interval: arc_hashmap_to_hashmap(&cache.snapshot_interval),
-            snapshot_retention: arc_hashmap_to_hashmap(&cache.snapshot_retention),
+            snapshot_policy: arc_hashmap_to_hashmap(&cache.snapshot_policy),
             stratagem_config: arc_hashmap_to_hashmap(&cache.stratagem_config),
             target: arc_hashmap_to_hashmap(&cache.target),
             target_record: arc_hashmap_to_hashmap(&cache.target_record),
@@ -572,8 +556,7 @@ pub enum Record {
     SfaPowerSupply(SfaPowerSupply),
     SfaController(SfaController),
     Snapshot(SnapshotRecord),
-    SnapshotInterval(SnapshotInterval),
-    SnapshotRetention(SnapshotRetention),
+    SnapshotPolicy(SnapshotPolicy),
     StratagemConfig(StratagemConfiguration),
     Target(ManagedTargetRecord),
     TargetRecord(TargetRecord),
@@ -604,8 +587,7 @@ pub enum ArcRecord {
     SfaPowerSupply(Arc<SfaPowerSupply>),
     SfaController(Arc<SfaController>),
     Snapshot(Arc<SnapshotRecord>),
-    SnapshotInterval(Arc<SnapshotInterval>),
-    SnapshotRetention(Arc<SnapshotRetention>),
+    SnapshotPolicy(Arc<SnapshotPolicy>),
     StratagemConfig(Arc<StratagemConfiguration>),
     Target(Arc<ManagedTargetRecord>),
     TargetRecord(Arc<TargetRecord>),
@@ -638,8 +620,7 @@ impl From<Record> for ArcRecord {
             Record::SfaController(x) => Self::SfaController(Arc::new(x)),
             Record::StratagemConfig(x) => Self::StratagemConfig(Arc::new(x)),
             Record::Snapshot(x) => Self::Snapshot(Arc::new(x)),
-            Record::SnapshotInterval(x) => Self::SnapshotInterval(Arc::new(x)),
-            Record::SnapshotRetention(x) => Self::SnapshotRetention(Arc::new(x)),
+            Record::SnapshotPolicy(x) => Self::SnapshotPolicy(Arc::new(x)),
             Record::Target(x) => Self::Target(Arc::new(x)),
             Record::TargetRecord(x) => Self::TargetRecord(Arc::new(x)),
             Record::User(x) => Self::User(Arc::new(x)),
@@ -673,8 +654,7 @@ pub enum RecordId {
     SfaController(i32),
     StratagemConfig(i32),
     Snapshot(i32),
-    SnapshotInterval(i32),
-    SnapshotRetention(i32),
+    SnapshotPolicy(i32),
     Target(i32),
     TargetRecord(i32),
     User(i32),
@@ -706,8 +686,7 @@ impl From<&Record> for RecordId {
             Record::SfaController(x) => RecordId::SfaController(x.id),
             Record::StratagemConfig(x) => RecordId::StratagemConfig(x.id),
             Record::Snapshot(x) => RecordId::Snapshot(x.id),
-            Record::SnapshotInterval(x) => RecordId::SnapshotInterval(x.id),
-            Record::SnapshotRetention(x) => RecordId::SnapshotRetention(x.id),
+            Record::SnapshotPolicy(x) => RecordId::SnapshotPolicy(x.id),
             Record::Target(x) => RecordId::Target(x.id),
             Record::TargetRecord(x) => RecordId::TargetRecord(x.id),
             Record::User(x) => RecordId::User(x.id),
@@ -742,8 +721,7 @@ impl Deref for RecordId {
             | Self::SfaController(x)
             | Self::Snapshot(x)
             | Self::StratagemConfig(x)
-            | Self::SnapshotInterval(x)
-            | Self::SnapshotRetention(x)
+            | Self::SnapshotPolicy(x)
             | Self::Target(x)
             | Self::TargetRecord(x)
             | Self::User(x)

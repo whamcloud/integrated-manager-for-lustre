@@ -513,65 +513,6 @@
       "nullable": []
     }
   },
-  "17645262c426038efcc8e22bf999c0d3cee07f52c4e276a1b607e2e00b2e62bd": {
-    "query": "\n                SELECT\n                    id,\n                    filesystem_name,\n                    reserve_value,\n                    reserve_unit as \"reserve_unit:ReserveUnit\",\n                    last_run,\n                    keep_num\n                FROM snapshot_retention\n            ",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 1,
-          "name": "filesystem_name",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 2,
-          "name": "reserve_value",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 3,
-          "name": "reserve_unit:ReserveUnit",
-          "type_info": {
-            "Custom": {
-              "name": "snapshot_reserve_unit",
-              "kind": {
-                "Enum": [
-                  "percent",
-                  "gibibytes",
-                  "tebibytes"
-                ]
-              }
-            }
-          }
-        },
-        {
-          "ordinal": 4,
-          "name": "last_run",
-          "type_info": "Timestamptz"
-        },
-        {
-          "ordinal": 5,
-          "name": "keep_num",
-          "type_info": "Int4"
-        }
-      ],
-      "parameters": {
-        "Left": []
-      },
-      "nullable": [
-        false,
-        false,
-        false,
-        false,
-        true,
-        false
-      ]
-    }
-  },
   "17ed37ab2c915514b18cde4f0a1f3d2bf2eface63c4cb96e18155ab370fe39b6": {
     "query": "DELETE FROM chroma_core_serverprofile_repolist WHERE serverprofile_id = $1",
     "describe": {
@@ -1310,28 +1251,6 @@
       ]
     }
   },
-  "3a099c680488372f27c087f941161200360329a21145cf0fa22c81f3ec5ee2ef": {
-    "query": "\n                INSERT INTO snapshot_interval (\n                    filesystem_name,\n                    use_barrier,\n                    interval\n                )\n                VALUES ($1, $2, $3)\n                ON CONFLICT (filesystem_name, interval)\n                DO NOTHING\n                RETURNING id\n            ",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "id",
-          "type_info": "Int4"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "Text",
-          "Bool",
-          "Interval"
-        ]
-      },
-      "nullable": [
-        false
-      ]
-    }
-  },
   "3b1ddcee3dee96365325874c4ea32c832ffd74ab137399443052a0918d69f2ed": {
     "query": "\n                SELECT\n                    c.id AS id,\n                    cancelled,\n                    complete,\n                    errored,\n                    created_at,\n                    array_agg(cj.job_id)::INT[] AS job_ids,\n                    message\n                FROM chroma_core_command c\n                JOIN chroma_core_command_jobs cj ON c.id = cj.command_id\n                WHERE (c.id = ANY ($3::INT[]))\n                GROUP BY c.id\n                OFFSET $1 LIMIT $2\n            ",
     "describe": {
@@ -1600,107 +1519,6 @@
       },
       "nullable": [
         true
-      ]
-    }
-  },
-  "45e66b9722e3f0ea68049efc3ce9a52ac0ccc202cd82c415578337c4053c873b": {
-    "query": "\n                SELECT\n                    id,\n                    filesystem_name,\n                    reserve_value,\n                    reserve_unit as \"reserve_unit:snapshot::ReserveUnit\",\n                    last_run,\n                    keep_num\n                FROM snapshot_retention\n            ",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 1,
-          "name": "filesystem_name",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 2,
-          "name": "reserve_value",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 3,
-          "name": "reserve_unit:snapshot::ReserveUnit",
-          "type_info": {
-            "Custom": {
-              "name": "snapshot_reserve_unit",
-              "kind": {
-                "Enum": [
-                  "percent",
-                  "gibibytes",
-                  "tebibytes"
-                ]
-              }
-            }
-          }
-        },
-        {
-          "ordinal": 4,
-          "name": "last_run",
-          "type_info": "Timestamptz"
-        },
-        {
-          "ordinal": 5,
-          "name": "keep_num",
-          "type_info": "Int4"
-        }
-      ],
-      "parameters": {
-        "Left": []
-      },
-      "nullable": [
-        false,
-        false,
-        false,
-        false,
-        true,
-        false
-      ]
-    }
-  },
-  "46a7815b904eddf8c5b3f77e9c9623806ba3e0a0247080ac9900adaad6b3ce11": {
-    "query": "SELECT * FROM snapshot_interval",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 1,
-          "name": "filesystem_name",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 2,
-          "name": "use_barrier",
-          "type_info": "Bool"
-        },
-        {
-          "ordinal": 3,
-          "name": "last_run",
-          "type_info": "Timestamptz"
-        },
-        {
-          "ordinal": 4,
-          "name": "interval",
-          "type_info": "Interval"
-        }
-      ],
-      "parameters": {
-        "Left": []
-      },
-      "nullable": [
-        false,
-        false,
-        false,
-        true,
-        false
       ]
     }
   },
@@ -2475,6 +2293,24 @@
       ]
     }
   },
+  "71b25feb0a6f2f39d6cb50e81d252016d921aaed81798aa23e3805bffc6c0e77": {
+    "query": "\n                INSERT INTO snapshot_policy (\n                    filesystem,\n                    interval,\n                    barrier,\n                    keep,\n                    daily,\n                    weekly,\n                    monthly\n                )\n                VALUES ($1, $2, $3, $4, $5, $6, $7)\n                ON CONFLICT (filesystem)\n                DO UPDATE SET\n                    interval = EXCLUDED.interval,\n                    barrier = EXCLUDED.barrier,\n                    keep = EXCLUDED.keep,\n                    daily = EXCLUDED.daily,\n                    weekly = EXCLUDED.weekly,\n                    monthly = EXCLUDED.monthly\n            ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Text",
+          "Interval",
+          "Bool",
+          "Int4",
+          "Int4",
+          "Int4",
+          "Int4"
+        ]
+      },
+      "nullable": []
+    }
+  },
   "7b3791ee979b58b8930bdfbad40e0b3ffba6faafb16c54aa1dfd309320387ac2": {
     "query": "SELECT * FROM corosync_resource_bans",
     "describe": {
@@ -2839,6 +2675,72 @@
       ]
     }
   },
+  "82aa67ceef3e830c8a4f4739d8e02c2fce46906173bbc19dedcc324d0183628d": {
+    "query": "SELECT * FROM snapshot_policy",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "filesystem",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "interval",
+          "type_info": "Interval"
+        },
+        {
+          "ordinal": 3,
+          "name": "barrier",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 4,
+          "name": "keep",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 5,
+          "name": "daily",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 6,
+          "name": "weekly",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 7,
+          "name": "monthly",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 8,
+          "name": "last_run",
+          "type_info": "Timestamptz"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true
+      ]
+    }
+  },
   "857ec5f2517d25f901399ddfb8efa1ab3f73ed8c8f899692c071172b61179d1a": {
     "query": "select * from chroma_core_lnetconfiguration where not_deleted = 't'",
     "describe": {
@@ -3057,20 +2959,6 @@
       ]
     }
   },
-  "8ac87d0e2c016985d993de3824a253423b3aa038a1609a0eecc2562d1b4887aa": {
-    "query": "\n                UPDATE snapshot_interval\n                SET last_run=$1\n                WHERE id=$2 AND filesystem_name=$3\n            ",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": [
-          "Timestamptz",
-          "Int4",
-          "Text"
-        ]
-      },
-      "nullable": []
-    }
-  },
   "8b11d7745ec336638b333bc511166314f63619293bf8b3df15fd1df807e1ee9a": {
     "query": "SELECT id, message FROM chroma_core_alertstate WHERE lustre_pid = $1 ORDER BY id DESC LIMIT 1",
     "describe": {
@@ -3250,6 +3138,32 @@
       ]
     }
   },
+  "9225bc4f7185030de710bb86e0ef3a1bbbf9e8f96e08389a1d6743beffd3ee1c": {
+    "query": "\n            SELECT snapshot_name, create_time FROM snapshot\n            WHERE filesystem_name = $1\n            AND   snapshot_name LIKE '\\_\\_%'\n            ORDER BY create_time DESC\n            LIMIT 1\n        ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "snapshot_name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 1,
+          "name": "create_time",
+          "type_info": "Timestamptz"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      },
+      "nullable": [
+        false,
+        false
+      ]
+    }
+  },
   "922e7457db1e165807273def66a5ecc6b22be1a849f5e4b06d5149ec00b5e8aa": {
     "query": "\n                DELETE FROM chroma_core_logmessage\n                WHERE id in ( \n                    SELECT id FROM chroma_core_logmessage ORDER BY id LIMIT $1\n                )\n            ",
     "describe": {
@@ -3257,18 +3171,6 @@
       "parameters": {
         "Left": [
           "Int8"
-        ]
-      },
-      "nullable": []
-    }
-  },
-  "93e2695978ceecbebff40c31f2f58bf6fd5351869d3b279adc5ad1f7436a25e9": {
-    "query": "DELETE FROM snapshot_interval WHERE id=$1",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": [
-          "Int4"
         ]
       },
       "nullable": []
@@ -3324,68 +3226,6 @@
         true,
         false,
         true,
-        true
-      ]
-    }
-  },
-  "9bc21bd7e2f9506e3ae0cb80fd80e0fc95243470a9bedd1d728a860d7d6b408f": {
-    "query": "SELECT * FROM snapshot WHERE filesystem_name = $1 ORDER BY create_time ASC",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 1,
-          "name": "filesystem_name",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 2,
-          "name": "snapshot_name",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 3,
-          "name": "create_time",
-          "type_info": "Timestamptz"
-        },
-        {
-          "ordinal": 4,
-          "name": "modify_time",
-          "type_info": "Timestamptz"
-        },
-        {
-          "ordinal": 5,
-          "name": "snapshot_fsname",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 6,
-          "name": "mounted",
-          "type_info": "Bool"
-        },
-        {
-          "ordinal": 7,
-          "name": "comment",
-          "type_info": "Text"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "Text"
-        ]
-      },
-      "nullable": [
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
         true
       ]
     }
@@ -3505,6 +3345,19 @@
       ]
     }
   },
+  "a0e41b98f3319a78ac985a3e7c0d5204cdceb8fd0ceb04b69d58e50abecf16b7": {
+    "query": "UPDATE snapshot_policy SET last_run = $1 WHERE filesystem = $2",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Timestamptz",
+          "Text"
+        ]
+      },
+      "nullable": []
+    }
+  },
   "a3269a5f7c491a332facfcf86c576350f4b9e7c14638a26d0bd17daef52c0613": {
     "query": "SELECT\n            id,\n            index,\n            enclosure_index,\n            failed,\n            slot_number,\n            health_state as \"health_state: HealthState\",\n            health_state_reason,\n            member_index,\n            member_state as \"member_state: MemberState\",\n            storage_system\n        FROM chroma_core_sfadiskdrive\n        ",
     "describe": {
@@ -3572,6 +3425,32 @@
         false,
         false,
         true,
+        false,
+        false
+      ]
+    }
+  },
+  "a4916e07e7f17d6bddb11973898bdbd1d38c0f70d80f75897e2048209cf0df6f": {
+    "query": "\n            SELECT snapshot_name, create_time FROM snapshot\n            WHERE filesystem_name = $1\n            AND   snapshot_name LIKE '\\_\\_%'\n            ORDER BY create_time DESC\n        ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "snapshot_name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 1,
+          "name": "create_time",
+          "type_info": "Timestamptz"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      },
+      "nullable": [
         false,
         false
       ]
@@ -4375,18 +4254,6 @@
       "nullable": []
     }
   },
-  "c92c006232fff5c4ba37894b349d63142824fc0141a156f06114fa113ed36fa7": {
-    "query": "DELETE FROM snapshot_retention WHERE id=$1",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": [
-          "Int4"
-        ]
-      },
-      "nullable": []
-    }
-  },
   "c9f733dc3958a75b638d7c6f567e6fccf89575ac2ac3a43a14bf64978557d91c": {
     "query": "SELECT id, name, cluster_id, resource_agent, role, active, orphaned, managed,\n            failed, failure_ignored, nodes_running_on, (active_node).id AS active_node_id,\n            (active_node).name AS active_node_name, mount_point\n        FROM corosync_resource",
     "describe": {
@@ -4733,27 +4600,13 @@
       ]
     }
   },
-  "dc969e1cf438fc20baccd36a43cf7725bcf95cf758c6f08d5ce88bd4f378a71c": {
-    "query": "\n                INSERT INTO snapshot_retention (\n                    filesystem_name,\n                    reserve_value,\n                    reserve_unit,\n                    keep_num\n                )\n                VALUES ($1, $2, $3, $4)\n                ON CONFLICT (filesystem_name)\n                DO UPDATE SET\n                reserve_value = EXCLUDED.reserve_value,\n                reserve_unit = EXCLUDED.reserve_unit,\n                keep_num = EXCLUDED.keep_num\n            ",
+  "db6424e3d3d5c2c2aaa67ea58d21af22a5ac91586c057d6983e24aca31792ff9": {
+    "query": "DELETE FROM snapshot_policy WHERE filesystem = $1",
     "describe": {
       "columns": [],
       "parameters": {
         "Left": [
-          "Text",
-          "Int4",
-          {
-            "Custom": {
-              "name": "snapshot_reserve_unit",
-              "kind": {
-                "Enum": [
-                  "percent",
-                  "gibibytes",
-                  "tebibytes"
-                ]
-              }
-            }
-          },
-          "Int4"
+          "Text"
         ]
       },
       "nullable": []
@@ -4848,65 +4701,6 @@
         false,
         false,
         true,
-        true,
-        false
-      ]
-    }
-  },
-  "e211fee58a58a67ae21206e84802a76ce81d15f4a3573bcceb3ba55f32a282b1": {
-    "query": "\n        SELECT\n            id,\n            filesystem_name,\n            reserve_value,\n            reserve_unit as \"reserve_unit:ReserveUnit\",\n            last_run,\n            keep_num\n        FROM snapshot_retention\n    ",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 1,
-          "name": "filesystem_name",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 2,
-          "name": "reserve_value",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 3,
-          "name": "reserve_unit:ReserveUnit",
-          "type_info": {
-            "Custom": {
-              "name": "snapshot_reserve_unit",
-              "kind": {
-                "Enum": [
-                  "percent",
-                  "gibibytes",
-                  "tebibytes"
-                ]
-              }
-            }
-          }
-        },
-        {
-          "ordinal": 4,
-          "name": "last_run",
-          "type_info": "Timestamptz"
-        },
-        {
-          "ordinal": 5,
-          "name": "keep_num",
-          "type_info": "Int4"
-        }
-      ],
-      "parameters": {
-        "Left": []
-      },
-      "nullable": [
-        false,
-        false,
-        false,
-        false,
         true,
         false
       ]

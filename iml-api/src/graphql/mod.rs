@@ -3,29 +3,22 @@
 // license that can be found in the LICENSE file.
 
 mod filesystem;
+mod snapshot;
 mod stratagem;
 mod task;
 
-use crate::{
-    command::get_command,
-    error::ImlApiError,
-    timer::{configure_snapshot_timer, remove_snapshot_timer},
-};
+use crate::error::ImlApiError;
 use chrono::{DateTime, Utc};
 use futures::{
     future::{self, join_all},
     TryFutureExt, TryStreamExt,
 };
-use iml_postgres::{
-    active_mgs_host_fqdn, fqdn_by_host_id, sqlx, sqlx::postgres::types::PgInterval, PgPool,
-};
+use iml_postgres::{fqdn_by_host_id, sqlx, PgPool};
 use iml_rabbit::{ImlRabbitError, Pool};
 use iml_wire_types::{
     db::{LogMessageRecord, ServerProfileRecord, TargetRecord},
     graphql::{ServerProfile, ServerProfileInput},
-    graphql_duration::GraphQLDuration,
     logs::{LogResponse, Meta},
-    snapshot::{ReserveUnit, Snapshot, SnapshotInterval, SnapshotRetention},
     task::Task,
     Command, EndpointName, FsType, Job, LogMessage, LogSeverity, MessageClass, SortDir,
 };
@@ -36,7 +29,7 @@ use juniper::{
 };
 use std::{
     collections::{HashMap, HashSet},
-    convert::{Infallible, TryFrom as _, TryInto},
+    convert::{Infallible, TryInto},
     ops::Deref,
     sync::Arc,
 };
@@ -124,6 +117,9 @@ impl QueryRoot {
     }
     fn task(&self) -> task::TaskQuery {
         task::TaskQuery
+    }
+    fn snapshot(&self) -> snapshot::SnapshotQuery {
+        snapshot::SnapshotQuery
     }
     /// Given a host id, try to find the matching corosync node name
     #[graphql(arguments(host_id(description = "The id to search on")))]
@@ -294,47 +290,6 @@ impl QueryRoot {
         Ok(xs)
     }
 
-    #[graphql(arguments(
-        limit(description = "optional paging limit, defaults to all rows"),
-        offset(description = "Offset into items, defaults to 0"),
-        dir(description = "Sort direction, defaults to ASC"),
-        fsname(description = "Filesystem the snapshot was taken from"),
-        name(description = "Name of the snapshot"),
-    ))]
-    /// Fetch the list of snapshots
-    async fn snapshots(
-        context: &Context,
-        limit: Option<i32>,
-        offset: Option<i32>,
-        dir: Option<SortDir>,
-        fsname: String,
-        name: Option<String>,
-    ) -> juniper::FieldResult<Vec<Snapshot>> {
-        let dir = dir.unwrap_or_default();
-
-        let _ = fs_id_by_name(&context.pg_pool, &fsname).await?;
-
-        let snapshots = sqlx::query_as!(
-            Snapshot,
-                r#"
-                    SELECT filesystem_name, snapshot_name, create_time, modify_time, snapshot_fsname, mounted, comment FROM snapshot s
-                    WHERE filesystem_name = $4 AND ($5::text IS NULL OR snapshot_name = $5)
-                    ORDER BY
-                        CASE WHEN $3 = 'ASC' THEN s.create_time END ASC,
-                        CASE WHEN $3 = 'DESC' THEN s.create_time END DESC
-                    OFFSET $1 LIMIT $2"#,
-                offset.unwrap_or(0) as i64,
-                limit.map(|x| x as i64),
-                dir.deref(),
-                fsname,
-                name,
-            )
-            .fetch_all(&context.pg_pool)
-            .await?;
-
-        Ok(snapshots)
-    }
-
     /// Fetch the list of commands
     #[graphql(arguments(
         limit(description = "optional paging limit, defaults to all rows"),
@@ -439,47 +394,6 @@ impl QueryRoot {
             .collect::<Vec<Option<Command>>>();
 
         Ok(commands)
-    }
-
-    /// List all snapshot intervals
-    async fn snapshot_intervals(context: &Context) -> juniper::FieldResult<Vec<SnapshotInterval>> {
-        let xs: Vec<SnapshotInterval> = sqlx::query!("SELECT * FROM snapshot_interval")
-            .fetch(&context.pg_pool)
-            .map_ok(|x| SnapshotInterval {
-                id: x.id,
-                filesystem_name: x.filesystem_name,
-                use_barrier: x.use_barrier,
-                interval: x.interval.into(),
-                last_run: x.last_run,
-            })
-            .try_collect()
-            .await?;
-
-        Ok(xs)
-    }
-    /// List all snapshot retention policies. Snapshots will automatically be deleted (starting with the oldest)
-    /// when free space falls below the defined reserve value and its associated unit.
-    async fn snapshot_retention_policies(
-        context: &Context,
-    ) -> juniper::FieldResult<Vec<SnapshotRetention>> {
-        let xs: Vec<SnapshotRetention> = sqlx::query_as!(
-            SnapshotRetention,
-            r#"
-                SELECT
-                    id,
-                    filesystem_name,
-                    reserve_value,
-                    reserve_unit as "reserve_unit:ReserveUnit",
-                    last_run,
-                    keep_num
-                FROM snapshot_retention
-            "#
-        )
-        .fetch(&context.pg_pool)
-        .try_collect()
-        .await?;
-
-        Ok(xs)
     }
 
     #[graphql(arguments(
@@ -643,28 +557,6 @@ impl QueryRoot {
     }
 }
 
-struct SnapshotIntervalName {
-    id: i32,
-    fs_name: String,
-    timestamp: DateTime<Utc>,
-}
-
-fn parse_snapshot_name(name: &str) -> Option<SnapshotIntervalName> {
-    match name.trim().splitn(3, '-').collect::<Vec<&str>>().as_slice() {
-        [id, fs, ts] => {
-            let ts = ts.parse::<DateTime<Utc>>().ok()?;
-            let id = id.parse::<i32>().ok()?;
-
-            Some(SnapshotIntervalName {
-                id,
-                fs_name: fs.to_string(),
-                timestamp: ts,
-            })
-        }
-        _ => None,
-    }
-}
-
 pub(crate) struct MutationRoot;
 
 #[juniper::graphql_object(Context = Context)]
@@ -678,328 +570,8 @@ impl MutationRoot {
     fn task(&self) -> task::TaskMutation {
         task::TaskMutation
     }
-    #[graphql(arguments(
-        fsname(description = "Filesystem to snapshot"),
-        name(description = "Name of the snapshot"),
-        comment(description = "A description for the purpose of the snapshot"),
-        use_barrier(
-            description = "Set write barrier before creating snapshot. The default value is `false`"
-        )
-    ))]
-    /// Creates a snapshot of an existing Lustre filesystem. Returns a `Command` to track progress.
-    /// For the `Command` to succeed, the filesystem being snapshoted must be available.
-    async fn create_snapshot(
-        context: &Context,
-        fsname: String,
-        name: String,
-        comment: Option<String>,
-        use_barrier: Option<bool>,
-    ) -> juniper::FieldResult<Command> {
-        let _ = fs_id_by_name(&context.pg_pool, &fsname).await?;
-        let name = name.trim();
-        validate_snapshot_name(name)?;
-
-        let snapshot_interval_name = parse_snapshot_name(name);
-        if let Some(data) = snapshot_interval_name {
-            sqlx::query!(
-                r#"
-                UPDATE snapshot_interval
-                SET last_run=$1
-                WHERE id=$2 AND filesystem_name=$3
-            "#,
-                data.timestamp,
-                data.id,
-                data.fs_name,
-            )
-            .execute(&context.pg_pool)
-            .await?;
-        }
-
-        let active_mgs_host_fqdn = active_mgs_host_fqdn(&fsname, &context.pg_pool)
-            .await?
-            .ok_or_else(|| {
-                FieldError::new("Filesystem not found or MGS is not mounted", Value::null())
-            })?;
-
-        let kwargs: HashMap<String, String> = vec![("message".into(), "Creating snapshot".into())]
-            .into_iter()
-            .collect();
-
-        let jobs = serde_json::json!([{
-            "class_name": "CreateSnapshotJob",
-            "args": {
-                "fsname": fsname,
-                "name": name,
-                "comment": comment,
-                "fqdn": active_mgs_host_fqdn,
-                "use_barrier": use_barrier.unwrap_or(false),
-            }
-        }]);
-        let command_id: i32 = iml_job_scheduler_rpc::call(
-            &context.rabbit_pool.get().await?,
-            "run_jobs",
-            vec![jobs],
-            Some(kwargs),
-        )
-        .map_err(ImlApiError::ImlJobSchedulerRpcError)
-        .await?;
-
-        let command = get_command(&context.pg_pool, command_id).await?;
-
-        Ok(command)
-    }
-    #[graphql(arguments(
-        fsname(description = "Filesystem snapshot was taken from"),
-        name(description = "Name of the snapshot"),
-        force(description = "Destroy the snapshot by force"),
-    ))]
-    /// Destroys an existing snapshot of an existing Lustre filesystem. Returns a `Command` to track progress.
-    /// For the `Command` to succeed, the filesystem must be available.
-    async fn destroy_snapshot(
-        context: &Context,
-        fsname: String,
-        name: String,
-        force: bool,
-    ) -> juniper::FieldResult<Command> {
-        let _ = fs_id_by_name(&context.pg_pool, &fsname).await?;
-        let name = name.trim();
-        validate_snapshot_name(name)?;
-
-        let active_mgs_host_fqdn = active_mgs_host_fqdn(&fsname, &context.pg_pool)
-            .await?
-            .ok_or_else(|| {
-                FieldError::new("Filesystem not found or MGS is not mounted", Value::null())
-            })?;
-
-        let kwargs: HashMap<String, String> =
-            vec![("message".into(), "Destroying snapshot".into())]
-                .into_iter()
-                .collect();
-
-        let jobs = serde_json::json!([{
-            "class_name": "DestroySnapshotJob",
-            "args": {
-                "fsname": fsname,
-                "name": name,
-                "force": force,
-                "fqdn": active_mgs_host_fqdn,
-            }
-        }]);
-        let command_id: i32 = iml_job_scheduler_rpc::call(
-            &context.rabbit_pool.get().await?,
-            "run_jobs",
-            vec![jobs],
-            Some(kwargs),
-        )
-        .map_err(ImlApiError::ImlJobSchedulerRpcError)
-        .await?;
-
-        let command = get_command(&context.pg_pool, command_id).await?;
-
-        Ok(command)
-    }
-    #[graphql(arguments(
-        fsname(description = "Filesystem snapshot was taken from"),
-        name(description = "Name of the snapshot"),
-    ))]
-    /// Mounts an existing snapshot of an existing Lustre filesystem. Returns a `Command` to track progress.
-    /// For the `Command` to succeed, the filesystem must be available.
-    async fn mount_snapshot(
-        context: &Context,
-        fsname: String,
-        name: String,
-    ) -> juniper::FieldResult<Command> {
-        let name = name.trim();
-        validate_snapshot_name(name)?;
-
-        let active_mgs_host_fqdn = active_mgs_host_fqdn(&fsname, &context.pg_pool)
-            .await?
-            .ok_or_else(|| {
-                FieldError::new("Filesystem not found or MGS is not mounted", Value::null())
-            })?;
-
-        let kwargs: HashMap<String, String> = vec![("message".into(), "Mounting snapshot".into())]
-            .into_iter()
-            .collect();
-
-        let jobs = serde_json::json!([{
-            "class_name": "MountSnapshotJob",
-            "args": {
-                "fsname": fsname,
-                "name": name,
-                "fqdn": active_mgs_host_fqdn,
-            }
-        }]);
-        let command_id: i32 = iml_job_scheduler_rpc::call(
-            &context.rabbit_pool.get().await?,
-            "run_jobs",
-            vec![jobs],
-            Some(kwargs),
-        )
-        .map_err(ImlApiError::ImlJobSchedulerRpcError)
-        .await?;
-
-        get_command(&context.pg_pool, command_id)
-            .await
-            .map_err(|e| e.into())
-    }
-    #[graphql(arguments(
-        fsname(description = "Filesystem snapshot was taken from"),
-        name(description = "Name of the snapshot"),
-    ))]
-    /// Unmounts an existing snapshot of an existing Lustre filesystem. Returns a `Command` to track progress.
-    /// For the `Command` to succeed, the filesystem must be available.
-    async fn unmount_snapshot(
-        context: &Context,
-        fsname: String,
-        name: String,
-    ) -> juniper::FieldResult<Command> {
-        let _ = fs_id_by_name(&context.pg_pool, &fsname).await?;
-        let name = name.trim();
-        validate_snapshot_name(name)?;
-
-        let active_mgs_host_fqdn = active_mgs_host_fqdn(&fsname, &context.pg_pool)
-            .await?
-            .ok_or_else(|| {
-                FieldError::new("Filesystem not found or MGS is not mounted", Value::null())
-            })?;
-
-        let kwargs: HashMap<String, String> =
-            vec![("message".into(), "Unmounting snapshot".into())]
-                .into_iter()
-                .collect();
-
-        let jobs = serde_json::json!([{
-            "class_name": "UnmountSnapshotJob",
-            "args": {
-                "fsname": fsname,
-                "name": name,
-                "fqdn": active_mgs_host_fqdn,
-            }
-        }]);
-        let command_id: i32 = iml_job_scheduler_rpc::call(
-            &context.rabbit_pool.get().await?,
-            "run_jobs",
-            vec![jobs],
-            Some(kwargs),
-        )
-        .map_err(ImlApiError::ImlJobSchedulerRpcError)
-        .await?;
-
-        get_command(&context.pg_pool, command_id)
-            .await
-            .map_err(|e| e.into())
-    }
-    #[graphql(arguments(
-        fsname(description = "The filesystem to create snapshots with"),
-        interval(description = "How often a snapshot should be taken"),
-        use_barrier(
-            description = "Set write barrier before creating snapshot. The default value is `false`"
-        ),
-    ))]
-    /// Creates a new snapshot interval.
-    /// A recurring snapshot will be taken once the given `interval` expires for the given `fsname`.
-    /// In order for the snapshot to be successful, the filesystem must be available.
-    async fn create_snapshot_interval(
-        context: &Context,
-        fsname: String,
-        interval: GraphQLDuration,
-        use_barrier: Option<bool>,
-    ) -> juniper::FieldResult<bool> {
-        let _ = fs_id_by_name(&context.pg_pool, &fsname).await?;
-        let maybe_id = sqlx::query!(
-            r#"
-                INSERT INTO snapshot_interval (
-                    filesystem_name,
-                    use_barrier,
-                    interval
-                )
-                VALUES ($1, $2, $3)
-                ON CONFLICT (filesystem_name, interval)
-                DO NOTHING
-                RETURNING id
-            "#,
-            fsname,
-            use_barrier.unwrap_or_default(),
-            PgInterval::try_from(interval.0)?,
-        )
-        .fetch_optional(&context.pg_pool)
-        .await?
-        .map(|x| x.id);
-
-        if let Some(id) = maybe_id {
-            configure_snapshot_timer(id, fsname, interval.0, use_barrier.unwrap_or_default())
-                .await?;
-        }
-
-        Ok(true)
-    }
-    /// Removes an existing snapshot interval.
-    /// This will also cancel any outstanding intervals scheduled by this rule.
-    #[graphql(arguments(id(description = "The snapshot interval id"),))]
-    async fn remove_snapshot_interval(context: &Context, id: i32) -> juniper::FieldResult<bool> {
-        sqlx::query!("DELETE FROM snapshot_interval WHERE id=$1", id)
-            .execute(&context.pg_pool)
-            .await?;
-
-        remove_snapshot_timer(id).await?;
-
-        Ok(true)
-    }
-    #[graphql(arguments(
-        fsname(description = "Filesystem name"),
-        reserve_value(
-            description = "Delete the oldest snapshot when available space falls below this value"
-        ),
-        reserve_unit(description = "The unit of measurement associated with the reserve_value"),
-        keep_num(
-            description = "The minimum number of snapshots to keep. This is to avoid deleting all snapshots while pursuiting the reserve goal"
-        )
-    ))]
-    /// Creates a new snapshot retention policy for the given `fsname`.
-    /// Snapshots will automatically be deleted (starting with the oldest)
-    /// when free space falls below the defined reserve value and its associated unit.
-    async fn create_snapshot_retention(
-        context: &Context,
-        fsname: String,
-        reserve_value: i32,
-        reserve_unit: ReserveUnit,
-        keep_num: Option<i32>,
-    ) -> juniper::FieldResult<bool> {
-        let _ = fs_id_by_name(&context.pg_pool, &fsname).await?;
-        sqlx::query!(
-            r#"
-                INSERT INTO snapshot_retention (
-                    filesystem_name,
-                    reserve_value,
-                    reserve_unit,
-                    keep_num
-                )
-                VALUES ($1, $2, $3, $4)
-                ON CONFLICT (filesystem_name)
-                DO UPDATE SET
-                reserve_value = EXCLUDED.reserve_value,
-                reserve_unit = EXCLUDED.reserve_unit,
-                keep_num = EXCLUDED.keep_num
-            "#,
-            fsname,
-            reserve_value,
-            reserve_unit as ReserveUnit,
-            keep_num.unwrap_or(0)
-        )
-        .execute(&context.pg_pool)
-        .await?;
-
-        Ok(true)
-    }
-    /// Remove an existing snapshot retention policy.
-    #[graphql(arguments(id(description = "The snapshot retention policy id")))]
-    async fn remove_snapshot_retention(context: &Context, id: i32) -> juniper::FieldResult<bool> {
-        sqlx::query!("DELETE FROM snapshot_retention WHERE id=$1", id)
-            .execute(&context.pg_pool)
-            .await?;
-
-        Ok(true)
+    fn snapshot(&self) -> snapshot::SnapshotMutation {
+        snapshot::SnapshotMutation
     }
 
     /// Create a server profile.
@@ -1137,6 +709,25 @@ impl MutationRoot {
         .await?;
 
         transaction.commit().await?;
+        Ok(true)
+    }
+
+    #[graphql(arguments(
+        filesystem(description = "The filesystem to remove snapshot policies for"),
+        id(description = "Id of the policy to remove"),
+    ))]
+    /// Removes the automatic snapshot policy.
+    async fn remove_snapshot_policy(
+        context: &Context,
+        filesystem: String,
+    ) -> juniper::FieldResult<bool> {
+        sqlx::query!(
+            "DELETE FROM snapshot_policy WHERE filesystem = $1",
+            filesystem
+        )
+        .execute(&context.pg_pool)
+        .await?;
+
         Ok(true)
     }
 }
@@ -1340,32 +931,6 @@ async fn get_banned_resources(pool: &PgPool) -> Result<Vec<BannedResource>, ImlA
     .await?;
 
     Ok(xs)
-}
-
-fn validate_snapshot_name(x: &str) -> Result<(), FieldError> {
-    if x.contains(' ') {
-        Err(FieldError::new(
-            "Snapshot name cannot contain spaces",
-            Value::null(),
-        ))
-    } else if x.contains('*') {
-        Err(FieldError::new(
-            "Snapshot name cannot contain * character",
-            Value::null(),
-        ))
-    } else if x.contains('/') {
-        Err(FieldError::new(
-            "Snapshot name cannot contain / character",
-            Value::null(),
-        ))
-    } else if x.contains('&') {
-        Err(FieldError::new(
-            "Snapshot name cannot contain & character",
-            Value::null(),
-        ))
-    } else {
-        Ok(())
-    }
 }
 
 async fn fs_id_by_name(pool: &PgPool, name: &str) -> Result<i32, juniper::FieldError> {
