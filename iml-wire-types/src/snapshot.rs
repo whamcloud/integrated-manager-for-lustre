@@ -9,7 +9,6 @@ use crate::{
     graphql_duration::GraphQLDuration,
 };
 use chrono::{offset::Utc, DateTime};
-use std::str::FromStr;
 #[cfg(feature = "cli")]
 use structopt::StructOpt;
 
@@ -59,77 +58,64 @@ impl Id for SnapshotRecord {
 pub const SNAPSHOT_TABLE_NAME: TableName = TableName("snapshot");
 
 #[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
-#[derive(serde::Deserialize, serde::Serialize, Clone, PartialEq, Debug)]
-/// A Snapshot interval
-pub struct SnapshotInterval {
+#[derive(serde::Deserialize, serde::Serialize, Eq, Clone, Debug)]
+/// Automatic snapshot policy
+pub struct SnapshotPolicy {
     /// The configuration id
     pub id: i32,
     /// The filesystem name
-    pub filesystem_name: String,
-    /// Use a write barrier
-    pub use_barrier: bool,
+    pub filesystem: String,
     /// The interval configuration
     pub interval: GraphQLDuration,
-    // Last known run
+    /// Preferred time to start creating automatic snapshots at
+    pub start: Option<DateTime<Utc>>,
+    /// Use a write barrier
+    pub barrier: bool,
+    /// Number of recent snapshots to keep
+    pub keep: i32,
+    /// The number of days when keep the most recent snapshot of each day
+    pub daily: i32,
+    /// The number of weeks when keep the most recent snapshot of each week
+    pub weekly: i32,
+    /// The number of months when keep the most recent snapshot of each month
+    pub monthly: i32,
+    /// Last known run
     pub last_run: Option<DateTime<Utc>>,
 }
 
-impl Id for SnapshotInterval {
+impl PartialEq for SnapshotPolicy {
+    fn eq(&self, other: &Self) -> bool {
+        self.filesystem == other.filesystem
+            && self.interval == other.interval
+            && self.start == other.start
+            && self.barrier == other.barrier
+            && self.keep == other.keep
+            && self.daily == other.daily
+            && self.weekly == other.weekly
+            && self.monthly == other.monthly
+    }
+}
+
+impl std::hash::Hash for SnapshotPolicy {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.filesystem.hash(state);
+        self.interval.hash(state);
+        self.start.hash(state);
+        self.barrier.hash(state);
+        self.keep.hash(state);
+        self.daily.hash(state);
+        self.weekly.hash(state);
+        self.monthly.hash(state);
+    }
+}
+
+impl Id for SnapshotPolicy {
     fn id(&self) -> i32 {
         self.id
     }
 }
 
-pub const SNAPSHOT_INTERVAL_TABLE_NAME: TableName = TableName("snapshot_interval");
-
-#[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
-#[derive(serde::Deserialize, serde::Serialize, Clone, PartialEq, Debug)]
-pub struct SnapshotRetention {
-    pub id: i32,
-    pub filesystem_name: String,
-    /// Amount or percent of free space to reserve
-    pub reserve_value: i32,
-    pub reserve_unit: ReserveUnit,
-    /// Minimum number of snapshots to keep
-    pub keep_num: i32,
-    pub last_run: Option<DateTime<Utc>>,
-}
-
-impl Id for SnapshotRetention {
-    fn id(&self) -> i32 {
-        self.id
-    }
-}
-
-pub const SNAPSHOT_RETENTION_TABLE_NAME: TableName = TableName("snapshot_retention");
-
-#[cfg_attr(feature = "graphql", derive(juniper::GraphQLEnum))]
-#[cfg_attr(feature = "postgres-interop", derive(sqlx::Type))]
-#[cfg_attr(feature = "postgres-interop", sqlx(rename = "snapshot_reserve_unit"))]
-#[cfg_attr(feature = "postgres-interop", sqlx(rename_all = "lowercase"))]
-#[derive(serde::Deserialize, serde::Serialize, Clone, Copy, PartialEq, Debug)]
-#[serde(rename_all = "lowercase")]
-pub enum ReserveUnit {
-    #[cfg_attr(feature = "graphql", graphql(name = "percent"))]
-    Percent,
-    #[cfg_attr(feature = "graphql", graphql(name = "gibibytes"))]
-    Gibibytes,
-    #[cfg_attr(feature = "graphql", graphql(name = "tebibytes"))]
-    Tebibytes,
-}
-
-impl FromStr for ReserveUnit {
-    type Err = String;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_lowercase().as_str() {
-            "%" | "percent" => Ok(Self::Percent),
-            "gib" | "g" | "gibibytes" => Ok(Self::Gibibytes),
-            "tib" | "t" | "tebibytes" => Ok(Self::Tebibytes),
-            x => Err(format!("Unexpected '{}'", x)),
-        }
-    }
-}
+pub const SNAPSHOT_POLICY_TABLE_NAME: TableName = TableName("snapshot_policy");
 
 #[derive(serde::Deserialize, Debug)]
 #[cfg_attr(feature = "cli", derive(StructOpt))]

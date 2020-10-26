@@ -36,7 +36,7 @@ pub struct Location {
 pub struct Error {
     message: String,
     locations: Vec<Location>,
-    path: Vec<String>,
+    path: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone, serde::Deserialize)]

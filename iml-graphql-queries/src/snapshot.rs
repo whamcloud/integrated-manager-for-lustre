@@ -2,25 +2,32 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+#[derive(Debug, Clone, serde::Deserialize)]
+pub struct Resp<T> {
+    pub snapshot: T,
+}
+
 pub mod create {
     use crate::Query;
     use iml_wire_types::Command;
 
     pub static QUERY: &str = r#"
-            mutation CreateSnapshot($fsname: String!, $name: String!, $comment: String, $use_barrier: Boolean) {
-              createSnapshot(fsname: $fsname, name: $name, comment: $comment, useBarrier: $use_barrier) {
-                cancelled
-                complete
-                created_at: createdAt
-                errored
-                id
-                jobs
-                logs
-                message
-                resource_uri: resourceUri
-              }
+        mutation CreateSnapshot($fsname: String!, $name: String!, $comment: String, $use_barrier: Boolean) {
+            snapshot {
+                createSnapshot(fsname: $fsname, name: $name, comment: $comment, useBarrier: $use_barrier) {
+                    cancelled
+                    complete
+                    created_at: createdAt
+                    errored
+                    id
+                    jobs
+                    logs
+                    message
+                    resource_uri: resourceUri
+                }
             }
-        "#;
+        }
+    "#;
 
     #[derive(Debug, serde::Serialize)]
     pub struct Vars {
@@ -48,10 +55,12 @@ pub mod create {
     }
 
     #[derive(Debug, Clone, serde::Deserialize)]
-    pub struct Resp {
+    pub struct CreateSnapshot {
         #[serde(rename(deserialize = "createSnapshot"))]
-        pub create_snapshot: Command,
+        pub create: Command,
     }
+
+    pub type Resp = super::Resp<CreateSnapshot>;
 }
 
 pub mod destroy {
@@ -60,16 +69,18 @@ pub mod destroy {
 
     pub static QUERY: &str = r#"
         mutation DestroySnapshot($fsname: String!, $name: String!, $force: Boolean!) {
-            destroySnapshot(fsname: $fsname, name: $name, force: $force) {
-                cancelled
-                complete
-                created_at: createdAt
-                errored
-                id
-                jobs
-                logs
-                message
-                resource_uri: resourceUri
+            snapshot {
+                destroySnapshot(fsname: $fsname, name: $name, force: $force) {
+                    cancelled
+                    complete
+                    created_at: createdAt
+                    errored
+                    id
+                    jobs
+                    logs
+                    message
+                    resource_uri: resourceUri
+                }
             }
         }
     "#;
@@ -93,10 +104,12 @@ pub mod destroy {
     }
 
     #[derive(Debug, Clone, serde::Deserialize)]
-    pub struct Resp {
+    pub struct DestroySnapshot {
         #[serde(rename(deserialize = "destroySnapshot"))]
-        pub destroy_snapshot: Command,
+        pub destroy: Command,
     }
+
+    pub type Resp = super::Resp<DestroySnapshot>;
 }
 
 pub mod mount {
@@ -105,17 +118,19 @@ pub mod mount {
 
     pub static QUERY: &str = r#"
         mutation MountSnapshot($fsname: String!, $name: String!) {
-          mountSnapshot(fsname: $fsname, name: $name) {
-            cancelled
-            complete
-            created_at: createdAt
-            errored
-            id
-            jobs
-            logs
-            message
-            resource_uri: resourceUri
-          }
+            snapshot {
+                mountSnapshot(fsname: $fsname, name: $name) {
+                    cancelled
+                    complete
+                    created_at: createdAt
+                    errored
+                    id
+                    jobs
+                    logs
+                    message
+                    resource_uri: resourceUri
+                }
+            }
         }
     "#;
 
@@ -136,10 +151,12 @@ pub mod mount {
     }
 
     #[derive(Debug, Clone, serde::Deserialize)]
-    pub struct Resp {
+    pub struct MountSnapshot {
         #[serde(rename(deserialize = "mountSnapshot"))]
-        pub mount_snapshot: Command,
+        pub mount: Command,
     }
+
+    pub type Resp = super::Resp<MountSnapshot>;
 }
 
 pub mod unmount {
@@ -148,17 +165,19 @@ pub mod unmount {
 
     pub static QUERY: &str = r#"
         mutation UnmountSnapshot($fsname: String!, $name: String!) {
-          unmountSnapshot(fsname: $fsname, name: $name) {
-            cancelled
-            complete
-            created_at: createdAt
-            errored
-            id
-            jobs
-            logs
-            message
-            resource_uri: resourceUri
-          }
+            snapshot {
+                unmountSnapshot(fsname: $fsname, name: $name) {
+                    cancelled
+                    complete
+                    created_at: createdAt
+                    errored
+                    id
+                    jobs
+                    logs
+                    message
+                    resource_uri: resourceUri
+                }
+            }
         }
     "#;
 
@@ -179,10 +198,12 @@ pub mod unmount {
     }
 
     #[derive(Debug, Clone, serde::Deserialize)]
-    pub struct Resp {
+    pub struct UnmountSnapshot {
         #[serde(rename(deserialize = "unmountSnapshot"))]
-        pub unmount_snapshot: Command,
+        pub unmount: Command,
     }
+
+    pub type Resp = super::Resp<UnmountSnapshot>;
 }
 
 pub mod list {
@@ -191,15 +212,17 @@ pub mod list {
 
     pub static QUERY: &str = r#"
         query Snapshots($fsname: String!, $name: String, $dir: SortDir, $offset: Int, $limit: Int) {
-          snapshots(fsname: $fsname, name: $name, dir: $dir, offset: $offset, limit: $limit) {
-            comment
-            create_time: createTime
-            filesystem_name: filesystemName
-            modify_time: modifyTime
-            mounted
-            snapshot_fsname: snapshotFsname
-            snapshot_name: snapshotName
-          }
+            snapshot {
+                  snapshots(fsname: $fsname, name: $name, dir: $dir, offset: $offset, limit: $limit) {
+                    comment
+                    create_time: createTime
+                    filesystem_name: filesystemName
+                    modify_time: modifyTime
+                    mounted
+                    snapshot_fsname: snapshotFsname
+                    snapshot_name: snapshotName
+                  }
+            }
         }
     "#;
 
@@ -232,211 +255,126 @@ pub mod list {
     }
 
     #[derive(Debug, Clone, serde::Deserialize)]
-    pub struct Resp {
+    pub struct ListSnapshots {
         #[serde(rename(deserialize = "snapshots"))]
         pub snapshots: Vec<Snapshot>,
     }
+
+    pub type Resp = super::Resp<ListSnapshots>;
 }
 
-pub mod create_interval {
-    use crate::Query;
+pub mod policy {
+    pub mod list {
+        use crate::Query;
+        use iml_wire_types::snapshot::SnapshotPolicy;
 
-    pub static QUERY: &str = r#"
-        mutation CreateSnapshotInterval($fsname: String!, $interval: Duration!, $use_barrier: Boolean) {
-            createSnapshotInterval(fsname: $fsname, interval: $interval, useBarrier: $use_barrier)
+        pub static QUERY: &str = r#"
+            query SnapshotPolicies {
+                snapshot {
+                      snapshotPolicies {
+                        id
+                        filesystem
+                        interval
+                        start
+                        barrier
+                        keep
+                        daily
+                        weekly
+                        monthly
+                        last_run: lastRun
+                      }
+                }
+            }
+        "#;
+
+        pub fn build() -> Query<()> {
+            Query {
+                query: QUERY.to_string(),
+                variables: None,
+            }
         }
-    "#;
 
-    #[derive(Debug, serde::Serialize)]
-    pub struct Vars {
-        fsname: String,
-        interval: String,
-        use_barrier: Option<bool>,
-    }
-
-    pub fn build(
-        fsname: impl ToString,
-        interval: String,
-        use_barrier: Option<bool>,
-    ) -> Query<Vars> {
-        Query {
-            query: QUERY.to_string(),
-            variables: Some(Vars {
-                fsname: fsname.to_string(),
-                interval,
-                use_barrier,
-            }),
+        #[derive(Debug, Clone, serde::Deserialize)]
+        pub struct ListPolicies {
+            #[serde(rename(deserialize = "snapshotPolicies"))]
+            pub policies: Vec<SnapshotPolicy>,
         }
+
+        pub type Resp = super::super::Resp<ListPolicies>;
     }
 
-    #[derive(Debug, Clone, serde::Deserialize)]
-    pub struct Resp {
-        #[serde(rename(deserialize = "createSnapshotInterval"))]
-        pub create_snapshot_interval: bool,
-    }
-}
+    pub mod create {
+        use crate::Query;
 
-pub mod remove_interval {
-    use crate::Query;
+        pub static QUERY: &str = r#"
+            mutation CreateSnapshotPolicy($filesystem: String!, $interval: Duration!, $barrier: Boolean, $start: DateTimeUtc,
+                                          $keep: Int!, $daily: Int, $weekly: Int, $monthly: Int) {
+                snapshot {
+                    createSnapshotPolicy(filesystem: $filesystem, interval: $interval, barrier: $barrier, start: $start,
+                                            keep: $keep, daily: $daily, weekly: $weekly, monthly: $monthly)
+                }
+            }
+        "#;
 
-    pub static QUERY: &str = r#"
-        mutation RemoveSnapshotInterval($id: Int!) {
-          removeSnapshotInterval(id: $id)
+        #[derive(Debug, serde::Serialize, Default, Clone)]
+        pub struct Vars {
+            pub filesystem: String,
+            pub interval: String,
+            pub start: Option<String>,
+            pub barrier: Option<bool>,
+            pub keep: i32,
+            pub daily: Option<i32>,
+            pub weekly: Option<i32>,
+            pub monthly: Option<i32>,
         }
-    "#;
 
-    #[derive(Debug, serde::Serialize)]
-    pub struct Vars {
-        id: i32,
-    }
-
-    pub fn build(id: i32) -> Query<Vars> {
-        Query {
-            query: QUERY.to_string(),
-            variables: Some(Vars { id }),
+        pub fn build(vars: Vars) -> Query<Vars> {
+            Query {
+                query: QUERY.to_string(),
+                variables: Some(vars),
+            }
         }
-    }
 
-    #[derive(Debug, Clone, serde::Deserialize)]
-    pub struct Resp {
-        #[serde(rename(deserialize = "removeSnapshotInterval"))]
-        pub remove_snapshot_interval: bool,
-    }
-}
-
-pub mod list_intervals {
-    use crate::Query;
-    use iml_wire_types::snapshot::SnapshotInterval;
-
-    pub static QUERY: &str = r#"
-        query SnapshotIntervals {
-          snapshotIntervals {
-            id
-            filesystem_name: filesystemName
-            use_barrier: useBarrier
-            interval
-            last_run: lastRun
-          }
+        #[derive(Debug, Clone, serde::Deserialize)]
+        pub struct CreateSnapshotPolicy {
+            #[serde(rename(deserialize = "createSnapshotPolicy"))]
+            pub created: bool,
         }
-    "#;
 
-    pub fn build() -> Query<()> {
-        Query {
-            query: QUERY.to_string(),
-            variables: None,
+        pub type Resp = super::super::Resp<CreateSnapshotPolicy>;
+    }
+
+    pub mod remove {
+        use crate::Query;
+
+        pub static QUERY: &str = r#"
+            mutation RemoveSnapshotPolicy($filesystem: String!) {
+                  snapshot {
+                      removeSnapshotPolicy(filesystem: $filesystem)
+                  }
+            }
+        "#;
+
+        #[derive(Debug, serde::Serialize, Default)]
+        pub struct Vars {
+            filesystem: String,
         }
-    }
 
-    #[derive(Debug, Clone, serde::Deserialize)]
-    pub struct Resp {
-        #[serde(rename(deserialize = "snapshotIntervals"))]
-        pub snapshot_intervals: Vec<SnapshotInterval>,
-    }
-}
-
-/// Graphql query to create a new retention. Note that
-/// Snapshots will automatically be deleted (starting with the oldest)
-/// when free space falls below the defined reserve value and its associated unit.
-pub mod create_retention {
-    use crate::Query;
-    use iml_wire_types::snapshot::ReserveUnit;
-
-    pub static QUERY: &str = r#"
-        mutation CreateSnapshotRetention($fsname: String!, $reserve_value: Int!, $reserve_unit: ReserveUnit!, $keep_num: Int) {
-            createSnapshotRetention(fsname: $fsname, reserveValue: $reserve_value, reserveUnit: $reserve_unit, keepNum: $keep_num)
+        pub fn build(filesystem: impl ToString) -> Query<Vars> {
+            Query {
+                query: QUERY.to_string(),
+                variables: Some(Vars {
+                    filesystem: filesystem.to_string(),
+                }),
+            }
         }
-    "#;
 
-    #[derive(Debug, serde::Serialize)]
-    pub struct Vars {
-        fsname: String,
-        reserve_value: u32,
-        reserve_unit: ReserveUnit,
-        keep_num: Option<u32>,
-    }
-
-    pub fn build(
-        fsname: impl ToString,
-        reserve_value: u32,
-        reserve_unit: ReserveUnit,
-        keep_num: Option<u32>,
-    ) -> Query<Vars> {
-        Query {
-            query: QUERY.to_string(),
-            variables: Some(Vars {
-                fsname: fsname.to_string(),
-                reserve_value,
-                reserve_unit,
-                keep_num,
-            }),
+        #[derive(Debug, Clone, serde::Deserialize)]
+        pub struct RemoveSnapshotPolicy {
+            #[serde(rename(deserialize = "removeSnapshotPolicy"))]
+            pub removed: bool,
         }
-    }
 
-    #[derive(Debug, Clone, serde::Deserialize)]
-    pub struct Resp {
-        #[serde(rename(deserialize = "createSnapshotRetention"))]
-        pub create_snapshot_retention: bool,
-    }
-}
-
-pub mod remove_retention {
-    use crate::Query;
-
-    pub static QUERY: &str = r#"
-        mutation RemoveSnapshotRetention($id: Int!) {
-          removeSnapshotRetention(id: $id)
-        }
-    "#;
-
-    #[derive(Debug, serde::Serialize)]
-    pub struct Vars {
-        id: i32,
-    }
-
-    pub fn build(id: i32) -> Query<Vars> {
-        Query {
-            query: QUERY.to_string(),
-            variables: Some(Vars { id }),
-        }
-    }
-
-    #[derive(Debug, Clone, serde::Deserialize)]
-    pub struct Resp {
-        #[serde(rename(deserialize = "removeSnapshotRetention"))]
-        pub remove_snapshot_retention: bool,
-    }
-}
-
-/// Graphql query to list retentions. For each retention, snapshots will automatically
-/// be deleted (starting with the oldest) when free space falls below the defined reserve
-/// value and its associated unit.
-pub mod list_retentions {
-    use crate::Query;
-    use iml_wire_types::snapshot::SnapshotRetention;
-
-    pub static QUERY: &str = r#"
-        query SnapshotRetentionPolicies {
-          snapshotRetentionPolicies {
-            id
-            filesystem_name: filesystemName
-            reserve_value: reserveValue
-            reserve_unit: reserveUnit
-            keep_num: keepNum
-            last_run: lastRun
-          }
-        }
-    "#;
-
-    pub fn build() -> Query<()> {
-        Query {
-            query: QUERY.to_string(),
-            variables: None,
-        }
-    }
-
-    #[derive(Debug, Clone, serde::Deserialize)]
-    pub struct Resp {
-        #[serde(rename(deserialize = "snapshotRetentionPolicies"))]
-        pub snapshot_retention_policies: Vec<SnapshotRetention>,
+        pub type Resp = super::super::Resp<RemoveSnapshotPolicy>;
     }
 }

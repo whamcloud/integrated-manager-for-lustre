@@ -6,7 +6,6 @@ mod action;
 mod command;
 mod error;
 mod graphql;
-mod timer;
 
 use iml_manager_env::get_pool_limit;
 use iml_postgres::get_db_pool;
