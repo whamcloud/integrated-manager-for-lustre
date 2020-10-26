@@ -18,7 +18,7 @@ use iml_wire_types::{
         EnclosureType, HealthState, JobState, JobType, MemberState, SfaController, SfaDiskDrive,
         SfaEnclosure, SfaJob, SfaPowerSupply, SfaStorageSystem, SubTargetType,
     },
-    snapshot::{ReserveUnit, SnapshotInterval, SnapshotRecord, SnapshotRetention},
+    snapshot::{SnapshotPolicy, SnapshotRecord},
     warp_drive::{Cache, Record, RecordChange, RecordId},
     Alert, ApiList, EndpointName, Filesystem, FlatQuery, FsType, Host,
 };
@@ -190,16 +190,10 @@ pub async fn db_record_to_change_record(
                 Ok(RecordChange::Update(Record::Snapshot(x)))
             }
         },
-        DbRecord::SnapshotInterval(x) => match (msg_type, x) {
-            (MessageType::Delete, x) => Ok(RecordChange::Delete(RecordId::SnapshotInterval(x.id))),
+        DbRecord::SnapshotPolicy(x) => match (msg_type, x) {
+            (MessageType::Delete, x) => Ok(RecordChange::Delete(RecordId::SnapshotPolicy(x.id))),
             (MessageType::Insert, x) | (MessageType::Update, x) => {
-                Ok(RecordChange::Update(Record::SnapshotInterval(x)))
-            }
-        },
-        DbRecord::SnapshotRetention(x) => match (msg_type, x) {
-            (MessageType::Delete, x) => Ok(RecordChange::Delete(RecordId::SnapshotRetention(x.id))),
-            (MessageType::Insert, x) | (MessageType::Update, x) => {
-                Ok(RecordChange::Update(Record::SnapshotRetention(x)))
+                Ok(RecordChange::Update(Record::SnapshotPolicy(x)))
             }
         },
         DbRecord::LnetConfiguration(x) => match (msg_type, x) {
@@ -578,40 +572,26 @@ pub async fn populate_from_db(
         .try_collect()
         .await?;
 
-    cache.snapshot_interval = sqlx::query!("SELECT * FROM snapshot_interval")
+    cache.snapshot_policy = sqlx::query!(r#"SELECT * FROM snapshot_policy"#)
         .fetch(pool)
         .map_ok(|x| {
             (
                 x.id,
-                SnapshotInterval {
+                SnapshotPolicy {
                     id: x.id,
-                    filesystem_name: x.filesystem_name,
-                    use_barrier: x.use_barrier,
+                    filesystem: x.filesystem,
                     interval: x.interval.into(),
+                    barrier: x.barrier,
+                    keep: x.keep,
+                    daily: x.daily,
+                    weekly: x.weekly,
+                    monthly: x.monthly,
                     last_run: x.last_run,
                 },
             )
         })
         .try_collect()
         .await?;
-
-    cache.snapshot_retention = sqlx::query_as!(
-        SnapshotRetention,
-        r#"
-        SELECT
-            id,
-            filesystem_name,
-            reserve_value,
-            reserve_unit as "reserve_unit:ReserveUnit",
-            last_run,
-            keep_num
-        FROM snapshot_retention
-    "#
-    )
-    .fetch(pool)
-    .map_ok(|x| (x.id, x))
-    .try_collect()
-    .await?;
 
     cache.stratagem_config = sqlx::query_as!(
         StratagemConfiguration,

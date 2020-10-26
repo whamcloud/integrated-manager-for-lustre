@@ -3,7 +3,7 @@ use iml_manager_client::ImlManagerClientError;
 use tokio::time::Instant;
 
 pub mod client_monitor;
-pub mod retention;
+pub mod policy;
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
