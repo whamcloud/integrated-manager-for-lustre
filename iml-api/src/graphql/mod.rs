@@ -20,7 +20,7 @@ use iml_wire_types::{
     logs::{LogResponse, Meta},
     snapshot::{ReserveUnit, Snapshot, SnapshotInterval, SnapshotRetention},
     task::Task,
-    Command, EndpointName, Job, LogMessage, LogSeverity, MessageClass, SortDir,
+    Command, EndpointName, FsType, Job, LogMessage, LogSeverity, MessageClass, SortDir,
 };
 use itertools::Itertools;
 use juniper::{
@@ -81,7 +81,7 @@ struct Target {
     /// Where this target is mounted
     mount_path: Option<String>,
     /// The filesystem type associated with this target
-    fs_type: String,
+    fs_type: Option<FsType>,
 }
 
 #[derive(juniper::GraphQLObject)]
@@ -1253,14 +1253,16 @@ async fn get_targets(
     exclude_unmounted: bool,
 ) -> juniper::FieldResult<Vec<Target>> {
     let dir = dir.unwrap_or_default();
+    let target_resources = get_fs_target_resources(&pool, None).await?;
 
     if let Some(ref fs_name) = fs_name {
         let _ = fs_id_by_name(&context.pg_pool, &fs_name).await?;
     }
 
-    let xs: Vec<Target> = sqlx::query!(
+    let xs: Vec<Target> = sqlx::query_as!(
+        Target,
         r#"
-            SELECT state, name, active_host_id, host_ids, filesystems, uuid, mount_path, dev_path, fs_type::text from target t
+            SELECT state, name, active_host_id, host_ids, filesystems, uuid, mount_path, dev_path, fs_type as "fs_type: FsType" from target t
             ORDER BY
                 CASE WHEN $3 = 'asc' THEN t.name END ASC,
                 CASE WHEN $3 = 'desc' THEN t.name END DESC
@@ -1269,21 +1271,7 @@ async fn get_targets(
         limit.map(|x| x as i64),
         dir.deref()
     )
-    .fetch(pool)
-    .map_ok(|x| {
-        Target {
-            state: x.state,
-            name: x.name,
-            active_host_id: x.active_host_id,
-            host_ids: x.host_ids,
-            filesystems: x.filesystems,
-            uuid: x.uuid,
-            mount_path: x.mount_path,
-            dev_path: x.dev_path,
-            fs_type: x.fs_type.unwrap_or_else(|| "ldiskfs".to_string()).into()
-        }
-    })
-    .try_collect::<Vec<Target>>()
+    .fetch_all(pool)
     .await?
     .into_iter()
     .filter(|x| match &fs_name {
@@ -1294,24 +1282,18 @@ async fn get_targets(
         true => x.state != "unmounted",
         false => true,
     })
+    .map(|mut x| {
+        let resource = target_resources
+            .iter()
+            .find(|resource| resource.name == x.name);
+
+        if let Some(resource) = resource {
+            x.host_ids = resource.cluster_hosts.clone();
+        }
+
+        x
+    })
     .collect();
-
-    let target_resources = get_fs_target_resources(&pool, None).await?;
-
-    let xs: Vec<Target> = xs
-        .into_iter()
-        .map(|mut x| {
-            let resource = target_resources
-                .iter()
-                .find(|resource| resource.name == x.name);
-
-            if let Some(resource) = resource {
-                x.host_ids = resource.cluster_hosts.clone();
-            }
-
-            x
-        })
-        .collect();
 
     Ok(xs)
 }

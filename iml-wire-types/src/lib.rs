@@ -2010,6 +2010,7 @@ pub struct LustreClient {
     pub mountpoints: Vec<String>,
 }
 
+#[cfg_attr(feature = "graphql", derive(juniper::GraphQLEnum))]
 #[cfg_attr(feature = "postgres-interop", derive(sqlx::Type))]
 #[cfg_attr(feature = "postgres-interop", sqlx(rename = "fs_type"))]
 #[cfg_attr(feature = "postgres-interop", sqlx(rename_all = "lowercase"))]
@@ -2031,11 +2032,7 @@ impl From<&str> for FsType {
 
 impl From<String> for FsType {
     fn from(x: String) -> Self {
-        match x.as_str() {
-            "ldiskfs" => Self::Ldiskfs,
-            "zfs" => Self::Zfs,
-            _ => Self::Ldiskfs,
-        }
+        Self::from(x.as_str())
     }
 }
 
@@ -2066,7 +2063,7 @@ impl From<&str> for LdevEntry {
         Self {
             primary: (*parts
                 .get(0)
-                .unwrap_or_else(|| panic!("LdevEntry must specify a primary server.")))
+                .expect("LdevEntry must specify a primary server."))
             .to_string(),
             failover: parts.get(1).map_or_else(
                 || panic!("LdevEntry must specify a failover server or '-'."),
@@ -2078,21 +2075,13 @@ impl From<&str> for LdevEntry {
                     }
                 },
             ),
-            label: (*parts
-                .get(2)
-                .unwrap_or_else(|| panic!("LdevEntry must specify a label.")))
-            .to_string(),
-            device: (*parts
-                .get(3)
-                .unwrap_or_else(|| panic!("LdevEntry must specify a device.")))
-            .to_string(),
-            fs_type: (*parts
-                .get(3)
-                .unwrap_or_else(|| panic!("LdevEntry must specify a device.")))
-            .split(':')
-            .next()
-            .unwrap_or_else(|| "ldiskfs")
-            .into(),
+            label: (*parts.get(2).expect("LdevEntry must specify a label.")).to_string(),
+            device: (*parts.get(3).expect("LdevEntry must specify a device.")).to_string(),
+            fs_type: (*parts.get(3).expect("LdevEntry must specify a device."))
+                .split(':')
+                .next()
+                .unwrap_or_else(|| "ldiskfs")
+                .into(),
         }
     }
 }
