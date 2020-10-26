@@ -7,7 +7,7 @@ pub mod logs {
     use iml_wire_types::{LogSeverity, MessageClass, SortDir};
 
     pub static QUERY: &str = r#"
-            query logs($limit: Int, $offset: Int, $dir: SortDir, $message: String, $fqdn: String, $tag: String, $startDatetime: String, $endDatetime: String, $messageClass: [MessageClass!], $severity: LogSeverity) {
+            query logs($limit: Int, $offset: Int, $dir: SortDir, $message: String, $fqdn: String, $tag: String, $startDatetime: DateTimeUtc, $endDatetime: DateTimeUtc, $messageClass: [MessageClass!], $severity: LogSeverity) {
                 logs(limit: $limit, offset: $offset, dir: $dir, message: $message, fqdn: $fqdn, tag: $tag, startDatetime: $startDatetime, endDatetime: $endDatetime, messageClass: $messageClass, severity: $severity) {
                     data {
                         id

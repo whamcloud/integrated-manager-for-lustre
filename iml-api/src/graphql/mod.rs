@@ -469,14 +469,15 @@ impl QueryRoot {
         limit(description = "optional paging limit, defaults to 100",),
         offset(description = "Offset into items, defaults to 0"),
         dir(description = "Sort direction, defaults to asc"),
-        message(description = "Pattern to search for in message"),
-        fqdn(description = "Pattern to search for in FQDN"),
-        tag(description = "Pattern to search for in tag"),
+        message(description = "Pattern to search for in message. Uses Postgres pattern matching  (https://www.postgresql.org/docs/9.6/functions-matching.html)"),
+        fqdn(description = "Pattern to search for in FQDN. Uses Postgres pattern matching  (https://www.postgresql.org/docs/9.6/functions-matching.html)"),
+        tag(description = "Pattern to search for in tag. Uses Postgres pattern matching  (https://www.postgresql.org/docs/9.6/functions-matching.html)"),
         start_datetime(description = "Start of the time period of logs"),
         end_datetime(description = "End of the time period of logs"),
         message_class(description = "Array of log message classes"),
         severity(description = "Upper bound of log severity"),
     ))]
+    /// Returns aggregated journal entries for all nodes the agent runs on.
     async fn logs(
         context: &Context,
         limit: Option<i32>,
@@ -485,20 +486,12 @@ impl QueryRoot {
         message: Option<String>,
         fqdn: Option<String>,
         tag: Option<String>,
-        start_datetime: Option<String>,
-        end_datetime: Option<String>,
+        start_datetime: Option<chrono::DateTime<Utc>>,
+        end_datetime: Option<chrono::DateTime<Utc>>,
         message_class: Option<Vec<MessageClass>>,
         severity: Option<LogSeverity>,
     ) -> juniper::FieldResult<LogResponse> {
         let dir = dir.unwrap_or_default();
-
-        let start_datetime = start_datetime
-            .map(|s| s.parse::<chrono::DateTime<Utc>>())
-            .map_or(Ok(None), |r| r.map(Some))?;
-
-        let end_datetime = end_datetime
-            .map(|s| s.parse::<chrono::DateTime<Utc>>())
-            .map_or(Ok(None), |r| r.map(Some))?;
 
         let message_class: Vec<_> = message_class
             .filter(|v| !v.is_empty())
@@ -507,7 +500,7 @@ impl QueryRoot {
             .map(|i| i as i16)
             .collect();
 
-        let severity = severity.unwrap_or(LogSeverity::Debug) as i16;
+        let severity = severity.unwrap_or(LogSeverity::Informational) as i16;
 
         let results = sqlx::query_as!(
             LogMessageRecord,
