@@ -2,13 +2,12 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use chrono_humanize::{Accuracy, HumanTime, Tense};
 use console::style;
 use futures::{Future, FutureExt};
 use iml_wire_types::{
     db::TargetRecord,
     graphql::ServerProfile,
-    snapshot::{ReserveUnit, Snapshot, SnapshotInterval, SnapshotRetention},
+    snapshot::{Snapshot, SnapshotPolicy},
     Command, Filesystem, Host, OstPool, StratagemConfiguration, StratagemReport,
 };
 use indicatif::ProgressBar;
@@ -138,47 +137,29 @@ impl IntoTable for Vec<Snapshot> {
     }
 }
 
-impl IntoTable for Vec<SnapshotInterval> {
+impl IntoTable for Vec<SnapshotPolicy> {
     fn into_table(self) -> Table {
         generate_table(
-            &["Id", "Filesystem", "Interval", "Use Barrier", "Last Run"],
-            self.into_iter().map(|i| {
+            &[
+                "Filesystem",
+                "Interval",
+                "Keep",
+                "Daily",
+                "Weekly",
+                "Monthly",
+                "Barrier",
+                "Last Run",
+            ],
+            self.into_iter().map(|p| {
                 vec![
-                    i.id.to_string(),
-                    i.filesystem_name,
-                    chrono::Duration::from_std(i.interval.0)
-                        .map(HumanTime::from)
-                        .map(|x| x.to_text_en(Accuracy::Precise, Tense::Present))
-                        .unwrap_or_else(|_| "---".to_string()),
-                    i.use_barrier.to_string(),
-                    i.last_run
-                        .map(|t| t.to_rfc2822())
-                        .unwrap_or_else(|| "---".to_string()),
-                ]
-            }),
-        )
-    }
-}
-
-impl IntoTable for Vec<SnapshotRetention> {
-    fn into_table(self) -> Table {
-        generate_table(
-            &["Id", "Filesystem", "Reserve", "Keep", "Last Run"],
-            self.into_iter().map(|r| {
-                vec![
-                    r.id.to_string(),
-                    r.filesystem_name,
-                    format!(
-                        "{} {}",
-                        r.reserve_value,
-                        match r.reserve_unit {
-                            ReserveUnit::Percent => "%",
-                            ReserveUnit::Gibibytes => "GiB",
-                            ReserveUnit::Tebibytes => "TiB",
-                        }
-                    ),
-                    r.keep_num.to_string(),
-                    r.last_run
+                    p.filesystem,
+                    p.interval.to_string(),
+                    p.keep.to_string(),
+                    p.daily.to_string(),
+                    p.weekly.to_string(),
+                    p.monthly.to_string(),
+                    p.barrier.to_string(),
+                    p.last_run
                         .map(|t| t.to_rfc2822())
                         .unwrap_or_else(|| "---".to_string()),
                 ]
