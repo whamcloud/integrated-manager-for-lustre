@@ -2170,6 +2170,24 @@
       ]
     }
   },
+  "71b25feb0a6f2f39d6cb50e81d252016d921aaed81798aa23e3805bffc6c0e77": {
+    "query": "\n                INSERT INTO snapshot_policy (\n                    filesystem,\n                    interval,\n                    barrier,\n                    keep,\n                    daily,\n                    weekly,\n                    monthly\n                )\n                VALUES ($1, $2, $3, $4, $5, $6, $7)\n                ON CONFLICT (filesystem)\n                DO UPDATE SET\n                    interval = EXCLUDED.interval,\n                    barrier = EXCLUDED.barrier,\n                    keep = EXCLUDED.keep,\n                    daily = EXCLUDED.daily,\n                    weekly = EXCLUDED.weekly,\n                    monthly = EXCLUDED.monthly\n            ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Text",
+          "Interval",
+          "Bool",
+          "Int4",
+          "Int4",
+          "Int4",
+          "Int4"
+        ]
+      },
+      "nullable": []
+    }
+  },
   "7ba0b27a4f4fca50c30701d9adbbf0c0421c310b6b99453bffb4bc7834fa765c": {
     "query": "\n                INSERT INTO corosync_resource_managed_host (host_id, cluster_id, corosync_resource_id)\n                SELECT $1, $2, corosync_resource_id FROM UNNEST($3::text[]) as corosync_resource_id\n                ON CONFLICT (host_id, corosync_resource_id, cluster_id)\n                DO NOTHING\n            ",
     "describe": {
@@ -2465,6 +2483,72 @@
         false,
         false,
         false
+      ]
+    }
+  },
+  "82aa67ceef3e830c8a4f4739d8e02c2fce46906173bbc19dedcc324d0183628d": {
+    "query": "SELECT * FROM snapshot_policy",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "filesystem",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "interval",
+          "type_info": "Interval"
+        },
+        {
+          "ordinal": 3,
+          "name": "barrier",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 4,
+          "name": "keep",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 5,
+          "name": "daily",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 6,
+          "name": "weekly",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 7,
+          "name": "monthly",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 8,
+          "name": "last_run",
+          "type_info": "Timestamptz"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        true
       ]
     }
   },
@@ -3999,6 +4083,19 @@
         false,
         false
       ]
+    }
+  },
+  "dc27c8e53476f37d4d8b5d539be33f3b62071e35d95ebea78e15a5ce59d35550": {
+    "query": "\n                DELETE FROM snapshot_policy\n                WHERE (filesystem IS NOT DISTINCT FROM $1)\n                OR    (id IS NOT DISTINCT FROM $2)\n\n            ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Text",
+          "Int4"
+        ]
+      },
+      "nullable": []
     }
   },
   "dc969e1cf438fc20baccd36a43cf7725bcf95cf758c6f08d5ce88bd4f378a71c": {

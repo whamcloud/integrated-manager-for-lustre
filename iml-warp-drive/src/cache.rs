@@ -18,7 +18,7 @@ use iml_wire_types::{
         EnclosureType, HealthState, JobState, JobType, MemberState, SfaController, SfaDiskDrive,
         SfaEnclosure, SfaJob, SfaPowerSupply, SfaStorageSystem, SubTargetType,
     },
-    snapshot::{ReserveUnit, SnapshotInterval, SnapshotRecord, SnapshotRetention},
+    snapshot::{ReserveUnit, SnapshotInterval, SnapshotPolicy, SnapshotRecord, SnapshotRetention},
     warp_drive::{Cache, Record, RecordChange, RecordId},
     Alert, ApiList, EndpointName, Filesystem, FlatQuery, Host, Target, TargetConfParam,
 };
@@ -196,6 +196,12 @@ pub async fn db_record_to_change_record(
             (MessageType::Delete, x) => Ok(RecordChange::Delete(RecordId::SnapshotRetention(x.id))),
             (MessageType::Insert, x) | (MessageType::Update, x) => {
                 Ok(RecordChange::Update(Record::SnapshotRetention(x)))
+            }
+        },
+        DbRecord::SnapshotPolicy(x) => match (msg_type, x) {
+            (MessageType::Delete, x) => Ok(RecordChange::Delete(RecordId::SnapshotPolicy(x.id))),
+            (MessageType::Insert, x) | (MessageType::Update, x) => {
+                Ok(RecordChange::Update(Record::SnapshotPolicy(x)))
             }
         },
         DbRecord::LnetConfiguration(x) => match (msg_type, x) {
@@ -550,6 +556,27 @@ pub async fn populate_from_db(
     .map_ok(|x| (x.id, x))
     .try_collect()
     .await?;
+
+    cache.snapshot_policy = sqlx::query!(r#"SELECT * FROM snapshot_policy"#)
+        .fetch(pool)
+        .map_ok(|x| {
+            (
+                x.id,
+                SnapshotPolicy {
+                    id: x.id,
+                    filesystem: x.filesystem,
+                    interval: x.interval.into(),
+                    barrier: x.barrier,
+                    keep: x.keep,
+                    daily: x.daily,
+                    weekly: x.weekly,
+                    monthly: x.monthly,
+                    last_run: x.last_run,
+                },
+            )
+        })
+        .try_collect()
+        .await?;
 
     cache.stratagem_config = sqlx::query_as!(
         StratagemConfiguration,
