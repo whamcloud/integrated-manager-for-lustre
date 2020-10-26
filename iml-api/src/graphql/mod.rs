@@ -469,9 +469,15 @@ impl QueryRoot {
         limit(description = "optional paging limit, defaults to 100",),
         offset(description = "Offset into items, defaults to 0"),
         dir(description = "Sort direction, defaults to asc"),
-        message(description = "Pattern to search for in message. Uses Postgres pattern matching  (https://www.postgresql.org/docs/9.6/functions-matching.html)"),
-        fqdn(description = "Pattern to search for in FQDN. Uses Postgres pattern matching  (https://www.postgresql.org/docs/9.6/functions-matching.html)"),
-        tag(description = "Pattern to search for in tag. Uses Postgres pattern matching  (https://www.postgresql.org/docs/9.6/functions-matching.html)"),
+        message(
+            description = "Pattern to search for in message. Uses Postgres pattern matching  (https://www.postgresql.org/docs/9.6/functions-matching.html)"
+        ),
+        fqdn(
+            description = "Pattern to search for in FQDN. Uses Postgres pattern matching  (https://www.postgresql.org/docs/9.6/functions-matching.html)"
+        ),
+        tag(
+            description = "Pattern to search for in tag. Uses Postgres pattern matching  (https://www.postgresql.org/docs/9.6/functions-matching.html)"
+        ),
         start_datetime(description = "Start of the time period of logs"),
         end_datetime(description = "End of the time period of logs"),
         message_class(description = "Array of log message classes"),
@@ -506,9 +512,9 @@ impl QueryRoot {
             LogMessageRecord,
             r#"
                     SELECT * FROM chroma_core_logmessage t
-                    WHERE t.message LIKE $4
-                      AND t.fqdn LIKE $5
-                      AND t.tag LIKE $6
+                    WHERE ($4::TEXT IS NULL OR t.message LIKE $4)
+                      AND ($5::TEXT IS NULL OR t.fqdn LIKE $5)
+                      AND ($6::TEXT IS NULL OR t.tag LIKE $6)
                       AND ($7::TIMESTAMPTZ IS NULL OR t.datetime >= $7)
                       AND ($8::TIMESTAMPTZ IS NULL OR t.datetime < $8)
                       AND ARRAY[t.message_class] <@ $9
@@ -520,9 +526,9 @@ impl QueryRoot {
             offset.unwrap_or(0) as i64,
             limit.map(|x| x as i64).unwrap_or(100),
             dir.deref(),
-            message.unwrap_or_else(|| "%".into()),
-            fqdn.unwrap_or_else(|| "%".into()),
-            tag.unwrap_or_else(|| "%".into()),
+            message,
+            fqdn,
+            tag,
             start_datetime,
             end_datetime,
             &message_class,

@@ -222,6 +222,77 @@
       ]
     }
   },
+  "11c0f67f66af2d8562fd6f5f2d9f77f5ce4b55ac2f557ef1f44e13c2f487df75": {
+    "query": "\n                    SELECT * FROM chroma_core_logmessage t\n                    WHERE ($4::TEXT IS NULL OR t.message LIKE $4)\n                      AND ($5::TEXT IS NULL OR t.fqdn LIKE $5)\n                      AND ($6::TEXT IS NULL OR t.tag LIKE $6)\n                      AND ($7::TIMESTAMPTZ IS NULL OR t.datetime >= $7)\n                      AND ($8::TIMESTAMPTZ IS NULL OR t.datetime < $8)\n                      AND ARRAY[t.message_class] <@ $9\n                      AND t.severity <= $10\n                    ORDER BY\n                        CASE WHEN $3 = 'ASC' THEN t.datetime END ASC,\n                        CASE WHEN $3 = 'DESC' THEN t.datetime END DESC\n                    OFFSET $1 LIMIT $2",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "datetime",
+          "type_info": "Timestamptz"
+        },
+        {
+          "ordinal": 2,
+          "name": "fqdn",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 3,
+          "name": "severity",
+          "type_info": "Int2"
+        },
+        {
+          "ordinal": 4,
+          "name": "facility",
+          "type_info": "Int2"
+        },
+        {
+          "ordinal": 5,
+          "name": "tag",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 6,
+          "name": "message",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 7,
+          "name": "message_class",
+          "type_info": "Int2"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Int8",
+          "Text",
+          "Text",
+          "Text",
+          "Text",
+          "Timestamptz",
+          "Timestamptz",
+          "Int2Array",
+          "Int2"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    }
+  },
   "12b85bdac2a34efedc73bb817f38fd589a8e2754392d863cf4211e169e935153": {
     "query": "\n        INSERT INTO chroma_core_sfadiskdrive\n        (\n            index,\n            enclosure_index,\n            failed,\n            slot_number,\n            health_state,\n            health_state_reason,\n            member_index,\n            member_state,\n            storage_system\n        )\n        SELECT * FROM UNNEST(\n            $1::integer[],\n            $2::integer[],\n            $3::bool[],\n            $4::integer[],\n            $5::smallint[],\n            $6::text[],\n            $7::smallint[],\n            $8::smallint[],\n            $9::text[]\n        )\n        ON CONFLICT (index, storage_system) DO UPDATE\n        SET\n            enclosure_index = excluded.enclosure_index,\n            failed = excluded.failed,\n            slot_number = excluded.slot_number,\n            health_state = excluded.health_state,\n            health_state_reason = excluded.health_state_reason,\n            member_index = excluded.member_index,\n            member_state = excluded.member_state\n    ",
     "describe": {
@@ -1481,77 +1552,6 @@
         ]
       },
       "nullable": [
-        false
-      ]
-    }
-  },
-  "546323619e05cc8168297a55db1ab24f918227f5438016cc514dec99bf135163": {
-    "query": "\n                    SELECT * FROM chroma_core_logmessage t\n                    WHERE t.message LIKE $4\n                      AND t.fqdn LIKE $5\n                      AND t.tag LIKE $6\n                      AND ($7::TIMESTAMPTZ IS NULL OR t.datetime >= $7)\n                      AND ($8::TIMESTAMPTZ IS NULL OR t.datetime < $8)\n                      AND ARRAY[t.message_class] <@ $9\n                      AND t.severity <= $10\n                    ORDER BY\n                        CASE WHEN $3 = 'ASC' THEN t.datetime END ASC,\n                        CASE WHEN $3 = 'DESC' THEN t.datetime END DESC\n                    OFFSET $1 LIMIT $2",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 1,
-          "name": "datetime",
-          "type_info": "Timestamptz"
-        },
-        {
-          "ordinal": 2,
-          "name": "fqdn",
-          "type_info": "Varchar"
-        },
-        {
-          "ordinal": 3,
-          "name": "severity",
-          "type_info": "Int2"
-        },
-        {
-          "ordinal": 4,
-          "name": "facility",
-          "type_info": "Int2"
-        },
-        {
-          "ordinal": 5,
-          "name": "tag",
-          "type_info": "Varchar"
-        },
-        {
-          "ordinal": 6,
-          "name": "message",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 7,
-          "name": "message_class",
-          "type_info": "Int2"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "Int8",
-          "Int8",
-          "Text",
-          "Text",
-          "Text",
-          "Text",
-          "Timestamptz",
-          "Timestamptz",
-          "Int2Array",
-          "Int2"
-        ]
-      },
-      "nullable": [
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
         false
       ]
     }
