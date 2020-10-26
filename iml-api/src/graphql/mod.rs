@@ -21,7 +21,7 @@ use iml_wire_types::{
     graphql::{ServerProfile, ServerProfileInput, ServerProfileResponse},
     graphql_duration::GraphQLDuration,
     logs::{LogResponse, Meta},
-    snapshot::{ReserveUnit, Snapshot, SnapshotInterval, SnapshotRetention},
+    snapshot::{ReserveUnit, Snapshot, SnapshotInterval, SnapshotPolicy, SnapshotRetention},
     task::Task,
     Command, EndpointName, Job, LogMessage, LogSeverity, MessageClass, SortDir,
 };
@@ -586,6 +586,27 @@ impl QueryRoot {
             data: server_profiles,
         })
     }
+
+    /// List all automatic snapshot policies.
+    async fn snapshot_policies(context: &Context) -> juniper::FieldResult<Vec<SnapshotPolicy>> {
+        let xs = sqlx::query!(r#"SELECT * FROM snapshot_policy"#)
+            .fetch(&context.pg_pool)
+            .map_ok(|x| SnapshotPolicy {
+                id: x.id,
+                filesystem: x.filesystem,
+                interval: x.interval.into(),
+                barrier: x.barrier,
+                keep: x.keep,
+                daily: x.daily,
+                weekly: x.weekly,
+                monthly: x.monthly,
+                last_run: x.last_run,
+            })
+            .try_collect()
+            .await?;
+
+        Ok(xs)
+    }
 }
 
 struct SnapshotIntervalName {
@@ -895,7 +916,7 @@ impl MutationRoot {
         ),
         reserve_unit(description = "The unit of measurement associated with the reserve_value"),
         keep_num(
-            description = "The minimum number of snapshots to keep. This is to avoid deleting all snapshots while pursuiting the reserve goal"
+            description = "The minimum number of snapshots to keep. This is to avoid deleting all snapshots while pursuing the reserve goal"
         )
     ))]
     /// Creates a new snapshot retention policy for the given `fsname`.
@@ -1049,6 +1070,67 @@ impl MutationRoot {
         Ok(true)
     }
 
+    #[graphql(arguments(
+        filesystem(description = "The filesystem to create snapshots with"),
+        interval(description = "How often a snapshot should be taken"),
+        use_barrier(
+            description = "Set write barrier before creating snapshot. The default value is `false`"
+        ),
+        keep(description = "Number of the most recent snapshots to keep"),
+        daily(description = "Then, number of days when keep the most recent snapshot of each day"),
+        weekly(
+            description = "Then, number of weeks when keep the most recent snapshot of each week"
+        ),
+        monthly(
+            description = "Then, number of months when keep the most recent snapshot of each month"
+        ),
+    ))]
+    /// Creates a new automatic snapshot policy.
+    async fn create_snapshot_policy(
+        context: &Context,
+        filesystem: String,
+        interval: GraphQLDuration,
+        barrier: Option<bool>,
+        keep: i32,
+        daily: Option<i32>,
+        weekly: Option<i32>,
+        monthly: Option<i32>,
+    ) -> juniper::FieldResult<bool> {
+        sqlx::query!(
+            r#"
+                INSERT INTO snapshot_policy (
+                    filesystem,
+                    interval,
+                    barrier,
+                    keep,
+                    daily,
+                    weekly,
+                    monthly
+                )
+                VALUES ($1, $2, $3, $4, $5, $6, $7)
+                ON CONFLICT (filesystem)
+                DO UPDATE SET
+                    interval = EXCLUDED.interval,
+                    barrier = EXCLUDED.barrier,
+                    keep = EXCLUDED.keep,
+                    daily = EXCLUDED.daily,
+                    weekly = EXCLUDED.weekly,
+                    monthly = EXCLUDED.monthly
+            "#,
+            filesystem,
+            PgInterval::try_from(interval.0)?,
+            barrier.unwrap_or(false),
+            keep,
+            daily.unwrap_or(0),
+            weekly.unwrap_or(0),
+            monthly.unwrap_or(0)
+        )
+        .fetch_optional(&context.pg_pool)
+        .await?;
+
+        Ok(true)
+    }
+
     #[graphql(arguments(profile_name(description = "Name of the profile to remove")))]
     async fn remove_server_profile(
         context: &Context,
@@ -1075,6 +1157,32 @@ impl MutationRoot {
             &profile_name
         )
         .execute(&mut transaction)
+        .await?;
+
+        Ok(true)
+    }
+
+    #[graphql(arguments(
+        filesystem(description = "The filesystem to remove snapshot policies for"),
+        id(description = "Id of the policy to remove"),
+    ))]
+    /// Removes the automatic snapshot policy.
+    async fn remove_snapshot_policy(
+        context: &Context,
+        filesystem: Option<String>,
+        id: Option<i32>,
+    ) -> juniper::FieldResult<bool> {
+        sqlx::query!(
+            r#"
+                DELETE FROM snapshot_policy
+                WHERE (filesystem IS NOT DISTINCT FROM $1)
+                OR    (id IS NOT DISTINCT FROM $2)
+
+            "#,
+            filesystem,
+            id
+        )
+        .fetch_optional(&context.pg_pool)
         .await?;
 
         Ok(true)

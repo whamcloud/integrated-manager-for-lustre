@@ -440,3 +440,105 @@ pub mod list_retentions {
         pub snapshot_retention_policies: Vec<SnapshotRetention>,
     }
 }
+
+pub mod policy {
+    pub mod list {
+        use crate::Query;
+        use iml_wire_types::snapshot::SnapshotPolicy;
+
+        pub static QUERY: &str = r#"
+            query SnapshotPolicies {
+              snapshotPolicies {
+                id
+                filesystem
+                interval
+                barrier
+                keep
+                daily
+                weekly
+                monthly
+                last_run: lastRun
+              }
+            }
+        "#;
+
+        pub fn build() -> Query<()> {
+            Query {
+                query: QUERY.to_string(),
+                variables: None,
+            }
+        }
+
+        #[derive(Debug, Clone, serde::Deserialize)]
+        pub struct Resp {
+            #[serde(rename(deserialize = "snapshotPolicies"))]
+            pub snapshot_policies: Vec<SnapshotPolicy>,
+        }
+    }
+
+    pub mod create {
+        use crate::Query;
+
+        pub static QUERY: &str = r#"
+            mutation CreateSnapshotPolicy($filesystem: String!, $interval: Duration!, $barrier: Boolean,
+                                          $keep: Int!, $daily: Int, $weekly: Int, $monthly: Int) {
+              createSnapshotPolicy(filesystem: $filesystem, interval: $interval, barrier: $barrier,
+                             keep: $keep, daily: $daily, weekly: $weekly, monthly: $monthly)
+            }
+        "#;
+
+        #[derive(Debug, serde::Serialize, Default, Clone)]
+        pub struct Vars {
+            pub filesystem: String,
+            pub interval: String,
+            pub barrier: Option<bool>,
+            pub keep: i32,
+            pub daily: Option<i32>,
+            pub weekly: Option<i32>,
+            pub monthly: Option<i32>,
+        }
+
+        pub fn build(vars: Vars) -> Query<Vars> {
+            Query {
+                query: QUERY.to_string(),
+                variables: Some(vars),
+            }
+        }
+
+        #[derive(Debug, Clone, serde::Deserialize)]
+        pub struct Resp {
+            #[serde(rename(deserialize = "createSnapshotPolicy"))]
+            pub snapshot_policy: bool,
+        }
+    }
+
+    pub mod remove {
+        use crate::Query;
+
+        pub static QUERY: &str = r#"
+            mutation RemoveSnapshotPolicy($filesystem: String!) {
+              removeSnapshotPolicy(filesystem: $filesystem)
+            }
+        "#;
+
+        #[derive(Debug, serde::Serialize, Default)]
+        pub struct Vars {
+            filesystem: String,
+        }
+
+        pub fn build(filesystem: impl ToString) -> Query<Vars> {
+            Query {
+                query: QUERY.to_string(),
+                variables: Some(Vars {
+                    filesystem: filesystem.to_string(),
+                }),
+            }
+        }
+
+        #[derive(Debug, Clone, serde::Deserialize)]
+        pub struct Resp {
+            #[serde(rename(deserialize = "removeSnapshotPolicy"))]
+            pub snapshot_policy: bool,
+        }
+    }
+}

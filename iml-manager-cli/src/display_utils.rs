@@ -7,7 +7,7 @@ use console::style;
 use futures::{Future, FutureExt};
 use iml_wire_types::{
     db::TargetRecord,
-    snapshot::{ReserveUnit, Snapshot, SnapshotInterval, SnapshotRetention},
+    snapshot::{ReserveUnit, Snapshot, SnapshotInterval, SnapshotPolicy, SnapshotRetention},
     Command, Filesystem, Host, OstPool, ServerProfile, StratagemConfiguration, StratagemReport,
 };
 use indicatif::ProgressBar;
@@ -179,6 +179,37 @@ impl IntoTable for Vec<SnapshotRetention> {
                     ),
                     r.keep_num.to_string(),
                     r.last_run
+                        .map(|t| t.to_rfc2822())
+                        .unwrap_or_else(|| "---".to_string()),
+                ]
+            }),
+        )
+    }
+}
+
+impl IntoTable for Vec<SnapshotPolicy> {
+    fn into_table(self) -> Table {
+        generate_table(
+            &[
+                "Filesystem",
+                "Interval",
+                "Keep",
+                "Daily",
+                "Weekly",
+                "Monthly",
+                "Barrier",
+                "Last Run",
+            ],
+            self.into_iter().map(|p| {
+                vec![
+                    p.filesystem,
+                    p.interval.to_string(),
+                    p.keep.to_string(),
+                    p.daily.to_string(),
+                    p.weekly.to_string(),
+                    p.monthly.to_string(),
+                    p.barrier.to_string(),
+                    p.last_run
                         .map(|t| t.to_rfc2822())
                         .unwrap_or_else(|| "---".to_string()),
                 ]
