@@ -466,7 +466,7 @@ impl QueryRoot {
     }
 
     #[graphql(arguments(
-        limit(description = "optional paging limit, defaults to all rows"),
+        limit(description = "optional paging limit, defaults to 100",),
         offset(description = "Offset into items, defaults to 0"),
         dir(description = "Sort direction, defaults to asc"),
         message(description = "Pattern to search for in message"),
@@ -525,7 +525,7 @@ impl QueryRoot {
                         CASE WHEN $3 = 'DESC' THEN t.datetime END DESC
                     OFFSET $1 LIMIT $2"#,
             offset.unwrap_or(0) as i64,
-            limit.map(|x| x as i64),
+            limit.map(|x| x as i64).unwrap_or(100),
             dir.deref(),
             message.unwrap_or_else(|| "%".into()),
             fqdn.unwrap_or_else(|| "%".into()),
