@@ -76,6 +76,8 @@ pub enum ImlAgentError {
     #[error(transparent)]
     AddrParseError(#[from] std::net::AddrParseError),
     #[error(transparent)]
+    IpNetworkError(#[from] ipnetwork::IpNetworkError),
+    #[error(transparent)]
     CibError(#[from] CibError),
     #[error(transparent)]
     CmdError(#[from] CmdError),
