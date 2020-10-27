@@ -122,7 +122,7 @@ async fn send_work(
 
     // Setup running_on if unset
     if task.single_runner && task.running_on_id.is_none() {
-        tracing::tracing!(
+        tracing::trace!(
             "Attempting to Set Task {} ({}) running_on to host {} ({})",
             task.name,
             task.id,
@@ -163,11 +163,11 @@ async fn send_work(
         }
     }
 
-    tracing::tracing!("send_work({}, {}, {})", fqdn, fsname, task.name);
+    tracing::trace!("send_work({}, {}, {})", fqdn, fsname, task.name);
 
     let mut trans = pg_pool.begin().await?;
 
-    tracing::tracing!(
+    tracing::trace!(
         "Started transaction for {}, {}, {}",
         fqdn,
         fsname,
@@ -313,7 +313,7 @@ async fn run_tasks(
                 .inspect_err(|e| tracing::warn!("send_work({}) failed {:?}", task.name, e))
                 .await?;
 
-            tracing::tracing!("send_work({}) completed, rc: {}", task.name, rc);
+            tracing::trace!("send_work({}) completed, rc: {}", task.name, rc);
 
             if rc < FID_LIMIT {
                 break;
@@ -340,7 +340,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     loop {
         interval.tick().await;
 
-        tracing::tracing!("Pool State: {:?}", pg_pool);
+        tracing::trace!("Pool State: {:?}", pg_pool);
 
         let ids: Vec<i32> = {
             let xs = active_clients.lock().await;
@@ -352,18 +352,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             continue;
         }
 
-        tracing::tracing!("checking workers for ids: {:?}", ids);
+        tracing::trace!("checking workers for ids: {:?}", ids);
 
         let workers = available_workers(&pg_pool, ids).await?;
 
-        tracing::tracing!("got workers: {:?}", workers);
+        tracing::trace!("got workers: {:?}", workers);
 
         {
             let mut x = active_clients.lock().await;
 
             x.extend(workers.iter().map(|w| w.id));
 
-            tracing::tracing!("Active Clients {:?}", x);
+            tracing::trace!("Active Clients {:?}", x);
         }
 
         let xs = workers.into_iter().map(|worker| {
@@ -376,24 +376,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let tasks = tasks_per_worker(&pg_pool, &worker).await?;
                 let fqdn = worker_fqdn(&pg_pool, &worker).await?;
 
-                tracing::tracing!("Starting run tasks for {}", &fqdn);
+                tracing::trace!("Starting run tasks for {}", &fqdn);
 
                 run_tasks(&action_client, &fqdn, &worker, tasks, &pg_pool).await;
 
-                tracing::tracing!("Completed run tasks for {}", &fqdn);
+                tracing::trace!("Completed run tasks for {}", &fqdn);
 
                 Ok::<_, error::ImlTaskRunnerError>(())
             }
             .then(move |x| async move {
-                tracing::tracing!("Attempting to take lock for release");
+                tracing::trace!("Attempting to take lock for release");
 
                 {
                     let mut c = active_clients.lock().await;
-                    tracing::tracing!("Took lock for release");
+                    tracing::trace!("Took lock for release");
 
                     c.remove(&worker_id);
 
-                    tracing::tracing!("Released Client {:?}. Active Clients {:?}", worker_id, c);
+                    tracing::trace!("Released Client {:?}. Active Clients {:?}", worker_id, c);
                 }
 
                 x
