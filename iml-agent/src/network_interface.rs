@@ -19,14 +19,15 @@ use ipnetwork::{Ipv4Network, Ipv6Network};
 use std::{
     collections::HashMap,
     net::{Ipv4Addr, Ipv6Addr},
+    num::ParseIntError,
 };
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum InterfaceProperties {
     InterfaceFlagsAndAttributes((String, Vec<String>, HashMap<String, String>)),
     InterfaceTypeAndMacAddress((Option<String>, Option<String>)),
-    Inet4AddressAndPrefix((String, u8)),
-    Inet6AddressAndPrefix((String, u8)),
+    Inet4AddressAndPrefix((String, Result<u8, ParseIntError>)),
+    Inet6AddressAndPrefix((String, Result<u8, ParseIntError>)),
 }
 
 #[derive(Debug, Default, serde::Serialize, serde::Deserialize)]
@@ -64,11 +65,11 @@ impl NetworkInterface {
             }
             InterfaceProperties::Inet4AddressAndPrefix((address, prefix)) => {
                 let address: Ipv4Addr = address.parse()?;
-                self.inet4_address.push(Ipv4Network::new(address, prefix)?);
+                self.inet4_address.push(Ipv4Network::new(address, prefix?)?);
             }
             InterfaceProperties::Inet6AddressAndPrefix((address, prefix)) => {
                 let address: Ipv6Addr = address.parse()?;
-                self.inet6_address.push(Ipv6Network::new(address, prefix)?);
+                self.inet6_address.push(Ipv6Network::new(address, prefix?)?);
             }
         }
 
@@ -76,14 +77,14 @@ impl NetworkInterface {
     }
 }
 
-fn interface_start<I>() -> impl Parser<I, Output = u32>
+fn interface_start<I>() -> impl Parser<I, Output = Result<u32, ParseIntError>>
 where
     I: Stream<Token = char>,
     I::Error: ParseError<I::Token, I::Range, I::Position>,
 {
     spaces()
         .and(many1::<Vec<_>, _, _>(digit()))
-        .map(|x| x.1.into_iter().collect::<String>().parse::<u32>().unwrap())
+        .map(|x| x.1.into_iter().collect::<String>().parse::<u32>())
         .skip(char(':'))
 }
 
@@ -141,13 +142,13 @@ where
         .map(|x| x.1)
 }
 
-fn parse_inet4_prefix<I>() -> impl Parser<I, Output = u8>
+fn parse_inet4_prefix<I>() -> impl Parser<I, Output = Result<u8, ParseIntError>>
 where
     I: Stream<Token = char>,
     I::Error: ParseError<I::Token, I::Range, I::Position>,
 {
     char('/')
-        .and(many1(digit()).map(|x: String| x.parse::<u8>().unwrap()))
+        .and(many1(digit()).map(|x: String| x.parse::<u8>()))
         .map(|x| x.1)
 }
 
@@ -163,13 +164,13 @@ where
         .map(|x| x.1)
 }
 
-fn parse_inet6_prefix<I>() -> impl Parser<I, Output = u8>
+fn parse_inet6_prefix<I>() -> impl Parser<I, Output = Result<u8, ParseIntError>>
 where
     I: Stream<Token = char>,
     I::Error: ParseError<I::Token, I::Range, I::Position>,
 {
     char('/')
-        .and(many1(digit()).map(|x: String| x.parse::<u8>().unwrap()))
+        .and(many1(digit()).map(|x: String| x.parse::<u8>()))
         .map(|x| x.1)
 }
 
@@ -260,9 +261,18 @@ pub fn parse(
                 .filter_map(|x| parse_network_line().parse(x).ok())
                 .try_fold(NetworkInterface::default(), |acc, (x, _)| acc.set_prop(x))
         })
+        .filter(|x| {
+            if let Ok(x) = x {
+                return x.interface.trim() != "lo" && !x.is_slave;
+            }
+
+            true
+        })
         .map(|x| {
             if let Ok(mut x) = x {
-                if let Some(stats) = stats_map.get_mut(&x.interface) {
+                let interface: Vec<&str> = x.interface.split('@').collect();
+
+                if let Some(stats) = stats_map.get_mut(interface[0]) {
                     x.stats = Some(stats.clone());
                 }
 
@@ -351,10 +361,10 @@ mod tests {
         let prefix = if let Ok(InterfaceProperties::Inet4AddressAndPrefix((_, prefix))) = result {
             prefix
         } else {
-            0
+            " ".parse::<u8>()
         };
 
-        assert_eq!(prefix, 8);
+        assert_eq!(prefix, Ok(8));
     }
 
     #[test]
@@ -381,10 +391,10 @@ mod tests {
         let prefix = if let Ok(InterfaceProperties::Inet6AddressAndPrefix((_, prefix))) = result {
             prefix
         } else {
-            0
+            " ".parse::<u8>()
         };
 
-        assert_eq!(prefix, 64);
+        assert_eq!(prefix, Ok(64));
     }
 
     #[test]
@@ -444,13 +454,27 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_error() {
+        let result = parse_network_line()
+            .parse("inet6 fe80::acb5:89ff:fe49:2d77/888888884 scope link")
+            .map(|x| x.0);
+
+        println!("Result: {:?}", result);
+        if let Ok(InterfaceProperties::Inet6AddressAndPrefix((_, x))) = result {
+            assert_eq!(x, "8888888".parse::<u8>());
+        } else {
+            assert!(false);
+        };
+    }
+
+    #[test]
     fn test_parsing_multiple_interfaces() {
         let network_interfaces = include_bytes!("./fixtures/network_interfaces.txt");
         let network_interfaces = std::str::from_utf8(network_interfaces).unwrap();
 
         let stats = include_bytes!("./fixtures/network_stats.txt");
         let stats = std::str::from_utf8(stats).unwrap();
-        let stats_map = network_interface_stats::parse(stats);
+        let stats_map = network_interface_stats::parse(stats).unwrap();
 
         let network_interfaces = parse(network_interfaces, stats_map);
 

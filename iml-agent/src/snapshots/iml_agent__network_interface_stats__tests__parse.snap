@@ -27,8 +27,8 @@ expression: stats
   },
   "ib0": {
     "rx": {
-      "bytes": 4771375320,
-      "packets": 23555227,
+      "bytes": 4828965068,
+      "packets": 23837574,
       "errs": 0,
       "drop": 0,
       "fifo": 0,
@@ -37,8 +37,8 @@ expression: stats
       "multicast": 0
     },
     "tx": {
-      "bytes": 4159125100,
-      "packets": 25706791,
+      "bytes": 4209864628,
+      "packets": 26019919,
       "errs": 0,
       "drop": 0,
       "fifo": 0,
@@ -49,8 +49,8 @@ expression: stats
   },
   "ib1": {
     "rx": {
-      "bytes": 155665548,
-      "packets": 1311436,
+      "bytes": 157149372,
+      "packets": 1323290,
       "errs": 0,
       "drop": 0,
       "fifo": 0,
@@ -59,8 +59,8 @@ expression: stats
       "multicast": 0
     },
     "tx": {
-      "bytes": 5883504,
-      "packets": 98056,
+      "bytes": 5955084,
+      "packets": 99249,
       "errs": 0,
       "drop": 0,
       "fifo": 0,
@@ -71,8 +71,8 @@ expression: stats
   },
   "lo": {
     "rx": {
-      "bytes": 24149144106,
-      "packets": 55169240,
+      "bytes": 24433256938,
+      "packets": 55834478,
       "errs": 0,
       "drop": 0,
       "fifo": 0,
@@ -81,8 +81,8 @@ expression: stats
       "multicast": 0
     },
     "tx": {
-      "bytes": 24149144106,
-      "packets": 55169240,
+      "bytes": 24433256938,
+      "packets": 55834478,
       "errs": 0,
       "drop": 0,
       "fifo": 0,
@@ -93,8 +93,8 @@ expression: stats
   },
   "mgmt0": {
     "rx": {
-      "bytes": 21254494518,
-      "packets": 39131054,
+      "bytes": 21493598205,
+      "packets": 39560517,
       "errs": 0,
       "drop": 0,
       "fifo": 0,
@@ -103,8 +103,8 @@ expression: stats
       "multicast": 0
     },
     "tx": {
-      "bytes": 8796940361,
-      "packets": 25337500,
+      "bytes": 8893646531,
+      "packets": 25626311,
       "errs": 0,
       "drop": 0,
       "fifo": 0,
@@ -137,8 +137,8 @@ expression: stats
   },
   "mgmt2": {
     "rx": {
-      "bytes": 38296564146,
-      "packets": 77330928,
+      "bytes": 38758532460,
+      "packets": 78257976,
       "errs": 0,
       "drop": 0,
       "fifo": 0,
@@ -147,8 +147,8 @@ expression: stats
       "multicast": 0
     },
     "tx": {
-      "bytes": 11526928880,
-      "packets": 73964142,
+      "bytes": 11666165360,
+      "packets": 74856970,
       "errs": 0,
       "drop": 0,
       "fifo": 0,
@@ -159,8 +159,8 @@ expression: stats
   },
   "usermode": {
     "rx": {
-      "bytes": 444304,
-      "packets": 3873,
+      "bytes": 449364,
+      "packets": 3919,
       "errs": 0,
       "drop": 0,
       "fifo": 0,
@@ -191,8 +191,8 @@ expression: stats
       "multicast": 0
     },
     "tx": {
-      "bytes": 582652088,
-      "packets": 653473,
+      "bytes": 592505330,
+      "packets": 664833,
       "errs": 0,
       "drop": 0,
       "fifo": 0,
@@ -213,8 +213,8 @@ expression: stats
       "multicast": 0
     },
     "tx": {
-      "bytes": 582651888,
-      "packets": 653469,
+      "bytes": 592505130,
+      "packets": 664829,
       "errs": 0,
       "drop": 0,
       "fifo": 0,
@@ -235,8 +235,8 @@ expression: stats
       "multicast": 0
     },
     "tx": {
-      "bytes": 582663880,
-      "packets": 653537,
+      "bytes": 592517122,
+      "packets": 664897,
       "errs": 0,
       "drop": 0,
       "fifo": 0,
@@ -257,8 +257,8 @@ expression: stats
       "multicast": 0
     },
     "tx": {
-      "bytes": 582652088,
-      "packets": 653473,
+      "bytes": 592505330,
+      "packets": 664833,
       "errs": 0,
       "drop": 0,
       "fifo": 0,
@@ -279,8 +279,8 @@ expression: stats
       "multicast": 0
     },
     "tx": {
-      "bytes": 582643002,
-      "packets": 653398,
+      "bytes": 592496244,
+      "packets": 664758,
       "errs": 0,
       "drop": 0,
       "fifo": 0,
@@ -301,8 +301,8 @@ expression: stats
       "multicast": 0
     },
     "tx": {
-      "bytes": 582643530,
-      "packets": 653410,
+      "bytes": 592496772,
+      "packets": 664770,
       "errs": 0,
       "drop": 0,
       "fifo": 0,
@@ -323,8 +323,8 @@ expression: stats
       "multicast": 0
     },
     "tx": {
-      "bytes": 582649906,
-      "packets": 653442,
+      "bytes": 592503148,
+      "packets": 664802,
       "errs": 0,
       "drop": 0,
       "fifo": 0,
@@ -345,8 +345,8 @@ expression: stats
       "multicast": 0
     },
     "tx": {
-      "bytes": 582650100,
-      "packets": 653447,
+      "bytes": 592503342,
+      "packets": 664807,
       "errs": 0,
       "drop": 0,
       "fifo": 0,
@@ -367,8 +367,8 @@ expression: stats
       "multicast": 0
     },
     "tx": {
-      "bytes": 582651586,
-      "packets": 653462,
+      "bytes": 592504828,
+      "packets": 664822,
       "errs": 0,
       "drop": 0,
       "fifo": 0,
@@ -389,8 +389,8 @@ expression: stats
       "multicast": 0
     },
     "tx": {
-      "bytes": 582643782,
-      "packets": 653416,
+      "bytes": 592497024,
+      "packets": 664776,
       "errs": 0,
       "drop": 0,
       "fifo": 0,
@@ -411,8 +411,8 @@ expression: stats
       "multicast": 0
     },
     "tx": {
-      "bytes": 582650284,
-      "packets": 653451,
+      "bytes": 592503526,
+      "packets": 664811,
       "errs": 0,
       "drop": 0,
       "fifo": 0,
@@ -433,8 +433,8 @@ expression: stats
       "multicast": 0
     },
     "tx": {
-      "bytes": 582678258,
-      "packets": 653642,
+      "bytes": 592531500,
+      "packets": 665002,
       "errs": 0,
       "drop": 0,
       "fifo": 0,
@@ -455,8 +455,8 @@ expression: stats
       "multicast": 0
     },
     "tx": {
-      "bytes": 582652056,
-      "packets": 653473,
+      "bytes": 592505298,
+      "packets": 664833,
       "errs": 0,
       "drop": 0,
       "fifo": 0,
@@ -477,8 +477,8 @@ expression: stats
       "multicast": 0
     },
     "tx": {
-      "bytes": 582649906,
-      "packets": 653442,
+      "bytes": 592503148,
+      "packets": 664802,
       "errs": 0,
       "drop": 0,
       "fifo": 0,
@@ -499,8 +499,8 @@ expression: stats
       "multicast": 0
     },
     "tx": {
-      "bytes": 582643782,
-      "packets": 653416,
+      "bytes": 592497024,
+      "packets": 664776,
       "errs": 0,
       "drop": 0,
       "fifo": 0,
@@ -521,8 +521,8 @@ expression: stats
       "multicast": 0
     },
     "tx": {
-      "bytes": 582652056,
-      "packets": 653473,
+      "bytes": 592505298,
+      "packets": 664833,
       "errs": 0,
       "drop": 0,
       "fifo": 0,
@@ -543,8 +543,8 @@ expression: stats
       "multicast": 0
     },
     "tx": {
-      "bytes": 582651528,
-      "packets": 653461,
+      "bytes": 592504770,
+      "packets": 664821,
       "errs": 0,
       "drop": 0,
       "fifo": 0,
@@ -565,8 +565,8 @@ expression: stats
       "multicast": 0
     },
     "tx": {
-      "bytes": 582651654,
-      "packets": 653464,
+      "bytes": 592504896,
+      "packets": 664824,
       "errs": 0,
       "drop": 0,
       "fifo": 0,
@@ -587,8 +587,8 @@ expression: stats
       "multicast": 0
     },
     "tx": {
-      "bytes": 582649990,
-      "packets": 653444,
+      "bytes": 592503232,
+      "packets": 664804,
       "errs": 0,
       "drop": 0,
       "fifo": 0,
@@ -609,8 +609,8 @@ expression: stats
       "multicast": 0
     },
     "tx": {
-      "bytes": 582643128,
-      "packets": 653401,
+      "bytes": 592496370,
+      "packets": 664761,
       "errs": 0,
       "drop": 0,
       "fifo": 0,
@@ -631,8 +631,8 @@ expression: stats
       "multicast": 0
     },
     "tx": {
-      "bytes": 582650284,
-      "packets": 653451,
+      "bytes": 592503526,
+      "packets": 664811,
       "errs": 0,
       "drop": 0,
       "fifo": 0,
@@ -653,8 +653,8 @@ expression: stats
       "multicast": 0
     },
     "tx": {
-      "bytes": 582651820,
-      "packets": 653467,
+      "bytes": 592505062,
+      "packets": 664827,
       "errs": 0,
       "drop": 0,
       "fifo": 0,
@@ -675,8 +675,8 @@ expression: stats
       "multicast": 0
     },
     "tx": {
-      "bytes": 582649864,
-      "packets": 653441,
+      "bytes": 592503106,
+      "packets": 664801,
       "errs": 0,
       "drop": 0,
       "fifo": 0,
@@ -697,8 +697,8 @@ expression: stats
       "multicast": 0
     },
     "tx": {
-      "bytes": 582651628,
-      "packets": 653463,
+      "bytes": 592504870,
+      "packets": 664823,
       "errs": 0,
       "drop": 0,
       "fifo": 0,
@@ -709,8 +709,8 @@ expression: stats
   },
   "vethc28587c": {
     "rx": {
-      "bytes": 5006179119,
-      "packets": 15566896,
+      "bytes": 5126155971,
+      "packets": 15906644,
       "errs": 0,
       "drop": 0,
       "fifo": 0,
@@ -719,8 +719,8 @@ expression: stats
       "multicast": 0
     },
     "tx": {
-      "bytes": 21910627502,
-      "packets": 20991492,
+      "bytes": 22376563397,
+      "packets": 21448851,
       "errs": 0,
       "drop": 0,
       "fifo": 0,
@@ -741,8 +741,8 @@ expression: stats
       "multicast": 0
     },
     "tx": {
-      "bytes": 582649990,
-      "packets": 653444,
+      "bytes": 592503232,
+      "packets": 664804,
       "errs": 0,
       "drop": 0,
       "fifo": 0,
@@ -763,8 +763,8 @@ expression: stats
       "multicast": 0
     },
     "tx": {
-      "bytes": 582650100,
-      "packets": 653447,
+      "bytes": 592503342,
+      "packets": 664807,
       "errs": 0,
       "drop": 0,
       "fifo": 0,
@@ -785,8 +785,8 @@ expression: stats
       "multicast": 0
     },
     "tx": {
-      "bytes": 582642204,
-      "packets": 653379,
+      "bytes": 592495446,
+      "packets": 664739,
       "errs": 0,
       "drop": 0,
       "fifo": 0,
@@ -807,8 +807,8 @@ expression: stats
       "multicast": 0
     },
     "tx": {
-      "bytes": 582649948,
-      "packets": 653443,
+      "bytes": 592503190,
+      "packets": 664803,
       "errs": 0,
       "drop": 0,
       "fifo": 0,
@@ -829,8 +829,8 @@ expression: stats
       "multicast": 0
     },
     "tx": {
-      "bytes": 582650310,
-      "packets": 653452,
+      "bytes": 592503552,
+      "packets": 664812,
       "errs": 0,
       "drop": 0,
       "fifo": 0,
@@ -841,8 +841,8 @@ expression: stats
   },
   "vethf6ea3d7": {
     "rx": {
-      "bytes": 4992283,
-      "packets": 56977,
+      "bytes": 5098678,
+      "packets": 58194,
       "errs": 0,
       "drop": 0,
       "fifo": 0,
@@ -851,8 +851,8 @@ expression: stats
       "multicast": 0
     },
     "tx": {
-      "bytes": 599269804,
-      "packets": 702775,
+      "bytes": 609478062,
+      "packets": 715181,
       "errs": 0,
       "drop": 0,
       "fifo": 0,
