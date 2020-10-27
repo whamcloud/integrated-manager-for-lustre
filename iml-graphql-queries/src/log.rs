@@ -45,6 +45,12 @@ pub mod logs {
         vars: Vars,
     }
 
+    impl Default for Builder {
+        fn default() -> Self {
+            Self::new()
+        }
+    }
+
     impl Builder {
         pub fn new() -> Self {
             Self {
@@ -109,7 +115,7 @@ pub mod logs {
         }
 
         pub fn with_severity(mut self, severity: &LogSeverity) -> Self {
-            self.vars.severity = Some(severity.clone());
+            self.vars.severity = Some(*severity);
             self
         }
 
