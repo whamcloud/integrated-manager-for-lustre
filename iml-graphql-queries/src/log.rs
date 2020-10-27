@@ -4,7 +4,7 @@
 
 pub mod logs {
     use crate::Query;
-    use iml_wire_types::{LogSeverity, MessageClass, SortDir};
+    use iml_wire_types::{logs::LogResponse, LogSeverity, MessageClass, SortDir};
 
     pub static QUERY: &str = r#"
             query logs($limit: Int, $offset: Int, $dir: SortDir, $message: String, $fqdn: String, $tag: String, $startDatetime: DateTimeUtc, $endDatetime: DateTimeUtc, $messageClass: [MessageClass!], $severity: LogSeverity) {
@@ -125,5 +125,10 @@ pub mod logs {
                 variables: Some(self.vars),
             }
         }
+    }
+
+    #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+    pub struct Resp {
+        pub logs: LogResponse,
     }
 }

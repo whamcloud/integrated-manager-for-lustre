@@ -1407,12 +1407,6 @@ pub mod logs {
         pub data: Vec<LogMessage>,
         pub meta: Meta,
     }
-
-    #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
-    #[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
-    pub struct Resp {
-        pub logs: LogResponse,
-    }
 }
 
 /// A `StratagemConfiguration` record from `api/stratagem_configuration`.
