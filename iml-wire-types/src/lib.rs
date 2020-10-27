@@ -2020,19 +2020,23 @@ pub enum FsType {
     Ldiskfs,
 }
 
-impl From<&str> for FsType {
-    fn from(x: &str) -> Self {
+impl TryFrom<&str> for FsType {
+    type Error = &'static str;
+
+    fn try_from(x: &str) -> Result<Self, Self::Error> {
         match x {
-            "ldiskfs" => Self::Ldiskfs,
-            "zfs" => Self::Zfs,
-            _ => Self::Ldiskfs,
+            "ldiskfs" => Ok(Self::Ldiskfs),
+            "zfs" => Ok(Self::Zfs),
+            _ => Err("Invalid fs type."),
         }
     }
 }
 
-impl From<String> for FsType {
-    fn from(x: String) -> Self {
-        Self::from(x.as_str())
+impl TryFrom<String> for FsType {
+    type Error = &'static str;
+
+    fn try_from(x: String) -> Result<Self, Self::Error> {
+        Self::try_from(x.as_str())
     }
 }
 
@@ -2053,7 +2057,7 @@ pub struct LdevEntry {
     pub failover: Option<String>,
     pub label: String,
     pub device: String,
-    pub fs_type: FsType,
+    pub fs_type: Option<FsType>,
 }
 
 impl From<&str> for LdevEntry {
@@ -2077,11 +2081,13 @@ impl From<&str> for LdevEntry {
             ),
             label: (*parts.get(2).expect("LdevEntry must specify a label.")).to_string(),
             device: (*parts.get(3).expect("LdevEntry must specify a device.")).to_string(),
-            fs_type: (*parts.get(3).expect("LdevEntry must specify a device."))
-                .split(':')
-                .next()
-                .unwrap_or_else(|| "ldiskfs")
-                .into(),
+            fs_type: FsType::try_from(
+                (*parts.get(3).expect("LdevEntry must specify a device."))
+                    .split(':')
+                    .next()
+                    .expect("get fs_type"),
+            )
+            .ok(),
         }
     }
 }
@@ -2090,10 +2096,12 @@ impl fmt::Display for LdevEntry {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let device = if self.device.starts_with("zfs:") || self.device.starts_with("ldiskfs:") {
             self.device.to_string()
-        } else if self.fs_type == FsType::Zfs {
+        } else if self.fs_type == Some(FsType::Zfs) {
             format!("zfs:{}", self.device)
-        } else {
+        } else if self.fs_type == Some(FsType::Ldiskfs) {
             format!("ldiskfs:{}", self.device)
+        } else {
+            self.device.to_string()
         };
 
         write!(
