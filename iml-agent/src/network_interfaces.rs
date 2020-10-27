@@ -26,7 +26,7 @@ async fn get_interfaces() -> Result<Vec<NetworkInterface>, ImlAgentError> {
 
     let net_stats = std::str::from_utf8(&net_stats.stdout)?;
 
-    let net_stats = network_interface_stats::parse(net_stats);
+    let net_stats = network_interface_stats::parse(net_stats)?;
 
     let network_interfaces = ip_addr_cmd().checked_output().await?;
 

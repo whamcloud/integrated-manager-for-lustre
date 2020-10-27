@@ -2,667 +2,1285 @@
 source: iml-agent/src/network_interface.rs
 expression: network_interfaces
 ---
-[
-  {
-    "interface": "lo",
-    "mac_address": "00:00:00:00:00:00",
-    "interface_type": "loopback",
-    "inet4_address": [
-      "127.0.0.1/8"
-    ],
-    "inet6_address": [
-      "::1/128"
-    ],
-    "stats": {
-      "rx": {
-        "bytes": 24149144106,
-        "packets": 55169240,
-        "errs": 0,
-        "drop": 0,
-        "fifo": 0,
-        "frame": 0,
-        "compressed": 0,
-        "multicast": 0
+{
+  "Ok": [
+    {
+      "interface": "usermode",
+      "mac_address": "52:54:00:12:34:56",
+      "interface_type": "ether",
+      "inet4_address": [
+        "10.0.2.15/24"
+      ],
+      "inet6_address": [
+        "fec0::5054:ff:fe12:3456/64",
+        "fe80::5054:ff:fe12:3456/64"
+      ],
+      "stats": {
+        "rx": {
+          "bytes": 449364,
+          "packets": 3919,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "frame": 0,
+          "compressed": 0,
+          "multicast": 0
+        },
+        "tx": {
+          "bytes": 20174,
+          "packets": 173,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "colls": 0,
+          "carrier": 0,
+          "compressed": 0
+        }
       },
-      "tx": {
-        "bytes": 24149144106,
-        "packets": 55169240,
-        "errs": 0,
-        "drop": 0,
-        "fifo": 0,
-        "colls": 0,
-        "carrier": 0,
-        "compressed": 0
-      }
+      "is_up": true,
+      "is_slave": false
     },
-    "is_up": true,
-    "is_slave": false
-  },
-  {
-    "interface": "vethd5ae58b@if35585",
-    "mac_address": "ae:b5:89:49:2d:77",
-    "interface_type": "ether",
-    "inet4_address": [],
-    "inet6_address": [
-      "fe80::acb5:89ff:fe49:2d77/64"
-    ],
-    "stats": null,
-    "is_up": true,
-    "is_slave": false
-  },
-  {
-    "interface": "usermode",
-    "mac_address": "52:54:00:12:34:56",
-    "interface_type": "ether",
-    "inet4_address": [
-      "10.0.2.15/24"
-    ],
-    "inet6_address": [
-      "fec0::5054:ff:fe12:3456/64",
-      "fe80::5054:ff:fe12:3456/64"
-    ],
-    "stats": {
-      "rx": {
-        "bytes": 444304,
-        "packets": 3873,
-        "errs": 0,
-        "drop": 0,
-        "fifo": 0,
-        "frame": 0,
-        "compressed": 0,
-        "multicast": 0
+    {
+      "interface": "veth16eb12b@if443650",
+      "mac_address": "5e:2b:ca:e4:6b:52",
+      "interface_type": "ether",
+      "inet4_address": [],
+      "inet6_address": [
+        "fe80::5c2b:caff:fee4:6b52/64"
+      ],
+      "stats": {
+        "rx": {
+          "bytes": 4116,
+          "packets": 58,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "frame": 0,
+          "compressed": 0,
+          "multicast": 0
+        },
+        "tx": {
+          "bytes": 592505130,
+          "packets": 664829,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "colls": 0,
+          "carrier": 0,
+          "compressed": 0
+        }
       },
-      "tx": {
-        "bytes": 20174,
-        "packets": 173,
-        "errs": 0,
-        "drop": 0,
-        "fifo": 0,
-        "colls": 0,
-        "carrier": 0,
-        "compressed": 0
-      }
+      "is_up": true,
+      "is_slave": false
     },
-    "is_up": true,
-    "is_slave": false
-  },
-  {
-    "interface": "mgmt0",
-    "mac_address": "02:00:f0:cd:8d:6e",
-    "interface_type": "ether",
-    "inet4_address": [
-      "10.36.47.10/20",
-      "10.36.47.116/22"
-    ],
-    "inet6_address": [
-      "fe80::f0ff:fecd:8d6e/64"
-    ],
-    "stats": {
-      "rx": {
-        "bytes": 21254494518,
-        "packets": 39131054,
-        "errs": 0,
-        "drop": 0,
-        "fifo": 0,
-        "frame": 0,
-        "compressed": 0,
-        "multicast": 0
+    {
+      "interface": "mgmt0",
+      "mac_address": "02:00:f0:cd:8d:6e",
+      "interface_type": "ether",
+      "inet4_address": [
+        "10.36.47.10/20",
+        "10.36.47.116/22"
+      ],
+      "inet6_address": [
+        "fe80::f0ff:fecd:8d6e/64"
+      ],
+      "stats": {
+        "rx": {
+          "bytes": 21493598205,
+          "packets": 39560517,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "frame": 0,
+          "compressed": 0,
+          "multicast": 0
+        },
+        "tx": {
+          "bytes": 8893646531,
+          "packets": 25626311,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "colls": 0,
+          "carrier": 0,
+          "compressed": 0
+        }
       },
-      "tx": {
-        "bytes": 8796940361,
-        "packets": 25337500,
-        "errs": 0,
-        "drop": 0,
-        "fifo": 0,
-        "colls": 0,
-        "carrier": 0,
-        "compressed": 0
-      }
+      "is_up": true,
+      "is_slave": false
     },
-    "is_up": true,
-    "is_slave": false
-  },
-  {
-    "interface": "mgmt1",
-    "mac_address": "02:00:0d:40:8d:6f",
-    "interface_type": "ether",
-    "inet4_address": [],
-    "inet6_address": [],
-    "stats": {
-      "rx": {
-        "bytes": 0,
-        "packets": 0,
-        "errs": 0,
-        "drop": 0,
-        "fifo": 0,
-        "frame": 0,
-        "compressed": 0,
-        "multicast": 0
+    {
+      "interface": "mgmt1",
+      "mac_address": "02:00:0d:40:8d:6f",
+      "interface_type": "ether",
+      "inet4_address": [],
+      "inet6_address": [],
+      "stats": {
+        "rx": {
+          "bytes": 0,
+          "packets": 0,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "frame": 0,
+          "compressed": 0,
+          "multicast": 0
+        },
+        "tx": {
+          "bytes": 0,
+          "packets": 0,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "colls": 0,
+          "carrier": 0,
+          "compressed": 0
+        }
       },
-      "tx": {
-        "bytes": 0,
-        "packets": 0,
-        "errs": 0,
-        "drop": 0,
-        "fifo": 0,
-        "colls": 0,
-        "carrier": 0,
-        "compressed": 0
-      }
+      "is_up": false,
+      "is_slave": false
     },
-    "is_up": false,
-    "is_slave": false
-  },
-  {
-    "interface": "mgmt2",
-    "mac_address": "02:00:8e:c2:8d:70",
-    "interface_type": "ether",
-    "inet4_address": [
-      "10.0.3.2/24"
-    ],
-    "inet6_address": [
-      "fe80::8eff:fec2:8d70/64"
-    ],
-    "stats": {
-      "rx": {
-        "bytes": 38296564146,
-        "packets": 77330928,
-        "errs": 0,
-        "drop": 0,
-        "fifo": 0,
-        "frame": 0,
-        "compressed": 0,
-        "multicast": 0
+    {
+      "interface": "mgmt2",
+      "mac_address": "02:00:8e:c2:8d:70",
+      "interface_type": "ether",
+      "inet4_address": [
+        "10.0.3.2/24"
+      ],
+      "inet6_address": [
+        "fe80::8eff:fec2:8d70/64"
+      ],
+      "stats": {
+        "rx": {
+          "bytes": 38758532460,
+          "packets": 78257976,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "frame": 0,
+          "compressed": 0,
+          "multicast": 0
+        },
+        "tx": {
+          "bytes": 11666165360,
+          "packets": 74856970,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "colls": 0,
+          "carrier": 0,
+          "compressed": 0
+        }
       },
-      "tx": {
-        "bytes": 11526928880,
-        "packets": 73964142,
-        "errs": 0,
-        "drop": 0,
-        "fifo": 0,
-        "colls": 0,
-        "carrier": 0,
-        "compressed": 0
-      }
+      "is_up": true,
+      "is_slave": false
     },
-    "is_up": true,
-    "is_slave": false
-  },
-  {
-    "interface": "ib0",
-    "mac_address": "20:00:04:be:fe:80:00:00:00:00:00:00:b8:59:9f:03:00:f6:8b:c0",
-    "interface_type": "infiniband",
-    "inet4_address": [
-      "172.16.0.24/24"
-    ],
-    "inet6_address": [
-      "fe80::ba59:9f03:f6:8bc0/64"
-    ],
-    "stats": {
-      "rx": {
-        "bytes": 4771375320,
-        "packets": 23555227,
-        "errs": 0,
-        "drop": 0,
-        "fifo": 0,
-        "frame": 0,
-        "compressed": 0,
-        "multicast": 0
+    {
+      "interface": "ib0",
+      "mac_address": "20:00:05:18:fe:80:00:00:00:00:00:00:b8:59:9f:03:00:f6:8b:c0",
+      "interface_type": "infiniband",
+      "inet4_address": [
+        "172.16.0.24/24"
+      ],
+      "inet6_address": [
+        "fe80::ba59:9f03:f6:8bc0/64"
+      ],
+      "stats": {
+        "rx": {
+          "bytes": 4828965068,
+          "packets": 23837574,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "frame": 0,
+          "compressed": 0,
+          "multicast": 0
+        },
+        "tx": {
+          "bytes": 4209864628,
+          "packets": 26019919,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "colls": 0,
+          "carrier": 0,
+          "compressed": 0
+        }
       },
-      "tx": {
-        "bytes": 4159125100,
-        "packets": 25706791,
-        "errs": 0,
-        "drop": 0,
-        "fifo": 0,
-        "colls": 0,
-        "carrier": 0,
-        "compressed": 0
-      }
+      "is_up": true,
+      "is_slave": false
     },
-    "is_up": true,
-    "is_slave": false
-  },
-  {
-    "interface": "ib1",
-    "mac_address": "20:00:0e:1c:fe:80:00:00:00:00:00:00:b8:59:9f:03:00:f6:8b:c1",
-    "interface_type": "infiniband",
-    "inet4_address": [
-      "172.16.0.28/24"
-    ],
-    "inet6_address": [
-      "fe80::ba59:9f03:f6:8bc1/64"
-    ],
-    "stats": {
-      "rx": {
-        "bytes": 155665548,
-        "packets": 1311436,
-        "errs": 0,
-        "drop": 0,
-        "fifo": 0,
-        "frame": 0,
-        "compressed": 0,
-        "multicast": 0
+    {
+      "interface": "ib1",
+      "mac_address": "20:00:0d:eb:fe:80:00:00:00:00:00:00:b8:59:9f:03:00:f6:8b:c1",
+      "interface_type": "infiniband",
+      "inet4_address": [
+        "172.16.0.28/24"
+      ],
+      "inet6_address": [
+        "fe80::ba59:9f03:f6:8bc1/64"
+      ],
+      "stats": {
+        "rx": {
+          "bytes": 157149372,
+          "packets": 1323290,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "frame": 0,
+          "compressed": 0,
+          "multicast": 0
+        },
+        "tx": {
+          "bytes": 5955084,
+          "packets": 99249,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "colls": 0,
+          "carrier": 0,
+          "compressed": 0
+        }
       },
-      "tx": {
-        "bytes": 5883504,
-        "packets": 98056,
-        "errs": 0,
-        "drop": 0,
-        "fifo": 0,
-        "colls": 0,
-        "carrier": 0,
-        "compressed": 0
-      }
+      "is_up": true,
+      "is_slave": false
     },
-    "is_up": true,
-    "is_slave": false
-  },
-  {
-    "interface": "docker0",
-    "mac_address": "02:42:26:df:9d:c2",
-    "interface_type": "ether",
-    "inet4_address": [
-      "172.17.0.1/16"
-    ],
-    "inet6_address": [],
-    "stats": {
-      "rx": {
-        "bytes": 0,
-        "packets": 0,
-        "errs": 0,
-        "drop": 0,
-        "fifo": 0,
-        "frame": 0,
-        "compressed": 0,
-        "multicast": 0
+    {
+      "interface": "docker0",
+      "mac_address": "02:42:e3:2a:7f:07",
+      "interface_type": "ether",
+      "inet4_address": [
+        "172.17.0.1/16"
+      ],
+      "inet6_address": [],
+      "stats": {
+        "rx": {
+          "bytes": 0,
+          "packets": 0,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "frame": 0,
+          "compressed": 0,
+          "multicast": 0
+        },
+        "tx": {
+          "bytes": 0,
+          "packets": 0,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "colls": 0,
+          "carrier": 0,
+          "compressed": 0
+        }
       },
-      "tx": {
-        "bytes": 0,
-        "packets": 0,
-        "errs": 0,
-        "drop": 0,
-        "fifo": 0,
-        "colls": 0,
-        "carrier": 0,
-        "compressed": 0
-      }
+      "is_up": true,
+      "is_slave": false
     },
-    "is_up": true,
-    "is_slave": false
-  },
-  {
-    "interface": "",
-    "mac_address": "02:42:4f:43:f8:91",
-    "interface_type": "ether",
-    "inet4_address": [
-      "172.18.0.1/16"
-    ],
-    "inet6_address": [
-      "fe80::42:4fff:fe43:f891/64"
-    ],
-    "stats": null,
-    "is_up": false,
-    "is_slave": false
-  },
-  {
-    "interface": "vethe063ab4@if35599",
-    "mac_address": "b2:70:2c:b3:7b:81",
-    "interface_type": "ether",
-    "inet4_address": [],
-    "inet6_address": [
-      "fe80::b070:2cff:feb3:7b81/64"
-    ],
-    "stats": null,
-    "is_up": true,
-    "is_slave": false
-  },
-  {
-    "interface": "veth9b39f63@if35603",
-    "mac_address": "e6:9a:da:1f:40:c9",
-    "interface_type": "ether",
-    "inet4_address": [],
-    "inet6_address": [
-      "fe80::e49a:daff:fe1f:40c9/64"
-    ],
-    "stats": null,
-    "is_up": true,
-    "is_slave": false
-  },
-  {
-    "interface": "vetha8c1451@if35611",
-    "mac_address": "3a:70:ac:dd:f1:b6",
-    "interface_type": "ether",
-    "inet4_address": [],
-    "inet6_address": [
-      "fe80::3870:acff:fedd:f1b6/64"
-    ],
-    "stats": null,
-    "is_up": true,
-    "is_slave": false
-  },
-  {
-    "interface": "vethd48e062@if35621",
-    "mac_address": "5e:ce:03:98:45:68",
-    "interface_type": "ether",
-    "inet4_address": [],
-    "inet6_address": [
-      "fe80::5cce:3ff:fe98:4568/64"
-    ],
-    "stats": null,
-    "is_up": true,
-    "is_slave": false
-  },
-  {
-    "interface": "vethe8659e9@if35625",
-    "mac_address": "ee:85:ca:ff:6f:9e",
-    "interface_type": "ether",
-    "inet4_address": [],
-    "inet6_address": [
-      "fe80::ec85:caff:feff:6f9e/64"
-    ],
-    "stats": null,
-    "is_up": true,
-    "is_slave": false
-  },
-  {
-    "interface": "veth840101b@if35631",
-    "mac_address": "66:04:3c:35:cd:f1",
-    "interface_type": "ether",
-    "inet4_address": [],
-    "inet6_address": [
-      "fe80::6404:3cff:fe35:cdf1/64"
-    ],
-    "stats": null,
-    "is_up": true,
-    "is_slave": false
-  },
-  {
-    "interface": "veth995405a@if35637",
-    "mac_address": "c6:fa:28:07:a1:88",
-    "interface_type": "ether",
-    "inet4_address": [],
-    "inet6_address": [
-      "fe80::c4fa:28ff:fe07:a188/64"
-    ],
-    "stats": null,
-    "is_up": true,
-    "is_slave": false
-  },
-  {
-    "interface": "veth9523e2c@if35643",
-    "mac_address": "02:d4:5e:76:51:61",
-    "interface_type": "ether",
-    "inet4_address": [],
-    "inet6_address": [
-      "fe80::d4:5eff:fe76:5161/64"
-    ],
-    "stats": null,
-    "is_up": true,
-    "is_slave": false
-  },
-  {
-    "interface": "veth3fde195@if35655",
-    "mac_address": "da:6b:45:96:ac:04",
-    "interface_type": "ether",
-    "inet4_address": [],
-    "inet6_address": [
-      "fe80::d86b:45ff:fe96:ac04/64"
-    ],
-    "stats": null,
-    "is_up": true,
-    "is_slave": false
-  },
-  {
-    "interface": "veth9e6c33f@if35659",
-    "mac_address": "aa:db:9f:af:96:98",
-    "interface_type": "ether",
-    "inet4_address": [],
-    "inet6_address": [
-      "fe80::a8db:9fff:feaf:9698/64"
-    ],
-    "stats": null,
-    "is_up": true,
-    "is_slave": false
-  },
-  {
-    "interface": "vethf2e5082@if35667",
-    "mac_address": "ea:d5:cb:14:03:c8",
-    "interface_type": "ether",
-    "inet4_address": [],
-    "inet6_address": [
-      "fe80::e8d5:cbff:fe14:3c8/64"
-    ],
-    "stats": null,
-    "is_up": true,
-    "is_slave": false
-  },
-  {
-    "interface": "vethfee4cf7@if35669",
-    "mac_address": "46:64:09:7f:a2:e9",
-    "interface_type": "ether",
-    "inet4_address": [],
-    "inet6_address": [
-      "fe80::4464:9ff:fe7f:a2e9/64"
-    ],
-    "stats": null,
-    "is_up": true,
-    "is_slave": false
-  },
-  {
-    "interface": "veth13197d6@if35671",
-    "mac_address": "c6:f9:2b:ea:b2:51",
-    "interface_type": "ether",
-    "inet4_address": [],
-    "inet6_address": [
-      "fe80::c4f9:2bff:feea:b251/64"
-    ],
-    "stats": null,
-    "is_up": true,
-    "is_slave": false
-  },
-  {
-    "interface": "veth3a5a647@if35683",
-    "mac_address": "1e:31:31:13:03:0b",
-    "interface_type": "ether",
-    "inet4_address": [],
-    "inet6_address": [
-      "fe80::1c31:31ff:fe13:30b/64"
-    ],
-    "stats": null,
-    "is_up": true,
-    "is_slave": false
-  },
-  {
-    "interface": "veth64507f5@if35689",
-    "mac_address": "02:2f:49:a3:e6:11",
-    "interface_type": "ether",
-    "inet4_address": [],
-    "inet6_address": [
-      "fe80::2f:49ff:fea3:e611/64"
-    ],
-    "stats": null,
-    "is_up": true,
-    "is_slave": false
-  },
-  {
-    "interface": "vethd29957a@if35691",
-    "mac_address": "6e:55:cd:b3:d1:c2",
-    "interface_type": "ether",
-    "inet4_address": [],
-    "inet6_address": [
-      "fe80::6c55:cdff:feb3:d1c2/64"
-    ],
-    "stats": null,
-    "is_up": true,
-    "is_slave": false
-  },
-  {
-    "interface": "veth7e0f8bf@if35693",
-    "mac_address": "b6:4b:c4:47:1e:ca",
-    "interface_type": "ether",
-    "inet4_address": [],
-    "inet6_address": [
-      "fe80::b44b:c4ff:fe47:1eca/64"
-    ],
-    "stats": null,
-    "is_up": true,
-    "is_slave": false
-  },
-  {
-    "interface": "vethc737ce9@if35695",
-    "mac_address": "c6:c7:1c:e2:fb:36",
-    "interface_type": "ether",
-    "inet4_address": [],
-    "inet6_address": [
-      "fe80::c4c7:1cff:fee2:fb36/64"
-    ],
-    "stats": null,
-    "is_up": true,
-    "is_slave": false
-  },
-  {
-    "interface": "vethc8cb1fc@if35697",
-    "mac_address": "52:a1:0d:68:05:4d",
-    "interface_type": "ether",
-    "inet4_address": [],
-    "inet6_address": [
-      "fe80::50a1:dff:fe68:54d/64"
-    ],
-    "stats": null,
-    "is_up": true,
-    "is_slave": false
-  },
-  {
-    "interface": "vethc4e79c4@if35701",
-    "mac_address": "3e:1c:27:6f:03:a9",
-    "interface_type": "ether",
-    "inet4_address": [],
-    "inet6_address": [
-      "fe80::3c1c:27ff:fe6f:3a9/64"
-    ],
-    "stats": null,
-    "is_up": true,
-    "is_slave": false
-  },
-  {
-    "interface": "veth0fe62a7@if35703",
-    "mac_address": "c6:37:d9:43:eb:83",
-    "interface_type": "ether",
-    "inet4_address": [],
-    "inet6_address": [
-      "fe80::c437:d9ff:fe43:eb83/64"
-    ],
-    "stats": null,
-    "is_up": true,
-    "is_slave": false
-  },
-  {
-    "interface": "veth13023f4@if35705",
-    "mac_address": "c2:50:73:a2:ba:5b",
-    "interface_type": "ether",
-    "inet4_address": [],
-    "inet6_address": [
-      "fe80::c050:73ff:fea2:ba5b/64"
-    ],
-    "stats": null,
-    "is_up": true,
-    "is_slave": false
-  },
-  {
-    "interface": "veth626b22c@if35707",
-    "mac_address": "7a:a8:2e:8d:f3:38",
-    "interface_type": "ether",
-    "inet4_address": [],
-    "inet6_address": [
-      "fe80::78a8:2eff:fe8d:f338/64"
-    ],
-    "stats": null,
-    "is_up": true,
-    "is_slave": false
-  },
-  {
-    "interface": "vethac77155@if35709",
-    "mac_address": "72:b2:a4:72:5a:b1",
-    "interface_type": "ether",
-    "inet4_address": [],
-    "inet6_address": [
-      "fe80::70b2:a4ff:fe72:5ab1/64"
-    ],
-    "stats": null,
-    "is_up": true,
-    "is_slave": false
-  },
-  {
-    "interface": "vethc75e896@if35739",
-    "mac_address": "6e:3a:5a:ab:a9:f5",
-    "interface_type": "ether",
-    "inet4_address": [],
-    "inet6_address": [
-      "fe80::6c3a:5aff:feab:a9f5/64"
-    ],
-    "stats": null,
-    "is_up": true,
-    "is_slave": false
-  },
-  {
-    "interface": "vethe7540db@if35747",
-    "mac_address": "5a:d8:7c:47:fb:bb",
-    "interface_type": "ether",
-    "inet4_address": [],
-    "inet6_address": [
-      "fe80::58d8:7cff:fe47:fbbb/64"
-    ],
-    "stats": null,
-    "is_up": true,
-    "is_slave": false
-  },
-  {
-    "interface": "veth3d93726@if35751",
-    "mac_address": "7a:9e:ed:05:da:e3",
-    "interface_type": "ether",
-    "inet4_address": [],
-    "inet6_address": [
-      "fe80::789e:edff:fe05:dae3/64"
-    ],
-    "stats": null,
-    "is_up": true,
-    "is_slave": false
-  },
-  {
-    "interface": "veth6c00034@if35755",
-    "mac_address": "36:12:59:84:77:92",
-    "interface_type": "ether",
-    "inet4_address": [],
-    "inet6_address": [
-      "fe80::3412:59ff:fe84:7792/64"
-    ],
-    "stats": null,
-    "is_up": true,
-    "is_slave": false
-  },
-  {
-    "interface": "veth36cb179@if35759",
-    "mac_address": "32:ef:bd:a6:03:69",
-    "interface_type": "ether",
-    "inet4_address": [],
-    "inet6_address": [
-      "fe80::30ef:bdff:fea6:369/64"
-    ],
-    "stats": null,
-    "is_up": true,
-    "is_slave": false
-  },
-  {
-    "interface": "veth4ccba02@if35576",
-    "mac_address": "7e:5a:0f:fd:9c:65",
-    "interface_type": "ether",
-    "inet4_address": [],
-    "inet6_address": [
-      "fe80::7c5a:fff:fefd:9c65/64"
-    ],
-    "stats": null,
-    "is_up": true,
-    "is_slave": false
-  }
-]
+    {
+      "interface": "",
+      "mac_address": "02:42:23:57:9c:d2",
+      "interface_type": "ether",
+      "inet4_address": [
+        "172.18.0.1/16"
+      ],
+      "inet6_address": [
+        "fe80::42:23ff:fe57:9cd2/64"
+      ],
+      "stats": null,
+      "is_up": false,
+      "is_slave": false
+    },
+    {
+      "interface": "veth9e52739@if443680",
+      "mac_address": "02:d2:4d:6a:e9:ef",
+      "interface_type": "ether",
+      "inet4_address": [],
+      "inet6_address": [
+        "fe80::d2:4dff:fe6a:e9ef/64"
+      ],
+      "stats": {
+        "rx": {
+          "bytes": 4132,
+          "packets": 58,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "frame": 0,
+          "compressed": 0,
+          "multicast": 0
+        },
+        "tx": {
+          "bytes": 592505062,
+          "packets": 664827,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "colls": 0,
+          "carrier": 0,
+          "compressed": 0
+        }
+      },
+      "is_up": true,
+      "is_slave": false
+    },
+    {
+      "interface": "vethbdb5f64@if443698",
+      "mac_address": "4a:46:c3:ac:ea:07",
+      "interface_type": "ether",
+      "inet4_address": [],
+      "inet6_address": [
+        "fe80::4846:c3ff:feac:ea07/64"
+      ],
+      "stats": {
+        "rx": {
+          "bytes": 4132,
+          "packets": 58,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "frame": 0,
+          "compressed": 0,
+          "multicast": 0
+        },
+        "tx": {
+          "bytes": 592504870,
+          "packets": 664823,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "colls": 0,
+          "carrier": 0,
+          "compressed": 0
+        }
+      },
+      "is_up": true,
+      "is_slave": false
+    },
+    {
+      "interface": "veth45bb9b8@if443700",
+      "mac_address": "ae:d8:09:a2:c9:ec",
+      "interface_type": "ether",
+      "inet4_address": [],
+      "inet6_address": [
+        "fe80::acd8:9ff:fea2:c9ec/64"
+      ],
+      "stats": {
+        "rx": {
+          "bytes": 3598,
+          "packets": 51,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "frame": 0,
+          "compressed": 0,
+          "multicast": 0
+        },
+        "tx": {
+          "bytes": 592503148,
+          "packets": 664802,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "colls": 0,
+          "carrier": 0,
+          "compressed": 0
+        }
+      },
+      "is_up": true,
+      "is_slave": false
+    },
+    {
+      "interface": "veth86cfdc2@if443702",
+      "mac_address": "e2:39:b1:0e:af:73",
+      "interface_type": "ether",
+      "inet4_address": [],
+      "inet6_address": [
+        "fe80::e039:b1ff:fe0e:af73/64"
+      ],
+      "stats": {
+        "rx": {
+          "bytes": 3598,
+          "packets": 51,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "frame": 0,
+          "compressed": 0,
+          "multicast": 0
+        },
+        "tx": {
+          "bytes": 592503232,
+          "packets": 664804,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "colls": 0,
+          "carrier": 0,
+          "compressed": 0
+        }
+      },
+      "is_up": true,
+      "is_slave": false
+    },
+    {
+      "interface": "veth63d4f07@if443704",
+      "mac_address": "02:c4:c4:ec:d0:42",
+      "interface_type": "ether",
+      "inet4_address": [],
+      "inet6_address": [
+        "fe80::c4:c4ff:feec:d042/64"
+      ],
+      "stats": {
+        "rx": {
+          "bytes": 3556,
+          "packets": 50,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "frame": 0,
+          "compressed": 0,
+          "multicast": 0
+        },
+        "tx": {
+          "bytes": 592503526,
+          "packets": 664811,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "colls": 0,
+          "carrier": 0,
+          "compressed": 0
+        }
+      },
+      "is_up": true,
+      "is_slave": false
+    },
+    {
+      "interface": "veth95ac83e@if443706",
+      "mac_address": "4a:cc:35:a1:ea:6c",
+      "interface_type": "ether",
+      "inet4_address": [],
+      "inet6_address": [
+        "fe80::48cc:35ff:fea1:ea6c/64"
+      ],
+      "stats": {
+        "rx": {
+          "bytes": 3598,
+          "packets": 51,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "frame": 0,
+          "compressed": 0,
+          "multicast": 0
+        },
+        "tx": {
+          "bytes": 592503526,
+          "packets": 664811,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "colls": 0,
+          "carrier": 0,
+          "compressed": 0
+        }
+      },
+      "is_up": true,
+      "is_slave": false
+    },
+    {
+      "interface": "veth7ff82b2@if443708",
+      "mac_address": "56:8c:02:99:df:d0",
+      "interface_type": "ether",
+      "inet4_address": [],
+      "inet6_address": [
+        "fe80::548c:2ff:fe99:dfd0/64"
+      ],
+      "stats": {
+        "rx": {
+          "bytes": 4158,
+          "packets": 59,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "frame": 0,
+          "compressed": 0,
+          "multicast": 0
+        },
+        "tx": {
+          "bytes": 592504896,
+          "packets": 664824,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "colls": 0,
+          "carrier": 0,
+          "compressed": 0
+        }
+      },
+      "is_up": true,
+      "is_slave": false
+    },
+    {
+      "interface": "veth4a6528b@if443712",
+      "mac_address": "0e:b5:2b:2a:21:fe",
+      "interface_type": "ether",
+      "inet4_address": [],
+      "inet6_address": [
+        "fe80::cb5:2bff:fe2a:21fe/64"
+      ],
+      "stats": {
+        "rx": {
+          "bytes": 4174,
+          "packets": 59,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "frame": 0,
+          "compressed": 0,
+          "multicast": 0
+        },
+        "tx": {
+          "bytes": 592504828,
+          "packets": 664822,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "colls": 0,
+          "carrier": 0,
+          "compressed": 0
+        }
+      },
+      "is_up": true,
+      "is_slave": false
+    },
+    {
+      "interface": "veth237e8e3@if443714",
+      "mac_address": "b6:95:35:81:c9:e9",
+      "interface_type": "ether",
+      "inet4_address": [],
+      "inet6_address": [
+        "fe80::b495:35ff:fe81:c9e9/64"
+      ],
+      "stats": {
+        "rx": {
+          "bytes": 10372,
+          "packets": 146,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "frame": 0,
+          "compressed": 0,
+          "multicast": 0
+        },
+        "tx": {
+          "bytes": 592517122,
+          "packets": 664897,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "colls": 0,
+          "carrier": 0,
+          "compressed": 0
+        }
+      },
+      "is_up": true,
+      "is_slave": false
+    },
+    {
+      "interface": "vethc401548@if443716",
+      "mac_address": "e2:74:77:7e:2c:16",
+      "interface_type": "ether",
+      "inet4_address": [],
+      "inet6_address": [
+        "fe80::e074:77ff:fe7e:2c16/64"
+      ],
+      "stats": {
+        "rx": {
+          "bytes": 3598,
+          "packets": 51,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "frame": 0,
+          "compressed": 0,
+          "multicast": 0
+        },
+        "tx": {
+          "bytes": 592503232,
+          "packets": 664804,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "colls": 0,
+          "carrier": 0,
+          "compressed": 0
+        }
+      },
+      "is_up": true,
+      "is_slave": false
+    },
+    {
+      "interface": "vethb66e91f@if443720",
+      "mac_address": "a6:03:a0:89:58:ed",
+      "interface_type": "ether",
+      "inet4_address": [],
+      "inet6_address": [
+        "fe80::a403:a0ff:fe89:58ed/64"
+      ],
+      "stats": {
+        "rx": {
+          "bytes": 3556,
+          "packets": 50,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "frame": 0,
+          "compressed": 0,
+          "multicast": 0
+        },
+        "tx": {
+          "bytes": 592503106,
+          "packets": 664801,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "colls": 0,
+          "carrier": 0,
+          "compressed": 0
+        }
+      },
+      "is_up": true,
+      "is_slave": false
+    },
+    {
+      "interface": "vethd531014@if443722",
+      "mac_address": "0e:d4:37:9f:1a:d2",
+      "interface_type": "ether",
+      "inet4_address": [],
+      "inet6_address": [
+        "fe80::cd4:37ff:fe9f:1ad2/64"
+      ],
+      "stats": {
+        "rx": {
+          "bytes": 3556,
+          "packets": 50,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "frame": 0,
+          "compressed": 0,
+          "multicast": 0
+        },
+        "tx": {
+          "bytes": 592503190,
+          "packets": 664803,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "colls": 0,
+          "carrier": 0,
+          "compressed": 0
+        }
+      },
+      "is_up": true,
+      "is_slave": false
+    },
+    {
+      "interface": "veth65f9fa0@if443724",
+      "mac_address": "f6:70:b0:df:3f:b3",
+      "interface_type": "ether",
+      "inet4_address": [],
+      "inet6_address": [
+        "fe80::f470:b0ff:fedf:3fb3/64"
+      ],
+      "stats": {
+        "rx": {
+          "bytes": 17214,
+          "packets": 243,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "frame": 0,
+          "compressed": 0,
+          "multicast": 0
+        },
+        "tx": {
+          "bytes": 592531500,
+          "packets": 665002,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "colls": 0,
+          "carrier": 0,
+          "compressed": 0
+        }
+      },
+      "is_up": true,
+      "is_slave": false
+    },
+    {
+      "interface": "veth6a20ae2@if443726",
+      "mac_address": "4e:0c:8e:df:a9:82",
+      "interface_type": "ether",
+      "inet4_address": [],
+      "inet6_address": [
+        "fe80::4c0c:8eff:fedf:a982/64"
+      ],
+      "stats": {
+        "rx": {
+          "bytes": 3598,
+          "packets": 51,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "frame": 0,
+          "compressed": 0,
+          "multicast": 0
+        },
+        "tx": {
+          "bytes": 592503148,
+          "packets": 664802,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "colls": 0,
+          "carrier": 0,
+          "compressed": 0
+        }
+      },
+      "is_up": true,
+      "is_slave": false
+    },
+    {
+      "interface": "vethe2cd54f@if443728",
+      "mac_address": "0e:7b:92:95:d0:9c",
+      "interface_type": "ether",
+      "inet4_address": [],
+      "inet6_address": [
+        "fe80::c7b:92ff:fe95:d09c/64"
+      ],
+      "stats": {
+        "rx": {
+          "bytes": 3582,
+          "packets": 51,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "frame": 0,
+          "compressed": 0,
+          "multicast": 0
+        },
+        "tx": {
+          "bytes": 592503552,
+          "packets": 664812,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "colls": 0,
+          "carrier": 0,
+          "compressed": 0
+        }
+      },
+      "is_up": true,
+      "is_slave": false
+    },
+    {
+      "interface": "veth874a4ed@if443730",
+      "mac_address": "0e:5d:5a:e7:a2:05",
+      "interface_type": "ether",
+      "inet4_address": [],
+      "inet6_address": [
+        "fe80::c5d:5aff:fee7:a205/64"
+      ],
+      "stats": {
+        "rx": {
+          "bytes": 0,
+          "packets": 0,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "frame": 0,
+          "compressed": 0,
+          "multicast": 0
+        },
+        "tx": {
+          "bytes": 592496370,
+          "packets": 664761,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "colls": 0,
+          "carrier": 0,
+          "compressed": 0
+        }
+      },
+      "is_up": true,
+      "is_slave": false
+    },
+    {
+      "interface": "veth46b11d3@if443732",
+      "mac_address": "82:e9:50:2e:af:d3",
+      "interface_type": "ether",
+      "inet4_address": [],
+      "inet6_address": [
+        "fe80::80e9:50ff:fe2e:afd3/64"
+      ],
+      "stats": {
+        "rx": {
+          "bytes": 3540,
+          "packets": 50,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "frame": 0,
+          "compressed": 0,
+          "multicast": 0
+        },
+        "tx": {
+          "bytes": 592503342,
+          "packets": 664807,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "colls": 0,
+          "carrier": 0,
+          "compressed": 0
+        }
+      },
+      "is_up": true,
+      "is_slave": false
+    },
+    {
+      "interface": "veth7c0d679@if443734",
+      "mac_address": "2a:ba:2f:7a:06:9a",
+      "interface_type": "ether",
+      "inet4_address": [],
+      "inet6_address": [
+        "fe80::28ba:2fff:fe7a:69a/64"
+      ],
+      "stats": {
+        "rx": {
+          "bytes": 4158,
+          "packets": 59,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "frame": 0,
+          "compressed": 0,
+          "multicast": 0
+        },
+        "tx": {
+          "bytes": 592504770,
+          "packets": 664821,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "colls": 0,
+          "carrier": 0,
+          "compressed": 0
+        }
+      },
+      "is_up": true,
+      "is_slave": false
+    },
+    {
+      "interface": "vethc647f9c@if443736",
+      "mac_address": "fa:3e:e3:f2:f2:6e",
+      "interface_type": "ether",
+      "inet4_address": [],
+      "inet6_address": [
+        "fe80::f83e:e3ff:fef2:f26e/64"
+      ],
+      "stats": {
+        "rx": {
+          "bytes": 3540,
+          "packets": 50,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "frame": 0,
+          "compressed": 0,
+          "multicast": 0
+        },
+        "tx": {
+          "bytes": 592503342,
+          "packets": 664807,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "colls": 0,
+          "carrier": 0,
+          "compressed": 0
+        }
+      },
+      "is_up": true,
+      "is_slave": false
+    },
+    {
+      "interface": "veth34c4142@if443738",
+      "mac_address": "66:03:2d:90:27:40",
+      "interface_type": "ether",
+      "inet4_address": [],
+      "inet6_address": [
+        "fe80::6403:2dff:fe90:2740/64"
+      ],
+      "stats": {
+        "rx": {
+          "bytes": 0,
+          "packets": 0,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "frame": 0,
+          "compressed": 0,
+          "multicast": 0
+        },
+        "tx": {
+          "bytes": 592496244,
+          "packets": 664758,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "colls": 0,
+          "carrier": 0,
+          "compressed": 0
+        }
+      },
+      "is_up": true,
+      "is_slave": false
+    },
+    {
+      "interface": "vethd1e8802@if443766",
+      "mac_address": "96:34:d7:03:86:fe",
+      "interface_type": "ether",
+      "inet4_address": [],
+      "inet6_address": [
+        "fe80::9434:d7ff:fe03:86fe/64"
+      ],
+      "stats": {
+        "rx": {
+          "bytes": 0,
+          "packets": 0,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "frame": 0,
+          "compressed": 0,
+          "multicast": 0
+        },
+        "tx": {
+          "bytes": 592495446,
+          "packets": 664739,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "colls": 0,
+          "carrier": 0,
+          "compressed": 0
+        }
+      },
+      "is_up": true,
+      "is_slave": false
+    },
+    {
+      "interface": "vethc28587c@if443601",
+      "mac_address": "12:5b:c4:4d:23:50",
+      "interface_type": "ether",
+      "inet4_address": [],
+      "inet6_address": [
+        "fe80::105b:c4ff:fe4d:2350/64"
+      ],
+      "stats": {
+        "rx": {
+          "bytes": 5126155971,
+          "packets": 15906644,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "frame": 0,
+          "compressed": 0,
+          "multicast": 0
+        },
+        "tx": {
+          "bytes": 22376563397,
+          "packets": 21448851,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "colls": 0,
+          "carrier": 0,
+          "compressed": 0
+        }
+      },
+      "is_up": true,
+      "is_slave": false
+    },
+    {
+      "interface": "vethf6ea3d7@if443610",
+      "mac_address": "16:d2:d7:70:55:9c",
+      "interface_type": "ether",
+      "inet4_address": [],
+      "inet6_address": [
+        "fe80::14d2:d7ff:fe70:559c/64"
+      ],
+      "stats": {
+        "rx": {
+          "bytes": 5098678,
+          "packets": 58194,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "frame": 0,
+          "compressed": 0,
+          "multicast": 0
+        },
+        "tx": {
+          "bytes": 609478062,
+          "packets": 715181,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "colls": 0,
+          "carrier": 0,
+          "compressed": 0
+        }
+      },
+      "is_up": true,
+      "is_slave": false
+    },
+    {
+      "interface": "veth36f5f66@if443614",
+      "mac_address": "b6:c1:e8:0e:2b:29",
+      "interface_type": "ether",
+      "inet4_address": [],
+      "inet6_address": [
+        "fe80::b4c1:e8ff:fe0e:2b29/64"
+      ],
+      "stats": {
+        "rx": {
+          "bytes": 0,
+          "packets": 0,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "frame": 0,
+          "compressed": 0,
+          "multicast": 0
+        },
+        "tx": {
+          "bytes": 592496772,
+          "packets": 664770,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "colls": 0,
+          "carrier": 0,
+          "compressed": 0
+        }
+      },
+      "is_up": true,
+      "is_slave": false
+    },
+    {
+      "interface": "veth2e73ef6@if443622",
+      "mac_address": "a2:c6:e5:5e:db:ce",
+      "interface_type": "ether",
+      "inet4_address": [],
+      "inet6_address": [
+        "fe80::a0c6:e5ff:fe5e:dbce/64"
+      ],
+      "stats": {
+        "rx": {
+          "bytes": 4148,
+          "packets": 58,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "frame": 0,
+          "compressed": 0,
+          "multicast": 0
+        },
+        "tx": {
+          "bytes": 592505330,
+          "packets": 664833,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "colls": 0,
+          "carrier": 0,
+          "compressed": 0
+        }
+      },
+      "is_up": true,
+      "is_slave": false
+    },
+    {
+      "interface": "veth4eb3f8a@if443626",
+      "mac_address": "46:13:83:6f:23:68",
+      "interface_type": "ether",
+      "inet4_address": [],
+      "inet6_address": [
+        "fe80::4413:83ff:fe6f:2368/64"
+      ],
+      "stats": {
+        "rx": {
+          "bytes": 0,
+          "packets": 0,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "frame": 0,
+          "compressed": 0,
+          "multicast": 0
+        },
+        "tx": {
+          "bytes": 592497024,
+          "packets": 664776,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "colls": 0,
+          "carrier": 0,
+          "compressed": 0
+        }
+      },
+      "is_up": true,
+      "is_slave": false
+    },
+    {
+      "interface": "veth06b8882@if443634",
+      "mac_address": "da:21:3b:d3:6e:b5",
+      "interface_type": "ether",
+      "inet4_address": [],
+      "inet6_address": [
+        "fe80::d821:3bff:fed3:6eb5/64"
+      ],
+      "stats": {
+        "rx": {
+          "bytes": 4148,
+          "packets": 58,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "frame": 0,
+          "compressed": 0,
+          "multicast": 0
+        },
+        "tx": {
+          "bytes": 592505330,
+          "packets": 664833,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "colls": 0,
+          "carrier": 0,
+          "compressed": 0
+        }
+      },
+      "is_up": true,
+      "is_slave": false
+    },
+    {
+      "interface": "veth7bd5de8@if443636",
+      "mac_address": "5a:e6:dd:b0:c4:9f",
+      "interface_type": "ether",
+      "inet4_address": [],
+      "inet6_address": [
+        "fe80::58e6:ddff:feb0:c49f/64"
+      ],
+      "stats": {
+        "rx": {
+          "bytes": 4116,
+          "packets": 58,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "frame": 0,
+          "compressed": 0,
+          "multicast": 0
+        },
+        "tx": {
+          "bytes": 592505298,
+          "packets": 664833,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "colls": 0,
+          "carrier": 0,
+          "compressed": 0
+        }
+      },
+      "is_up": true,
+      "is_slave": false
+    },
+    {
+      "interface": "veth72f61ea@if443640",
+      "mac_address": "46:18:1b:f0:2a:bb",
+      "interface_type": "ether",
+      "inet4_address": [],
+      "inet6_address": [
+        "fe80::4418:1bff:fef0:2abb/64"
+      ],
+      "stats": {
+        "rx": {
+          "bytes": 0,
+          "packets": 0,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "frame": 0,
+          "compressed": 0,
+          "multicast": 0
+        },
+        "tx": {
+          "bytes": 592497024,
+          "packets": 664776,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "colls": 0,
+          "carrier": 0,
+          "compressed": 0
+        }
+      },
+      "is_up": true,
+      "is_slave": false
+    },
+    {
+      "interface": "veth676cb59@if443644",
+      "mac_address": "3a:5a:b1:17:36:19",
+      "interface_type": "ether",
+      "inet4_address": [],
+      "inet6_address": [
+        "fe80::385a:b1ff:fe17:3619/64"
+      ],
+      "stats": {
+        "rx": {
+          "bytes": 4116,
+          "packets": 58,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "frame": 0,
+          "compressed": 0,
+          "multicast": 0
+        },
+        "tx": {
+          "bytes": 592505298,
+          "packets": 664833,
+          "errs": 0,
+          "drop": 0,
+          "fifo": 0,
+          "colls": 0,
+          "carrier": 0,
+          "compressed": 0
+        }
+      },
+      "is_up": true,
+      "is_slave": false
+    }
+  ]
+}
