@@ -5,7 +5,6 @@ from django.test.utils import CaptureQueriesContext
 
 from chroma_api.filesystem import FilesystemResource
 from chroma_api.host import HostResource
-from chroma_api.log import LogResource
 from chroma_api.target import TargetResource
 from chroma_api.volume import VolumeResource
 from chroma_core.lib.cache import ObjectCache
@@ -115,32 +114,6 @@ class TestQueryScaling(ChromaApiTestCase):
         else:
             # Worse than O(N)
             return OrderBad()
-
-    def test_logs(self):
-        def create_n_logs_decorated(n):
-            LogMessage.objects.all().delete()
-
-            for i in range(0, n):
-                # Ensure log messages have some NID-like and target-like strings
-                # to exercise annotation
-                fake_log_message("fake %s bogus-MDT0000 192.168.0.1@tcp1" % i)
-
-        def create_n_logs_undecorated(n):
-            LogMessage.objects.all().delete()
-
-            for i in range(0, n):
-                # Ensure log messages have some NID-like and target-like strings
-                # to exercise annotation
-                fake_log_message("fake %s bogus bar baz" % i)
-
-        decorated_scaling = self._measure_scaling(create_n_logs_decorated, LogResource)
-        undecorated_scaling = self._measure_scaling(create_n_logs_undecorated, LogResource)
-
-        # FIXME: log decoration is O(N) because we issue a separate query for decorating each log message
-        self.assertIsInstance(decorated_scaling, OrderN)
-
-        self.assertIsInstance(undecorated_scaling, Order1)
-        self.assertEqual(undecorated_scaling.query_count, QUERIES_TOTAL_UNDECORATED_LOGS)
 
     def _create_n_hosts(self, n):
         LNetConfiguration.objects.all().delete()

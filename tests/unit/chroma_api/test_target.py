@@ -84,22 +84,6 @@ class TestTargetResource(ChromaApiTestCase):
             self.api_set_state_full(mgt_uri, "unmounted")
             Command.set_state.assert_called_once()
 
-    def test_log_links(self):
-        """Test that log viewer only displays valid links."""
-        self.host = synthetic_host("myserver-with-nids", [Nid.Nid("192.168.0.1", "tcp", 0)])
-        self.create_simple_filesystem(self.host)
-        fake_log_message("192.168.0.1@tcp testfs-MDT0000")
-        response = self.api_client.get("/api/log/")
-        (event,) = self.deserialize(response)["objects"]
-        self.assertEqual(len(event["substitutions"]), 2)
-        self.host.state = "removed"
-        self.host.save()
-        self.mdt.not_deleted = False
-        self.mdt.save()
-        response = self.api_client.get("/api/log/")
-        (event,) = self.deserialize(response)["objects"]
-        self.assertEqual(len(event["substitutions"]), 0)
-
     def _target_hosts(self, paths):
         """Generate host labels for given target paths."""
         for path in paths:
