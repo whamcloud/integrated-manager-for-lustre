@@ -15,19 +15,21 @@ use futures::{future::join_all, TryFutureExt, TryStreamExt};
 use iml_postgres::{sqlx, sqlx::postgres::types::PgInterval, PgPool};
 use iml_rabbit::{ImlRabbitError, Pool};
 use iml_wire_types::{
+    db::LogMessageRecord,
     graphql_duration::GraphQLDuration,
+    logs::{LogResponse, Meta},
     snapshot::{ReserveUnit, Snapshot, SnapshotInterval, SnapshotRetention},
     task::Task,
-    Command, EndpointName, Job,
+    Command, EndpointName, Job, LogMessage, LogSeverity, MessageClass, SortDir,
 };
 use itertools::Itertools;
 use juniper::{
     http::{graphiql::graphiql_source, GraphQLRequest},
-    EmptySubscription, FieldError, GraphQLEnum, RootNode, Value,
+    EmptySubscription, FieldError, RootNode, Value,
 };
 use std::{
     collections::{HashMap, HashSet},
-    convert::{Infallible, TryFrom as _},
+    convert::{Infallible, TryFrom as _, TryInto},
     ops::Deref,
     sync::Arc,
 };
@@ -119,29 +121,6 @@ struct BannedResource {
     master_only: bool,
 }
 
-#[derive(GraphQLEnum)]
-enum SortDir {
-    Asc,
-    Desc,
-}
-
-impl Default for SortDir {
-    fn default() -> Self {
-        Self::Asc
-    }
-}
-
-impl Deref for SortDir {
-    type Target = str;
-
-    fn deref(&self) -> &Self::Target {
-        match self {
-            Self::Asc => "asc",
-            Self::Desc => "desc",
-        }
-    }
-}
-
 #[derive(Debug, serde::Serialize)]
 pub struct SendJob<'a, T> {
     pub class_name: &'a str,
@@ -191,8 +170,8 @@ impl QueryRoot {
                 type
                 FROM corosync_node n
                 ORDER BY
-                    CASE WHEN $1 = 'asc' THEN n.id END ASC,
-                    CASE WHEN $1 = 'desc' THEN n.id END DESC
+                    CASE WHEN $1 = 'ASC' THEN n.id END ASC,
+                    CASE WHEN $1 = 'DESC' THEN n.id END DESC
                 OFFSET $2 LIMIT $3"#,
             dir.deref(),
             offset.unwrap_or(0) as i64,
@@ -227,8 +206,8 @@ impl QueryRoot {
             r#"
                 SELECT * from target t
                 ORDER BY
-                    CASE WHEN $3 = 'asc' THEN t.name END ASC,
-                    CASE WHEN $3 = 'desc' THEN t.name END DESC
+                    CASE WHEN $3 = 'ASC' THEN t.name END ASC,
+                    CASE WHEN $3 = 'DESC' THEN t.name END DESC
                 OFFSET $1 LIMIT $2"#,
             offset.unwrap_or(0) as i64,
             limit.map(|x| x as i64),
@@ -324,8 +303,8 @@ impl QueryRoot {
                     SELECT filesystem_name, snapshot_name, create_time, modify_time, snapshot_fsname, mounted, comment FROM snapshot s
                     WHERE filesystem_name = $4 AND ($5::text IS NULL OR snapshot_name = $5)
                     ORDER BY
-                        CASE WHEN $3 = 'asc' THEN s.create_time END ASC,
-                        CASE WHEN $3 = 'desc' THEN s.create_time END DESC
+                        CASE WHEN $3 = 'ASC' THEN s.create_time END ASC,
+                        CASE WHEN $3 = 'DESC' THEN s.create_time END DESC
                     OFFSET $1 LIMIT $2"#,
                 offset.unwrap_or(0) as i64,
                 limit.map(|x| x as i64),
@@ -374,8 +353,8 @@ impl QueryRoot {
                   AND ($5::TEXT IS NULL OR c.message ILIKE '%' || $5 || '%')
                 GROUP BY c.id
                 ORDER BY
-                    CASE WHEN $3 = 'asc' THEN c.id END ASC,
-                    CASE WHEN $3 = 'desc' THEN c.id END DESC
+                    CASE WHEN $3 = 'ASC' THEN c.id END ASC,
+                    CASE WHEN $3 = 'DESC' THEN c.id END DESC
                 OFFSET $1 LIMIT $2
             "#,
             offset.unwrap_or(0) as i64,
@@ -484,6 +463,98 @@ impl QueryRoot {
         .await?;
 
         Ok(xs)
+    }
+
+    #[graphql(arguments(
+        limit(description = "optional paging limit, defaults to 100",),
+        offset(description = "Offset into items, defaults to 0"),
+        dir(description = "Sort direction, defaults to asc"),
+        message(
+            description = "Pattern to search for in message. Uses Postgres pattern matching  (https://www.postgresql.org/docs/9.6/functions-matching.html)"
+        ),
+        fqdn(
+            description = "Pattern to search for in FQDN. Uses Postgres pattern matching  (https://www.postgresql.org/docs/9.6/functions-matching.html)"
+        ),
+        tag(
+            description = "Pattern to search for in tag. Uses Postgres pattern matching  (https://www.postgresql.org/docs/9.6/functions-matching.html)"
+        ),
+        start_datetime(description = "Start of the time period of logs"),
+        end_datetime(description = "End of the time period of logs"),
+        message_class(description = "Array of log message classes"),
+        severity(description = "Upper bound of log severity"),
+    ))]
+    /// Returns aggregated journal entries for all nodes the agent runs on.
+    async fn logs(
+        context: &Context,
+        limit: Option<i32>,
+        offset: Option<i32>,
+        dir: Option<SortDir>,
+        message: Option<String>,
+        fqdn: Option<String>,
+        tag: Option<String>,
+        start_datetime: Option<chrono::DateTime<Utc>>,
+        end_datetime: Option<chrono::DateTime<Utc>>,
+        message_class: Option<Vec<MessageClass>>,
+        severity: Option<LogSeverity>,
+    ) -> juniper::FieldResult<LogResponse> {
+        let dir = dir.unwrap_or_default();
+
+        let message_class: Vec<_> = message_class
+            .filter(|v| !v.is_empty())
+            .unwrap_or_else(|| vec![MessageClass::Normal])
+            .into_iter()
+            .map(|i| i as i16)
+            .collect();
+
+        let severity = severity.unwrap_or(LogSeverity::Informational) as i16;
+
+        let results = sqlx::query_as!(
+            LogMessageRecord,
+            r#"
+                    SELECT * FROM chroma_core_logmessage t
+                    WHERE ($4::TEXT IS NULL OR t.message LIKE $4)
+                      AND ($5::TEXT IS NULL OR t.fqdn LIKE $5)
+                      AND ($6::TEXT IS NULL OR t.tag LIKE $6)
+                      AND ($7::TIMESTAMPTZ IS NULL OR t.datetime >= $7)
+                      AND ($8::TIMESTAMPTZ IS NULL OR t.datetime < $8)
+                      AND ARRAY[t.message_class] <@ $9
+                      AND t.severity <= $10
+                    ORDER BY
+                        CASE WHEN $3 = 'ASC' THEN t.datetime END ASC,
+                        CASE WHEN $3 = 'DESC' THEN t.datetime END DESC
+                    OFFSET $1 LIMIT $2"#,
+            offset.unwrap_or(0) as i64,
+            limit.map(|x| x as i64).unwrap_or(100),
+            dir.deref(),
+            message,
+            fqdn,
+            tag,
+            start_datetime,
+            end_datetime,
+            &message_class,
+            severity,
+        )
+        .fetch_all(&context.pg_pool)
+        .await?;
+        let xs: Vec<LogMessage> = results
+            .into_iter()
+            .map(|x| x.try_into())
+            .collect::<Result<_, _>>()?;
+
+        let total_count = sqlx::query!(
+            "SELECT total_rows FROM rowcount WHERE table_name = 'chroma_core_logmessage';"
+        )
+        .fetch_one(&context.pg_pool)
+        .await?
+        .total_rows
+        .ok_or_else(|| FieldError::new("Number of rows doesn't fit in i32", Value::null()))?;
+
+        Ok(LogResponse {
+            data: xs,
+            meta: Meta {
+                total_count: total_count.try_into()?,
+            },
+        })
     }
 }
 
@@ -1048,7 +1119,7 @@ fn validate_snapshot_name(x: &str) -> Result<(), FieldError> {
             "Snapshot name cannot contain / character",
             Value::null(),
         ))
-    } else if x.contains("&") {
+    } else if x.contains('&') {
         Err(FieldError::new(
             "Snapshot name cannot contain & character",
             Value::null(),

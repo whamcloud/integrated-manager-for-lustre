@@ -9,7 +9,7 @@ use iml_postgres::{
     sqlx::{self, PgPool},
 };
 use iml_service_queue::service_queue::ImlServiceQueueError;
-use iml_wire_types::{AlertRecordType, AlertSeverity};
+use iml_wire_types::{AlertRecordType, AlertSeverity, MessageClass};
 use lazy_static::lazy_static;
 use regex::Regex;
 use std::collections::HashMap;
@@ -27,16 +27,6 @@ pub enum ImlJournalError {
     SqlxCoreError(#[from] sqlx::error::Error),
     #[error(transparent)]
     TryFromIntError(#[from] std::num::TryFromIntError),
-}
-
-#[derive(Debug, Eq, PartialEq)]
-#[repr(i16)]
-pub enum LogMessageClass {
-    Normal,
-    Lustre,
-    LustreError,
-    Copytool,
-    CopytoolError,
 }
 
 lazy_static! {
@@ -67,13 +57,13 @@ lazy_static! {
     };
 }
 
-pub fn get_message_class(message: &str) -> LogMessageClass {
+pub fn get_message_class(message: &str) -> MessageClass {
     if LUSTRE_ERROR_TS.is_match(message) || LUSTRE_ERROR.is_match(message) {
-        LogMessageClass::LustreError
+        MessageClass::LustreError
     } else if LUSTRE_TS.is_match(message) || LUSTRE.is_match(message) {
-        LogMessageClass::Lustre
+        MessageClass::Lustre
     } else {
-        LogMessageClass::Normal
+        MessageClass::Normal
     }
 }
 
@@ -306,22 +296,19 @@ mod tests {
         let tests = vec![
             (
                 "[NOT A TIME STAMP ] Lustre: Lustre output here",
-                LogMessageClass::Normal,
+                MessageClass::Normal,
             ),
-            ("Lustre: Lustre output here", LogMessageClass::Lustre),
-            (
-                "LustreError: Lustre output here",
-                LogMessageClass::LustreError,
-            ),
+            ("Lustre: Lustre output here", MessageClass::Lustre),
+            ("LustreError: Lustre output here", MessageClass::LustreError),
             (
                 "[1234567A89] LustreError: Not A Time Stamp",
-                LogMessageClass::Normal,
+                MessageClass::Normal,
             ),
             (
                 "[123456789.123456789A] LustreError: Not A Time Stamp",
-                LogMessageClass::Normal,
+                MessageClass::Normal,
             ),
-            ("Nothing to see here", LogMessageClass::Normal),
+            ("Nothing to see here", MessageClass::Normal),
         ];
 
         for (msg, expected) in tests {

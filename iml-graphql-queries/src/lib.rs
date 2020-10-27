@@ -2,6 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+pub mod log;
 pub mod snapshot;
 pub mod stratagem;
 pub mod task;
@@ -70,11 +71,4 @@ impl<T> From<Response<T>> for Result<Data<T>, Errors> {
             Response::Errors(e) => Err(e),
         }
     }
-}
-
-#[derive(Debug, Clone, serde::Serialize)]
-#[serde(untagged, rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum SortDir {
-    Asc,
-    Desc,
 }

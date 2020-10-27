@@ -1,5 +1,105 @@
 {
   "db": "PostgreSQL",
+  "044c83becc9a4280aa888bab7106a2fb5501c1a205830e57010416e1aaeae1d3": {
+    "query": "\n                SELECT\n                (n.id).name AS \"name!\",\n                (n.id).id AS \"id!\",\n                cluster_id,\n                online,\n                standby,\n                standby_onfail,\n                maintenance,\n                pending,\n                unclean,\n                shutdown,\n                expected_up,\n                is_dc,\n                resources_running,\n                type\n                FROM corosync_node n\n                ORDER BY\n                    CASE WHEN $1 = 'ASC' THEN n.id END ASC,\n                    CASE WHEN $1 = 'DESC' THEN n.id END DESC\n                OFFSET $2 LIMIT $3",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "name!",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 1,
+          "name": "id!",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "cluster_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 3,
+          "name": "online",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 4,
+          "name": "standby",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 5,
+          "name": "standby_onfail",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 6,
+          "name": "maintenance",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 7,
+          "name": "pending",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 8,
+          "name": "unclean",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 9,
+          "name": "shutdown",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 10,
+          "name": "expected_up",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 11,
+          "name": "is_dc",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 12,
+          "name": "resources_running",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 13,
+          "name": "type",
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Text",
+          "Int8",
+          "Int8"
+        ]
+      },
+      "nullable": [
+        null,
+        null,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    }
+  },
   "046635a93b52edbebece125556cfeecd193704ba40dfb6ff42a51e7a890dba1e": {
     "query": "\n            DELETE FROM corosync_resource_bans\n            USING corosync_node_managed_host\n            WHERE host_id = $1\n            AND node = (corosync_node_id).name\n            AND id != ALL($2)\n            ",
     "describe": {
@@ -117,6 +217,77 @@
         "Left": []
       },
       "nullable": [
+        false,
+        false
+      ]
+    }
+  },
+  "11c0f67f66af2d8562fd6f5f2d9f77f5ce4b55ac2f557ef1f44e13c2f487df75": {
+    "query": "\n                    SELECT * FROM chroma_core_logmessage t\n                    WHERE ($4::TEXT IS NULL OR t.message LIKE $4)\n                      AND ($5::TEXT IS NULL OR t.fqdn LIKE $5)\n                      AND ($6::TEXT IS NULL OR t.tag LIKE $6)\n                      AND ($7::TIMESTAMPTZ IS NULL OR t.datetime >= $7)\n                      AND ($8::TIMESTAMPTZ IS NULL OR t.datetime < $8)\n                      AND ARRAY[t.message_class] <@ $9\n                      AND t.severity <= $10\n                    ORDER BY\n                        CASE WHEN $3 = 'ASC' THEN t.datetime END ASC,\n                        CASE WHEN $3 = 'DESC' THEN t.datetime END DESC\n                    OFFSET $1 LIMIT $2",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "datetime",
+          "type_info": "Timestamptz"
+        },
+        {
+          "ordinal": 2,
+          "name": "fqdn",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 3,
+          "name": "severity",
+          "type_info": "Int2"
+        },
+        {
+          "ordinal": 4,
+          "name": "facility",
+          "type_info": "Int2"
+        },
+        {
+          "ordinal": 5,
+          "name": "tag",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 6,
+          "name": "message",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 7,
+          "name": "message_class",
+          "type_info": "Int2"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Int8",
+          "Text",
+          "Text",
+          "Text",
+          "Text",
+          "Timestamptz",
+          "Timestamptz",
+          "Int2Array",
+          "Int2"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
         false,
         false
       ]
@@ -1445,66 +1616,6 @@
       ]
     }
   },
-  "559f8dbd559ead28670594e12dce12aa256f972ad469a67320aa7970640affa8": {
-    "query": "\n                    SELECT filesystem_name, snapshot_name, create_time, modify_time, snapshot_fsname, mounted, comment FROM snapshot s\n                    WHERE filesystem_name = $4 AND ($5::text IS NULL OR snapshot_name = $5)\n                    ORDER BY\n                        CASE WHEN $3 = 'asc' THEN s.create_time END ASC,\n                        CASE WHEN $3 = 'desc' THEN s.create_time END DESC\n                    OFFSET $1 LIMIT $2",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "filesystem_name",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 1,
-          "name": "snapshot_name",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 2,
-          "name": "create_time",
-          "type_info": "Timestamptz"
-        },
-        {
-          "ordinal": 3,
-          "name": "modify_time",
-          "type_info": "Timestamptz"
-        },
-        {
-          "ordinal": 4,
-          "name": "snapshot_fsname",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 5,
-          "name": "mounted",
-          "type_info": "Bool"
-        },
-        {
-          "ordinal": 6,
-          "name": "comment",
-          "type_info": "Text"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "Int8",
-          "Int8",
-          "Text",
-          "Text",
-          "Text"
-        ]
-      },
-      "nullable": [
-        false,
-        false,
-        false,
-        false,
-        false,
-        true,
-        true
-      ]
-    }
-  },
   "5755ec79ff7be6cdfe0ba5fa9c2cd9c280a99db0c802ce3b795a4f5ebd5a9e35": {
     "query": "\n        DELETE FROM chroma_core_fidtaskqueue \n        WHERE id in ( \n            SELECT id FROM chroma_core_fidtaskqueue WHERE task_id = $1 LIMIT $2 FOR UPDATE SKIP LOCKED \n        ) RETURNING id, fid as \"fid: _\", data, task_id",
     "describe": {
@@ -1807,66 +1918,6 @@
         ]
       },
       "nullable": []
-    }
-  },
-  "67823b0937ae10ec17b2f0bb4f82ca85be68e46e999129786957970af1fcf7e2": {
-    "query": "\n                SELECT\n                    c.id AS id,\n                    cancelled,\n                    complete,\n                    errored,\n                    created_at,\n                    array_agg(cj.job_id)::INT[] AS job_ids,\n                    message\n                FROM chroma_core_command c\n                JOIN chroma_core_command_jobs cj ON c.id = cj.command_id\n                WHERE ($4::BOOL IS NULL OR complete = $4)\n                  AND ($5::TEXT IS NULL OR c.message ILIKE '%' || $5 || '%')\n                GROUP BY c.id\n                ORDER BY\n                    CASE WHEN $3 = 'asc' THEN c.id END ASC,\n                    CASE WHEN $3 = 'desc' THEN c.id END DESC\n                OFFSET $1 LIMIT $2\n            ",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 1,
-          "name": "cancelled",
-          "type_info": "Bool"
-        },
-        {
-          "ordinal": 2,
-          "name": "complete",
-          "type_info": "Bool"
-        },
-        {
-          "ordinal": 3,
-          "name": "errored",
-          "type_info": "Bool"
-        },
-        {
-          "ordinal": 4,
-          "name": "created_at",
-          "type_info": "Timestamptz"
-        },
-        {
-          "ordinal": 5,
-          "name": "job_ids",
-          "type_info": "Int4Array"
-        },
-        {
-          "ordinal": 6,
-          "name": "message",
-          "type_info": "Varchar"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "Int8",
-          "Int8",
-          "Text",
-          "Bool",
-          "Text"
-        ]
-      },
-      "nullable": [
-        false,
-        false,
-        false,
-        false,
-        false,
-        null,
-        false
-      ]
     }
   },
   "681d997bb965a228c0aa75d93d09faefe5412daaf3e7bda3630df319fb9edabb": {
@@ -2432,6 +2483,24 @@
       ]
     }
   },
+  "8a7e849cf7654907787343223c017f302c514e4728439d79ff4f91fca17e1ebb": {
+    "query": "SELECT total_rows FROM rowcount WHERE table_name = 'chroma_core_logmessage';",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "total_rows",
+          "type_info": "Int8"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        true
+      ]
+    }
+  },
   "8ac87d0e2c016985d993de3824a253423b3aa038a1609a0eecc2562d1b4887aa": {
     "query": "\n                UPDATE snapshot_interval\n                SET last_run=$1\n                WHERE id=$2 AND filesystem_name=$3\n            ",
     "describe": {
@@ -2868,102 +2937,126 @@
       ]
     }
   },
-  "a758dca692819dfa3fae672685a361c3a2c8767ac72d6d3753057d0326e1d7d0": {
-    "query": "\n                SELECT\n                (n.id).name AS \"name!\",\n                (n.id).id AS \"id!\",\n                cluster_id,\n                online,\n                standby,\n                standby_onfail,\n                maintenance,\n                pending,\n                unclean,\n                shutdown,\n                expected_up,\n                is_dc,\n                resources_running,\n                type\n                FROM corosync_node n\n                ORDER BY\n                    CASE WHEN $1 = 'asc' THEN n.id END ASC,\n                    CASE WHEN $1 = 'desc' THEN n.id END DESC\n                OFFSET $2 LIMIT $3",
+  "a36f75c883918331f080025b809fb0d2ebf00ef9a4c40d5cdb5e6e960c3f7c58": {
+    "query": "\n                SELECT * from target t\n                ORDER BY\n                    CASE WHEN $3 = 'ASC' THEN t.name END ASC,\n                    CASE WHEN $3 = 'DESC' THEN t.name END DESC\n                OFFSET $1 LIMIT $2",
     "describe": {
       "columns": [
         {
           "ordinal": 0,
-          "name": "name!",
+          "name": "state",
           "type_info": "Text"
         },
         {
           "ordinal": 1,
-          "name": "id!",
+          "name": "name",
           "type_info": "Text"
         },
         {
           "ordinal": 2,
-          "name": "cluster_id",
+          "name": "active_host_id",
           "type_info": "Int4"
         },
         {
           "ordinal": 3,
-          "name": "online",
-          "type_info": "Bool"
+          "name": "host_ids",
+          "type_info": "Int4Array"
         },
         {
           "ordinal": 4,
-          "name": "standby",
-          "type_info": "Bool"
+          "name": "filesystems",
+          "type_info": "TextArray"
         },
         {
           "ordinal": 5,
-          "name": "standby_onfail",
-          "type_info": "Bool"
+          "name": "uuid",
+          "type_info": "Text"
         },
         {
           "ordinal": 6,
-          "name": "maintenance",
-          "type_info": "Bool"
+          "name": "mount_path",
+          "type_info": "Text"
         },
         {
           "ordinal": 7,
-          "name": "pending",
-          "type_info": "Bool"
-        },
-        {
-          "ordinal": 8,
-          "name": "unclean",
-          "type_info": "Bool"
-        },
-        {
-          "ordinal": 9,
-          "name": "shutdown",
-          "type_info": "Bool"
-        },
-        {
-          "ordinal": 10,
-          "name": "expected_up",
-          "type_info": "Bool"
-        },
-        {
-          "ordinal": 11,
-          "name": "is_dc",
-          "type_info": "Bool"
-        },
-        {
-          "ordinal": 12,
-          "name": "resources_running",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 13,
-          "name": "type",
+          "name": "dev_path",
           "type_info": "Text"
         }
       ],
       "parameters": {
         "Left": [
-          "Text",
           "Int8",
-          "Int8"
+          "Int8",
+          "Text"
         ]
       },
       "nullable": [
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+        true,
+        true
+      ]
+    }
+  },
+  "a8110847776ee7220577529cf0e395fe9ef3d72fa113924a08ef4a1c44664f82": {
+    "query": "\n                SELECT\n                    c.id AS id,\n                    cancelled,\n                    complete,\n                    errored,\n                    created_at,\n                    array_agg(cj.job_id)::INT[] AS job_ids,\n                    message\n                FROM chroma_core_command c\n                JOIN chroma_core_command_jobs cj ON c.id = cj.command_id\n                WHERE ($4::BOOL IS NULL OR complete = $4)\n                  AND ($5::TEXT IS NULL OR c.message ILIKE '%' || $5 || '%')\n                GROUP BY c.id\n                ORDER BY\n                    CASE WHEN $3 = 'ASC' THEN c.id END ASC,\n                    CASE WHEN $3 = 'DESC' THEN c.id END DESC\n                OFFSET $1 LIMIT $2\n            ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "cancelled",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 2,
+          "name": "complete",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 3,
+          "name": "errored",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 4,
+          "name": "created_at",
+          "type_info": "Timestamptz"
+        },
+        {
+          "ordinal": 5,
+          "name": "job_ids",
+          "type_info": "Int4Array"
+        },
+        {
+          "ordinal": 6,
+          "name": "message",
+          "type_info": "Varchar"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Int8",
+          "Text",
+          "Bool",
+          "Text"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
         null,
-        null,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
         false
       ]
     }
@@ -3333,6 +3426,66 @@
         ]
       },
       "nullable": []
+    }
+  },
+  "bec714dda53dc06d09fcebc82d0db1559923c53d36dc6deba1afd629983c7d6c": {
+    "query": "\n                    SELECT filesystem_name, snapshot_name, create_time, modify_time, snapshot_fsname, mounted, comment FROM snapshot s\n                    WHERE filesystem_name = $4 AND ($5::text IS NULL OR snapshot_name = $5)\n                    ORDER BY\n                        CASE WHEN $3 = 'ASC' THEN s.create_time END ASC,\n                        CASE WHEN $3 = 'DESC' THEN s.create_time END DESC\n                    OFFSET $1 LIMIT $2",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "filesystem_name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 1,
+          "name": "snapshot_name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "create_time",
+          "type_info": "Timestamptz"
+        },
+        {
+          "ordinal": 3,
+          "name": "modify_time",
+          "type_info": "Timestamptz"
+        },
+        {
+          "ordinal": 4,
+          "name": "snapshot_fsname",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 5,
+          "name": "mounted",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 6,
+          "name": "comment",
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Int8",
+          "Text",
+          "Text",
+          "Text"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        true
+      ]
     }
   },
   "c0976422207fb3d2a45cc9f4cc6182133c51442f462c867708d93260ae6a6e9c": {
@@ -4333,70 +4486,6 @@
         true,
         false,
         false
-      ]
-    }
-  },
-  "fba3951eaf0a7444054fc346e92e654336fab1b5654428b43795c49df570844f": {
-    "query": "\n                SELECT * from target t\n                ORDER BY\n                    CASE WHEN $3 = 'asc' THEN t.name END ASC,\n                    CASE WHEN $3 = 'desc' THEN t.name END DESC\n                OFFSET $1 LIMIT $2",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "state",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 1,
-          "name": "name",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 2,
-          "name": "active_host_id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 3,
-          "name": "host_ids",
-          "type_info": "Int4Array"
-        },
-        {
-          "ordinal": 4,
-          "name": "filesystems",
-          "type_info": "TextArray"
-        },
-        {
-          "ordinal": 5,
-          "name": "uuid",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 6,
-          "name": "mount_path",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 7,
-          "name": "dev_path",
-          "type_info": "Text"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "Int8",
-          "Int8",
-          "Text"
-        ]
-      },
-      "nullable": [
-        false,
-        false,
-        true,
-        false,
-        false,
-        false,
-        true,
-        true
       ]
     }
   },

@@ -11,7 +11,11 @@ use crate::{
     GMsg,
 };
 use futures::channel::oneshot;
-use iml_wire_types::{warp_drive::ArcCache, ApiList, EndpointName as _, Host, Log, LogSeverity};
+use iml_graphql_queries::{
+    log::{self, logs},
+    Response,
+};
+use iml_wire_types::{warp_drive::ArcCache, Host, LogMessage, LogSeverity, SortDir};
 use seed::{prelude::*, *};
 use std::{sync::Arc, time::Duration};
 
@@ -25,7 +29,7 @@ pub struct Model {
 pub enum State {
     Loading,
     Fetching,
-    Loaded(ApiList<Log>),
+    Loaded(logs::Resp),
 }
 
 impl Default for State {
@@ -36,7 +40,7 @@ impl Default for State {
 
 #[derive(Clone, Debug)]
 pub enum Msg {
-    LogsFetched(Box<fetch::ResponseDataResult<ApiList<Log>>>),
+    LogsFetched(fetch::ResponseDataResult<Response<logs::Resp>>),
     FetchOffset,
     Loop,
     Page(paging::Msg),
@@ -46,28 +50,29 @@ pub enum Msg {
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
     match msg {
         Msg::FetchOffset => {
-            if let Ok(cmd) = fetch::Request::api_query(
-                Log::endpoint_name(),
-                &[("limit", model.pager.limit()), ("offset", model.pager.offset())],
-            )
-            .map(|req| req.fetch_json_data(|x| Msg::LogsFetched(Box::new(x))))
-            {
-                orders.skip().perform_cmd(cmd);
-            } else {
-                error!("Could not fetch logs.");
-            };
+            let builder = log::logs::Builder::new()
+                .with_limit(model.pager.limit())
+                .with_offset(model.pager.offset())
+                .with_dir(SortDir::Desc);
+            let query = builder.build();
+            let req = fetch::Request::graphql_query(&query);
+
+            orders.perform_cmd(req.fetch_json_data(|x| Msg::LogsFetched(x)));
         }
         Msg::LogsFetched(r) => {
-            match *r {
-                Ok(resp) => {
+            match r {
+                Ok(Response::Data(d)) => {
                     orders
                         .proxy(Msg::Page)
-                        .send_msg(paging::Msg::SetTotal(resp.meta.total_count as usize));
+                        .send_msg(paging::Msg::SetTotal(d.data.logs.meta.total_count as usize));
 
-                    model.state = State::Loaded(resp);
+                    model.state = State::Loaded(d.data)
+                }
+                Ok(Response::Errors(e)) => {
+                    error!("An error has occurred during fetching logs: ", e);
                 }
                 Err(fail_reason) => {
-                    error!("An error has occurred {:?}", fail_reason);
+                    error!("An error has occurred: ", fail_reason);
                     orders.skip();
                 }
             }
@@ -132,7 +137,7 @@ pub fn view(model: &Model, cache: &ArcCache) -> impl View<Msg> {
             ],
             div![loading::view()]
         ],
-        State::Loaded(logs) => div![
+        State::Loaded(response) => div![
             class![C.bg_menu_active],
             div![
                 class![C.px_6, C.py_4, C.bg_blue_1000],
@@ -149,7 +154,7 @@ pub fn view(model: &Model, cache: &ArcCache) -> impl View<Msg> {
                     ]
                 ],
             ],
-            logs.objects.iter().map(|x| { log_item_view(x, cache) })
+            response.logs.data.iter().map(|x| { log_item_view(x, cache) })
         ],
     }]
 }
@@ -169,7 +174,7 @@ fn log_severity<T>(x: LogSeverity) -> Node<T> {
     }
 }
 
-fn log_item_view(log: &Log, cache: &ArcCache) -> Node<Msg> {
+fn log_item_view(log: &LogMessage, cache: &ArcCache) -> Node<Msg> {
     div![
         class![
             C.bg_menu,
@@ -185,12 +190,12 @@ fn log_item_view(log: &Log, cache: &ArcCache) -> Node<Msg> {
         div![
             class![C.text_green_500, C.col_span_3],
             label_view("Time: "),
-            chrono::DateTime::parse_from_rfc3339(&log.datetime)
-                .unwrap()
-                .format("%H:%M:%S %Y/%m/%d")
-                .to_string()
+            &log.datetime.format("%H:%M:%S %Y/%m/%d").to_string()
         ],
-        div![class![C.grid, C.justify_end], log_severity(log.severity)],
+        div![
+            class![C.grid, C.justify_end],
+            log_severity(LogSeverity::from(log.severity))
+        ],
         div![class![C.col_span_4], log.message],
         div![
             class![C.col_span_2],

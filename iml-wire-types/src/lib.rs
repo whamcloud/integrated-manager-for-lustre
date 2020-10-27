@@ -13,11 +13,12 @@ pub mod task;
 pub mod warp_drive;
 
 use chrono::{DateTime, Utc};
-use serde_repr::{Deserialize_repr, Serialize_repr};
+use db::LogMessageRecord;
 use std::{
     cmp::{Ord, Ordering},
     collections::{BTreeMap, BTreeSet, HashMap},
     convert::TryFrom,
+    convert::TryInto,
     fmt, io,
     ops::Deref,
     sync::Arc,
@@ -1237,14 +1238,32 @@ pub struct Substitution {
     pub resource_uri: String,
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
+#[derive(serde::Deserialize, serde::Serialize, Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "postgres-interop", derive(sqlx::Type))]
+#[cfg_attr(feature = "graphql", derive(juniper::GraphQLEnum))]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+#[repr(i16)]
 pub enum MessageClass {
-    Normal,
-    Lustre,
-    LustreError,
-    Copytool,
-    CopytoolError,
+    Normal = 0,
+    Lustre = 1,
+    LustreError = 2,
+    Copytool = 3,
+    CopytoolError = 4,
+}
+
+impl TryFrom<i16> for MessageClass {
+    type Error = &'static str;
+
+    fn try_from(value: i16) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(MessageClass::Normal),
+            1 => Ok(MessageClass::Lustre),
+            2 => Ok(MessageClass::LustreError),
+            3 => Ok(MessageClass::Copytool),
+            4 => Ok(MessageClass::CopytoolError),
+            _ => Err("Invalid variant for MessageClass"),
+        }
+    }
 }
 
 /// Severities from syslog protocol
@@ -1260,8 +1279,13 @@ pub enum MessageClass {
 /// | 6    | Informational: informational messages    |
 /// | 7    | Debug: debug-level messages              |
 ///
-#[derive(Serialize_repr, Deserialize_repr, PartialEq, Eq, Ord, PartialOrd, Clone, Copy, Debug)]
-#[repr(u8)]
+#[derive(
+    serde::Deserialize, serde::Serialize, PartialEq, Eq, Ord, PartialOrd, Clone, Copy, Debug,
+)]
+#[cfg_attr(feature = "postgres-interop", derive(sqlx::Type))]
+#[cfg_attr(feature = "graphql", derive(juniper::GraphQLEnum))]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+#[repr(i16)]
 pub enum LogSeverity {
     Emergency = 0,
     Alert = 1,
@@ -1271,6 +1295,24 @@ pub enum LogSeverity {
     Notice = 5,
     Informational = 6,
     Debug = 7,
+}
+
+impl TryFrom<i16> for LogSeverity {
+    type Error = &'static str;
+
+    fn try_from(value: i16) -> Result<Self, <Self as TryFrom<i16>>::Error> {
+        match value {
+            0 => Ok(LogSeverity::Emergency),
+            1 => Ok(LogSeverity::Alert),
+            2 => Ok(LogSeverity::Critical),
+            3 => Ok(LogSeverity::Error),
+            4 => Ok(LogSeverity::Warning),
+            5 => Ok(LogSeverity::Notice),
+            6 => Ok(LogSeverity::Informational),
+            7 => Ok(LogSeverity::Debug),
+            _ => Err("Invalid variant for LogSeverity"),
+        }
+    }
 }
 
 /// An Log record from /api/log/
@@ -1291,6 +1333,79 @@ pub struct Log {
 impl EndpointName for Log {
     fn endpoint_name() -> &'static str {
         "log"
+    }
+}
+
+// A log message from GraphQL endpoint
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+#[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
+pub struct LogMessage {
+    pub id: i32,
+    pub datetime: chrono::DateTime<Utc>,
+    pub facility: i32,
+    pub fqdn: String,
+    pub message: String,
+    pub message_class: MessageClass,
+    pub severity: LogSeverity,
+    pub tag: String,
+}
+
+impl TryFrom<LogMessageRecord> for LogMessage {
+    type Error = &'static str;
+
+    fn try_from(record: LogMessageRecord) -> Result<Self, Self::Error> {
+        Ok(Self {
+            id: record.id,
+            datetime: record.datetime,
+            facility: record.facility as i32,
+            fqdn: record.fqdn,
+            message: record.message,
+            message_class: record.message_class.try_into()?,
+            severity: record.severity.try_into()?,
+            tag: record.tag,
+        })
+    }
+}
+
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+#[cfg_attr(feature = "graphql", derive(juniper::GraphQLEnum))]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum SortDir {
+    Asc,
+    Desc,
+}
+
+impl Default for SortDir {
+    fn default() -> Self {
+        Self::Asc
+    }
+}
+
+impl Deref for SortDir {
+    type Target = str;
+
+    fn deref(&self) -> &Self::Target {
+        match self {
+            Self::Asc => "ASC",
+            Self::Desc => "DESC",
+        }
+    }
+}
+
+pub mod logs {
+    use crate::LogMessage;
+
+    #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+    #[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
+    pub struct Meta {
+        pub total_count: i32,
+    }
+
+    #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+    #[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
+    pub struct LogResponse {
+        pub data: Vec<LogMessage>,
+        pub meta: Meta,
     }
 }
 

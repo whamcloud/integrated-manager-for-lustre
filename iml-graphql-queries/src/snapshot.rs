@@ -186,8 +186,8 @@ pub mod unmount {
 }
 
 pub mod list {
-    use crate::{Query, SortDir};
-    use iml_wire_types::snapshot::Snapshot;
+    use crate::Query;
+    use iml_wire_types::{snapshot::Snapshot, SortDir};
 
     pub static QUERY: &str = r#"
         query Snapshots($fsname: String!, $name: String, $dir: SortDir, $offset: Int, $limit: Int) {
