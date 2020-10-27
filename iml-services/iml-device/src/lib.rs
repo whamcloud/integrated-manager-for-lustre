@@ -19,6 +19,7 @@ use iml_tracing::tracing;
 use iml_wire_types::{Fqdn, FsType};
 use std::{
     collections::{BTreeMap, BTreeSet, HashMap},
+    convert::TryFrom,
     sync::Arc,
 };
 
@@ -75,7 +76,7 @@ pub async fn create_target_cache(pool: &PgPool) -> Result<Vec<Target>, ImlDevice
                 uuid: x.uuid,
                 mount_path: x.mount_path,
                 dev_path: x.dev_path,
-                fs_type: x.fs_type.map(|x| x.into()),
+                fs_type: x.fs_type.map(|x| FsType::try_from(x).ok()).flatten(),
             }
         })
         .try_collect()
@@ -464,9 +465,10 @@ pub fn find_targets<'a>(
                 name: target.into(),
                 uuid: fs_uuid.into(),
                 mount_path: Some(mntpnt.0.to_string_lossy().to_string()),
-                fs_type: match osd.contains("zfs") {
-                    true => Some("zfs".into()),
-                    false => Some("ldiskfs".into()),
+                fs_type: match osd {
+                    osd if osd.contains("zfs") => Some(FsType::Zfs),
+                    osd if osd.contains("ldiskfs") => Some(FsType::Ldiskfs),
+                    _ => None,
                 },
             },
         )

@@ -1256,7 +1256,7 @@ async fn get_targets(
     let target_resources = get_fs_target_resources(&pool, None).await?;
 
     if let Some(ref fs_name) = fs_name {
-        let _ = fs_id_by_name(&context.pg_pool, &fs_name).await?;
+        let _ = fs_id_by_name(pool, &fs_name).await?;
     }
 
     let xs: Vec<Target> = sqlx::query_as!(
