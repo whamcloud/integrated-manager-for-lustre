@@ -1,15 +1,13 @@
 use combine::{
     error::ParseError,
     many1,
-    parser::{
-        char::{char, digit, letter, spaces},
-    },
+    parser::char::{char, digit, letter, spaces},
     stream::Stream,
     token, Parser,
 };
 use std::collections::HashMap;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 struct RxStats {
     bytes: u64,
     packets: u64,
@@ -36,7 +34,7 @@ impl From<(u64, u64, u64, u64, u64, u64, u64, u64)> for RxStats {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 struct TxStats {
     bytes: u64,
     packets: u64,
@@ -63,7 +61,7 @@ impl From<(u64, u64, u64, u64, u64, u64, u64, u64)> for TxStats {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct InterfaceStats {
     rx: RxStats,
     tx: TxStats,
@@ -138,7 +136,7 @@ where
 
 pub fn parse(output: &str) -> InterfaceStatsMap {
     output
-        .split("\n")
+        .split('\n')
         .skip(2)
         .filter_map(|x| parse_stats_line().parse(x).ok())
         .fold(
@@ -167,7 +165,7 @@ mod tests {
     fn test_parse_interface_stats() {
         let result = parse_stats_line()
             .parse("eth0: 72453387   55109    0    0    0     0          0         0   630390    9575    0    0    0     0       0          0")
-            .map(|((interface, rx), _)| rx);
+            .map(|((_, rx), _)| rx);
 
         assert_eq!(
             result,
@@ -198,10 +196,12 @@ mod tests {
 
     #[test]
     fn test_parse() {
-        let stats_data = include_bytes!("./fixtures/proc_net_dev.txt");
+        let stats_data = include_bytes!("./fixtures/network_stats.txt");
         let stats_data = std::str::from_utf8(stats_data).unwrap();
         let stats = parse(stats_data);
 
-        insta::assert_debug_snapshot!(stats);
+        insta::with_settings!({sort_maps => true}, {
+            insta::assert_json_snapshot!(stats)
+        });
     }
 }

@@ -15,30 +15,28 @@ use combine::{
     stream::Stream,
     token, Parser,
 };
-use std::collections::HashMap;
+use ipnetwork::{Ipv4Network, Ipv6Network};
+use std::{
+    collections::HashMap,
+    net::{Ipv4Addr, Ipv6Addr},
+};
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum InterfaceProperties {
     InterfaceFlagsAndAttributes((String, Vec<String>, HashMap<String, String>)),
     InterfaceTypeAndMacAddress((Option<String>, Option<String>)),
-    Inet4AddressAndPrefix((String, u32)),
-    Inet6AddressAndPrefix((String, u32)),
+    Inet4AddressAndPrefix((String, u8)),
+    Inet6AddressAndPrefix((String, u8)),
 }
 
-#[derive(Debug)]
-pub struct Address {
-    address: String,
-    prefix: u32,
-}
-
-#[derive(Debug)]
+#[derive(Debug, Default, serde::Serialize, serde::Deserialize)]
 pub struct NetworkInterface {
     pub interface: String,
     pub mac_address: Option<String>,
     pub interface_type: Option<String>,
-    pub inet4_address: Vec<Address>,
-    pub inet6_address: Vec<Address>,
-    pub stats: Option<network_interface_stats::InterfaceStats>, 
+    pub inet4_address: Vec<Ipv4Network>,
+    pub inet6_address: Vec<Ipv6Network>,
+    pub stats: Option<network_interface_stats::InterfaceStats>,
     pub is_up: bool,
     pub is_slave: bool,
 }
@@ -62,29 +60,18 @@ impl NetworkInterface {
                 self.mac_address = address;
             }
             InterfaceProperties::Inet4AddressAndPrefix((address, prefix)) => {
-                self.inet4_address.push(Address { address, prefix });
+                let address: Ipv4Addr = address.parse().expect("parse address to Ipv4Addr");
+                self.inet4_address
+                    .push(Ipv4Network::new(address, prefix).expect("create Ipv4Network"));
             }
             InterfaceProperties::Inet6AddressAndPrefix((address, prefix)) => {
-                self.inet6_address.push(Address { address, prefix });
+                let address: Ipv6Addr = address.parse().expect("parse address to Ipv6Addr");
+                self.inet6_address
+                    .push(Ipv6Network::new(address, prefix).expect("create Ipv6Network"));
             }
         }
 
         self
-    }
-}
-
-impl Default for NetworkInterface {
-    fn default() -> Self {
-        NetworkInterface {
-            interface: "".into(),
-            mac_address: None,
-            interface_type: None,
-            inet4_address: vec![],
-            inet6_address: vec![],
-            stats: None,
-            is_up: false,
-            is_slave: false,
-        }
     }
 }
 
@@ -153,13 +140,13 @@ where
         .map(|x| x.1)
 }
 
-fn parse_inet4_prefix<I>() -> impl Parser<I, Output = u32>
+fn parse_inet4_prefix<I>() -> impl Parser<I, Output = u8>
 where
     I: Stream<Token = char>,
     I::Error: ParseError<I::Token, I::Range, I::Position>,
 {
     char('/')
-        .and(many1(digit()).map(|x: String| x.parse::<u32>().unwrap()))
+        .and(many1(digit()).map(|x: String| x.parse::<u8>().unwrap()))
         .map(|x| x.1)
 }
 
@@ -175,13 +162,13 @@ where
         .map(|x| x.1)
 }
 
-fn parse_inet6_prefix<I>() -> impl Parser<I, Output = u32>
+fn parse_inet6_prefix<I>() -> impl Parser<I, Output = u8>
 where
     I: Stream<Token = char>,
     I::Error: ParseError<I::Token, I::Range, I::Position>,
 {
     char('/')
-        .and(many1(digit()).map(|x: String| x.parse::<u32>().unwrap()))
+        .and(many1(digit()).map(|x: String| x.parse::<u8>().unwrap()))
         .map(|x| x.1)
 }
 
@@ -251,7 +238,10 @@ where
     ))
 }
 
-pub fn parse(output: &str, mut stats_map: network_interface_stats::InterfaceStatsMap) -> Vec<NetworkInterface> {
+pub fn parse(
+    output: &str,
+    mut stats_map: network_interface_stats::InterfaceStatsMap,
+) -> Vec<NetworkInterface> {
     let xs = output.split('\n').fold(vec![], |mut acc, x| {
         if interface_start().parse(x).map(|x| x.0).is_ok() {
             let iface = vec![x];
@@ -452,8 +442,13 @@ mod tests {
     fn test_parsing_multiple_interfaces() {
         let network_interfaces = include_bytes!("./fixtures/network_interfaces.txt");
         let network_interfaces = std::str::from_utf8(network_interfaces).unwrap();
-        let network_interfaces = parse(network_interfaces);
 
-        insta::assert_debug_snapshot!(network_interfaces);
+        let stats = include_bytes!("./fixtures/network_stats.txt");
+        let stats = std::str::from_utf8(stats).unwrap();
+        let stats_map = network_interface_stats::parse(stats);
+
+        let network_interfaces = parse(network_interfaces, stats_map);
+
+        insta::assert_json_snapshot!(network_interfaces);
     }
 }
