@@ -32,7 +32,6 @@ class ChromaApi(Api):
 api = ChromaApi(api_name="api")
 
 import chroma_api.alert
-import chroma_api.log
 import chroma_api.job
 import chroma_api.step
 import chroma_api.command
