@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::network_interface_stats;
+use crate::{agent_error::ImlAgentError, network_interface_stats};
 use combine::{
     attempt, choice,
     error::ParseError,
@@ -42,7 +42,10 @@ pub struct NetworkInterface {
 }
 
 impl NetworkInterface {
-    pub fn set_prop(mut self, prop: InterfaceProperties) -> NetworkInterface {
+    pub fn set_prop(
+        mut self,
+        prop: InterfaceProperties,
+    ) -> Result<NetworkInterface, ImlAgentError> {
         match prop {
             InterfaceProperties::InterfaceFlagsAndAttributes((interface, flags, _attributes)) => {
                 self.interface = interface;
@@ -60,18 +63,16 @@ impl NetworkInterface {
                 self.mac_address = address;
             }
             InterfaceProperties::Inet4AddressAndPrefix((address, prefix)) => {
-                let address: Ipv4Addr = address.parse().expect("parse address to Ipv4Addr");
-                self.inet4_address
-                    .push(Ipv4Network::new(address, prefix).expect("create Ipv4Network"));
+                let address: Ipv4Addr = address.parse()?;
+                self.inet4_address.push(Ipv4Network::new(address, prefix)?);
             }
             InterfaceProperties::Inet6AddressAndPrefix((address, prefix)) => {
-                let address: Ipv6Addr = address.parse().expect("parse address to Ipv6Addr");
-                self.inet6_address
-                    .push(Ipv6Network::new(address, prefix).expect("create Ipv6Network"));
+                let address: Ipv6Addr = address.parse()?;
+                self.inet6_address.push(Ipv6Network::new(address, prefix)?);
             }
         }
 
-        self
+        Ok(self)
     }
 }
 
@@ -241,7 +242,7 @@ where
 pub fn parse(
     output: &str,
     mut stats_map: network_interface_stats::InterfaceStatsMap,
-) -> Vec<NetworkInterface> {
+) -> Result<Vec<NetworkInterface>, ImlAgentError> {
     let xs = output.split('\n').fold(vec![], |mut acc, x| {
         if interface_start().parse(x).map(|x| x.0).is_ok() {
             let iface = vec![x];
@@ -257,11 +258,15 @@ pub fn parse(
         .map(|x| {
             x.into_iter()
                 .filter_map(|x| parse_network_line().parse(x).ok())
-                .fold(NetworkInterface::default(), |acc, (x, _)| acc.set_prop(x))
+                .try_fold(NetworkInterface::default(), |acc, (x, _)| acc.set_prop(x))
         })
-        .map(|mut x| {
-            if let Some(stats) = stats_map.get_mut(&x.interface) {
-                x.stats = Some(stats.clone());
+        .map(|x| {
+            if let Ok(mut x) = x {
+                if let Some(stats) = stats_map.get_mut(&x.interface) {
+                    x.stats = Some(stats.clone());
+                }
+
+                return Ok(x);
             }
 
             x

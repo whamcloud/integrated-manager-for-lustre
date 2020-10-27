@@ -32,7 +32,5 @@ async fn get_interfaces() -> Result<Vec<NetworkInterface>, ImlAgentError> {
 
     let network_interfaces = std::str::from_utf8(&network_interfaces.stdout)?;
 
-    let network_interfaces = parse_interfaces(network_interfaces, net_stats);
-
-    Ok(network_interfaces)
+    parse_interfaces(network_interfaces, net_stats)
 }
