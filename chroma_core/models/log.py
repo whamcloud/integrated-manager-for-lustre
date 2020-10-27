@@ -5,6 +5,38 @@
 
 from django.db import models
 
+import re
+
+
+class MessageClass:
+    NORMAL = 0
+    LUSTRE = 1
+    LUSTRE_ERROR = 2
+    COPYTOOL = 3
+    COPYTOOL_ERROR = 4
+
+    @classmethod
+    def strings(cls):
+        return [cls.to_string(i) for i in [cls.NORMAL, cls.LUSTRE, cls.LUSTRE_ERROR, cls.COPYTOOL, cls.COPYTOOL_ERROR]]
+
+    @classmethod
+    def to_string(cls, n):
+        """Convert a MessageClass ID to a string"""
+        if not hasattr(cls, "_to_string"):
+            cls._to_string = dict(
+                [(v, k) for k, v in cls.__dict__.items() if not k.startswith("_") and isinstance(v, int)]
+            )
+        return cls._to_string[n]
+
+    @classmethod
+    def from_string(cls, s):
+        """Convert a string to a MessageClass ID"""
+        if not hasattr(cls, "_from_string"):
+            cls._from_string = dict(
+                [(k, v) for k, v in cls.__dict__.items() if not k.startswith("_") and isinstance(v, int)]
+            )
+        return cls._from_string[s]
+
 
 class LogMessage(models.Model):
     class Meta:
@@ -31,3 +63,17 @@ class LogMessage(models.Model):
     tag = models.CharField(max_length=63)
     message = models.TextField()
     message_class = models.SmallIntegerField()
+
+    @classmethod
+    def get_message_class(cls, message):
+        log_match = "(\[[\d\.]*\])? ?%s:"
+
+        if re.match(log_match % "LustreError", message):
+            return MessageClass.LUSTRE_ERROR
+        elif re.match(log_match % "Lustre", message):
+            return MessageClass.LUSTRE
+        else:
+            return MessageClass.NORMAL
+
+    def __str__(self):
+        return "%s %s %s %s %s %s" % (self.datetime, self.fqdn, self.severity, self.facility, self.tag, self.message)
