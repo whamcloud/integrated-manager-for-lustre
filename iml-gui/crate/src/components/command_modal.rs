@@ -21,7 +21,8 @@ use std::{
     time::Duration,
 };
 
-/// The component polls `/api/(command|job|step)/` endpoint and this constant defines how often it does.
+/// The component polls `/api/(command|job|step)/` endpoint and this constant defines how often it
+/// does.
 const POLL_INTERVAL: Duration = Duration::from_millis(1000);
 
 type Job0 = Job<Option<serde_json::Value>>;
@@ -40,7 +41,7 @@ pub struct JobId(i32);
 
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub enum TypedId {
-    Command(i32),
+    Cmd(i32),
     Job(i32),
     Step(i32),
 }
@@ -70,7 +71,7 @@ impl Select {
         let mut step_ids = Vec::new();
         for t in &self.0 {
             match t {
-                TypedId::Command(c) => insert_in_sorted(&mut cmd_ids, *c),
+                TypedId::Cmd(c) => insert_in_sorted(&mut cmd_ids, *c),
                 TypedId::Job(j) => insert_in_sorted(&mut job_ids, *j),
                 TypedId::Step(s) => insert_in_sorted(&mut step_ids, *s),
             }
@@ -150,6 +151,9 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
 
             match cmds {
                 Input::Commands(cmds) => {
+                    if let Some(cmd) = cmds.first() {
+                        model.select.perform_click(TypedId::Cmd(cmd.id));
+                    }
                     // use the (little) optimization:
                     // if we already have the commands and they all finished, we don't need to poll them anymore
                     model.update_commands(cmds);
@@ -303,7 +307,7 @@ pub(crate) fn view(model: &Model) -> Node<Msg> {
 }
 
 fn command_item_view(model: &Model, x: &RichCommand) -> Node<Msg> {
-    let is_open = model.select.contains(TypedId::Command(x.id));
+    let is_open = model.select.contains(TypedId::Cmd(x.id));
     // all commands will be marked complete when they finished, it's the absence of other states that makes them successful
     let border = if !is_open {
         C.border_transparent
@@ -342,7 +346,7 @@ fn command_item_view(model: &Model, x: &RichCommand) -> Node<Msg> {
                     C.select_none,
                     C.py_5
                 ],
-                simple_ev(Ev::Click, Msg::Click(TypedId::Command(x.id))),
+                simple_ev(Ev::Click, Msg::Click(TypedId::Cmd(x.id))),
                 span![class![C.font_thin, C.text_xl], cmd_status_icon(x), &x.message],
                 font_awesome(
                     class![C.w_4, C.h_4, C.inline, C.text_gray_700, C.text_blue_500],
@@ -422,7 +426,7 @@ fn job_item_combine(parent: Node<Msg>, acc: Vec<Node<Msg>>, _ctx: &mut Context) 
 fn job_item_cancel_button(job: &Arc<RichJob>, cancelling: bool) -> Node<Msg> {
     if let Some(trans) = find_cancel_transition(job) {
         let cancel_btn: Node<Msg> = div![
-            class![C.inline, C.px_1, C.rounded_lg, C.text_white, C.cursor_pointer],
+            class![C.inline, C.ml_1, C.px_1, C.rounded_lg, C.text_white, C.cursor_pointer],
             trans.label,
         ];
         if !cancelling {
@@ -934,9 +938,9 @@ mod tests {
     fn test_selection_split() {
         let select = Select(
             vec![
-                TypedId::Command(1),
-                TypedId::Command(1),
-                TypedId::Command(2),
+                TypedId::Cmd(1),
+                TypedId::Cmd(1),
+                TypedId::Cmd(2),
                 TypedId::Job(13),
                 TypedId::Job(12),
                 TypedId::Job(11),
@@ -1226,7 +1230,7 @@ mod tests {
                 let sel_step_ids = sample(rng, &step_ids, ns);
                 let result = sel_cmd_ids
                     .into_iter()
-                    .map(|id| TypedId::Command(id))
+                    .map(|id| TypedId::Cmd(id))
                     .chain(sel_job_ids.into_iter().map(|id| TypedId::Job(id)))
                     .chain(sel_step_ids.into_iter().map(|id| TypedId::Step(id)))
                     .collect::<HashSet<_>>();
