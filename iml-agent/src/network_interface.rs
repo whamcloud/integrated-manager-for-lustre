@@ -2,6 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use crate::network_interface_stats;
 use combine::{
     attempt, choice,
     error::ParseError,
@@ -37,6 +38,7 @@ pub struct NetworkInterface {
     pub interface_type: Option<String>,
     pub inet4_address: Vec<Address>,
     pub inet6_address: Vec<Address>,
+    pub stats: Option<network_interface_stats::InterfaceStats>, 
     pub is_up: bool,
     pub is_slave: bool,
 }
@@ -79,6 +81,7 @@ impl Default for NetworkInterface {
             interface_type: None,
             inet4_address: vec![],
             inet6_address: vec![],
+            stats: None,
             is_up: false,
             is_slave: false,
         }
@@ -248,7 +251,7 @@ where
     ))
 }
 
-fn parse(output: &str) -> Vec<NetworkInterface> {
+pub fn parse(output: &str, mut stats_map: network_interface_stats::InterfaceStatsMap) -> Vec<NetworkInterface> {
     let xs = output.split('\n').fold(vec![], |mut acc, x| {
         if interface_start().parse(x).map(|x| x.0).is_ok() {
             let iface = vec![x];
@@ -265,6 +268,13 @@ fn parse(output: &str) -> Vec<NetworkInterface> {
             x.into_iter()
                 .filter_map(|x| parse_network_line().parse(x).ok())
                 .fold(NetworkInterface::default(), |acc, (x, _)| acc.set_prop(x))
+        })
+        .map(|mut x| {
+            if let Some(stats) = stats_map.get_mut(&x.interface) {
+                x.stats = Some(stats.clone());
+            }
+
+            x
         })
         .collect()
 }
