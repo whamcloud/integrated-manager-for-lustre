@@ -33,6 +33,7 @@ cp iml-agent %{buildroot}%{_bindir}
 cp iml-agent-comms %{buildroot}%{_bindir}
 cp iml-agent-daemon %{buildroot}%{_bindir}
 cp iml-api %{buildroot}%{_bindir}
+cp iml-client %{buildroot}%{_bindir}
 cp iml-config %{buildroot}%{_bindir}
 cp iml-corosync %{buildroot}%{_bindir}
 cp iml-device %{buildroot}%{_bindir}
@@ -122,6 +123,17 @@ Group: System Environment/Libraries
 
 %files config-cli
 %{_bindir}/iml-config
+
+%package client
+Summary: IML manager client
+License: MIT
+Group: System Environment/Libraries
+
+%description client
+%{summary}
+
+%files client
+%{_bindir}/iml-client
 
 %package agent
 Summary: IML Agent Daemon and CLI

@@ -61,6 +61,7 @@ srpm:
 		iml-warp-drive/systemd-units/* \
 		${TMPDIR}/release/rust-iml
 	cp ${TARGET}/release/iml ${TMPDIR}/release/rust-iml
+	cp ${TARGET}/release/iml-client ${TMPDIR}/release/rust-iml
 	cp ${TARGET}/release/iml-config ${TMPDIR}/release/rust-iml
 	tar -czvf ${TMPDIR}/_topdir/SOURCES/rust-iml.tar.gz -C ${TMPDIR}/release/rust-iml .
 	cp rust-iml.spec ${TMPDIR}/_topdir/SPECS/

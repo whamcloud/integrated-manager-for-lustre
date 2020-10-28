@@ -49,3 +49,7 @@ path = "src/main.rs"
 [[bin]]
 name = "iml-config"
 path = "src/config-main.rs"
+
+[[bin]]
+name = "iml-client"
+path = "src/client.rs"
