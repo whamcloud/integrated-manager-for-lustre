@@ -18,6 +18,26 @@ from chroma_core.lib.job import DependOn, DependAll, Step
 from chroma_help.help import help_text
 
 
+def reverse_host_dep(mh):
+    return list(
+        [
+            x
+            for x in LustreClientMount.objects.filter(host_id=mh.id)
+            if (not mh.immutable_state) and ManagedFilesystem.objects.filter(name=x.filesystem).exists()
+        ]
+    )
+
+
+def reverse_lnet_dep(lc):
+    return list(
+        [
+            x
+            for x in LustreClientMount.objects.filter(host_id=lc.host.id)
+            if ManagedFilesystem.objects.filter(name=x.filesystem, immutable_state=False).exists()
+        ]
+    )
+
+
 class LustreClientMount(DeletableStatefulObject):
     host = models.ForeignKey("ManagedHost", help_text="Mount host", related_name="client_mounts", on_delete=CASCADE)
     filesystem = models.CharField(
@@ -85,8 +105,8 @@ class LustreClientMount(DeletableStatefulObject):
         return DependAll(deps)
 
     reverse_deps = {
-        "ManagedHost": lambda mh: list(LustreClientMount.objects.filter(host_id=mh.id)),
-        "LNetConfiguration": lambda lc: list(LustreClientMount.objects.filter(host_id=lc.host.id)),
+        "ManagedHost": reverse_host_dep,
+        "LNetConfiguration": reverse_lnet_dep,
         "ManagedFilesystem": lambda mf: list(LustreClientMount.objects.filter(filesystem=mf.name)),
     }
 
@@ -208,6 +228,10 @@ class UnmountLustreClientMountJob(StateChangeJob):
 
     def description(self):
         return "Unmount %s" % self.lustre_client_mount
+
+    def can_run(self):
+        client_mount = self.lustre_client_mount
+        return ManagedFilesystem.objects.filter(name=client_mount.filesystem).exists()
 
     def get_steps(self):
         client_mount = self.lustre_client_mount
