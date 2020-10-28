@@ -53,6 +53,9 @@ services:
   device:
     environment:
       - RUST_LOG=debug
+  network:
+    environment:
+      - RUST_LOG=debug
 EOF
 
 # Enable but do not start iml-docker

@@ -38,6 +38,7 @@ cp iml-corosync %{buildroot}%{_bindir}
 cp iml-device %{buildroot}%{_bindir}
 cp iml-journal %{buildroot}%{_bindir}
 cp iml-mailbox %{buildroot}%{_bindir}
+cp iml-network %{buildroot}%{_bindir}
 cp iml-ntp %{buildroot}%{_bindir}
 cp iml-ostpool %{buildroot}%{_bindir}
 cp iml-postoffice %{buildroot}%{_bindir}
@@ -56,6 +57,7 @@ cp iml-rust-corosync.service %{buildroot}%{_unitdir}
 cp iml-device.service %{buildroot}%{_unitdir}
 cp iml-journal.service %{buildroot}%{_unitdir}
 cp iml-mailbox.service %{buildroot}%{_unitdir}
+cp iml-network.service %{buildroot}%{_unitdir}
 cp iml-ntp.service %{buildroot}%{_unitdir}
 cp iml-ostpool.service %{buildroot}%{_unitdir}
 cp iml-postoffice.service %{buildroot}%{_unitdir}
@@ -331,6 +333,27 @@ Group: System Environment/Libraries
 %{_bindir}/iml-mailbox
 %attr(0644,root,root)%{_unitdir}/iml-mailbox.service
 
+%package network
+Summary: Consumer of IML Agent Network push queue
+License: MIT
+Group: System Environment/Libraries
+
+%description network
+%{summary}
+
+%post network
+%systemd_post iml-network.service
+
+%preun network
+%systemd_preun iml-network.service
+
+%postun network
+%systemd_postun_with_restart iml-network.service
+
+%files network
+%{_bindir}/iml-network
+%attr(0644,root,root)%{_unitdir}/iml-network.service
+
 %package ntp
 Summary: Consumer of IML Agent Ntp push queue
 License: MIT
@@ -527,6 +550,9 @@ Group: System Environment/Libraries
 %attr(0644,root,root)%{_unitdir}/iml-timer.service
 
 %changelog
+* Wed Oct 28 2020 Will Johnson <wjohnson@whamcloud.com> - 0.4.0-1
+- Add network service
+
 * Thu Sep 17 2020 Will Johnson <wjohnson@whamcloud.com> - 0.3.0-1
 - Add timer service
 

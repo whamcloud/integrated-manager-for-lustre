@@ -14,6 +14,7 @@ pub mod corosync;
 pub mod daemon_plugin;
 pub mod device;
 pub mod journal;
+pub mod network;
 pub mod ntp;
 pub mod ostpool;
 pub mod postoffice;

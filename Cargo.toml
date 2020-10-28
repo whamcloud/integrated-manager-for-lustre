@@ -25,6 +25,7 @@ members = [
   'iml-services/iml-device',
   'iml-services/iml-journal',
   'iml-services/iml-journal',
+  'iml-services/iml-network',
   'iml-services/iml-ntp',
   'iml-services/iml-ostpool',
   'iml-services/iml-postoffice',

@@ -161,6 +161,17 @@ services:
       - RUST_LOG=info,sqlx::query=warn
     volumes:
       - "manager-config:/var/lib/chroma"
+  network:
+        image: "imlteam/network:6.2.0"
+        hostname: "iml-network"
+        build:
+          context: ../
+          dockerfile: ./docker/iml-network.dockerfile
+        deploy: *default-deploy
+        volumes:
+          - "manager-config:/var/lib/chroma"
+        environment:
+          - RUST_LOG=info,sqlx::query=warn
   ntp:
     image: "imlteam/ntp:6.2.0"
     hostname: "iml-ntp"
