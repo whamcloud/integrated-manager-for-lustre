@@ -2110,7 +2110,7 @@ impl fmt::Display for LdevEntry {
             self.primary,
             self.failover.as_deref().unwrap_or("-"),
             self.label,
-            device
+            device,
         )
     }
 }

@@ -4,8 +4,8 @@
 
 use crate::{
     api_utils::{
-        create_command, get, get_all, get_hosts, get_influx, get_one, wait_for_cmds_success,
-        SendCmd, SendJob,
+        create_command, get, get_all, get_hosts, get_influx, get_one, graphql,
+        wait_for_cmds_success, SendCmd, SendJob,
     },
     display_utils::{usage, wrap_fut, DisplayType, IntoDisplayType as _},
     error::ImlManagerCliError,
@@ -13,6 +13,7 @@ use crate::{
 };
 use console::Term;
 use futures::future::{try_join, try_join_all};
+use iml_graphql_queries::filesystem as filesystem_queries;
 use iml_wire_types::{Filesystem, FlatQuery, Mgt, Ost};
 use number_formatter::{format_bytes, format_number};
 use prettytable::{Row, Table};
@@ -46,6 +47,9 @@ pub enum FilesystemCommand {
         #[structopt(short, long)]
         hosts: Option<String>,
     },
+    /// Create Ldev Conf
+    #[structopt(name = "create_ldev")]
+    CreateLdev,
 }
 
 fn option_sub(a: Option<u64>, b: Option<u64>) -> Option<u64> {
@@ -95,6 +99,16 @@ async fn detect_filesystem(hosts: Option<String>) -> Result<(), ImlManagerCliErr
         }],
     };
     let cmd = wrap_fut("Detecting filesystems...", create_command(cmd)).await?;
+
+    wait_for_cmds_success(&[cmd]).await?;
+    Ok(())
+}
+
+async fn create_ldev() -> Result<(), ImlManagerCliError> {
+    let resp: iml_graphql_queries::Response<filesystem_queries::ldev_create::Resp> =
+        graphql(filesystem_queries::ldev_create::build()).await?;
+
+    let cmd = Result::from(resp)?.data.create_ldev_conf;
 
     wait_for_cmds_success(&[cmd]).await?;
     Ok(())
@@ -193,6 +207,7 @@ pub async fn filesystem_cli(command: FilesystemCommand) -> Result<(), ImlManager
         }
         FilesystemCommand::Pool { command } => ostpool_cli(command).await?,
         FilesystemCommand::Detect { hosts } => detect_filesystem(hosts).await?,
+        FilesystemCommand::CreateLdev => create_ldev().await?,
     };
 
     Ok(())

@@ -1,0 +1,90 @@
+---
+source: iml-agent/src/action_plugins/ldev.rs
+expression: data
+---
+{
+    LdevEntry {
+        primary: "zeno1",
+        failover: Some(
+            "zeno5",
+        ),
+        label: "zeno-OST0000",
+        device: "zfs:lustre-zeno1/ost1",
+        fs_type: Some(
+            Zfs,
+        ),
+    },
+    LdevEntry {
+        primary: "zeno2",
+        failover: None,
+        label: "zeno-OST0001",
+        device: "zfs:lustre-zeno2/ost1",
+        fs_type: Some(
+            Zfs,
+        ),
+    },
+    LdevEntry {
+        primary: "zeno3",
+        failover: Some(
+            "zeno7",
+        ),
+        label: "zeno-OST0002",
+        device: "zfs:lustre-zeno3/ost1",
+        fs_type: Some(
+            Zfs,
+        ),
+    },
+    LdevEntry {
+        primary: "zeno4",
+        failover: Some(
+            "zeno8",
+        ),
+        label: "zeno-OST0003",
+        device: "zfs:lustre-zeno4/ost1",
+        fs_type: Some(
+            Zfs,
+        ),
+    },
+    LdevEntry {
+        primary: "zeno5",
+        failover: Some(
+            "zeno1",
+        ),
+        label: "zeno-OST0004",
+        device: "zfs:lustre-zeno5/ost1",
+        fs_type: Some(
+            Zfs,
+        ),
+    },
+    LdevEntry {
+        primary: "zeno6",
+        failover: None,
+        label: "zeno-OST0005",
+        device: "zfs:lustre-zeno6/ost1",
+        fs_type: Some(
+            Zfs,
+        ),
+    },
+    LdevEntry {
+        primary: "zeno7",
+        failover: Some(
+            "zeno3",
+        ),
+        label: "zeno-OST0006",
+        device: "zfs:lustre-zeno7/ost1",
+        fs_type: Some(
+            Zfs,
+        ),
+    },
+    LdevEntry {
+        primary: "zeno8",
+        failover: Some(
+            "zeno4",
+        ),
+        label: "zeno-OST0007",
+        device: "zfs:lustre-zeno8/ost1",
+        fs_type: Some(
+            Zfs,
+        ),
+    },
+}

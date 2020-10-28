@@ -337,26 +337,6 @@
       ]
     }
   },
-  "131959cfcc0275c8797cb5aa12f0ad15dd6baa2f75c716815607a039defac3a6": {
-    "query": "select fqdn from chroma_core_managedhost where id = $1 and not_deleted = 't'",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "fqdn",
-          "type_info": "Varchar"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "Int4"
-        ]
-      },
-      "nullable": [
-        false
-      ]
-    }
-  },
   "17645262c426038efcc8e22bf999c0d3cee07f52c4e276a1b607e2e00b2e62bd": {
     "query": "\n                SELECT\n                    id,\n                    filesystem_name,\n                    reserve_value,\n                    reserve_unit as \"reserve_unit:ReserveUnit\",\n                    last_run,\n                    keep_num\n                FROM snapshot_retention\n            ",
     "describe": {
@@ -2472,6 +2452,30 @@
       ]
     }
   },
+  "84106161840919908a2de13f79f154cdce5d97fc689118c49f0e83de1ada7fd6": {
+    "query": "SELECT mh.fqdn, target.filesystems FROM target as target LEFT JOIN chroma_core_managedhost as mh ON mh.id = target.active_host_id WHERE target.name='MGS' AND mh.fqdn IS NOT NULL",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "fqdn",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 1,
+          "name": "filesystems",
+          "type_info": "TextArray"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false
+      ]
+    }
+  },
   "857ec5f2517d25f901399ddfb8efa1ab3f73ed8c8f899692c071172b61179d1a": {
     "query": "select * from chroma_core_lnetconfiguration where not_deleted = 't'",
     "describe": {
@@ -3410,6 +3414,30 @@
         false,
         false,
         false,
+        false,
+        false
+      ]
+    }
+  },
+  "b70a8df89e1b93a9f73332d8b635d485813a418d99cb6a744e76d5f4df866f39": {
+    "query": "SELECT id, fqdn FROM chroma_core_managedhost WHERE not_deleted=True",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "fqdn",
+          "type_info": "Varchar"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
         false,
         false
       ]

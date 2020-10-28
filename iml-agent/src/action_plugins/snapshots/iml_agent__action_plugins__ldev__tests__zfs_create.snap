@@ -22,6 +22,6 @@ oss2 oss1 zfsmo-OST000d zfs:ost13/ost13
 oss2 oss1 zfsmo-OST000e zfs:ost14/ost14
 oss2 oss1 zfsmo-OST000f zfs:ost15/ost15
 oss2 oss1 zfsmo-OST0010 zfs:ost16/ost16
-oss2 oss1 zfsmo-OST00011 zfs:ost17/ost17
-oss2 oss1 zfsmo-OST00012 zfs:ost18/ost18
-oss2 oss1 zfsmo-OST00013 zfs:ost19/ost19
+oss2 oss1 zfsmo-OST0011 zfs:ost17/ost17
+oss2 oss1 zfsmo-OST0012 zfs:ost18/ost18
+oss2 oss1 zfsmo-OST0013 zfs:ost19/ost19

@@ -20,7 +20,7 @@ use iml_wire_types::{
     logs::{LogResponse, Meta},
     snapshot::{ReserveUnit, Snapshot, SnapshotInterval, SnapshotRetention},
     task::Task,
-    Command, EndpointName, FsType, Job, LogMessage, LogSeverity, MessageClass, SortDir,
+    Command, EndpointName, FsType, Job, LdevEntry, LogMessage, LogSeverity, MessageClass, SortDir,
 };
 use itertools::Itertools;
 use juniper::{
@@ -886,6 +886,130 @@ impl MutationRoot {
             .await?;
 
         Ok(true)
+    }
+
+    /// Create LDev Conf
+    async fn create_ldev_conf(context: &Context) -> juniper::FieldResult<Command> {
+        tracing::debug!("creating ldev conf");
+        let hosts =
+            sqlx::query!("SELECT id, fqdn FROM chroma_core_managedhost WHERE not_deleted=True")
+                .fetch_all(&context.pg_pool)
+                .await?
+                .into_iter()
+                .map(|x| (x.id, x.fqdn))
+                .collect::<HashMap<i32, String>>();
+
+        tracing::debug!("hosts: {:?}", hosts);
+
+        let fs_to_fqdn_map = sqlx::query!(
+            "SELECT mh.fqdn, target.filesystems FROM target as target \
+            LEFT JOIN chroma_core_managedhost as mh ON mh.id = target.active_host_id \
+            WHERE target.name='MGS' AND mh.fqdn IS NOT NULL"
+        )
+        .fetch_all(&context.pg_pool)
+        .await?
+        .into_iter()
+        .map(|x| {
+            let xs = x
+                .filesystems
+                .iter()
+                .cloned()
+                .map(|fs| (fs, x.fqdn.to_string()))
+                .collect::<Vec<(String, String)>>();
+            xs
+        })
+        .flatten()
+        .collect::<HashMap<String, String>>();
+
+        tracing::debug!("fs_to_fqdn_map: {:?}", fs_to_fqdn_map);
+
+        let targets = get_targets(&context.pg_pool, None, None, None, None, true).await?;
+
+        tracing::debug!("targets: {:?}", targets);
+
+        let ldev_entries = targets
+            .into_iter()
+            .map(|x| {
+                if let Some(primary) = x.active_host_id {
+                    if let Some(mount_path) = x.mount_path {
+                        let failovers = x
+                            .host_ids
+                            .into_iter()
+                            .filter(|x| *x != primary)
+                            .filter_map(|x| hosts.get(&x))
+                            .map(|x| x.to_string())
+                            .collect::<Vec<String>>();
+
+                        let failover = if failovers.is_empty() {
+                            None
+                        } else {
+                            Some(failovers[0].to_string())
+                        };
+
+                        let ldev_entry = LdevEntry {
+                            primary: hosts.get(&primary).expect("get primary host").to_string(),
+                            failover,
+                            label: x.name,
+                            device: mount_path,
+                            fs_type: x.fs_type,
+                        };
+
+                        return Ok((
+                            fs_to_fqdn_map
+                                .get(&x.filesystems[0])
+                                .expect("get first filesystem"),
+                            ldev_entry,
+                        ));
+                    } else {
+                        return Err(ImlApiError::TargetsNotMounted);
+                    }
+                } else {
+                    return Err(ImlApiError::TargetsNotMounted);
+                }
+            })
+            .try_fold(
+                vec![].into_iter().collect(),
+                |mut acc: HashMap<String, Vec<LdevEntry>>, entry| match entry {
+                    Ok((fqdn, ldev_entry)) => {
+                        let items = acc.entry(fqdn.to_string()).or_insert(vec![]);
+                        (*items).push(ldev_entry);
+
+                        Ok(acc)
+                    }
+                    Err(e) => Err(e),
+                },
+            );
+
+        tracing::debug!("ldev entries: {:?}", ldev_entries);
+
+        match ldev_entries {
+            Ok(ldev_entries) => {
+                let kwargs: HashMap<String, String> =
+                    vec![("message".into(), "Creating LDev Conf".into())]
+                        .into_iter()
+                        .collect();
+
+                let jobs = serde_json::json!([{
+                    "class_name": "ConfigureLDevJob",
+                    "args": {
+                        "ldev_entries": serde_json::to_string(&ldev_entries)?
+                    }
+                }]);
+                let command_id: i32 = iml_job_scheduler_rpc::call(
+                    &context.rabbit_pool.get().await?,
+                    "run_jobs",
+                    vec![jobs],
+                    Some(kwargs),
+                )
+                .map_err(ImlApiError::ImlJobSchedulerRpcError)
+                .await?;
+
+                let command = get_command(&context.pg_pool, command_id).await?;
+
+                Ok(command)
+            }
+            Err(e) => Err(FieldError::new(e.to_string(), Value::null())),
+        }
     }
 }
 
