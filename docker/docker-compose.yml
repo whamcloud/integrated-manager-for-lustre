@@ -356,13 +356,13 @@ services:
       - USE_SNAPSHOTS
       - EXA_VERSION
       - SFA_ENDPOINTS_1
-  iml-manager-cli:
-    image: "imlteam/iml-manager-cli:6.2.0"
+  iml-cli:
+    image: "imlteam/iml-cli:6.2.0"
     stdin_open: true
     tty: true
     build:
       context: ../
-      dockerfile: ./docker/iml-manager-cli.dockerfile
+      dockerfile: ./docker/iml-cli.dockerfile
     deploy: *default-deploy
     volumes:
       - "manager-config:/var/lib/chroma"

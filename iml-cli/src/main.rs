@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use iml_manager_cli::{
+use iml_cli::{
     api::{self, api_cli, graphql_cli},
     display_utils::display_error,
     filesystem::{self, filesystem_cli},

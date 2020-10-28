@@ -1644,6 +1644,42 @@ name = "iml-change"
 version = "0.1.0"
 
 [[package]]
+name = "iml-cli"
+version = "0.4.0"
+dependencies = [
+ "chrono",
+ "chrono-humanize",
+ "combine 4.1.0",
+ "console 0.11.3",
+ "dialoguer",
+ "dotenv",
+ "futures",
+ "hostlist-parser",
+ "iml-api-utils",
+ "iml-command-utils",
+ "iml-graphql-queries",
+ "iml-influx",
+ "iml-manager-client",
+ "iml-postgres",
+ "iml-tracing",
+ "iml-wire-types",
+ "indicatif",
+ "insta 1.1.0",
+ "lazy_static",
+ "number-formatter",
+ "prettytable-rs",
+ "regex",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "structopt",
+ "thiserror",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "iml-cmd"
 version = "0.4.0"
 dependencies = [
@@ -1796,42 +1832,6 @@ dependencies = [
  "thiserror",
  "tokio",
  "warp",
-]
-
-[[package]]
-name = "iml-manager-cli"
-version = "0.4.0"
-dependencies = [
- "chrono",
- "chrono-humanize",
- "combine 4.1.0",
- "console 0.11.3",
- "dialoguer",
- "dotenv",
- "futures",
- "hostlist-parser",
- "iml-api-utils",
- "iml-command-utils",
- "iml-graphql-queries",
- "iml-influx",
- "iml-manager-client",
- "iml-postgres",
- "iml-tracing",
- "iml-wire-types",
- "indicatif",
- "insta 1.1.0",
- "lazy_static",
- "number-formatter",
- "prettytable-rs",
- "regex",
- "reqwest",
- "serde",
- "serde_json",
- "serde_yaml",
- "structopt",
- "thiserror",
- "tokio",
- "tracing",
 ]
 
 [[package]]

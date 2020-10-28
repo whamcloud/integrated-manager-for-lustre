@@ -13,7 +13,7 @@ members = [
   'iml-influx',
   'iml-job-scheduler-rpc',
   'iml-mailbox',
-  'iml-manager-cli',
+  'iml-cli',
   'iml-manager-client',
   'iml-manager-env',
   'iml-postgres',

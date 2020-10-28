@@ -1,5 +1,5 @@
 ---
-source: iml-manager-cli/src/nginx.rs
+source: iml-cli/src/nginx.rs
 expression: config
 ---
 map $ssl_client_s_dn $ssl_client_s_dn_cn {
