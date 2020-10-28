@@ -104,6 +104,27 @@ pub async fn unmount(unmount: Unmount) -> Result<(), ImlAgentError> {
         .map(drop)
 }
 
+/// This action will attempt to:
+/// - Create the specified `Mount.mountpoint` path
+/// - Add a systemd mount to `/etc/fstab`
+/// - Optionally set systemd mount to start at boot iff `Mount.persist` is `true`.
+pub async fn add_fstab_entry(mount: Mount) -> Result<(), ImlAgentError> {
+    // This should return Ok(()) if the dir already exists.
+    fs::create_dir_all(&mount.mountpoint).await?;
+
+    update_fstab_entry(&mount.mountspec, &mount.mountpoint, mount.persist).await?;
+
+    Ok(())
+}
+
+/// This action will attempt to:
+/// - Remove a mountpoint from `/etc/fstab`
+pub async fn remove_fstab_entry(mount: Mount) -> Result<(), ImlAgentError> {
+    delete_fstab_entry(&mount.mountpoint).await?;
+
+    Ok(())
+}
+
 pub async fn unmount_many(xs: Vec<Unmount>) -> Result<(), ImlAgentError> {
     for x in xs {
         unmount(x).await?;
