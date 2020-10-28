@@ -7,7 +7,7 @@ expression: network_interfaces
     {
       "interface": "usermode",
       "mac_address": "52:54:00:12:34:56",
-      "interface_type": "ether",
+      "interface_type": "tcp",
       "inet4_address": [
         "10.0.2.15/24"
       ],
@@ -43,7 +43,7 @@ expression: network_interfaces
     {
       "interface": "veth16eb12b@if443650",
       "mac_address": "5e:2b:ca:e4:6b:52",
-      "interface_type": "ether",
+      "interface_type": "tcp",
       "inet4_address": [],
       "inet6_address": [
         "fe80::5c2b:caff:fee4:6b52/64"
@@ -76,7 +76,7 @@ expression: network_interfaces
     {
       "interface": "mgmt0",
       "mac_address": "02:00:f0:cd:8d:6e",
-      "interface_type": "ether",
+      "interface_type": "tcp",
       "inet4_address": [
         "10.36.47.10/20",
         "10.36.47.116/22"
@@ -112,7 +112,7 @@ expression: network_interfaces
     {
       "interface": "mgmt1",
       "mac_address": "02:00:0d:40:8d:6f",
-      "interface_type": "ether",
+      "interface_type": "tcp",
       "inet4_address": [],
       "inet6_address": [],
       "stats": {
@@ -143,7 +143,7 @@ expression: network_interfaces
     {
       "interface": "mgmt2",
       "mac_address": "02:00:8e:c2:8d:70",
-      "interface_type": "ether",
+      "interface_type": "tcp",
       "inet4_address": [
         "10.0.3.2/24"
       ],
@@ -178,7 +178,7 @@ expression: network_interfaces
     {
       "interface": "ib0",
       "mac_address": "20:00:05:18:fe:80:00:00:00:00:00:00:b8:59:9f:03:00:f6:8b:c0",
-      "interface_type": "infiniband",
+      "interface_type": "o2ib",
       "inet4_address": [
         "172.16.0.24/24"
       ],
@@ -213,7 +213,7 @@ expression: network_interfaces
     {
       "interface": "ib1",
       "mac_address": "20:00:0d:eb:fe:80:00:00:00:00:00:00:b8:59:9f:03:00:f6:8b:c1",
-      "interface_type": "infiniband",
+      "interface_type": "o2ib",
       "inet4_address": [
         "172.16.0.28/24"
       ],
@@ -248,7 +248,7 @@ expression: network_interfaces
     {
       "interface": "docker0",
       "mac_address": "02:42:e3:2a:7f:07",
-      "interface_type": "ether",
+      "interface_type": "tcp",
       "inet4_address": [
         "172.17.0.1/16"
       ],
@@ -281,7 +281,7 @@ expression: network_interfaces
     {
       "interface": "",
       "mac_address": "02:42:23:57:9c:d2",
-      "interface_type": "ether",
+      "interface_type": "tcp",
       "inet4_address": [
         "172.18.0.1/16"
       ],
@@ -295,7 +295,7 @@ expression: network_interfaces
     {
       "interface": "veth9e52739@if443680",
       "mac_address": "02:d2:4d:6a:e9:ef",
-      "interface_type": "ether",
+      "interface_type": "tcp",
       "inet4_address": [],
       "inet6_address": [
         "fe80::d2:4dff:fe6a:e9ef/64"
@@ -328,7 +328,7 @@ expression: network_interfaces
     {
       "interface": "vethbdb5f64@if443698",
       "mac_address": "4a:46:c3:ac:ea:07",
-      "interface_type": "ether",
+      "interface_type": "tcp",
       "inet4_address": [],
       "inet6_address": [
         "fe80::4846:c3ff:feac:ea07/64"
@@ -361,7 +361,7 @@ expression: network_interfaces
     {
       "interface": "veth45bb9b8@if443700",
       "mac_address": "ae:d8:09:a2:c9:ec",
-      "interface_type": "ether",
+      "interface_type": "tcp",
       "inet4_address": [],
       "inet6_address": [
         "fe80::acd8:9ff:fea2:c9ec/64"
@@ -394,7 +394,7 @@ expression: network_interfaces
     {
       "interface": "veth86cfdc2@if443702",
       "mac_address": "e2:39:b1:0e:af:73",
-      "interface_type": "ether",
+      "interface_type": "tcp",
       "inet4_address": [],
       "inet6_address": [
         "fe80::e039:b1ff:fe0e:af73/64"
@@ -427,7 +427,7 @@ expression: network_interfaces
     {
       "interface": "veth63d4f07@if443704",
       "mac_address": "02:c4:c4:ec:d0:42",
-      "interface_type": "ether",
+      "interface_type": "tcp",
       "inet4_address": [],
       "inet6_address": [
         "fe80::c4:c4ff:feec:d042/64"
@@ -460,7 +460,7 @@ expression: network_interfaces
     {
       "interface": "veth95ac83e@if443706",
       "mac_address": "4a:cc:35:a1:ea:6c",
-      "interface_type": "ether",
+      "interface_type": "tcp",
       "inet4_address": [],
       "inet6_address": [
         "fe80::48cc:35ff:fea1:ea6c/64"
@@ -493,7 +493,7 @@ expression: network_interfaces
     {
       "interface": "veth7ff82b2@if443708",
       "mac_address": "56:8c:02:99:df:d0",
-      "interface_type": "ether",
+      "interface_type": "tcp",
       "inet4_address": [],
       "inet6_address": [
         "fe80::548c:2ff:fe99:dfd0/64"
@@ -526,7 +526,7 @@ expression: network_interfaces
     {
       "interface": "veth4a6528b@if443712",
       "mac_address": "0e:b5:2b:2a:21:fe",
-      "interface_type": "ether",
+      "interface_type": "tcp",
       "inet4_address": [],
       "inet6_address": [
         "fe80::cb5:2bff:fe2a:21fe/64"
@@ -559,7 +559,7 @@ expression: network_interfaces
     {
       "interface": "veth237e8e3@if443714",
       "mac_address": "b6:95:35:81:c9:e9",
-      "interface_type": "ether",
+      "interface_type": "tcp",
       "inet4_address": [],
       "inet6_address": [
         "fe80::b495:35ff:fe81:c9e9/64"
@@ -592,7 +592,7 @@ expression: network_interfaces
     {
       "interface": "vethc401548@if443716",
       "mac_address": "e2:74:77:7e:2c:16",
-      "interface_type": "ether",
+      "interface_type": "tcp",
       "inet4_address": [],
       "inet6_address": [
         "fe80::e074:77ff:fe7e:2c16/64"
@@ -625,7 +625,7 @@ expression: network_interfaces
     {
       "interface": "vethb66e91f@if443720",
       "mac_address": "a6:03:a0:89:58:ed",
-      "interface_type": "ether",
+      "interface_type": "tcp",
       "inet4_address": [],
       "inet6_address": [
         "fe80::a403:a0ff:fe89:58ed/64"
@@ -658,7 +658,7 @@ expression: network_interfaces
     {
       "interface": "vethd531014@if443722",
       "mac_address": "0e:d4:37:9f:1a:d2",
-      "interface_type": "ether",
+      "interface_type": "tcp",
       "inet4_address": [],
       "inet6_address": [
         "fe80::cd4:37ff:fe9f:1ad2/64"
@@ -691,7 +691,7 @@ expression: network_interfaces
     {
       "interface": "veth65f9fa0@if443724",
       "mac_address": "f6:70:b0:df:3f:b3",
-      "interface_type": "ether",
+      "interface_type": "tcp",
       "inet4_address": [],
       "inet6_address": [
         "fe80::f470:b0ff:fedf:3fb3/64"
@@ -724,7 +724,7 @@ expression: network_interfaces
     {
       "interface": "veth6a20ae2@if443726",
       "mac_address": "4e:0c:8e:df:a9:82",
-      "interface_type": "ether",
+      "interface_type": "tcp",
       "inet4_address": [],
       "inet6_address": [
         "fe80::4c0c:8eff:fedf:a982/64"
@@ -757,7 +757,7 @@ expression: network_interfaces
     {
       "interface": "vethe2cd54f@if443728",
       "mac_address": "0e:7b:92:95:d0:9c",
-      "interface_type": "ether",
+      "interface_type": "tcp",
       "inet4_address": [],
       "inet6_address": [
         "fe80::c7b:92ff:fe95:d09c/64"
@@ -790,7 +790,7 @@ expression: network_interfaces
     {
       "interface": "veth874a4ed@if443730",
       "mac_address": "0e:5d:5a:e7:a2:05",
-      "interface_type": "ether",
+      "interface_type": "tcp",
       "inet4_address": [],
       "inet6_address": [
         "fe80::c5d:5aff:fee7:a205/64"
@@ -823,7 +823,7 @@ expression: network_interfaces
     {
       "interface": "veth46b11d3@if443732",
       "mac_address": "82:e9:50:2e:af:d3",
-      "interface_type": "ether",
+      "interface_type": "tcp",
       "inet4_address": [],
       "inet6_address": [
         "fe80::80e9:50ff:fe2e:afd3/64"
@@ -856,7 +856,7 @@ expression: network_interfaces
     {
       "interface": "veth7c0d679@if443734",
       "mac_address": "2a:ba:2f:7a:06:9a",
-      "interface_type": "ether",
+      "interface_type": "tcp",
       "inet4_address": [],
       "inet6_address": [
         "fe80::28ba:2fff:fe7a:69a/64"
@@ -889,7 +889,7 @@ expression: network_interfaces
     {
       "interface": "vethc647f9c@if443736",
       "mac_address": "fa:3e:e3:f2:f2:6e",
-      "interface_type": "ether",
+      "interface_type": "tcp",
       "inet4_address": [],
       "inet6_address": [
         "fe80::f83e:e3ff:fef2:f26e/64"
@@ -922,7 +922,7 @@ expression: network_interfaces
     {
       "interface": "veth34c4142@if443738",
       "mac_address": "66:03:2d:90:27:40",
-      "interface_type": "ether",
+      "interface_type": "tcp",
       "inet4_address": [],
       "inet6_address": [
         "fe80::6403:2dff:fe90:2740/64"
@@ -955,7 +955,7 @@ expression: network_interfaces
     {
       "interface": "vethd1e8802@if443766",
       "mac_address": "96:34:d7:03:86:fe",
-      "interface_type": "ether",
+      "interface_type": "tcp",
       "inet4_address": [],
       "inet6_address": [
         "fe80::9434:d7ff:fe03:86fe/64"
@@ -988,7 +988,7 @@ expression: network_interfaces
     {
       "interface": "vethc28587c@if443601",
       "mac_address": "12:5b:c4:4d:23:50",
-      "interface_type": "ether",
+      "interface_type": "tcp",
       "inet4_address": [],
       "inet6_address": [
         "fe80::105b:c4ff:fe4d:2350/64"
@@ -1021,7 +1021,7 @@ expression: network_interfaces
     {
       "interface": "vethf6ea3d7@if443610",
       "mac_address": "16:d2:d7:70:55:9c",
-      "interface_type": "ether",
+      "interface_type": "tcp",
       "inet4_address": [],
       "inet6_address": [
         "fe80::14d2:d7ff:fe70:559c/64"
@@ -1054,7 +1054,7 @@ expression: network_interfaces
     {
       "interface": "veth36f5f66@if443614",
       "mac_address": "b6:c1:e8:0e:2b:29",
-      "interface_type": "ether",
+      "interface_type": "tcp",
       "inet4_address": [],
       "inet6_address": [
         "fe80::b4c1:e8ff:fe0e:2b29/64"
@@ -1087,7 +1087,7 @@ expression: network_interfaces
     {
       "interface": "veth2e73ef6@if443622",
       "mac_address": "a2:c6:e5:5e:db:ce",
-      "interface_type": "ether",
+      "interface_type": "tcp",
       "inet4_address": [],
       "inet6_address": [
         "fe80::a0c6:e5ff:fe5e:dbce/64"
@@ -1120,7 +1120,7 @@ expression: network_interfaces
     {
       "interface": "veth4eb3f8a@if443626",
       "mac_address": "46:13:83:6f:23:68",
-      "interface_type": "ether",
+      "interface_type": "tcp",
       "inet4_address": [],
       "inet6_address": [
         "fe80::4413:83ff:fe6f:2368/64"
@@ -1153,7 +1153,7 @@ expression: network_interfaces
     {
       "interface": "veth06b8882@if443634",
       "mac_address": "da:21:3b:d3:6e:b5",
-      "interface_type": "ether",
+      "interface_type": "tcp",
       "inet4_address": [],
       "inet6_address": [
         "fe80::d821:3bff:fed3:6eb5/64"
@@ -1186,7 +1186,7 @@ expression: network_interfaces
     {
       "interface": "veth7bd5de8@if443636",
       "mac_address": "5a:e6:dd:b0:c4:9f",
-      "interface_type": "ether",
+      "interface_type": "tcp",
       "inet4_address": [],
       "inet6_address": [
         "fe80::58e6:ddff:feb0:c49f/64"
@@ -1219,7 +1219,7 @@ expression: network_interfaces
     {
       "interface": "veth72f61ea@if443640",
       "mac_address": "46:18:1b:f0:2a:bb",
-      "interface_type": "ether",
+      "interface_type": "tcp",
       "inet4_address": [],
       "inet6_address": [
         "fe80::4418:1bff:fef0:2abb/64"
@@ -1252,7 +1252,7 @@ expression: network_interfaces
     {
       "interface": "veth676cb59@if443644",
       "mac_address": "3a:5a:b1:17:36:19",
-      "interface_type": "ether",
+      "interface_type": "tcp",
       "inet4_address": [],
       "inet6_address": [
         "fe80::385a:b1ff:fe17:3619/64"
