@@ -7,7 +7,7 @@ use combine::{
 };
 use std::{collections::HashMap, convert::TryFrom, num::ParseIntError};
 
-type MaybeStat = Result<u64, ParseIntError>;
+type StatResult = Result<u64, ParseIntError>;
 
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 struct RxStats {
@@ -23,30 +23,30 @@ struct RxStats {
 
 impl
     TryFrom<(
-        MaybeStat,
-        MaybeStat,
-        MaybeStat,
-        MaybeStat,
-        MaybeStat,
-        MaybeStat,
-        MaybeStat,
-        MaybeStat,
+        StatResult,
+        StatResult,
+        StatResult,
+        StatResult,
+        StatResult,
+        StatResult,
+        StatResult,
+        StatResult,
     )> for RxStats
 {
     type Error = ParseIntError;
 
     fn try_from(
         (v1, v2, v3, v4, v5, v6, v7, v8): (
-            MaybeStat,
-            MaybeStat,
-            MaybeStat,
-            MaybeStat,
-            MaybeStat,
-            MaybeStat,
-            MaybeStat,
-            MaybeStat,
+            StatResult,
+            StatResult,
+            StatResult,
+            StatResult,
+            StatResult,
+            StatResult,
+            StatResult,
+            StatResult,
         ),
-    ) -> Result<Self, ParseIntError> {
+    ) -> Result<Self, Self::Error> {
         Ok(RxStats {
             bytes: v1?,
             packets: v2?,
@@ -74,30 +74,30 @@ struct TxStats {
 
 impl
     TryFrom<(
-        MaybeStat,
-        MaybeStat,
-        MaybeStat,
-        MaybeStat,
-        MaybeStat,
-        MaybeStat,
-        MaybeStat,
-        MaybeStat,
+        StatResult,
+        StatResult,
+        StatResult,
+        StatResult,
+        StatResult,
+        StatResult,
+        StatResult,
+        StatResult,
     )> for TxStats
 {
     type Error = ParseIntError;
 
     fn try_from(
         (v1, v2, v3, v4, v5, v6, v7, v8): (
-            MaybeStat,
-            MaybeStat,
-            MaybeStat,
-            MaybeStat,
-            MaybeStat,
-            MaybeStat,
-            MaybeStat,
-            MaybeStat,
+            StatResult,
+            StatResult,
+            StatResult,
+            StatResult,
+            StatResult,
+            StatResult,
+            StatResult,
+            StatResult,
         ),
-    ) -> Result<Self, ParseIntError> {
+    ) -> Result<Self, Self::Error> {
         Ok(TxStats {
             bytes: v1?,
             packets: v2?,
@@ -130,7 +130,7 @@ impl
             Result<RxStats, ParseIntError>,
             Result<TxStats, ParseIntError>,
         ),
-    ) -> Result<Self, ParseIntError> {
+    ) -> Result<Self, Self::Error> {
         Ok(InterfaceStats { rx: rx?, tx: tx? })
     }
 }
@@ -156,7 +156,7 @@ where
         .skip(char(':'))
 }
 
-fn parse_stat<I>() -> impl Parser<I, Output = MaybeStat>
+fn parse_stat<I>() -> impl Parser<I, Output = StatResult>
 where
     I: Stream<Token = char>,
     I::Error: ParseError<I::Token, I::Range, I::Position>,
@@ -169,14 +169,14 @@ where
 fn parse_stats<I>() -> impl Parser<
     I,
     Output = (
-        MaybeStat,
-        MaybeStat,
-        MaybeStat,
-        MaybeStat,
-        MaybeStat,
-        MaybeStat,
-        MaybeStat,
-        MaybeStat,
+        StatResult,
+        StatResult,
+        StatResult,
+        StatResult,
+        StatResult,
+        StatResult,
+        StatResult,
+        StatResult,
     ),
 >
 where

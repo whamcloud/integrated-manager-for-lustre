@@ -2,7 +2,10 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{agent_error::ImlAgentError, network_interface_stats};
+use crate::{
+    agent_error::{ImlAgentError, InterfaceError},
+    network_interface_stats,
+};
 use combine::{
     attempt, choice,
     error::ParseError,
@@ -18,6 +21,7 @@ use combine::{
 use ipnetwork::{Ipv4Network, Ipv6Network};
 use std::{
     collections::HashMap,
+    convert::TryFrom,
     net::{Ipv4Addr, Ipv6Addr},
     num::ParseIntError,
 };
@@ -30,11 +34,61 @@ pub enum InterfaceProperties {
     Inet6AddressAndPrefix((String, Result<u8, ParseIntError>)),
 }
 
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum LndType {
+    Tcp,
+    O2ib,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum LinuxType {
+    Ethernet,
+    Ether,
+    Infiniband,
+}
+
+impl TryFrom<Option<String>> for LinuxType {
+    type Error = InterfaceError;
+
+    fn try_from(val: Option<String>) -> Result<Self, Self::Error> {
+        if let Some(val) = val {
+            match val.to_ascii_lowercase().trim() {
+                "ethernet" => Ok(LinuxType::Ethernet),
+                "ether" => Ok(LinuxType::Ether),
+                "infiniband" => Ok(LinuxType::Infiniband),
+                _ => Err(InterfaceError("Invalid linux network type. Must be one of 'ethernet', 'ether', or 'infiniband'.".into())),
+            }
+        } else {
+            Err(InterfaceError("Interface type is not set.".into()))
+        }
+    }
+}
+
+impl TryFrom<Option<LinuxType>> for LndType {
+    type Error = InterfaceError;
+
+    fn try_from(i_type: Option<LinuxType>) -> Result<Self, Self::Error> {
+        if let Some(i_type) = i_type {
+            match i_type {
+                LinuxType::Ethernet => Ok(LndType::Tcp),
+                LinuxType::Ether => Ok(LndType::Tcp),
+                LinuxType::Infiniband => Ok(LndType::O2ib),
+            }
+        } else {
+            Err(InterfaceError(
+                "The linux type is not set and thus cannot be converted to an LndType.".into(),
+            ))
+        }
+    }
+}
+
 #[derive(Debug, Default, serde::Serialize, serde::Deserialize)]
 pub struct NetworkInterface {
     pub interface: String,
     pub mac_address: Option<String>,
-    pub interface_type: Option<String>,
+    pub interface_type: Option<LndType>,
     pub inet4_address: Vec<Ipv4Network>,
     pub inet6_address: Vec<Ipv6Network>,
     pub stats: Option<network_interface_stats::InterfaceStats>,
@@ -60,6 +114,8 @@ impl NetworkInterface {
                 }
             }
             InterfaceProperties::InterfaceTypeAndMacAddress((interface_type, address)) => {
+                let interface_type: Option<LinuxType> = LinuxType::try_from(interface_type).ok();
+                let interface_type: Option<LndType> = LndType::try_from(interface_type).ok();
                 self.interface_type = interface_type;
                 self.mac_address = address;
             }
