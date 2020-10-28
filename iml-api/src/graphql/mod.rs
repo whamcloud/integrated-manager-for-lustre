@@ -297,6 +297,8 @@ impl QueryRoot {
     ) -> juniper::FieldResult<Vec<Snapshot>> {
         let dir = dir.unwrap_or_default();
 
+        let _ = fs_id_by_name(&context.pg_pool, &fsname).await?;
+
         let snapshots = sqlx::query_as!(
             Snapshot,
                 r#"
