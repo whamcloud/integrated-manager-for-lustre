@@ -201,6 +201,10 @@ impl QueryRoot {
     ) -> juniper::FieldResult<Vec<Target>> {
         let dir = dir.unwrap_or_default();
 
+        if let Some(ref fs_name) = fs_name {
+            let _ = fs_id_by_name(&context.pg_pool, &fs_name).await?;
+        }
+
         let xs: Vec<Target> = sqlx::query_as!(
             Target,
             r#"
@@ -254,6 +258,9 @@ impl QueryRoot {
         context: &Context,
         fs_name: Option<String>,
     ) -> juniper::FieldResult<Vec<TargetResource>> {
+        if let Some(ref fs_name) = fs_name {
+            let _ = fs_id_by_name(&context.pg_pool, &fs_name).await?;
+        }
         let xs = get_fs_target_resources(&context.pg_pool, fs_name).await?;
 
         Ok(xs)
@@ -274,6 +281,7 @@ impl QueryRoot {
         context: &Context,
         fs_name: String,
     ) -> juniper::FieldResult<Vec<Vec<String>>> {
+        let _ = fs_id_by_name(&context.pg_pool, &fs_name).await?;
         let xs = get_fs_cluster_hosts(&context.pg_pool, fs_name).await?;
 
         Ok(xs)
@@ -609,6 +617,7 @@ impl MutationRoot {
         comment: Option<String>,
         use_barrier: Option<bool>,
     ) -> juniper::FieldResult<Command> {
+        let _ = fs_id_by_name(&context.pg_pool, &fsname).await?;
         let name = name.trim();
         validate_snapshot_name(name)?;
 
@@ -674,6 +683,7 @@ impl MutationRoot {
         name: String,
         force: bool,
     ) -> juniper::FieldResult<Command> {
+        let _ = fs_id_by_name(&context.pg_pool, &fsname).await?;
         let name = name.trim();
         validate_snapshot_name(name)?;
 
@@ -766,6 +776,7 @@ impl MutationRoot {
         fsname: String,
         name: String,
     ) -> juniper::FieldResult<Command> {
+        let _ = fs_id_by_name(&context.pg_pool, &fsname).await?;
         let name = name.trim();
         validate_snapshot_name(name)?;
 
@@ -817,6 +828,7 @@ impl MutationRoot {
         interval: GraphQLDuration,
         use_barrier: Option<bool>,
     ) -> juniper::FieldResult<bool> {
+        let _ = fs_id_by_name(&context.pg_pool, &fsname).await?;
         let maybe_id = sqlx::query!(
             r#"
                 INSERT INTO snapshot_interval (
@@ -876,6 +888,7 @@ impl MutationRoot {
         reserve_unit: ReserveUnit,
         keep_num: Option<i32>,
     ) -> juniper::FieldResult<bool> {
+        let _ = fs_id_by_name(&context.pg_pool, &fsname).await?;
         sqlx::query!(
             r#"
                 INSERT INTO snapshot_retention (
