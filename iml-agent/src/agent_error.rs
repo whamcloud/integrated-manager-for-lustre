@@ -71,21 +71,6 @@ impl std::error::Error for CibError {
     }
 }
 
-#[derive(Debug)]
-pub struct InterfaceError(pub String);
-
-impl fmt::Display for InterfaceError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl std::error::Error for InterfaceError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        None
-    }
-}
-
 #[derive(Debug, Error)]
 pub enum ImlAgentError {
     #[error(transparent)]
@@ -158,8 +143,6 @@ pub enum ImlAgentError {
     LdevEntriesError(String),
     #[error(transparent)]
     CombineEasyError(#[from] combine::stream::easy::Errors<char, String, usize>),
-    #[error(transparent)]
-    InterfaceError(InterfaceError),
 }
 
 impl From<Output> for ImlAgentError {

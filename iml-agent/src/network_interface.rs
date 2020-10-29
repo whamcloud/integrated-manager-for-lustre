@@ -2,10 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{
-    agent_error::{ImlAgentError, InterfaceError},
-    network_interface_stats,
-};
+use crate::{agent_error::ImlAgentError, network_interface_stats};
 use combine::{
     attempt, choice,
     error::ParseError,
@@ -50,7 +47,7 @@ pub enum LinuxType {
 }
 
 impl TryFrom<Option<String>> for LinuxType {
-    type Error = InterfaceError;
+    type Error = &'static str;
 
     fn try_from(val: Option<String>) -> Result<Self, Self::Error> {
         if let Some(val) = val {
@@ -58,16 +55,16 @@ impl TryFrom<Option<String>> for LinuxType {
                 "ethernet" => Ok(LinuxType::Ethernet),
                 "ether" => Ok(LinuxType::Ether),
                 "infiniband" => Ok(LinuxType::Infiniband),
-                _ => Err(InterfaceError("Invalid linux network type. Must be one of 'ethernet', 'ether', or 'infiniband'.".into())),
+                _ => Err("Invalid linux network type. Must be one of 'ethernet', 'ether', or 'infiniband'.".into()),
             }
         } else {
-            Err(InterfaceError("Interface type is not set.".into()))
+            Err("Interface type is not set.".into())
         }
     }
 }
 
 impl TryFrom<Option<LinuxType>> for LndType {
-    type Error = InterfaceError;
+    type Error = &'static str;
 
     fn try_from(i_type: Option<LinuxType>) -> Result<Self, Self::Error> {
         if let Some(i_type) = i_type {
@@ -77,9 +74,7 @@ impl TryFrom<Option<LinuxType>> for LndType {
                 LinuxType::Infiniband => Ok(LndType::O2ib),
             }
         } else {
-            Err(InterfaceError(
-                "The linux type is not set and thus cannot be converted to an LndType.".into(),
-            ))
+            Err("The linux type is not set and thus cannot be converted to an LndType.".into())
         }
     }
 }
