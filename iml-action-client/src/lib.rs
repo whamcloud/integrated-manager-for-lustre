@@ -3,14 +3,10 @@
 // license that can be found in the LICENSE file.
 
 use bytes::buf::BufExt as _;
-use futures::{
-    future::{abortable, AbortHandle, Aborted},
-    Future,
-};
 use hyper::{client::HttpConnector, Body, Request};
 use hyperlocal::{UnixClientExt as _, UnixConnector};
 use iml_manager_env::{get_action_runner_http, get_action_runner_uds, running_in_docker};
-use iml_wire_types::{Action, ActionId, ActionName, ActionType, Fqdn};
+use iml_wire_types::{Action, ActionId, ActionName, ActionType, AgentResult, Fqdn};
 use std::{ops::Deref, sync::Arc};
 use thiserror::Error;
 use uuid::Uuid;
@@ -21,8 +17,6 @@ pub enum ImlActionClientError {
     HyperError(#[from] hyper::Error),
     #[error(transparent)]
     UriError(hyper::http::uri::InvalidUri),
-    #[error("Request Cancelled")]
-    CancelledRequest,
     #[error(transparent)]
     HttpError(#[from] hyper::http::Error),
     #[error(transparent)]
@@ -80,92 +74,54 @@ impl Default for Client {
 }
 
 impl Client {
-    /// Invoke the given action plugin on the given `host`
-    ///
-    /// *Note*: There is no way to cancel this fn, use `invoke_rust_agent_cancelable`
-    /// If you need to cancel.
     pub async fn invoke_rust_agent(
         &self,
         host: impl Into<Fqdn>,
-        command: impl Into<ActionName> + Send,
+        action: impl Into<ActionName> + Send,
         args: impl serde::Serialize + Send,
+        uuid: impl Into<Option<&Uuid>>,
     ) -> Result<serde_json::Value, ImlActionClientError> {
-        let request_id = Uuid::new_v4().to_hyphenated().to_string();
-
-        build_invoke_rust_agent(
-            Arc::clone(&self.inner),
-            Arc::clone(&self.uri),
-            host,
-            command,
-            args,
-            request_id,
-        )
-        .await
-    }
-    /// Invoke the given action plugin on the given `host`.
-    ///
-    /// Returns an `AbortHandle`. When aborted, the
-    /// action plugin is cancelled.
-    pub fn invoke_rust_agent_cancelable(
-        &self,
-        host: impl Into<Fqdn> + Clone,
-        command: impl Into<ActionName>,
-        args: impl serde::Serialize,
-    ) -> Result<
-        (
-            AbortHandle,
-            impl Future<Output = Result<serde_json::Value, ImlActionClientError>>,
-        ),
-        ImlActionClientError,
-    > {
-        let request_id = Uuid::new_v4().to_hyphenated().to_string();
-
-        let host2 = host.clone();
-        let request_id2 = request_id.clone();
-
-        let inner = Arc::clone(&self.inner);
-
-        let uri = Arc::clone(&self.uri);
-
-        let post = build_invoke_rust_agent(
-            Arc::clone(&self.inner),
-            Arc::clone(&self.uri),
-            host,
-            command,
-            args,
-            request_id,
-        );
-
-        let (fut, handle) = abortable(post);
-
-        let fut = async move {
-            let x = fut.await;
-
-            match x {
-                Ok(x) => x,
-                Err(Aborted) => {
-                    let cancel = ActionType::Remote((
-                        host2.into(),
-                        Action::ActionCancel {
-                            id: ActionId(request_id2),
-                        },
-                    ));
-
-                    let req = Request::builder()
-                        .method("POST")
-                        .uri(uri.deref())
-                        .body(Body::from(serde_json::to_string(&cancel)?));
-
-                    if let Ok(req) = req {
-                        let _rc = inner.request(req).await;
-                    }
-
-                    Err(ImlActionClientError::CancelledRequest)
-                }
-            }
+        let id = match uuid.into() {
+            Some(x) => x.to_hyphenated().to_string(),
+            None => Uuid::new_v4().to_hyphenated().to_string(),
         };
 
-        Ok((handle, fut))
+        let action = Action::ActionStart {
+            action: action.into(),
+            args: serde_json::json!(args),
+            id: ActionId(id),
+        };
+
+        build_invoke_rust_agent(Arc::clone(&self.inner), Arc::clone(&self.uri), host, action).await
+    }
+    pub async fn invoke_rust_agent_expect_result(
+        &self,
+        host: impl Into<Fqdn>,
+        action: impl Into<ActionName> + Send,
+        args: impl serde::Serialize + Send,
+        uuid: impl Into<Option<&Uuid>>,
+    ) -> Result<AgentResult, ImlActionClientError> {
+        let x = self.invoke_rust_agent(host, action, args, uuid).await?;
+        let x = serde_json::from_value(x)?;
+
+        Ok(x)
+    }
+    pub async fn cancel_request(
+        &self,
+        host: impl Into<Fqdn> + Clone,
+        uuid: &Uuid,
+    ) -> Result<(), ImlActionClientError> {
+        let action = Action::ActionCancel {
+            id: ActionId(uuid.to_hyphenated().to_string()),
+        };
+
+        let x =
+            build_invoke_rust_agent(Arc::clone(&self.inner), Arc::clone(&self.uri), host, action)
+                .await?;
+
+        tracing::info!("Cancelled request: {}. Resp: {:?}", uuid, x);
+
+        Ok(())
     }
 }
 
@@ -173,18 +129,9 @@ async fn build_invoke_rust_agent(
     client: Arc<ClientInner>,
     uri: Arc<hyper::Uri>,
     host: impl Into<Fqdn>,
-    command: impl Into<ActionName>,
-    args: impl serde::Serialize,
-    request_id: String,
+    action: Action,
 ) -> Result<serde_json::Value, ImlActionClientError> {
-    let action = ActionType::Remote((
-        host.into(),
-        Action::ActionStart {
-            action: command.into(),
-            args: serde_json::json!(args),
-            id: ActionId(request_id.clone()),
-        },
-    ));
+    let action = ActionType::Remote((host.into(), action));
 
     let req = Request::builder()
         .method(hyper::Method::POST)
