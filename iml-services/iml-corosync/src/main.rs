@@ -5,13 +5,12 @@
 use futures::TryStreamExt;
 use iml_corosync::{
     delete_cluster, delete_corosync_resource_bans, delete_nodes, delete_target_resources,
-    fetch_corosync_cluster_by_nodes, get_host_id_by_fqdn, upsert_cluster_nodes,
-    upsert_corosync_cluster, upsert_node_managed_host, upsert_resource_bans,
-    upsert_target_resource_managed_host, upsert_target_resources, CorosyncNodeKey,
-    ImlCorosyncError,
+    fetch_corosync_cluster_by_nodes, upsert_cluster_nodes, upsert_corosync_cluster,
+    upsert_node_managed_host, upsert_resource_bans, upsert_target_resource_managed_host,
+    upsert_target_resources, CorosyncNodeKey, ImlCorosyncError,
 };
 use iml_manager_env::get_pool_limit;
-use iml_postgres::{get_db_pool, sqlx};
+use iml_postgres::{get_db_pool, host_id_by_fqdn, sqlx};
 use iml_service_queue::service_queue::consume_data;
 use iml_tracing::tracing;
 use iml_wire_types::high_availability::Cluster;
@@ -37,7 +36,7 @@ async fn main() -> Result<(), ImlCorosyncError> {
     sqlx::migrate!("../../migrations").run(&pool).await?;
 
     while let Some((fqdn, (local_node_id, cluster))) = s.try_next().await? {
-        let host_id = get_host_id_by_fqdn(&fqdn, &pool).await?;
+        let host_id = host_id_by_fqdn(&fqdn, &pool).await?;
 
         let host_id = match host_id {
             Some(id) => id,

@@ -4,10 +4,7 @@
 
 use iml_postgres::{sqlx, PgPool};
 use iml_service_queue::service_queue::ImlServiceQueueError;
-use iml_wire_types::{
-    high_availability::{Ban, Node, Resource},
-    Fqdn,
-};
+use iml_wire_types::high_availability::{Ban, Node, Resource};
 use std::{collections::HashMap, fmt};
 use thiserror::Error;
 
@@ -175,21 +172,6 @@ pub async fn delete_target_resources(
     .await?;
 
     Ok(())
-}
-
-pub async fn get_host_id_by_fqdn(
-    fqdn: &Fqdn,
-    pool: &PgPool,
-) -> Result<Option<i32>, ImlCorosyncError> {
-    let id = sqlx::query!(
-        "select id from chroma_core_managedhost where fqdn = $1 and not_deleted = 't'",
-        fqdn.to_string()
-    )
-    .fetch_optional(pool)
-    .await?
-    .map(|x| x.id);
-
-    Ok(id)
 }
 
 pub async fn upsert_resource_bans(
