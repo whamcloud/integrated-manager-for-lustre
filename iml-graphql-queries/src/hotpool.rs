@@ -115,7 +115,7 @@ pub mod list {
             query Hotpools($dir: SortDir, $offset: Int, $limit: Int) {
               hotpools(dir: $dir, offset: $offset, limit: $limit) {
                 id
-                filesystem_id: filesystemId
+                filesystem
                 state
                 state_modified_at: stateModifiedAt
                 ha_label: haLabel
