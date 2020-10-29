@@ -1556,6 +1556,26 @@
       ]
     }
   },
+  "504a930966fb6c80893f22f15b8d896034a50b01b35ea07dd3de72a7e65bd52b": {
+    "query": "SELECT id FROM chroma_core_managedhost WHERE fqdn = $1 AND not_deleted = 't'",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      },
+      "nullable": [
+        false
+      ]
+    }
+  },
   "554681d480739b966bb4fafc141ce924e3d4edafbad3cc811dd67b3f3295dabb": {
     "query": "\n        SELECT\n            id,\n            is_superuser,\n            username,\n            first_name,\n            last_name,\n            email,\n            is_staff,\n            is_active\n        FROM auth_user\n    ",
     "describe": {
