@@ -12,7 +12,9 @@ use crate::{
 };
 use chrono::{DateTime, Utc};
 use futures::{future::join_all, TryFutureExt, TryStreamExt};
-use iml_postgres::{sqlx, sqlx::postgres::types::PgInterval, PgPool};
+use iml_postgres::{
+    active_mgs_host_fqdn, fqdn_by_host_id, sqlx, sqlx::postgres::types::PgInterval, PgPool,
+};
 use iml_rabbit::{ImlRabbitError, Pool};
 use iml_wire_types::{
     db::LogMessageRecord,
@@ -1142,44 +1144,6 @@ fn validate_snapshot_name(x: &str) -> Result<(), FieldError> {
     } else {
         Ok(())
     }
-}
-
-async fn active_mgs_host_fqdn(
-    fsname: &str,
-    pool: &PgPool,
-) -> Result<Option<String>, iml_postgres::sqlx::Error> {
-    let fsnames = &[fsname.into()][..];
-    let maybe_active_mgs_host_id = sqlx::query!(
-        r#"
-            SELECT active_host_id from target WHERE filesystems @> $1 and name='MGS'
-        "#,
-        fsnames
-    )
-    .fetch_optional(pool)
-    .await?
-    .and_then(|x| x.active_host_id);
-
-    tracing::trace!("Maybe active MGS host id: {:?}", maybe_active_mgs_host_id);
-
-    if let Some(active_mgs_host_id) = maybe_active_mgs_host_id {
-        let active_mgs_host_fqdn = fqdn_by_host_id(pool, active_mgs_host_id).await?;
-
-        Ok(Some(active_mgs_host_fqdn))
-    } else {
-        Ok(None)
-    }
-}
-
-async fn fqdn_by_host_id(pool: &PgPool, id: i32) -> Result<String, iml_postgres::sqlx::Error> {
-    let fqdn = sqlx::query!(
-        r#"SELECT fqdn FROM chroma_core_managedhost WHERE id=$1 and not_deleted = 't'"#,
-        id
-    )
-    .fetch_one(pool)
-    .await?
-    .fqdn;
-
-    Ok(fqdn)
 }
 
 async fn fs_id_by_name(pool: &PgPool, name: &str) -> Result<i32, juniper::FieldError> {

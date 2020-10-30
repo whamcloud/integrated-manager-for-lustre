@@ -10,6 +10,7 @@ use futures::{
     Stream,
 };
 use iml_manager_env::get_db_conn_string;
+use iml_wire_types::Fqdn;
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 pub use sqlx::{self, postgres::PgPool};
 use std::{pin::Pin, sync::Arc};
@@ -96,6 +97,56 @@ where
     let s = client.prepare(&query).await?;
 
     client.query_raw(&s, params).await
+}
+
+pub async fn fqdn_by_host_id(pool: &PgPool, id: i32) -> Result<String, sqlx::Error> {
+    let fqdn = sqlx::query!(
+        r#"SELECT fqdn FROM chroma_core_managedhost WHERE id=$1 and not_deleted = 't'"#,
+        id
+    )
+    .fetch_one(pool)
+    .await?
+    .fqdn;
+
+    Ok(fqdn)
+}
+
+pub async fn host_id_by_fqdn(fqdn: &Fqdn, pool: &PgPool) -> Result<Option<i32>, sqlx::Error> {
+    let id = sqlx::query!(
+        "select id from chroma_core_managedhost where fqdn = $1 and not_deleted = 't'",
+        fqdn.to_string()
+    )
+    .fetch_optional(pool)
+    .await?
+    .map(|x| x.id);
+
+    Ok(id)
+}
+
+pub async fn active_mgs_host_fqdn(
+    fsname: &str,
+    pool: &PgPool,
+) -> Result<Option<String>, sqlx::Error> {
+    let fsnames = &[fsname.into()][..];
+    let maybe_active_mgs_host_id = sqlx::query!(
+        r#"
+            SELECT active_host_id from target WHERE filesystems @> $1 and name='MGS'
+        "#,
+        fsnames
+    )
+    .fetch_optional(pool)
+    .await?
+    .and_then(|x| x.active_host_id);
+
+    tracing::trace!("Maybe active MGS host id: {:?}", maybe_active_mgs_host_id);
+
+    if let Some(active_mgs_host_id) = maybe_active_mgs_host_id {
+        let active_mgs_host_fqdn = fqdn_by_host_id(pool, active_mgs_host_id).await?;
+
+        Ok(Some(active_mgs_host_fqdn))
+    } else {
+        Ok(None)
+    }
 }
 
 #[cfg(feature = "test")]
