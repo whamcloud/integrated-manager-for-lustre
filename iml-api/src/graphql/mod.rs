@@ -569,35 +569,18 @@ impl QueryRoot {
     }
 
     async fn server_profiles(context: &Context) -> juniper::FieldResult<ServerProfileResponse> {
-        let server_profile_records = sqlx::query_as!(
-            ServerProfileRecord,
+        let server_profile_records = sqlx::query!(
             r#"
-                SELECT * FROM chroma_core_serverprofile;
+                SELECT array_agg((r.repo_name, r.location))
+                    AS repos, sp.*
+                    FROM chroma_core_repo AS r
+                    INNER JOIN chroma_core_serverprofile_repolist AS rl ON r.repo_name = rl.repo_id
+                    INNER JOIN chroma_core_serverprofile AS sp ON rl.serverprofile_id = sp.name
+                    GROUP BY sp.name;
             "#,
         )
         .fetch_all(&context.pg_pool)
         .await?;
-
-        let mut server_profiles: Vec<ServerProfile> = vec![];
-        let server_profile_ids: Vec<_> = server_profile_records
-            .iter()
-            .map(|sp| sp.name.clone())
-            .collect();
-
-        for spi in server_profile_ids {
-            let repos = sqlx::query_as!(
-                RepoRecord,
-                r#"
-                    SELECT r.repo_name, r.location 
-                      FROM chroma_core_repo AS r 
-                      INNER JOIN chroma_core_serverprofile_repolist AS rl ON r.repo_name = rl.repo_id 
-                      WHERE rl.serverprofile_id = $1 
-                      ORDER BY r.repo_name;
-                "#,
-                spi
-            ).fetch_all(&context.pg_pool)
-            .await?;
-        }
 
         Ok(ServerProfileResponse { data: vec![] })
     }
