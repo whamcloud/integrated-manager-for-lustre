@@ -19,7 +19,6 @@ use iml_tracing::tracing;
 use iml_wire_types::{Fqdn, FsType};
 use std::{
     collections::{BTreeMap, BTreeSet, HashMap},
-    convert::TryFrom,
     sync::Arc,
 };
 
@@ -64,7 +63,7 @@ pub async fn create_cache(pool: &PgPool) -> Result<Cache, ImlDeviceError> {
 }
 
 pub async fn create_target_cache(pool: &PgPool) -> Result<Vec<Target>, ImlDeviceError> {
-    let xs: Vec<Target> = sqlx::query!("SELECT state, name, active_host_id, host_ids, filesystems, uuid, mount_path, dev_path, fs_type::text FROM target")
+    let xs: Vec<Target> = sqlx::query!(r#"SELECT state, name, active_host_id, host_ids, filesystems, uuid, mount_path, dev_path, fs_type AS "fs_type: FsType" FROM target"#)
         .fetch(pool)
         .map_ok(|x| {
             Target {
@@ -76,7 +75,7 @@ pub async fn create_target_cache(pool: &PgPool) -> Result<Vec<Target>, ImlDevice
                 uuid: x.uuid,
                 mount_path: x.mount_path,
                 dev_path: x.dev_path,
-                fs_type: x.fs_type.map(|x| FsType::try_from(x).ok()).flatten(),
+                fs_type: x.fs_type,
             }
         })
         .try_collect()
