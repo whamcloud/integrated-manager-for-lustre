@@ -638,6 +638,7 @@ impl EndpointName for Host {
 
 /// A server profile record from api/server_profile/
 #[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
+#[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
 pub struct ServerProfile {
     pub corosync: bool,
     pub corosync2: bool,
@@ -662,6 +663,29 @@ impl EndpointName for ServerProfile {
         "server_profile"
     }
 }
+
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+#[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
+pub struct ServerProfileResponse {
+    pub data: Vec<ServerProfile>,
+}
+
+// impl TryFrom<ServerProfileRecord> for ServerProfile {
+//     type Error = &'static str;
+
+//     fn try_from(record: ServerProfileRecord) -> Result<Self, Self::Error> {
+//         Ok(Self {
+//             id: record.id,
+//             datetime: record.datetime,
+//             facility: record.facility as i32,
+//             fqdn: record.fqdn,
+//             message: record.message,
+//             message_class: record.message_class.try_into()?,
+//             severity: record.severity.try_into()?,
+//             tag: record.tag,
+//         })
+//     }
+// }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ProfileTest {

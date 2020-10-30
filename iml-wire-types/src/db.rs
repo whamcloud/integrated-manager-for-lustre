@@ -919,3 +919,66 @@ impl Id for LogMessageRecord {
         self.id
     }
 }
+
+/// Record from `chroma_core_serverprofile` table
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq)]
+pub struct ServerProfileRecord {
+    pub corosync: bool,
+    pub corosync2: bool,
+    pub default: bool,
+    pub initial_state: String,
+    pub managed: bool,
+    pub name: String,
+    pub ntp: bool,
+    pub pacemaker: bool,
+    pub ui_description: String,
+    pub ui_name: String,
+    pub user_selectable: bool,
+    pub worker: bool,
+}
+
+pub const SERVER_PROFILE_TABLE_NAME: TableName = TableName("chroma_core_serverprofile");
+
+impl Name for ServerProfileRecord {
+    fn table_name() -> TableName<'static> {
+        SERVER_PROFILE_TABLE_NAME
+    }
+}
+
+/// Record from `chroma_core_serverprofile_repolist` table
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq)]
+pub struct ServerProfileRepoListRecord {
+    pub id: i32,
+    pub serverprofile_id: String,
+    pub repo_id: String,
+}
+
+pub const SERVER_PROFILE_REPO_LIST_TABLE_NAME: TableName =
+    TableName("chroma_core_serverprofile_repolist");
+
+impl Name for ServerProfileRepoListRecord {
+    fn table_name() -> TableName<'static> {
+        SERVER_PROFILE_REPO_LIST_TABLE_NAME
+    }
+}
+
+impl Id for ServerProfileRepoListRecord {
+    fn id(&self) -> i32 {
+        self.id
+    }
+}
+
+/// Record from `chroma_core_serverprofile_repolist` table
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq)]
+pub struct RepoRecord {
+    pub repo_name: String,
+    pub location: String,
+}
+
+pub const REPO_TABLE_NAME: TableName = TableName("chroma_core_repo");
+
+impl Name for RepoRecord {
+    fn table_name() -> TableName<'static> {
+        REPO_TABLE_NAME
+    }
+}

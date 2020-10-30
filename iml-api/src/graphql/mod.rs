@@ -17,12 +17,13 @@ use iml_postgres::{
 };
 use iml_rabbit::{ImlRabbitError, Pool};
 use iml_wire_types::{
-    db::LogMessageRecord,
+    db::{LogMessageRecord, RepoRecord, ServerProfileRecord},
     graphql_duration::GraphQLDuration,
     logs::{LogResponse, Meta},
     snapshot::{ReserveUnit, Snapshot, SnapshotInterval, SnapshotRetention},
     task::Task,
-    Command, EndpointName, Job, LogMessage, LogSeverity, MessageClass, SortDir,
+    Command, EndpointName, Job, LogMessage, LogSeverity, MessageClass, ServerProfile,
+    ServerProfileResponse, SortDir,
 };
 use itertools::Itertools;
 use juniper::{
@@ -567,6 +568,40 @@ impl QueryRoot {
                 total_count: total_count.try_into()?,
             },
         })
+    }
+
+    async fn server_profiles(context: &Context) -> juniper::FieldResult<ServerProfileResponse> {
+        let server_profile_records = sqlx::query_as!(
+            ServerProfileRecord,
+            r#"
+                SELECT * FROM chroma_core_serverprofile;
+            "#,
+        )
+        .fetch_all(&context.pg_pool)
+        .await?;
+
+        let mut server_profiles: Vec<ServerProfile> = vec![];
+        let server_profile_ids: Vec<_> = server_profile_records
+            .iter()
+            .map(|sp| sp.name.clone())
+            .collect();
+
+        for spi in server_profile_ids {
+            let repos = sqlx::query_as!(
+                RepoRecord,
+                r#"
+                    SELECT r.repo_name, r.location 
+                      FROM chroma_core_repo AS r 
+                      INNER JOIN chroma_core_serverprofile_repolist AS rl ON r.repo_name = rl.repo_id 
+                      WHERE rl.serverprofile_id = $1 
+                      ORDER BY r.repo_name;
+                "#,
+                spi
+            ).fetch_all(&context.pg_pool)
+            .await?;
+        }
+
+        Ok(ServerProfileResponse { data: vec![] })
     }
 }
 
