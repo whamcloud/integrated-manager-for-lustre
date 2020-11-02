@@ -26,6 +26,7 @@ use std::{
 use tokio::time;
 
 pub mod error;
+mod stats;
 
 // Number of fids to chunk together
 const FID_LIMIT: i64 = 2000;
@@ -323,6 +324,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut interval = time::interval(DELAY);
 
     let action_client = Client::default();
+
+    // Stats collection
+    tokio::spawn(stats::collector(pg_pool.clone()));
 
     // Task Runner Loop
     loop {
