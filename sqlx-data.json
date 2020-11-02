@@ -1981,6 +1981,96 @@
       "nullable": []
     }
   },
+  "6f3c08f058a72efb6a3926dbe47380662c1eb80ec3001bf551792719fcd51e74": {
+    "query": "\n                SELECT jsonb_agg((r.repo_name, r.location))\n                    AS repos, sp.*\n                    FROM chroma_core_repo AS r\n                    INNER JOIN chroma_core_serverprofile_repolist AS rl ON r.repo_name = rl.repo_id\n                    INNER JOIN chroma_core_serverprofile AS sp ON rl.serverprofile_id = sp.name\n                    GROUP BY sp.name;\n            ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "repos",
+          "type_info": "Jsonb"
+        },
+        {
+          "ordinal": 1,
+          "name": "name",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 2,
+          "name": "ui_name",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 3,
+          "name": "ui_description",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 4,
+          "name": "managed",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 5,
+          "name": "worker",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 6,
+          "name": "user_selectable",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 7,
+          "name": "initial_state",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 8,
+          "name": "ntp",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 9,
+          "name": "corosync",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 10,
+          "name": "corosync2",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 11,
+          "name": "pacemaker",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 12,
+          "name": "default",
+          "type_info": "Bool"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        null,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    }
+  },
   "7bee1c38d05ac3f8bcf4d48b375c740341121c04d2f5b04ceb1d58ef0a006c08": {
     "query": "\n        SELECT * FROM chroma_core_lustreclientmount\n        WHERE\n            state = 'mounted'\n            AND not_deleted = 't'\n            AND id != ALL($1)\n        LIMIT $2\n        ",
     "describe": {
