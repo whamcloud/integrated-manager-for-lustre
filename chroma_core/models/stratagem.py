@@ -412,7 +412,7 @@ class ScanMdtJob(Job):
         return "Scan with the given config on the given host"
 
     def create_locks(self):
-        return [StateLock(job=self, locked_item=ManagedFilesystem.objects.find(name=self.fsname), write=False)]
+        return [StateLock(job=self, locked_item=ManagedFilesystem.objects.get(name=self.fsname), write=False)]
 
     def get_steps(self):
         return [
