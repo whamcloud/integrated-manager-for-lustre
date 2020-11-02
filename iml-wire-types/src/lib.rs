@@ -13,7 +13,7 @@ pub mod task;
 pub mod warp_drive;
 
 use chrono::{DateTime, Utc};
-use db::LogMessageRecord;
+use db::{LogMessageRecord, ServerProfileRecord};
 use std::{
     cmp::{Ord, Ordering},
     collections::{BTreeMap, BTreeSet, HashMap},
@@ -652,6 +652,7 @@ pub struct ServerProfile {
     pub ui_name: String,
     pub user_selectable: bool,
     pub worker: bool,
+    pub repos: HashMap<String, String>,
 }
 
 impl FlatQuery for ServerProfile {}
@@ -668,22 +669,37 @@ pub struct ServerProfileResponse {
     pub data: Vec<ServerProfile>,
 }
 
-// impl TryFrom<ServerProfileRecord> for ServerProfile {
-//     type Error = &'static str;
-
-//     fn try_from(record: ServerProfileRecord) -> Result<Self, Self::Error> {
-//         Ok(Self {
-//             id: record.id,
-//             datetime: record.datetime,
-//             facility: record.facility as i32,
-//             fqdn: record.fqdn,
-//             message: record.message,
-//             message_class: record.message_class.try_into()?,
-//             severity: record.severity.try_into()?,
-//             tag: record.tag,
-//         })
-//     }
-// }
+impl ServerProfile {
+    fn new(record: ServerProfileRecord, repos: &serde_json::Value) -> Result<Self, &'static str> {
+        let repos: HashMap<String, String> = repos
+            .as_array()
+            .ok_or("repos is not an array")?
+            .iter()
+            .filter_map(|p| {
+                let name = p.get("f1")?;
+                let location = p.get("f2")?;
+                Some((name.as_str()?.into(), location.as_str()?.into()))
+            })
+            .collect();
+        Ok(Self {
+            corosync: record.corosync,
+            corosync2: record.corosync2,
+            default: record.default,
+            initial_state: record.initial_state,
+            managed: record.managed,
+            name: record.name,
+            ntp: record.ntp,
+            pacemaker: record.pacemaker,
+            repolist: vec![],
+            resource_uri: record.resource_uri,
+            repos,
+            ui_description: record.ui_description,
+            ui_name: record.ui_name,
+            user_selectable: record.user_selectable,
+            worker: record.worker,
+        })
+    }
+}
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct ProfileTest {
