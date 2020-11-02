@@ -5,8 +5,11 @@ name = "iml-task-runner"
 version = "0.1.0"
 
 [dependencies]
+bigdecimal = "0.1.0"
 futures = "0.3"
 iml-action-client = {path = "../iml-action-client", version = "0.1"}
+iml-influx = {path = "../iml-influx", version = "0.2"}
+iml-manager-client = {path = "../iml-manager-client", version = "0.4"}
 iml-manager-env = {path = "../iml-manager-env", version = "0.4"}
 iml-postgres = {path = "../iml-postgres", version = "0.4"}
 iml-tracing = {path = "../iml-tracing", version = "0.3"}

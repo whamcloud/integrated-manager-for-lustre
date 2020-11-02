@@ -1447,6 +1447,48 @@
       ]
     }
   },
+  "47bf7ead8324dc4af0c3561006ef56bc984401ea56a46d6afb790936c83d8eb4": {
+    "query": "SELECT SUM(fids_total) AS fids_total,\nSUM(fids_completed) AS fids_completed,\nSUM(fids_failed) AS fids_failed,\nactions,\nfs.name AS filesystem FROM chroma_core_task AS t\nJOIN chroma_core_managedfilesystem AS fs ON t.filesystem_id = fs.id GROUP BY actions,fs.name",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "fids_total",
+          "type_info": "Numeric"
+        },
+        {
+          "ordinal": 1,
+          "name": "fids_completed",
+          "type_info": "Numeric"
+        },
+        {
+          "ordinal": 2,
+          "name": "fids_failed",
+          "type_info": "Numeric"
+        },
+        {
+          "ordinal": 3,
+          "name": "actions",
+          "type_info": "TextArray"
+        },
+        {
+          "ordinal": 4,
+          "name": "filesystem",
+          "type_info": "Varchar"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        null,
+        null,
+        null,
+        false,
+        false
+      ]
+    }
+  },
   "49bd9f25a94b082053121c3dacc67f7363340f5ec4a6da58c1f21a1103748ff0": {
     "query": "\n            SELECT t.name, t.dev_path, h.fqdn\n            FROM target t\n            INNER JOIN chroma_core_managedhost h\n            ON t.active_host_id = h.id\n            WHERE $1 = ANY(t.filesystems)\n            AND h.not_deleted = 't'\n        ",
     "describe": {
