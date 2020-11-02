@@ -654,7 +654,6 @@ pub struct ServerProfile {
     pub ui_name: String,
     pub user_selectable: bool,
     pub worker: bool,
-    pub repos: HashMap<String, String>,
 }
 
 impl FlatQuery for ServerProfile {}
@@ -665,13 +664,31 @@ impl EndpointName for ServerProfile {
     }
 }
 
+#[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
+#[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
+pub struct ServerProfileNew {
+    pub corosync: bool,
+    pub corosync2: bool,
+    pub default: bool,
+    pub initial_state: String,
+    pub managed: bool,
+    pub name: String,
+    pub ntp: bool,
+    pub pacemaker: bool,
+    pub ui_description: String,
+    pub ui_name: String,
+    pub user_selectable: bool,
+    pub worker: bool,
+    pub repos: HashMap<String, String>,
+}
+
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 #[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
 pub struct ServerProfileResponse {
     pub data: Vec<ServerProfile>,
 }
 
-impl ServerProfile {
+impl ServerProfileNew {
     fn new(record: ServerProfileRecord, repos: &serde_json::Value) -> Result<Self, &'static str> {
         let repos: HashMap<String, String> = repos
             .as_array()
@@ -692,8 +709,6 @@ impl ServerProfile {
             name: record.name,
             ntp: record.ntp,
             pacemaker: record.pacemaker,
-            repolist: vec![],
-            resource_uri: record.resource_uri,
             repos,
             ui_description: record.ui_description,
             ui_name: record.ui_name,
