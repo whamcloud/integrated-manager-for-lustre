@@ -2,11 +2,16 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{agent_error::ImlAgentError, agent_error::RequiredError, http_comms::streaming_client};
-use futures::{future, stream, StreamExt, TryStreamExt};
+use crate::{
+    agent_error::ImlAgentError,
+    agent_error::RequiredError,
+    http_comms::{crypto_client, streaming_client},
+};
+use futures::{future, StreamExt, TryStreamExt};
 use iml_cmd::{CheckedCommandExt, Command};
 use iml_fs::{read_file_to_end, stream_dir_lines, write_tempfile};
 use iml_wire_types::stratagem::{StratagemConfig, StratagemDevice, StratagemGroup, StratagemRule};
+use reqwest::Body;
 use std::{convert::Into, path::PathBuf};
 use uuid::Uuid;
 
@@ -326,20 +331,29 @@ pub async fn trigger_scan(
 ///
 /// This fn will stream all files in parallel and return once they have all finished.
 pub async fn stream_fidlists(mailbox_files: MailboxFiles) -> Result<(), ImlAgentError> {
+    let client = crypto_client::create_client()?;
     let mailbox_files = mailbox_files.into_iter().map(|(file, address)| {
+        let client = client.clone();
         tracing::debug!("streaming from dir:{:?} to mailbox:{}", &file, &address);
         stream_dir_lines(file)
             .err_into::<ImlAgentError>()
             .chunks(5000)
             .map(Ok)
             .try_for_each(move |xs| {
-                let xs = xs.into_iter().map(|x| {
-                    let x = x?;
+                let xs: String = xs
+                    .into_iter()
+                    .filter_map(|x| -> Option<String> {
+                        if let Ok(x) = x {
+                            Some(format!("{{ \"fid\": \"{}\" }}\n", x).into())
+                        } else {
+                            None
+                        }
+                    })
+                    .collect::<Vec<String>>()
+                    .join("");
+                let body = Body::from(xs);
 
-                    Ok(format!("{{ \"fid\": \"{}\" }}\n", x).into())
-                });
-
-                streaming_client::send("mailbox", address.clone(), stream::iter(xs))
+                streaming_client::send(client.clone(), "mailbox", address.clone(), body)
             })
     });
 

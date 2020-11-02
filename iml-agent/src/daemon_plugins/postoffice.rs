@@ -6,14 +6,15 @@ use crate::{
     agent_error::ImlAgentError,
     daemon_plugins::{DaemonPlugin, Output},
     env,
-    http_comms::streaming_client::send,
+    http_comms::{crypto_client::create_client, streaming_client::send},
 };
 use async_trait::async_trait;
 use futures::{
     stream::{StreamExt as _, TryStreamExt},
-    Future, FutureExt,
+    Future, FutureExt, TryFutureExt,
 };
 use inotify::{Inotify, WatchMask};
+use reqwest::{Body, Client};
 use std::{
     collections::{HashMap, HashSet},
     pin::Pin,
@@ -21,7 +22,7 @@ use std::{
 };
 use stream_cancel::{Trigger, Tripwire};
 use tokio::{fs, net::UnixListener, sync::Mutex};
-use tokio_util::codec::{BytesCodec, FramedRead};
+use tokio_util::codec::{LinesCodec, FramedRead};
 
 pub struct PostOffice {
     // individual mailbox socket listeners
@@ -43,11 +44,12 @@ impl std::fmt::Debug for PostOffice {
 }
 
 // Returned trigger should be dropped to cause route to stop
-fn start_route(mailbox: String) -> Trigger {
+fn start_route(client: Client, mailbox: String) -> Trigger {
     let (trigger, tripwire) = Tripwire::new();
     let addr = env::mailbox_sock(&mailbox);
 
     let rc = async move {
+        let client = client.clone();
         // remove old unix socket
         let _ = fs::remove_file(&addr).await.map_err(|e| {
             tracing::debug!("Failed to remove file {}: {}", &addr, &e);
@@ -60,17 +62,24 @@ fn start_route(mailbox: String) -> Trigger {
 
         tracing::debug!("Starting Route for {}", mailbox);
         while let Some(inbound) = incoming.next().await {
+            let mailbox = mailbox.clone();
+            let client = client.clone();
             match inbound {
                 Ok(inbound) => {
-                    let stream = FramedRead::new(inbound, BytesCodec::new())
-                        .map_ok(bytes::BytesMut::freeze)
-                        .err_into();
-                    let transfer = send("mailbox", mailbox.clone(), stream).map(|r| {
-                        if let Err(e) = r {
-                            tracing::error!("Failed to transfer: {}", e);
-                        }
-                    });
-                    tokio::spawn(transfer);
+                    let xs = FramedRead::new(inbound, LinesCodec::new())
+                        .chunks(10)
+                        .map(Ok)
+                        .try_for_each(move |xs| {
+                            let data = xs.into_iter()
+                                .filter_map(|x| x.ok())
+                                .collect::<Vec<String>>()
+                                .join("");
+                            let body = Body::from(data);
+
+                            send(client.clone(), "mailbox", mailbox.clone(), body)
+                                .inspect_err(|e| tracing::error!("Failed to transfer: {}", e))
+                        });
+                    tokio::spawn(xs);
                 }
                 Err(e) => tracing::error!("Failed transfer: {}", e),
             }
@@ -99,9 +108,10 @@ impl DaemonPlugin for PostOffice {
         self.trigger = Some(trigger);
 
         async move {
+            let client = create_client()?;
             if let Ok(file) = fs::read_to_string(&conf_file).await {
                 let itr = file.lines().map(|mb| {
-                    let trigger = start_route(mb.to_string());
+                    let trigger = start_route(client.clone(), mb.to_string());
                     (mb.to_string(), trigger)
                 });
                 routes.lock().await.extend(itr);
@@ -134,7 +144,7 @@ impl DaemonPlugin for PostOffice {
 
                             let added = &newset - &oldset;
                             let itr = added.iter().map(|mb| {
-                                let trigger = start_route(mb.to_string());
+                                let trigger = start_route(client.clone(), mb.to_string());
                                 (mb.to_string(), trigger)
                             });
                             let mut rt = routes.lock().await;

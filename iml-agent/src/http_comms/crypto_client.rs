@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::agent_error::ImlAgentError;
+use crate::{agent_error::ImlAgentError, env};
 use bytes::Bytes;
 use futures::{stream, Future, Stream, TryFutureExt, TryStreamExt};
 use reqwest::{Client, Identity, IntoUrl, Response};
@@ -23,7 +23,8 @@ pub fn get_id(pem: &[u8]) -> Result<Identity, ImlAgentError> {
 /// # Arguments
 ///
 /// * `id` - The client identity to use
-pub fn create_client(id: Identity) -> Result<Client, ImlAgentError> {
+pub fn create_client() -> Result<Client, ImlAgentError> {
+    let id = get_id(&env::PEM)?;
     Client::builder()
         .use_rustls_tls()
         .danger_accept_invalid_certs(true)

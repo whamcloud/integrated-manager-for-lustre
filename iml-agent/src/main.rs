@@ -2,7 +2,6 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use env::{MANAGER_URL, PEM};
 use futures::{
     future::{select, AbortHandle, Abortable},
     FutureExt, TryFutureExt,
@@ -21,12 +20,11 @@ async fn main() -> Result<()> {
 
     tracing::info!("Starting Rust agent_daemon");
 
-    let message_endpoint = MANAGER_URL.join("/agent2/message/")?;
+    let message_endpoint = env::MANAGER_URL.join("/agent2/message/")?;
 
     let start_time = chrono::Utc::now().format("%Y-%m-%dT%T%.6f%:zZ").to_string();
 
-    let identity = crypto_client::get_id(&PEM)?;
-    let client = crypto_client::create_client(identity)?;
+    let client = crypto_client::create_client()?;
 
     let agent_client =
         AgentClient::new(start_time.clone(), message_endpoint.clone(), client.clone());

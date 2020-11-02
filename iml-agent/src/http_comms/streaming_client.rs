@@ -5,20 +5,16 @@
 use crate::{agent_error::ImlAgentError, env, http_comms::crypto_client};
 use futures::{future, Stream, TryFutureExt, TryStreamExt};
 use iml_fs::read_lines;
-use reqwest::{Body, StatusCode};
+use reqwest::{Body, Client, StatusCode};
 
 /// Streams the given data to the manager mailbox.
 pub async fn send(
+    client: Client,
     path: &'static str,
     message_name: String,
-    stream: impl Stream<Item = Result<bytes::Bytes, ImlAgentError>> + Send + Sync + 'static,
+    body: Body,
 ) -> Result<(), ImlAgentError> {
     tracing::debug!("Sending mailbox message to {}", message_name);
-
-    let id = crypto_client::get_id(&env::PEM)?;
-    let client = crypto_client::create_client(id)?;
-
-    let body = Body::wrap_stream(stream);
 
     let resp = client
         .post(env::MANAGER_URL.join(&format!("/{}/", path))?)
@@ -40,9 +36,8 @@ pub async fn send(
 pub fn get(message_name: String) -> impl Stream<Item = Result<String, ImlAgentError>> {
     let q: Vec<(String, String)> = vec![];
 
-    future::ready(crypto_client::get_id(&env::PEM))
+    future::ready(crypto_client::create_client())
         .err_into()
-        .and_then(|id| async { crypto_client::create_client(id) })
         .and_then(move |client| async move {
             let message_endpoint = env::MANAGER_URL.join("/mailbox/")?.join(&message_name)?;
 

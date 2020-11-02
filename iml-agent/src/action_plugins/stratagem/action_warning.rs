@@ -5,7 +5,7 @@
 use crate::{
     agent_error::{ImlAgentError, RequiredError},
     fidlist,
-    http_comms::streaming_client::send,
+    http_comms::{crypto_client::create_client, streaming_client::send},
     lustre::search_rootpath,
 };
 use futures::{
@@ -13,6 +13,7 @@ use futures::{
 };
 use iml_wire_types::{FidError, FidItem};
 use liblustreapi::LlapiFid;
+use reqwest::Body;
 use std::{collections::HashMap, io};
 use tokio::task::spawn_blocking;
 use tracing::{debug, error};
@@ -98,6 +99,8 @@ pub async fn process_fids(
 
     let mntpt = llapi.mntpt();
 
+    let client = create_client()?;
+
     let (tx, rx) = mpsc::unbounded::<FidError>();
 
     let s = stream::iter(fid_list)
@@ -131,7 +134,7 @@ pub async fn process_fids(
             x.freeze()
         });
 
-    tokio::spawn(send("report", report_name, s));
+    tokio::spawn(send(client, "report", report_name, Body::wrap_stream(s)));
 
     Ok(rx.collect().await)
 }
