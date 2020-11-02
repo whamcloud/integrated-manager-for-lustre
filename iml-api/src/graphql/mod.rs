@@ -573,7 +573,7 @@ impl QueryRoot {
     async fn server_profiles(context: &Context) -> juniper::FieldResult<ServerProfileResponse> {
         let server_profile_records = sqlx::query!(
             r#"
-                SELECT array_agg((r.repo_name, r.location))
+                SELECT jsonb_agg((r.repo_name, r.location))
                     AS repos, sp.*
                     FROM chroma_core_repo AS r
                     INNER JOIN chroma_core_serverprofile_repolist AS rl ON r.repo_name = rl.repo_id
@@ -583,6 +583,17 @@ impl QueryRoot {
         )
         .fetch_all(&context.pg_pool)
         .await?;
+        for spr in server_profile_records {
+            spr.repos.map(|x| {
+                x.as_array().map(|y| {
+                    for pair in y {
+                        let name = pair.get("f1");
+                        let location = pair.get("f2");
+                        tracing::info!("{:?}: {:?}", name, location);
+                    }
+                })
+            });
+        }
 
         Ok(ServerProfileResponse { data: vec![] })
     }
