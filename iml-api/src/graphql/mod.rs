@@ -36,10 +36,7 @@ use iml_wire_types::{
     Command, EndpointName, FsType, Job, AvailableTransition, JobLock, LogMessage, LogSeverity, MessageClass, SortDir,
 };
 use itertools::Itertools;
-use juniper::{
-    http::{graphiql::graphiql_source, GraphQLRequest},
-    EmptySubscription, FieldError, RootNode, Value,
-};
+use juniper::{http::{graphiql::graphiql_source, GraphQLRequest}, EmptySubscription, FieldError, RootNode, Value};
 use std::{
     collections::{HashMap, HashSet},
     convert::{Infallible, TryFrom as _, TryInto},
@@ -47,6 +44,8 @@ use std::{
     sync::Arc,
 };
 use warp::Filter;
+use crate::graphql_job::{JobRecord, JobGQL};
+use crate::graphql_step::{StepRecord, StepGQL};
 
 #[derive(juniper::GraphQLObject)]
 /// A Corosync Node found in `crm_mon`
@@ -439,16 +438,12 @@ impl QueryRoot {
     /// collection is guaranteed to match the input.
     /// If a command not found, `None` is returned for that index.
     #[graphql(arguments(
-        limit(description = "paging limit, defaults to 20"),
-        offset(description = "Offset into items, defaults to 0"),
         ids(description = "The list of command ids to fetch, ids may be empty"),
     ))]
     async fn commands_by_ids(
         context: &Context,
-        limit: Option<i32>,
-        offset: Option<i32>,
         ids: Vec<i32>,
-    ) -> juniper::FieldResult<Vec<Option<Command>>> {
+    ) -> juniper::FieldResult<Vec<Command>> {
         let ids: &[i32] = &ids[..];
         let unordered_cmds: Vec<Command> = sqlx::query_as!(
             CommandRecord,
@@ -463,12 +458,9 @@ impl QueryRoot {
                     message
                 FROM chroma_core_command c
                 JOIN chroma_core_command_jobs cj ON c.id = cj.command_id
-                WHERE (c.id = ANY ($3::INT[]))
+                WHERE (c.id = ANY ($1::INT[]))
                 GROUP BY c.id
-                OFFSET $1 LIMIT $2
             "#,
-            offset.unwrap_or(0) as i64,
-            limit.unwrap_or(20) as i64,
             ids,
         )
         .fetch_all(&context.pg_pool)
@@ -476,63 +468,152 @@ impl QueryRoot {
             xs.into_iter().map(|x| x.into()).collect::<Vec<Command>>()
         })
         .await?;
+
         let mut hm = unordered_cmds
             .into_iter()
-            .map(|c| (c.id, c))
+            .map(|x| (x.id, x))
             .collect::<HashMap<i32, Command>>();
+        let mut not_found = Vec::new();
         let commands = ids
             .iter()
-            .map(|id| hm.remove(id))
-            .collect::<Vec<Option<Command>>>();
+            .filter_map(|id| {
+                hm.remove(id).or_else(|| {
+                    not_found.push(id);
+                    None
+                })
+            })
+            .collect::<Vec<Command>>();
 
-        Ok(commands)
+        if !not_found.is_empty() {
+            Err(FieldError::from(format!("Commands not found for ids: {:?}", not_found)))
+        } else {
+            Ok(commands)
+        }
     }
 
-    // /// Fetch the list of jobs
-    // #[graphql(arguments(
-    //     limit(description = "paging limit, defaults to 20"),
-    //     offset(description = "Offset into items, defaults to 0"),
-    //     ids(description = "The list of command ids to fetch, ids may be empty"),
-    // ))]
-    // async fn jobs_by_ids(
-    //     context: &Context,
-    //     limit: Option<i32>,
-    //     offset: Option<i32>,
-    //     ids: Vec<i32>,
-    // ) -> juniper::FieldResult<Vec<Job0>> {
-    //     let jobs: Vec<Job0> = sqlx::query_as!(
-    //         JobRecord,
-    //         r#"
-    //             SELECT
-    //                 j.id AS id,
-    //                 state,
-    //                 errored,
-    //                 cancelled,
-    //                 created_at,
-    //                 modified_at,
-    //                 wait_for_json,
-    //                 locks_json,
-    //                 content_type_id
-    //             FROM chroma_core_job j
-    //             WHERE ($4::VARCHAR IS NULL OR state = $4)
-    //             ORDER BY
-    //                 CASE WHEN $3 = 'asc' THEN j.created_at END ASC,
-    //                 CASE WHEN $3 = 'desc' THEN j.modified_at END DESC
-    //             OFFSET $1 LIMIT $2
-    //         "#,
-    //         offset.unwrap_or(0) as i64,
-    //         limit.unwrap_or(20) as i64,
-    //         dir.deref(),
-    //         job_state,
-    //     )
-    //     .fetch_all(&context.pg_pool)
-    //     .map_ok(|xs: Vec<JobRecord>|
-    //         xs.into_iter().map(|x| x.into()).collect::<Vec<Job0>>()
-    //     )
-    //     .await?;
-    //     Ok(jobs)
-    //     Ok(vec![])
-    // }
+    /// Fetch the list of jobs
+    #[graphql(arguments(
+        ids(description = "The list of job ids to fetch, may be empty array"),
+    ))]
+    async fn jobs_by_ids(
+        context: &Context,
+        ids: Vec<i32>,
+    ) -> juniper::FieldResult<Vec<JobGQL>> {
+        let ids: &[i32] = &ids[..];
+        let unordered_jobs: Vec<JobGQL> = sqlx::query_as!(
+            JobRecord,
+            r#"
+                SELECT job.id,
+                       array(SELECT cj.command_id
+                             FROM chroma_core_command_jobs AS cj
+                             WHERE cj.job_id = job.id) :: INT[] AS commands,
+                       job.state,
+                       job.errored,
+                       job.cancelled,
+                       job.modified_at,
+                       job.created_at,
+                       job.wait_for_json,
+                       job.locks_json,
+                       job.content_type_id,
+                       job.class_name,
+                       job.description,
+                       job.cancellable,
+                       array_agg(sr.id)::INT[]                  AS step_result_keys,
+                       array_agg(sr.result)::TEXT[]             AS step_results_values
+                FROM chroma_core_job AS job
+                         JOIN chroma_core_command_jobs AS cj ON cj.job_id = job.id
+                         JOIN chroma_core_stepresult AS sr ON sr.job_id = job.id
+                WHERE (job.id = ANY ($1::INT[]))
+                GROUP BY job.id
+            "#,
+            ids
+        )
+        .fetch_all(&context.pg_pool)
+        .map_ok(|xs: Vec<JobRecord>|
+            xs.into_iter().filter_map(|x| JobGQL::try_from(x).ok()).collect::<Vec<JobGQL>>()
+        )
+        .await?;
+
+        let mut hm = unordered_jobs
+            .into_iter()
+            .map(|x| (x.id, x))
+            .collect::<HashMap<i32, JobGQL>>();
+        let mut not_found = Vec::new();
+        let jobs = ids
+            .iter()
+            .filter_map(|id| {
+                hm.remove(id).or_else(|| {
+                    not_found.push(id);
+                    None
+                })
+            })
+            .collect::<Vec<JobGQL>>();
+
+        if !not_found.is_empty() {
+            Err(FieldError::from(format!("Jobs not found for ids: {:?}", not_found)))
+        } else {
+            Ok(jobs)
+        }
+    }
+
+    /// Fetch the list of steps
+    #[graphql(arguments(
+    ids(description = "The list of step ids to fetch, may be empty array"),
+    ))]
+    async fn steps_by_ids(
+        context: &Context,
+        ids: Vec<i32>,
+    ) -> juniper::FieldResult<Vec<StepGQL>> {
+        let ids: &[i32] = &ids[..];
+        let unordered_steps: Vec<StepGQL> = sqlx::query_as!(
+            StepRecord,
+            r#"
+                SELECT sr.created_at,
+                    sr.backtrace,
+                    sr.console,
+                    sr.id,
+                    sr.description,
+                    sr.step_index,
+                    sr.log,
+                    sr.class_name,
+                    sr.job_id,
+                    sr.modified_at,
+                    sr.state,
+                    sr.result,
+                    sr.args_json,
+                    sr.step_count
+                FROM chroma_core_stepresult as sr
+                WHERE (sr.id = ANY ($1::INT[]))
+            "#,
+            ids
+        )
+        .fetch_all(&context.pg_pool)
+        .map_ok(|xs: Vec<StepRecord>|
+            xs.into_iter().filter_map(|x| StepGQL::try_from(x).ok()).collect::<Vec<StepGQL>>()
+        )
+        .await?;
+
+        let mut hm = unordered_steps
+            .into_iter()
+            .map(|x| (x.id, x))
+            .collect::<HashMap<i32, StepGQL>>();
+        let mut not_found = Vec::new();
+        let jobs = ids
+            .iter()
+            .filter_map(|id| {
+                hm.remove(id).or_else(|| {
+                    not_found.push(id);
+                    None
+                })
+            })
+            .collect::<Vec<StepGQL>>();
+
+        if !not_found.is_empty() {
+            Err(FieldError::from(format!("Jobs not found for ids: {:?}", not_found)))
+        } else {
+            Ok(jobs)
+        }
+    }
 
     /// List all snapshot intervals
     async fn snapshot_intervals(context: &Context) -> juniper::FieldResult<Vec<SnapshotInterval>> {
@@ -1263,61 +1344,6 @@ impl From<CommandRecord> for Command {
             logs: "".to_string(),
             message: x.message.clone(),
             resource_uri: format!("/api/{}/{}/", Command::endpoint_name(), x.id),
-        }
-    }
-}
-
-/// Stuff
-#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
-pub struct Job0 {
-    // pub available_transitions: Vec<AvailableTransition>,
-    pub cancelled: bool,
-    pub class_name: String,
-    pub commands: Vec<String>,
-    pub created_at: String,
-    pub description: String,
-    pub errored: bool,
-    pub id: i32,
-    pub modified_at: String,
-    // pub read_locks: Vec<JobLock>,
-    pub resource_uri: String,
-    pub state: String,
-    pub step_results: String, // GraphQLMap<GraphQLJson>,
-    pub steps: Vec<String>,
-    pub wait_for: Vec<String>,
-    // pub write_locks: Vec<JobLock>,
-}
-
-#[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
-#[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
-struct JobRecord {
-    id: i32,
-    cancelled: bool,
-    errored: bool,
-    modified_at: DateTime<Utc>,
-    created_at: DateTime<Utc>,
-    state: String,
-}
-
-impl From<JobRecord> for Job0 {
-    fn from(x: JobRecord) -> Self {
-        Self {
-            id: x.id,
-            class_name: "".to_string(),
-            cancelled: x.cancelled,
-            errored: x.errored,
-            // available_transitions: vec![],
-            modified_at: x.modified_at.format("%Y-%m-%dT%T%.6f").to_string(),
-            created_at: x.created_at.format("%Y-%m-%dT%T%.6f").to_string(),
-            resource_uri: format!("/api/{}/{}/", Job::<()>::endpoint_name(), x.id),
-            state: x.state,
-            step_results: Default::default(),
-            steps: vec![],
-            wait_for: vec![],
-            commands: vec![],
-            description: "".to_string(),
-            // read_locks: vec![],
-            // write_locks: vec![],
         }
     }
 }

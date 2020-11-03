@@ -25,6 +25,7 @@ tokio = {version = "0.2", features = ["macros", "rt-threaded"]}
 tracing = "0.1"
 uuid = {version = "0.8", features = ["v4"]}
 warp = "0.2"
+dotenv = "0.15.0"
 
 [dependencies.regex]
 default-features = false

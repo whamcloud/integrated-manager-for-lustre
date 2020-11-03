@@ -2,8 +2,8 @@
 pub struct GraphQLJson(pub serde_json::Value);
 
 #[juniper::graphql_scalar(
-name = "Json",
-description = "An opaque json value",
+    name = "Json",
+    description = "An opaque json value",
 )]
 impl<S> GraphQLScalar for GraphQLJson
     where
@@ -91,7 +91,6 @@ mod tests {
             }\
         }";
 
-        // TODO insta
         assert_eq!(o.to_string(), exp);
     }
 }

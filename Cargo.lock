@@ -1677,6 +1677,7 @@ name = "iml-api"
 version = "0.4.0"
 dependencies = [
  "chrono",
+ "dotenv",
  "futures",
  "humantime 2.0.1",
  "iml-job-scheduler-rpc",
