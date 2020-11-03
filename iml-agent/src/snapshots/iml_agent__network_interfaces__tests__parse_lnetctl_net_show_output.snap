@@ -2,29 +2,58 @@
 source: iml-agent/src/network_interfaces.rs
 expression: yaml
 ---
-{
-  "net": [
-    {
-      "net type": "lo",
-      "local NI(s)": [
-        {
-          "nid": "0@lo",
-          "status": "up",
-          "interfaces": null
-        }
-      ]
-    },
-    {
-      "net type": "tcp",
-      "local NI(s)": [
-        {
-          "nid": "10.73.20.21@tcp",
-          "status": "up",
-          "interfaces": {
-            "0": "eth1"
-          }
-        }
-      ]
-    }
-  ]
+LNet {
+    net: [
+        Net {
+            net_type: "lo",
+            local_nis: [
+                Nid {
+                    nid: "0@lo",
+                    status: "up",
+                    interfaces: None,
+                },
+            ],
+        },
+        Net {
+            net_type: "tcp",
+            local_nis: [
+                Nid {
+                    nid: "10.73.20.21@tcp",
+                    status: "up",
+                    interfaces: Some(
+                        {
+                            1: "eth2",
+                            0: "eth1",
+                        },
+                    ),
+                },
+            ],
+        },
+        Net {
+            net_type: "o2ib",
+            local_nis: [
+                Nid {
+                    nid: "172.16.0.24@o2ib",
+                    status: "up",
+                    interfaces: Some(
+                        {
+                            1: "ib3",
+                            0: "ib0",
+                        },
+                    ),
+                },
+                Nid {
+                    nid: "172.16.0.28@o2ib",
+                    status: "up",
+                    interfaces: Some(
+                        {
+                            0: "ib1",
+                            2: "ib5",
+                            1: "ib4",
+                        },
+                    ),
+                },
+            ],
+        },
+    ],
 }
