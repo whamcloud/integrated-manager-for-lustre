@@ -28,7 +28,7 @@ class StepResource(ChromaModelResource):
         resource_name = "step"
         authorization = PatchedDjangoAuthorization()
         authentication = AnonymousAuthentication()
-        excludes = ["step_klass"]
+        excludes = ["step_klass", "class_name", "args_json", "description"]
         filtering = {"job": ["exact"], "id": ["exact", "in"]}
         ordering = ["created_at", "modified_at"]
         list_allowed_methods = ["get"]

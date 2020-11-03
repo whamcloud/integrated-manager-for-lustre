@@ -21,6 +21,9 @@ class StepResult(models.Model):
     job = models.ForeignKey("Job", on_delete=CASCADE)
     step_klass = PickledObjectField()
     args = PickledObjectField(help_text="Dictionary of arguments to this step")
+    class_name = models.CharField(default=b"", max_length=128)
+    args_json = models.TextField(default="{}")
+    description = models.TextField(default=b"")
 
     step_index = models.IntegerField(
         help_text="Zero-based index of this step within the steps of\

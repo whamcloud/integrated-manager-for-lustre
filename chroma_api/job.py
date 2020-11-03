@@ -180,7 +180,8 @@ class JobResource(ChromaModelResource):
         result = {}
 
         for step_result in bundle.obj.stepresult_set.all():
-            result[StepResource().get_resource_uri(step_result)] = (
+            uri = StepResource().get_resource_uri(step_result)
+            result[uri] = (
                 json.loads(step_result.result) if step_result.result else None
             )
         return result
@@ -193,7 +194,7 @@ class JobResource(ChromaModelResource):
         resource_name = "job"
         authorization = PatchedDjangoAuthorization()
         authentication = AnonymousAuthentication()
-        excludes = ["task_id", "locks_json", "wait_for_json"]
+        excludes = ["task_id", "locks_json", "wait_for_json", "description", "cancellable"]
         ordering = ["created_at"]
         list_allowed_methods = ["get"]
         detail_allowed_methods = ["get", "put"]
