@@ -14,7 +14,7 @@ use crate::{
     network_interfaces,
 };
 use futures::Future;
-use iml_wire_types::NetworkInterface;
+use iml_wire_types::{LNet, NetworkData, NetworkInterface};
 use std::pin::Pin;
 
 #[derive(Debug)]
@@ -24,14 +24,23 @@ pub fn create() -> impl DaemonPlugin {
     Network
 }
 
-async fn get_network_interfaces<F1>(get_interfaces: fn() -> F1) -> Result<Output, ImlAgentError>
+async fn get_network_data<F1, F2>(
+    get_interfaces: fn() -> F1,
+    get_lnet_data: fn() -> F2,
+) -> Result<Output, ImlAgentError>
 where
     F1: Future<Output = Result<Vec<NetworkInterface>, ImlAgentError>>,
+    F2: Future<Output = Result<LNet, ImlAgentError>>,
 {
-    let xs = get_interfaces().await?;
-    let xs = serde_json::to_value(xs).map(Some)?;
+    let network_interfaces = get_interfaces().await?;
+    let lnet_data = get_lnet_data().await?;
 
-    Ok(xs)
+    let xs = NetworkData {
+        network_interfaces,
+        lnet_data,
+    };
+
+    Ok(serde_json::to_value(xs).map(Some)?)
 }
 
 impl DaemonPlugin for Network {
@@ -44,6 +53,10 @@ impl DaemonPlugin for Network {
     fn update_session(
         &self,
     ) -> Pin<Box<dyn Future<Output = Result<Output, ImlAgentError>> + Send>> {
-        Box::pin(get_network_interfaces(network_interfaces::get_interfaces))
+        let xs = get_network_data(
+            network_interfaces::get_interfaces,
+            network_interfaces::get_lnet_data,
+        );
+        Box::pin(xs)
     }
 }

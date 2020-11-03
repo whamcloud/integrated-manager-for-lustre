@@ -891,41 +891,6 @@
       ]
     }
   },
-  "321e561cd3b4279dba46176519f5ac2644785954e6bbd229e41ae16fb21f5417": {
-    "query": "\n                INSERT INTO network_interface \n                (mac_address, name, inet4_address, inet6_address, lnd_type, state_up, host_id)\n                SELECT mac_address, name, string_to_array(inet4_address, ',')::inet[], string_to_array(inet6_address, ',')::inet[], lnd_type, state_up, host_id\n                FROM UNNEST($1::text[], $2::text[], $3::text[], $4::text[], $5::lnd_network_type[], $6::bool[], $7::int[])\n                AS t(mac_address, name, inet4_address, inet6_address, lnd_type, state_up, host_id)\n                ON CONFLICT (mac_address)\n                    DO\n                    UPDATE SET  name          = EXCLUDED.name,\n                                inet4_address = EXCLUDED.inet4_address,\n                                inet6_address = EXCLUDED.inet6_address,\n                                lnd_type      = EXCLUDED.lnd_type,\n                                state_up      = EXCLUDED.state_up,\n                                host_id       = EXCLUDED.host_id",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": [
-          "TextArray",
-          "TextArray",
-          "TextArray",
-          "TextArray",
-          {
-            "Custom": {
-              "name": "_lnd_network_type",
-              "kind": {
-                "Array": {
-                  "Custom": {
-                    "name": "lnd_network_type",
-                    "kind": {
-                      "Enum": [
-                        "tcp",
-                        "o2ib"
-                      ]
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "BoolArray",
-          "Int4Array"
-        ]
-      },
-      "nullable": []
-    }
-  },
   "36188079437a0e3df0d4584e22b15673bfadcf66128168b59e13717eedcd8470": {
     "query": "\n            DELETE FROM corosync_node\n            USING corosync_node_managed_host\n            WHERE id = corosync_node_id\n            AND host_id = $1\n            AND corosync_node_id != ALL($2::corosync_node_key[])\n        ",
     "describe": {
@@ -1232,6 +1197,22 @@
         true,
         false
       ]
+    }
+  },
+  "3dfe2227b567061b9d1ed14fae74d781b1e5daf89cc326ef139cfc714299bb95": {
+    "query": "\n            INSERT INTO lnet \n            (nid, host_id, net_type, status, interfaces)\n            SELECT nid, host_id, net_type, status, string_to_array(interfaces, ',')::text[]\n            FROM UNNEST($1::text[], $2::int[], $3::text[], $4::text[], $5::text[])\n            AS t(nid, host_id, net_type, status, interfaces)\n            ON CONFLICT (nid)\n                DO\n                UPDATE SET  host_id       = EXCLUDED.host_id,\n                            net_type      = EXCLUDED.net_type,\n                            status        = EXCLUDED.status,\n                            interfaces    = EXCLUDED.interfaces",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "TextArray",
+          "Int4Array",
+          "TextArray",
+          "TextArray",
+          "TextArray"
+        ]
+      },
+      "nullable": []
     }
   },
   "414a5b7c63ec04ad876c282460de775c0e919c1063c46c7a49704b3ccd87ab3f": {
@@ -4456,6 +4437,41 @@
         false,
         false
       ]
+    }
+  },
+  "f98f8c6f1fb7cdffb434c4cc4f9b2fe23c553b5dd61aa8bf9cae9377500e67a8": {
+    "query": "\n            INSERT INTO network_interface \n            (mac_address, name, inet4_address, inet6_address, lnd_type, state_up, host_id)\n            SELECT mac_address, name, string_to_array(inet4_address, ',')::inet[], string_to_array(inet6_address, ',')::inet[], lnd_type, state_up, host_id\n            FROM UNNEST($1::text[], $2::text[], $3::text[], $4::text[], $5::lnd_network_type[], $6::bool[], $7::int[])\n            AS t(mac_address, name, inet4_address, inet6_address, lnd_type, state_up, host_id)\n            ON CONFLICT (mac_address)\n                DO\n                UPDATE SET  name          = EXCLUDED.name,\n                            inet4_address = EXCLUDED.inet4_address,\n                            inet6_address = EXCLUDED.inet6_address,\n                            lnd_type      = EXCLUDED.lnd_type,\n                            state_up      = EXCLUDED.state_up,\n                            host_id       = EXCLUDED.host_id",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "TextArray",
+          "TextArray",
+          "TextArray",
+          "TextArray",
+          {
+            "Custom": {
+              "name": "_lnd_network_type",
+              "kind": {
+                "Array": {
+                  "Custom": {
+                    "name": "lnd_network_type",
+                    "kind": {
+                      "Enum": [
+                        "tcp",
+                        "o2ib"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "BoolArray",
+          "Int4Array"
+        ]
+      },
+      "nullable": []
     }
   },
   "fa7bdf3c5e49361f1afaa6a2075745f0943c461aa87a97854e3004c75c5f6367": {

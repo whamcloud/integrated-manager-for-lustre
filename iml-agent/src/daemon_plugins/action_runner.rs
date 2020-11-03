@@ -44,7 +44,7 @@ impl DaemonPlugin for ActionRunner {
     async fn on_message(&self, v: serde_json::Value) -> Result<AgentResult> {
         let action: Action = match serde_json::from_value(v) {
             Ok(x) => x,
-            Err(e) => return Err(ImlAgentError::Serde(e)),
+            Err(e) => return Err(ImlAgentError::SerdeJson(e)),
         };
 
         match action {
