@@ -22,7 +22,7 @@ use std::{
 };
 use stream_cancel::{Trigger, Tripwire};
 use tokio::{fs, net::UnixListener, sync::Mutex};
-use tokio_util::codec::{LinesCodec, FramedRead};
+use tokio_util::codec::{FramedRead, LinesCodec};
 
 pub struct PostOffice {
     // individual mailbox socket listeners
@@ -70,10 +70,13 @@ fn start_route(client: Client, mailbox: String) -> Trigger {
                         .chunks(10)
                         .map(Ok)
                         .try_for_each(move |xs| {
-                            let data = xs.into_iter()
+                            let mut data = xs
+                                .into_iter()
                                 .filter_map(|x| x.ok())
                                 .collect::<Vec<String>>()
-                                .join("");
+                                .join("\n");
+                            data.push('\n');
+                            tracing::trace!("{} <- {:?}", mailbox, data);
                             let body = Body::from(data);
 
                             send(client.clone(), "mailbox", mailbox.clone(), body)
