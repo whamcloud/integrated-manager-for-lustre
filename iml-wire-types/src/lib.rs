@@ -2392,3 +2392,29 @@ pub struct NetworkInterface {
     pub is_up: bool,
     pub is_slave: bool,
 }
+
+#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
+pub struct Nid {
+    pub nid: String,
+    pub status: String,
+    pub interfaces: Option<HashMap<i32, String>>,
+}
+
+#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
+pub struct Net {
+    #[serde(rename = "net type")]
+    pub net_type: String,
+    #[serde(rename = "local NI(s)")]
+    pub local_nis: Vec<Nid>,
+}
+
+#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
+pub struct LNet {
+    pub net: Vec<Net>,
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct NetworkData {
+    pub network_interfaces: Vec<NetworkInterface>,
+    pub lnet_data: LNet,
+}

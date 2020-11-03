@@ -122,7 +122,9 @@ pub enum ImlAgentError {
     #[error("Rx went away")]
     SendError,
     #[error(transparent)]
-    Serde(#[from] serde_json::Error),
+    SerdeJson(#[from] serde_json::Error),
+    #[error(transparent)]
+    SerdeYaml(#[from] serde_yaml::Error),
     #[error(transparent)]
     SystemdError(#[from] iml_systemd::SystemdError),
     #[error(transparent)]
