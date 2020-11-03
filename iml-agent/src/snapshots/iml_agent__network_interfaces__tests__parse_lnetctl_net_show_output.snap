@@ -1,0 +1,30 @@
+---
+source: iml-agent/src/network_interfaces.rs
+expression: yaml
+---
+{
+  "net": [
+    {
+      "net type": "lo",
+      "local NI(s)": [
+        {
+          "nid": "0@lo",
+          "status": "up",
+          "interfaces": null
+        }
+      ]
+    },
+    {
+      "net type": "tcp",
+      "local NI(s)": [
+        {
+          "nid": "10.73.20.21@tcp",
+          "status": "up",
+          "interfaces": {
+            "0": "eth1"
+          }
+        }
+      ]
+    }
+  ]
+}
