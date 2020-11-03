@@ -73,10 +73,24 @@ mod tests {
         - nid: 10.73.20.21@tcp
           status: up
           interfaces:
-              0: eth1"#;
+              0: eth1
+              1: eth2
+    - net type: o2ib
+      local NI(s):
+        - nid: 172.16.0.24@o2ib
+          status: up
+          interfaces:
+              0: ib0
+              1: ib3
+        - nid: 172.16.0.28@o2ib
+          status: up
+          interfaces:
+              0: ib1
+              1: ib4
+              2: ib5"#;
 
         let yaml: LNet = serde_yaml::from_str(data).unwrap();
 
-        insta::assert_json_snapshot!(yaml)
+        insta::assert_debug_snapshot!(yaml)
     }
 }
