@@ -28,6 +28,7 @@ iml-tracing = {version = "0.3", path = "../iml-tracing"}
 iml-util = {path = "../iml-util", version = "0.4.0"}
 iml-wire-types = {path = "../iml-wire-types", version = "0.4", features = ["cli"]}
 inotify = "0.8"
+ipnetwork = "0.17"
 lazy_static = "1.4.0"
 libc = "0.2"
 liblustreapi = {path = "../liblustreapi", version = "0.4"}

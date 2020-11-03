@@ -1577,6 +1577,7 @@ dependencies = [
  "iml-wire-types",
  "inotify",
  "insta 1.1.0",
+ "ipnetwork",
  "lazy_static",
  "libc",
  "liblustreapi",
@@ -2163,6 +2164,7 @@ dependencies = [
  "im",
  "iml-api-utils",
  "iml-change",
+ "ipnetwork",
  "juniper",
  "serde",
  "serde_json",
@@ -2294,6 +2296,15 @@ name = "ipnet"
 version = "2.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "47be2f14c678be2fdcab04ab1171db51b2762ce6f0a8ee87c8dd4a04ed216135"
+
+[[package]]
+name = "ipnetwork"
+version = "0.17.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "02c3eaab3ac0ede60ffa41add21970a7df7d91772c03383aac6c2c3d53cc716b"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "itertools"

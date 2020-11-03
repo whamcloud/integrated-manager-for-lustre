@@ -13,6 +13,7 @@ humantime = "2.0"
 im = {version = "15.0", features = ["serde"]}
 iml-api-utils = {path = "../iml-api-utils", version = "0.4"}
 iml-change = {path = "../iml-change", version = "0.1", optional = true}
+ipnetwork = "0.17"
 juniper = {git = "https://github.com/graphql-rust/juniper", optional = true}
 serde = {version = "1", features = ["derive"]}
 serde_json = "1.0"
