@@ -17,13 +17,13 @@ use iml_postgres::{
 };
 use iml_rabbit::{ImlRabbitError, Pool};
 use iml_wire_types::{
-    db::{LogMessageRecord, RepoRecord, ServerProfileRecord},
+    db::{LogMessageRecord, ServerProfileRecord},
+    graphql::{ServerProfile, ServerProfileResponse},
     graphql_duration::GraphQLDuration,
     logs::{LogResponse, Meta},
     snapshot::{ReserveUnit, Snapshot, SnapshotInterval, SnapshotRetention},
     task::Task,
-    Command, EndpointName, Job, LogMessage, LogSeverity, MessageClass, ServerProfile,
-    ServerProfileResponse, SortDir,
+    Command, EndpointName, Job, LogMessage, LogSeverity, MessageClass, SortDir,
 };
 use itertools::Itertools;
 use juniper::{
@@ -583,19 +583,32 @@ impl QueryRoot {
         )
         .fetch_all(&context.pg_pool)
         .await?;
-        for spr in server_profile_records {
-            spr.repos.map(|x| {
-                x.as_array().map(|y| {
-                    for pair in y {
-                        let name = pair.get("f1");
-                        let location = pair.get("f2");
-                        tracing::info!("{:?}: {:?}", name, location);
-                    }
-                })
-            });
-        }
 
-        Ok(ServerProfileResponse { data: vec![] })
+        let server_profiles: Vec<_> = server_profile_records
+            .into_iter()
+            .filter_map(|spr| {
+                let record = ServerProfileRecord {
+                    corosync: spr.corosync,
+                    corosync2: spr.corosync2,
+                    default: spr.default,
+                    initial_state: spr.initial_state,
+                    managed: spr.managed,
+                    name: spr.name,
+                    ntp: spr.ntp,
+                    pacemaker: spr.pacemaker,
+                    ui_description: spr.ui_description,
+                    ui_name: spr.ui_name,
+                    user_selectable: spr.user_selectable,
+                    worker: spr.worker,
+                };
+                let repos = spr.repos?;
+                ServerProfile::new(record, &repos).ok()
+            })
+            .collect();
+
+        Ok(ServerProfileResponse {
+            data: server_profiles,
+        })
     }
 }
 

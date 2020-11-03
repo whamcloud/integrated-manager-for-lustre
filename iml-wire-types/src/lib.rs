@@ -13,7 +13,7 @@ pub mod task;
 pub mod warp_drive;
 
 use chrono::{DateTime, Utc};
-use db::{LogMessageRecord, ServerProfileRecord};
+use db::LogMessageRecord;
 use ipnetwork::{Ipv4Network, Ipv6Network};
 use std::{
     cmp::{Ord, Ordering},
@@ -664,57 +664,74 @@ impl EndpointName for ServerProfile {
     }
 }
 
-#[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
-#[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
-pub struct ServerProfileNew {
-    pub corosync: bool,
-    pub corosync2: bool,
-    pub default: bool,
-    pub initial_state: String,
-    pub managed: bool,
-    pub name: String,
-    pub ntp: bool,
-    pub pacemaker: bool,
-    pub ui_description: String,
-    pub ui_name: String,
-    pub user_selectable: bool,
-    pub worker: bool,
-    pub repos: HashMap<String, String>,
-}
+pub mod graphql {
+    use crate::db::ServerProfileRecord;
 
-#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
-#[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
-pub struct ServerProfileResponse {
-    pub data: Vec<ServerProfile>,
-}
+    #[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
+    #[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
+    pub struct ServerProfile {
+        pub corosync: bool,
+        pub corosync2: bool,
+        pub default: bool,
+        pub initial_state: String,
+        pub managed: bool,
+        pub name: String,
+        pub ntp: bool,
+        pub pacemaker: bool,
+        pub ui_description: String,
+        pub ui_name: String,
+        pub user_selectable: bool,
+        pub worker: bool,
+        pub repos: Vec<Repository>,
+    }
 
-impl ServerProfileNew {
-    fn new(record: ServerProfileRecord, repos: &serde_json::Value) -> Result<Self, &'static str> {
-        let repos: HashMap<String, String> = repos
-            .as_array()
-            .ok_or("repos is not an array")?
-            .iter()
-            .filter_map(|p| {
-                let name = p.get("f1")?;
-                let location = p.get("f2")?;
-                Some((name.as_str()?.into(), location.as_str()?.into()))
+    #[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
+    #[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
+    pub struct Repository {
+        pub name: String,
+        pub location: String,
+    }
+
+    #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+    #[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
+    pub struct ServerProfileResponse {
+        pub data: Vec<ServerProfile>,
+    }
+
+    impl ServerProfile {
+        pub fn new(
+            record: ServerProfileRecord,
+            repos: &serde_json::Value,
+        ) -> Result<Self, &'static str> {
+            let repos: Vec<_> = repos
+                .as_array()
+                .ok_or("repos is not an array")?
+                .iter()
+                .filter_map(|p| {
+                    let name = p.get("f1")?;
+                    let location = p.get("f2")?;
+                    Some(Repository {
+                        name: name.as_str()?.into(),
+                        location: location.as_str()?.into(),
+                    })
+                })
+                .collect();
+            Ok(Self {
+                corosync: record.corosync,
+                corosync2: record.corosync2,
+                default: record.default,
+                initial_state: record.initial_state,
+                managed: record.managed,
+                name: record.name,
+                ntp: record.ntp,
+                pacemaker: record.pacemaker,
+                repos,
+                ui_description: record.ui_description,
+                ui_name: record.ui_name,
+                user_selectable: record.user_selectable,
+                worker: record.worker,
             })
-            .collect();
-        Ok(Self {
-            corosync: record.corosync,
-            corosync2: record.corosync2,
-            default: record.default,
-            initial_state: record.initial_state,
-            managed: record.managed,
-            name: record.name,
-            ntp: record.ntp,
-            pacemaker: record.pacemaker,
-            repos,
-            ui_description: record.ui_description,
-            ui_name: record.ui_name,
-            user_selectable: record.user_selectable,
-            worker: record.worker,
-        })
+        }
     }
 }
 
