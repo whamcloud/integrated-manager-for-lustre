@@ -11,9 +11,10 @@
 use crate::{
     agent_error::ImlAgentError,
     daemon_plugins::{DaemonPlugin, Output},
-    network_interfaces::get_interfaces,
+    network_interfaces::{get_interfaces, get_lnet_data},
 };
 use futures::Future;
+use iml_wire_types::NetworkData;
 use std::pin::Pin;
 
 #[derive(Debug)]
@@ -24,10 +25,15 @@ pub fn create() -> impl DaemonPlugin {
 }
 
 async fn get_network_interfaces() -> Result<Output, ImlAgentError> {
-    let xs = get_interfaces().await?;
-    let xs = serde_json::to_value(xs).map(Some)?;
+    let network_interfaces = get_interfaces().await?;
+    let lnet_data = get_lnet_data().await?;
 
-    Ok(xs)
+    let xs = NetworkData {
+        network_interfaces,
+        lnet_data,
+    };
+
+    Ok(serde_json::to_value(xs).map(Some)?)
 }
 
 impl DaemonPlugin for Network {
