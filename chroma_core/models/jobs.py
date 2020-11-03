@@ -62,7 +62,7 @@ class StatefulObject(models.Model):
         self.state_modified_at = now()
 
     def not_state(self, state):
-        return list(set(self.states) - set([state]))
+        return list(set(self.states) - {state})
 
     def not_states(self, states):
         return list(set(self.states) - set(states))
@@ -350,6 +350,9 @@ class Job(models.Model):
 
     wait_for_json = models.TextField()
     locks_json = models.TextField()
+    class_name = models.TextField(default='')
+    description = models.TextField(default='')
+    cancellable = models.BooleanField(default=True)
 
     @classmethod
     def long_description(cls, stateful_object):
