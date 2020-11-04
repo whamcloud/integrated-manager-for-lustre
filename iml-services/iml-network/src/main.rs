@@ -157,9 +157,9 @@ fn parse_lnet_data(
         .fold(
             (vec![], vec![], vec![], vec![], vec![]),
             |mut acc, (net_type, nid, status, interfaces)| {
-                acc.0.push(nid);
+                acc.0.push(net_type);
                 acc.1.push(host_id);
-                acc.2.push(net_type);
+                acc.2.push(nid);
                 acc.3.push(status);
                 acc.4.push(
                     interfaces
@@ -179,27 +179,30 @@ async fn update_lnet_data(
 ) -> Result<(), sqlx::Error> {
     let xs = parse_lnet_data(lnet_data, host_id);
 
-    sqlx::query!(
+    let x = sqlx::query!(
         r#"
-            INSERT INTO lnet 
-            (nid, host_id, net_type, status, interfaces)
-            SELECT nid, host_id, net_type, status, string_to_array(interfaces, ',')::text[]
+            INSERT INTO nid
+            (net_type, host_id, nid, status, interfaces)
+            SELECT net_type, host_id, nid, status, string_to_array(interfaces, ',')::text[]
             FROM UNNEST($1::text[], $2::int[], $3::text[], $4::text[], $5::text[])
-            AS t(nid, host_id, net_type, status, interfaces)
+            AS t(net_type, host_id, nid, status, interfaces)
             ON CONFLICT (nid)
                 DO
                 UPDATE SET  host_id       = EXCLUDED.host_id,
                             net_type      = EXCLUDED.net_type,
                             status        = EXCLUDED.status,
-                            interfaces    = EXCLUDED.interfaces"#,
+                            interfaces    = EXCLUDED.interfaces
+            RETURNING id"#,
         &xs.0,
         &xs.1,
         &xs.2,
         &xs.3,
         &xs.4,
     )
-    .execute(pool)
+    .fetch_all(pool)
     .await?;
+
+    tracing::error!("ids: {:?}", x);
 
     Ok(())
 }
@@ -304,19 +307,16 @@ mod tests {
                             status: "up".into(),
                             interfaces: None,
                         },
+                        Nid {
+                            nid: "172.16.0.28@o2ib".into(),
+                            status: "up".into(),
+                            interfaces: Some(
+                                vec![(0, "ib1".into()), (1, "ib4".into()), (2, "ib5".into())]
+                                    .into_iter()
+                                    .collect::<BTreeMap<i32, String>>(),
+                            ),
+                        }
                     ],
-                },
-                Net {
-                    net_type: "o2ib".into(),
-                    local_nis: vec![Nid {
-                        nid: "172.16.0.28@o2ib".into(),
-                        status: "up".into(),
-                        interfaces: Some(
-                            vec![(0, "ib1".into()), (1, "ib4".into()), (2, "ib5".into())]
-                                .into_iter()
-                                .collect::<BTreeMap<i32, String>>(),
-                        ),
-                    }],
                 },
             ],
         };
