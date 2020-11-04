@@ -15,9 +15,9 @@ use tokio::time;
 struct TaskStats {
     actions: Vec<String>,
     filesystem: String,
-    fids_total: Option<BigDecimal>,
-    fids_completed: Option<BigDecimal>,
-    fids_failed: Option<BigDecimal>,
+    fids_total: BigDecimal,
+    fids_completed: BigDecimal,
+    fids_failed: BigDecimal,
 }
 
 const DELAY: Duration = Duration::from_secs(60);
@@ -33,9 +33,9 @@ pub(crate) async fn collector(pool: PgPool) -> Result<(), ImlTaskRunnerError> {
 
         let stats: Vec<TaskStats> = sqlx::query_as!(
             TaskStats,
-            r#"SELECT SUM(fids_total) AS fids_total,
-SUM(fids_completed) AS fids_completed,
-SUM(fids_failed) AS fids_failed,
+            r#"SELECT COALESCE(SUM(fids_total), 0) AS "fids_total!",
+COALESCE(SUM(fids_completed), 0) AS "fids_completed!",
+COALESCE(SUM(fids_failed), 0) AS "fids_failed!",
 actions,
 fs.name AS filesystem FROM chroma_core_task AS t
 JOIN chroma_core_managedfilesystem AS fs ON t.filesystem_id = fs.id GROUP BY actions,fs.name"#
@@ -62,33 +62,15 @@ JOIN chroma_core_managedfilesystem AS fs ON t.filesystem_id = fs.id GROUP BY act
                             .add_tag("filesystem", Value::String(stat.filesystem.clone()))
                             .add_field(
                                 "fids_completed",
-                                Value::Integer(
-                                    stat.fids_completed
-                                        .as_ref()
-                                        .map(|x| x.to_i64())
-                                        .flatten()
-                                        .unwrap_or(0),
-                                ),
+                                Value::Integer(stat.fids_completed.to_i64().unwrap_or(0)),
                             )
                             .add_field(
                                 "fids_failed",
-                                Value::Integer(
-                                    stat.fids_failed
-                                        .as_ref()
-                                        .map(|x| x.to_i64())
-                                        .flatten()
-                                        .unwrap_or(0),
-                                ),
+                                Value::Integer(stat.fids_failed.to_i64().unwrap_or(0)),
                             )
                             .add_field(
                                 "fids_total",
-                                Value::Integer(
-                                    stat.fids_total
-                                        .as_ref()
-                                        .map(|x| x.to_i64())
-                                        .flatten()
-                                        .unwrap_or(0),
-                                ),
+                                Value::Integer(stat.fids_total.to_i64().unwrap_or(0)),
                             ),
                     )
                 } else {
