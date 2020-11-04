@@ -2397,7 +2397,7 @@ pub struct NetworkInterface {
 pub struct Nid {
     pub nid: String,
     pub status: String,
-    pub interfaces: Option<HashMap<i32, String>>,
+    pub interfaces: Option<BTreeMap<i32, String>>,
 }
 
 #[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]

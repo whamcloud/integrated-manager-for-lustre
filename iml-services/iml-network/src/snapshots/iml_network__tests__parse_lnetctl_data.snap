@@ -1,0 +1,36 @@
+---
+source: iml-services/iml-network/src/main.rs
+expression: parsed_data
+---
+(
+    [
+        "10.73.20.21@tcp",
+        "172.16.0.24@o2ib",
+        "172.16.0.26@o2ib",
+        "172.16.0.28@o2ib",
+    ],
+    [
+        2,
+        2,
+        2,
+        2,
+    ],
+    [
+        "tcp",
+        "o2ib",
+        "o2ib",
+        "o2ib",
+    ],
+    [
+        "up",
+        "down",
+        "up",
+        "up",
+    ],
+    [
+        "eth1,eth2",
+        "ib0,ib3",
+        "",
+        "ib1,ib4,ib5",
+    ],
+)
