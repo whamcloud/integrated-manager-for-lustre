@@ -58,7 +58,7 @@ JOIN chroma_core_managedfilesystem AS fs ON t.filesystem_id = fs.id GROUP BY act
                 if let Some(action) = stat.actions.first() {
                     Some(
                         Point::new("task")
-                            .add_tag("action", Value::String(action.clone()))
+                            .add_tag("action", Value::String(action.to_string()))
                             .add_tag("filesystem", Value::String(stat.filesystem.clone()))
                             .add_field(
                                 "fids_completed",
