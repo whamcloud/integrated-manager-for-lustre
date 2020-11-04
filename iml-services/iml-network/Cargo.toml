@@ -13,6 +13,6 @@ iml-rabbit = {path = "../../iml-rabbit", version = "0.4"}
 iml-service-queue = {path = "../iml-service-queue", version = "0.4"}
 iml-tracing = {version = "0.3", path = "../../iml-tracing"}
 iml-wire-types = {path = "../../iml-wire-types", version = "0.4"}
-tokio = {version = "0.3", features = ["macros", "rt-multi-thread"]}
+tokio = {version = "0.2", features = ["rt-threaded", "blocking"]}
 tracing = "0.1"
 url = "2.1"

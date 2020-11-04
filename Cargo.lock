@@ -750,7 +750,7 @@ dependencies = [
  "async-trait",
  "crossbeam-queue",
  "num_cpus",
- "tokio 0.2.22",
+ "tokio",
 ]
 
 [[package]]
@@ -1268,7 +1268,7 @@ dependencies = [
  "http",
  "indexmap",
  "slab",
- "tokio 0.2.22",
+ "tokio",
  "tokio-util",
  "tracing",
  "tracing-futures",
@@ -1435,7 +1435,7 @@ dependencies = [
  "itoa",
  "pin-project 0.4.27",
  "socket2",
- "tokio 0.2.22",
+ "tokio",
  "tower-service",
  "tracing",
  "want",
@@ -1452,7 +1452,7 @@ dependencies = [
  "hyper",
  "log",
  "rustls",
- "tokio 0.2.22",
+ "tokio",
  "tokio-rustls",
  "webpki",
 ]
@@ -1466,7 +1466,7 @@ dependencies = [
  "bytes",
  "hyper",
  "native-tls",
- "tokio 0.2.22",
+ "tokio",
  "tokio-tls",
 ]
 
@@ -1480,7 +1480,7 @@ dependencies = [
  "hex",
  "hyper",
  "pin-project 0.4.27",
- "tokio 0.2.22",
+ "tokio",
 ]
 
 [[package]]
@@ -1545,7 +1545,7 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror",
- "tokio 0.2.22",
+ "tokio",
  "tokio-runtime-shutdown",
  "tokio-test",
  "tracing",
@@ -1595,7 +1595,7 @@ dependencies = [
  "structopt",
  "tempfile",
  "thiserror",
- "tokio 0.2.22",
+ "tokio",
  "tokio-util",
  "tracing",
  "url",
@@ -1615,7 +1615,7 @@ dependencies = [
  "iml-wire-types",
  "serde",
  "serde_json",
- "tokio 0.2.22",
+ "tokio",
  "tracing",
  "uuid",
  "warp",
@@ -1640,7 +1640,7 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror",
- "tokio 0.2.22",
+ "tokio",
  "tracing",
  "uuid",
  "warp",
@@ -1663,7 +1663,7 @@ name = "iml-cmd"
 version = "0.4.0"
 dependencies = [
  "futures",
- "tokio 0.2.22",
+ "tokio",
  "tracing",
  "warp",
 ]
@@ -1677,7 +1677,7 @@ dependencies = [
  "iml-tracing",
  "iml-wire-types",
  "thiserror",
- "tokio 0.2.22",
+ "tokio",
 ]
 
 [[package]]
@@ -1695,7 +1695,7 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror",
- "tokio 0.2.22",
+ "tokio",
  "tokio-test",
 ]
 
@@ -1719,7 +1719,7 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror",
- "tokio 0.2.22",
+ "tokio",
  "tokio-test",
  "url",
  "warp",
@@ -1733,7 +1733,7 @@ dependencies = [
  "futures",
  "tempdir",
  "tempfile",
- "tokio 0.2.22",
+ "tokio",
  "tokio-util",
 ]
 
@@ -1767,7 +1767,7 @@ dependencies = [
  "iml-wire-types",
  "serde",
  "serde_json",
- "tokio 0.2.22",
+ "tokio",
  "tracing",
  "uuid",
 ]
@@ -1790,7 +1790,7 @@ dependencies = [
  "serde_json",
  "thiserror",
  "time 0.2.22",
- "tokio 0.2.22",
+ "tokio",
 ]
 
 [[package]]
@@ -1809,7 +1809,7 @@ dependencies = [
  "serde_json",
  "tempdir",
  "thiserror",
- "tokio 0.2.22",
+ "tokio",
  "warp",
 ]
 
@@ -1845,7 +1845,7 @@ dependencies = [
  "serde_yaml",
  "structopt",
  "thiserror",
- "tokio 0.2.22",
+ "tokio",
  "tracing",
 ]
 
@@ -1882,7 +1882,7 @@ dependencies = [
  "iml-service-queue",
  "iml-tracing",
  "iml-wire-types",
- "tokio 0.3.3",
+ "tokio",
  "tracing",
  "url",
 ]
@@ -1898,7 +1898,7 @@ dependencies = [
  "iml-service-queue",
  "iml-tracing",
  "iml-wire-types",
- "tokio 0.2.22",
+ "tokio",
  "tracing",
 ]
 
@@ -1912,7 +1912,7 @@ dependencies = [
  "iml-service-queue",
  "iml-tracing",
  "iml-wire-types",
- "tokio 0.2.22",
+ "tokio",
  "tracing",
 ]
 
@@ -1938,7 +1938,7 @@ dependencies = [
  "iml-service-queue",
  "iml-tracing",
  "iml-wire-types",
- "tokio 0.2.22",
+ "tokio",
  "tracing",
 ]
 
@@ -1953,7 +1953,7 @@ dependencies = [
  "lapin",
  "serde_json",
  "thiserror",
- "tokio 0.2.22",
+ "tokio",
  "tokio-amqp",
  "tracing",
  "warp",
@@ -1969,7 +1969,7 @@ dependencies = [
  "iml-manager-env",
  "iml-tracing",
  "tempdir",
- "tokio 0.2.22",
+ "tokio",
  "tracing",
  "warp",
 ]
@@ -1985,7 +1985,7 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
- "tokio 0.2.22",
+ "tokio",
  "tokio-test",
  "tracing",
  "url",
@@ -2019,7 +2019,7 @@ dependencies = [
  "iml-wire-types",
  "serde",
  "thiserror",
- "tokio 0.2.22",
+ "tokio",
  "unzip-n",
  "url",
  "wbem-client",
@@ -2043,7 +2043,7 @@ dependencies = [
  "iml-wire-types",
  "serde",
  "thiserror",
- "tokio 0.2.22",
+ "tokio",
  "url",
 ]
 
@@ -2062,7 +2062,7 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror",
- "tokio 0.2.22",
+ "tokio",
  "tracing",
  "url",
 ]
@@ -2082,7 +2082,7 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror",
- "tokio 0.2.22",
+ "tokio",
  "tracing",
 ]
 
@@ -2095,7 +2095,7 @@ dependencies = [
  "iml-wire-types",
  "serde",
  "serde_json",
- "tokio 0.2.22",
+ "tokio",
  "tracing",
 ]
 
@@ -2112,7 +2112,7 @@ dependencies = [
  "lazy_static",
  "serde_json",
  "thiserror",
- "tokio 0.2.22",
+ "tokio",
 ]
 
 [[package]]
@@ -2125,7 +2125,7 @@ dependencies = [
  "iml-tracing",
  "serde",
  "serde_json",
- "tokio 0.2.22",
+ "tokio",
  "warp",
 ]
 
@@ -2133,7 +2133,7 @@ dependencies = [
 name = "iml-tracing"
 version = "0.3.0"
 dependencies = [
- "tokio 0.2.22",
+ "tokio",
  "tracing",
  "tracing-subscriber",
 ]
@@ -2146,7 +2146,7 @@ dependencies = [
  "iml-wire-types",
  "serde",
  "serde_json",
- "tokio 0.2.22",
+ "tokio",
  "tracing",
 ]
 
@@ -2164,7 +2164,7 @@ dependencies = [
  "iml-wire-types",
  "serde",
  "serde_json",
- "tokio 0.2.22",
+ "tokio",
  "tokio-runtime-shutdown",
  "tracing",
  "uuid",
@@ -2239,7 +2239,7 @@ dependencies = [
  "inotify-sys",
  "libc",
  "mio 0.6.22",
- "tokio 0.2.22",
+ "tokio",
 ]
 
 [[package]]
@@ -3521,7 +3521,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_urlencoded",
- "tokio 0.2.22",
+ "tokio",
  "tokio-rustls",
  "tokio-tls",
  "url",
@@ -4018,7 +4018,7 @@ source = "git+https://github.com/jgrund/sqlx?branch=support-offline-workspaces#3
 dependencies = [
  "native-tls",
  "once_cell",
- "tokio 0.2.22",
+ "tokio",
  "tokio-native-tls",
 ]
 
@@ -4095,7 +4095,7 @@ dependencies = [
  "futures-core",
  "futures-util",
  "pin-project 0.4.27",
- "tokio 0.2.22",
+ "tokio",
 ]
 
 [[package]]
@@ -4107,7 +4107,7 @@ dependencies = [
  "futures-core",
  "futures-util",
  "pin-project 0.4.27",
- "tokio 0.2.22",
+ "tokio",
 ]
 
 [[package]]
@@ -4421,21 +4421,8 @@ dependencies = [
  "pin-project-lite",
  "signal-hook-registry",
  "slab",
- "tokio-macros 0.2.5",
+ "tokio-macros",
  "winapi 0.3.9",
-]
-
-[[package]]
-name = "tokio"
-version = "0.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e5ca08accbcb46f11fd8d2d1c6158c348b7888009a1f39260bcad66f6a454250"
-dependencies = [
- "autocfg 1.0.1",
- "num_cpus",
- "pin-project-lite",
- "slab",
- "tokio-macros 0.3.1",
 ]
 
 [[package]]
@@ -4445,7 +4432,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2938fb5b638e6d8992c304e2426db2de4502f19084b91ec4562d9b45bf896fc4"
 dependencies = [
  "lapin",
- "tokio 0.2.22",
+ "tokio",
 ]
 
 [[package]]
@@ -4460,24 +4447,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "tokio-macros"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "21d30fdbb5dc2d8f91049691aa1a9d4d4ae422a21c334ce8936e5886d30c5c45"
-dependencies = [
- "proc-macro2 1.0.24",
- "quote 1.0.7",
- "syn 1.0.48",
-]
-
-[[package]]
 name = "tokio-native-tls"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cd608593a919a8e05a7d1fc6df885e40f6a88d3a70a3a7eff23ff27964eda069"
 dependencies = [
  "native-tls",
- "tokio 0.2.22",
+ "tokio",
 ]
 
 [[package]]
@@ -4498,7 +4474,7 @@ dependencies = [
  "pin-project-lite",
  "postgres-protocol",
  "postgres-types",
- "tokio 0.2.22",
+ "tokio",
  "tokio-util",
 ]
 
@@ -4508,7 +4484,7 @@ version = "0.4.0"
 dependencies = [
  "futures",
  "stream-cancel 0.5.2",
- "tokio 0.2.22",
+ "tokio",
  "tokio-test",
 ]
 
@@ -4520,7 +4496,7 @@ checksum = "e12831b255bcfa39dc0436b01e19fea231a37db570686c06ee72c423479f889a"
 dependencies = [
  "futures-core",
  "rustls",
- "tokio 0.2.22",
+ "tokio",
  "webpki",
 ]
 
@@ -4532,7 +4508,7 @@ checksum = "ed0049c119b6d505c4447f5c64873636c7af6c75ab0d45fd9f618d82acb8016d"
 dependencies = [
  "bytes",
  "futures-core",
- "tokio 0.2.22",
+ "tokio",
 ]
 
 [[package]]
@@ -4542,7 +4518,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9a70f4fcd7b3b24fb194f837560168208f669ca8cb70d0c4b862944452396343"
 dependencies = [
  "native-tls",
- "tokio 0.2.22",
+ "tokio",
 ]
 
 [[package]]
@@ -4554,7 +4530,7 @@ dependencies = [
  "futures-util",
  "log",
  "pin-project 0.4.27",
- "tokio 0.2.22",
+ "tokio",
  "tungstenite",
 ]
 
@@ -4569,7 +4545,7 @@ dependencies = [
  "futures-sink",
  "log",
  "pin-project-lite",
- "tokio 0.2.22",
+ "tokio",
 ]
 
 [[package]]
@@ -4899,7 +4875,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_urlencoded",
- "tokio 0.2.22",
+ "tokio",
  "tokio-tungstenite",
  "tower-service",
  "tracing",
