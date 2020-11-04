@@ -11,10 +11,9 @@
 use crate::{
     agent_error::ImlAgentError,
     daemon_plugins::{DaemonPlugin, Output},
-    network_interfaces,
+    network_interfaces::get_interfaces,
 };
 use futures::Future;
-use iml_wire_types::NetworkInterface;
 use std::pin::Pin;
 
 #[derive(Debug)]
@@ -24,10 +23,7 @@ pub fn create() -> impl DaemonPlugin {
     Network
 }
 
-async fn get_network_interfaces<F1>(get_interfaces: fn() -> F1) -> Result<Output, ImlAgentError>
-where
-    F1: Future<Output = Result<Vec<NetworkInterface>, ImlAgentError>>,
-{
+async fn get_network_interfaces() -> Result<Output, ImlAgentError> {
     let xs = get_interfaces().await?;
     let xs = serde_json::to_value(xs).map(Some)?;
 
@@ -44,6 +40,6 @@ impl DaemonPlugin for Network {
     fn update_session(
         &self,
     ) -> Pin<Box<dyn Future<Output = Result<Output, ImlAgentError>> + Send>> {
-        Box::pin(get_network_interfaces(network_interfaces::get_interfaces))
+        Box::pin(get_network_interfaces())
     }
 }

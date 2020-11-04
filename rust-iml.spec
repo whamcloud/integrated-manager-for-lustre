@@ -550,9 +550,6 @@ Group: System Environment/Libraries
 %attr(0644,root,root)%{_unitdir}/iml-timer.service
 
 %changelog
-* Wed Oct 28 2020 Will Johnson <wjohnson@whamcloud.com> - 0.4.0-1
-- Add network service
-
 * Thu Sep 17 2020 Will Johnson <wjohnson@whamcloud.com> - 0.3.0-1
 - Add timer service
 

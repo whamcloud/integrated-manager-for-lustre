@@ -43,6 +43,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let host_id = if let Some(host_id) = host_id {
             host_id
         } else {
+            tracing::debug!("Couldn't get the host id using fqdn {}", fqdn);
             continue;
         };
 
@@ -122,11 +123,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         let points = interfaces
             .iter()
-            .cloned()
-            .filter_map(|x: NetworkInterface| {
+            .filter_map(|x: &NetworkInterface| {
                 x.stats
                     .clone()
-                    .map(|stat| (x.interface, stat.rx.bytes, stat.tx.bytes))
+                    .map(|stat| (x.interface.to_string(), stat.rx.bytes, stat.tx.bytes))
             })
             .map(|(interface, rx_bytes, tx_bytes)| {
                 Point::new("net")
