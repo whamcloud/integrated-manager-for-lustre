@@ -1883,6 +1883,7 @@ dependencies = [
  "iml-service-queue",
  "iml-tracing",
  "iml-wire-types",
+ "insta 1.1.0",
  "tokio",
  "tracing",
  "url",

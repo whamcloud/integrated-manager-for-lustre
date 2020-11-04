@@ -129,12 +129,11 @@ async fn update_network_stats(
     Ok(())
 }
 
-async fn update_lnet_data(
-    pool: &PgPool,
-    host_id: i32,
+fn parse_lnet_data(
     lnet_data: &LNet,
-) -> Result<(), sqlx::Error> {
-    let xs = lnet_data
+    host_id: i32,
+) -> (Vec<String>, Vec<i32>, Vec<String>, Vec<String>, Vec<String>) {
+    lnet_data
         .net
         .iter()
         .cloned()
@@ -170,7 +169,15 @@ async fn update_lnet_data(
 
                 acc
             },
-        );
+        )
+}
+
+async fn update_lnet_data(
+    pool: &PgPool,
+    host_id: i32,
+    lnet_data: &LNet,
+) -> Result<(), sqlx::Error> {
+    let xs = parse_lnet_data(lnet_data, host_id);
 
     sqlx::query!(
         r#"
@@ -248,4 +255,74 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use iml_wire_types::{Net, Nid};
+    use std::collections::BTreeMap;
+
+    #[test]
+    fn test_parse_lnetctl_data() {
+        let data = LNet {
+            net: vec![
+                Net {
+                    net_type: "lo".into(),
+                    local_nis: vec![Nid {
+                        nid: "0@lo".into(),
+                        status: "up".into(),
+                        interfaces: None,
+                    }],
+                },
+                Net {
+                    net_type: "tcp".into(),
+                    local_nis: vec![Nid {
+                        nid: "10.73.20.21@tcp".into(),
+                        status: "up".into(),
+                        interfaces: Some(
+                            vec![(0, "eth1".into()), (1, "eth2".into())]
+                                .into_iter()
+                                .collect::<BTreeMap<i32, String>>(),
+                        ),
+                    }],
+                },
+                Net {
+                    net_type: "o2ib".into(),
+                    local_nis: vec![
+                        Nid {
+                            nid: "172.16.0.24@o2ib".into(),
+                            status: "down".into(),
+                            interfaces: Some(
+                                vec![(0, "ib0".into()), (1, "ib3".into())]
+                                    .into_iter()
+                                    .collect::<BTreeMap<i32, String>>(),
+                            ),
+                        },
+                        Nid {
+                            nid: "172.16.0.26@o2ib".into(),
+                            status: "up".into(),
+                            interfaces: None,
+                        },
+                    ],
+                },
+                Net {
+                    net_type: "o2ib".into(),
+                    local_nis: vec![Nid {
+                        nid: "172.16.0.28@o2ib".into(),
+                        status: "up".into(),
+                        interfaces: Some(
+                            vec![(0, "ib1".into()), (1, "ib4".into()), (2, "ib5".into())]
+                                .into_iter()
+                                .collect::<BTreeMap<i32, String>>(),
+                        ),
+                    }],
+                },
+            ],
+        };
+
+        let parsed_data = parse_lnet_data(&data, 2);
+
+        insta::assert_debug_snapshot!(parsed_data)
+    }
 }
