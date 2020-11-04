@@ -78,7 +78,7 @@ mod tests {
     - net type: o2ib
       local NI(s):
         - nid: 172.16.0.24@o2ib
-          status: up
+          status: down
           interfaces:
               0: ib0
               1: ib3
@@ -91,6 +91,8 @@ mod tests {
 
         let yaml: LNet = serde_yaml::from_str(data).unwrap();
 
-        insta::assert_debug_snapshot!(yaml)
+        insta::with_settings!({sort_maps => true}, {
+            insta::assert_json_snapshot!(yaml)
+        });
     }
 }
