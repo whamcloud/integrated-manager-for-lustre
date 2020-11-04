@@ -20,7 +20,7 @@ struct TaskStats {
     fids_failed: Option<BigDecimal>,
 }
 
-const DELAY: Duration = Duration::from_secs(300);
+const DELAY: Duration = Duration::from_secs(60);
 
 pub(crate) async fn collector(pool: PgPool) -> Result<(), ImlTaskRunnerError> {
     let mut interval = time::interval(DELAY);
@@ -43,7 +43,7 @@ JOIN chroma_core_managedfilesystem AS fs ON t.filesystem_id = fs.id GROUP BY act
         .fetch_all(&pool)
         .await?;
 
-        if stats.len() == 0 {
+        if stats.is_empty() {
             continue;
         }
 
