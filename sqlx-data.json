@@ -1216,6 +1216,48 @@
       "nullable": []
     }
   },
+  "42bbf0326d3d70bb432ea84b4bb01a34dc07a4cc3c17918ec2983e495429c251": {
+    "query": "SELECT COALESCE(SUM(fids_total), 0) AS \"fids_total!\",\nCOALESCE(SUM(fids_completed), 0) AS \"fids_completed!\",\nCOALESCE(SUM(fids_failed), 0) AS \"fids_failed!\",\nactions,\nfs.name AS filesystem FROM chroma_core_task AS t\nJOIN chroma_core_managedfilesystem AS fs ON t.filesystem_id = fs.id GROUP BY actions,fs.name",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "fids_total!",
+          "type_info": "Numeric"
+        },
+        {
+          "ordinal": 1,
+          "name": "fids_completed!",
+          "type_info": "Numeric"
+        },
+        {
+          "ordinal": 2,
+          "name": "fids_failed!",
+          "type_info": "Numeric"
+        },
+        {
+          "ordinal": 3,
+          "name": "actions",
+          "type_info": "TextArray"
+        },
+        {
+          "ordinal": 4,
+          "name": "filesystem",
+          "type_info": "Varchar"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        null,
+        null,
+        null,
+        false,
+        false
+      ]
+    }
+  },
   "457c805cf2fb6b16d6b42b2662c7f2569d1261d68547e9a3fc7c41bcd5694e26": {
     "query": "\n                INSERT INTO chroma_core_task (\n                    name,\n                    start,\n                    state,\n                    fids_total,\n                    fids_completed,\n                    fids_failed,\n                    data_transfered,\n                    single_runner,\n                    keep_failed,\n                    actions,\n                    args,\n                    filesystem_id\n                )\n                VALUES (\n                    $1,\n                    now(),\n                    $2,\n                    0,\n                    0,\n                    0,\n                    0,\n                    $3,\n                    $4,\n                    $5,\n                    $6,\n                    $7\n                )\n                RETURNING *\n            ",
     "describe": {
@@ -1443,48 +1485,6 @@
         false,
         false,
         true,
-        false
-      ]
-    }
-  },
-  "47bf7ead8324dc4af0c3561006ef56bc984401ea56a46d6afb790936c83d8eb4": {
-    "query": "SELECT SUM(fids_total) AS fids_total,\nSUM(fids_completed) AS fids_completed,\nSUM(fids_failed) AS fids_failed,\nactions,\nfs.name AS filesystem FROM chroma_core_task AS t\nJOIN chroma_core_managedfilesystem AS fs ON t.filesystem_id = fs.id GROUP BY actions,fs.name",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "fids_total",
-          "type_info": "Numeric"
-        },
-        {
-          "ordinal": 1,
-          "name": "fids_completed",
-          "type_info": "Numeric"
-        },
-        {
-          "ordinal": 2,
-          "name": "fids_failed",
-          "type_info": "Numeric"
-        },
-        {
-          "ordinal": 3,
-          "name": "actions",
-          "type_info": "TextArray"
-        },
-        {
-          "ordinal": 4,
-          "name": "filesystem",
-          "type_info": "Varchar"
-        }
-      ],
-      "parameters": {
-        "Left": []
-      },
-      "nullable": [
-        null,
-        null,
-        null,
-        false,
         false
       ]
     }
