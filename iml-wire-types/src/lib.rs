@@ -686,8 +686,34 @@ pub mod graphql {
     }
 
     #[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
+    #[cfg_attr(feature = "graphql", derive(juniper::GraphQLInputObject))]
+    pub struct ServerProfileInput {
+        pub corosync: bool,
+        pub corosync2: bool,
+        pub default: bool,
+        pub initial_state: String,
+        pub managed: bool,
+        pub name: String,
+        pub ntp: bool,
+        pub pacemaker: bool,
+        pub ui_description: String,
+        pub ui_name: String,
+        pub user_selectable: bool,
+        pub worker: bool,
+        pub packages: Vec<String>,
+        pub repolist: Vec<String>,
+    }
+
+    #[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
     #[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
     pub struct Repository {
+        pub name: String,
+        pub location: String,
+    }
+
+    #[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
+    #[cfg_attr(feature = "graphql", derive(juniper::GraphQLInputObject))]
+    pub struct RepositoryInput {
         pub name: String,
         pub location: String,
     }
