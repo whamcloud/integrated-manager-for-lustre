@@ -1,5 +1,18 @@
 {
   "db": "PostgreSQL",
+  "00687c9ad8074d4f792c5f4ec3339132da1e5384bcd88b8c7607d83e098687a3": {
+    "query": "\n            INSERT INTO chroma_core_serverprofilepackage (package_name, server_profile_id)\n            SELECT package_name, $2\n            FROM UNNEST($1::text[])\n            as t(package_name)\n            ON CONFLICT DO NOTHING\n            ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "TextArray",
+          "Varchar"
+        ]
+      },
+      "nullable": []
+    }
+  },
   "044c83becc9a4280aa888bab7106a2fb5501c1a205830e57010416e1aaeae1d3": {
     "query": "\n                SELECT\n                (n.id).name AS \"name!\",\n                (n.id).id AS \"id!\",\n                cluster_id,\n                online,\n                standby,\n                standby_onfail,\n                maintenance,\n                pending,\n                unclean,\n                shutdown,\n                expected_up,\n                is_dc,\n                resources_running,\n                type\n                FROM corosync_node n\n                ORDER BY\n                    CASE WHEN $1 = 'ASC' THEN n.id END ASC,\n                    CASE WHEN $1 = 'DESC' THEN n.id END DESC\n                OFFSET $2 LIMIT $3",
     "describe": {
@@ -3492,6 +3505,27 @@
       ]
     }
   },
+  "b94684b98d9c2877a51d94070b43e039ea62218cb9c1e561e9280bed7de35e15": {
+    "query": "\n            INSERT INTO chroma_core_serverprofile\n            (\n                name,\n                ui_name,\n                ui_description,\n                managed,\n                worker,\n                user_selectable,\n                initial_state,\n                ntp,\n                corosync,\n                corosync2,\n                pacemaker,\n                \"default\"\n            )\n            VALUES\n            ($1, $2, $3, $4, $5, 'true', $6, $7, $8, $9, $10, 'false')\n            ON CONFLICT (name)\n            DO UPDATE\n            SET\n            ui_name = excluded.ui_name,\n            ui_description = excluded.ui_description,\n            managed = excluded.managed,\n            worker = excluded.worker,\n            user_selectable = excluded.user_selectable,\n            initial_state = excluded.initial_state,\n            ntp = excluded.ntp,\n            corosync = excluded.corosync,\n            corosync2 = excluded.corosync2,\n            pacemaker = excluded.pacemaker,\n            \"default\" = excluded.default\n        ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Varchar",
+          "Varchar",
+          "Text",
+          "Bool",
+          "Bool",
+          "Varchar",
+          "Bool",
+          "Bool",
+          "Bool",
+          "Bool"
+        ]
+      },
+      "nullable": []
+    }
+  },
   "bb7fb337cfeac9a17eefb21a498e76be70c2f395473ba42331f51cc5e6d48679": {
     "query": "\n        INSERT INTO chroma_core_device\n        (fqdn, devices)\n        VALUES ($1, $2)\n        ON CONFLICT (fqdn) DO UPDATE\n        SET devices = EXCLUDED.devices\n    ",
     "describe": {
@@ -4277,6 +4311,19 @@
           "Int2Array",
           "Int2Array",
           "TextArray",
+          "TextArray"
+        ]
+      },
+      "nullable": []
+    }
+  },
+  "e97e41ee7351b4ee4362648015b98d3bf7618e8ce675007c682154454b921c7b": {
+    "query": "\n            INSERT INTO chroma_core_serverprofile_repolist (serverprofile_id, repo_id)\n            SELECT $1, repo_id\n            FROM UNNEST($2::text[])\n            AS t(repo_id)\n            ON CONFLICT DO NOTHING\n        ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Varchar",
           "TextArray"
         ]
       },
