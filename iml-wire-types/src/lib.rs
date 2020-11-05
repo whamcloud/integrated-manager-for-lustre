@@ -636,7 +636,6 @@ impl EndpointName for Host {
 
 /// A server profile record from api/server_profile/
 #[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
-#[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
 pub struct ServerProfile {
     pub corosync: bool,
     pub corosync2: bool,
