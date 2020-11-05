@@ -179,44 +179,37 @@ async fn update_lnet_data(
 ) -> Result<(), sqlx::Error> {
     let xs = parse_lnet_data(lnet_data, host_id);
 
-    let xs = sqlx::query!(
+    sqlx::query!(
         r#"
-            INSERT INTO nid
-            (net_type, host_id, nid, status, interfaces)
-            SELECT net_type, host_id, nid, status, string_to_array(interfaces, ',')::text[]
-            FROM UNNEST($1::text[], $2::int[], $3::text[], $4::text[], $5::text[])
-            AS t(net_type, host_id, nid, status, interfaces)
-            ON CONFLICT (host_id, nid)
+            WITH updated AS (
+                INSERT INTO nid
+                (net_type, host_id, nid, status, interfaces)
+                SELECT net_type, host_id, nid, status, string_to_array(interfaces, ',')::text[]
+                FROM UNNEST($1::text[], $2::int[], $3::text[], $4::text[], $5::text[])
+                AS t(net_type, host_id, nid, status, interfaces)
+                ON CONFLICT (host_id, nid)
+                    DO
+                    UPDATE SET  net_type      = EXCLUDED.net_type,
+                                status        = EXCLUDED.status,
+                                interfaces    = EXCLUDED.interfaces
+                RETURNING id
+            )
+
+            INSERT INTO lnet
+            (host_id, state, nids)
+            (SELECT $6, $7, array_agg(id) from updated)
+            ON CONFLICT (host_id)
                 DO
-                UPDATE SET  net_type      = EXCLUDED.net_type,
-                            status        = EXCLUDED.status,
-                            interfaces    = EXCLUDED.interfaces
-            RETURNING id"#,
+                UPDATE SET nids  = EXCLUDED.nids,
+                           state = EXCLUDED.state;
+                "#,
         &xs.0,
         &xs.1,
         &xs.2,
         &xs.3,
         &xs.4,
-    )
-    .fetch_all(pool)
-    .await?
-    .into_iter()
-    .map(|x| x.id)
-    .collect::<Vec<i32>>();
-
-    // Update the lnet table with the list of nids for the current host_id
-    sqlx::query!(
-        r#"
-            INSERT INTO lnet
-            (host_id, state, nids)
-            VALUES($1, $2, $3)
-            ON CONFLICT (host_id)
-                DO
-                UPDATE SET nids  = EXCLUDED.nids,
-                           state = EXCLUDED.state"#,
         &host_id,
         &lnet_data.get_state(),
-        &xs
     )
     .execute(pool)
     .await?;
