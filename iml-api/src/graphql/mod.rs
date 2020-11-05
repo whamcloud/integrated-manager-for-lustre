@@ -1070,6 +1070,35 @@ impl MutationRoot {
 
         Ok(true)
     }
+
+    #[graphql(arguments(profile_name(description = "Name of the profile to remove")))]
+    async fn remove_server_profile(
+        context: &Context,
+        profile_name: String,
+    ) -> juniper::FieldResult<bool> {
+        sqlx::query!(
+            "DELETE FROM chroma_core_serverprofile_repolist WHERE serverprofile_id = $1",
+            &profile_name
+        )
+        .execute(&context.pg_pool)
+        .await?;
+
+        sqlx::query!(
+            "DELETE FROM chroma_core_serverprofilepackage WHERE server_profile_id = $1",
+            &profile_name
+        )
+        .execute(&context.pg_pool)
+        .await?;
+
+        sqlx::query!(
+            "DELETE FROM chroma_core_serverprofile where name = $1",
+            &profile_name
+        )
+        .execute(&context.pg_pool)
+        .await?;
+
+        Ok(true)
+    }
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
