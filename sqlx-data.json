@@ -3883,6 +3883,19 @@
       ]
     }
   },
+  "db9e066259a3016c5a6c2f1d42625f6c9a6fc291a0d2f1a32e40966e3cf97f09": {
+    "query": "\n            INSERT INTO lnet\n            (host_id, nids)\n            VALUES($1, $2)\n            ON CONFLICT (host_id)\n                DO\n                UPDATE SET nids = EXCLUDED.nids",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Int4Array"
+        ]
+      },
+      "nullable": []
+    }
+  },
   "dc969e1cf438fc20baccd36a43cf7725bcf95cf758c6f08d5ce88bd4f378a71c": {
     "query": "\n                INSERT INTO snapshot_retention (\n                    filesystem_name,\n                    reserve_value,\n                    reserve_unit,\n                    keep_num\n                )\n                VALUES ($1, $2, $3, $4)\n                ON CONFLICT (filesystem_name)\n                DO UPDATE SET\n                reserve_value = EXCLUDED.reserve_value,\n                reserve_unit = EXCLUDED.reserve_unit,\n                keep_num = EXCLUDED.keep_num\n            ",
     "describe": {
