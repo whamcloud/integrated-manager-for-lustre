@@ -30,3 +30,16 @@ pub async fn search_rootpath(device: String) -> Result<LlapiFid, ImlAgentError> 
         .await
         .and_then(std::convert::identity)
 }
+
+/// Find any MDT0s that exist on this node
+pub async fn list_mdt0s() -> Vec<String> {
+    lctl(vec!["get_param", "-N", "mdt.*-MDT0000"])
+        .await
+        .map(|o| {
+            o.lines()
+                .filter_map(|line| line.split('.').nth(1))
+                .map(|s| s.to_string())
+                .collect()
+        })
+        .unwrap_or_else(|_| vec![])
+}

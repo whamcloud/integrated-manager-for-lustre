@@ -2,34 +2,71 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{agent_error::ImlAgentError, lustre::lctl};
-use combine::{stream::easy, EasyParser};
+use crate::{agent_error::ImlAgentError, device_scanner_client, lustre::lctl};
+use chrono::{DateTime, TimeZone, Utc};
 use iml_wire_types::snapshot::{Create, Destroy, List, Mount, Snapshot, Unmount};
 
-mod parse;
-
 pub async fn list(l: List) -> Result<Vec<Snapshot>, ImlAgentError> {
-    let mut args = vec!["snapshot_list", "--fsname", &l.fsname];
+    let mut args = vec!["--device", &l.target, "snapshot", "-l"];
     if let Some(name) = &l.name {
-        args.push("--name");
         args.push(name);
     }
     let stdout = lctl(args).await?;
     let stdout = stdout.trim();
 
     if stdout.is_empty() {
-        Ok(vec![])
-    } else {
-        parse_snapshot_list(&stdout).map_err(ImlAgentError::CombineEasyError)
+        return Ok(vec![]);
+    }
+
+    let mounts = device_scanner_client::get_mounts().await?;
+
+    for snap in parse_device_snapshots(stdout) {
+        let label = get_snapshot_label(&snap.0, &l.target).await?;
+
+        if label.is_none() {
+            continue;
+        }
+
+        mounts
+            .iter()
+            .filter(|x| x.opts.0.split(',').any(|x| x == "nomgs"))
+            .filter(|x| x.fs_type.0 == "lustre")
+            .find_map(|x| {
+                let s = x.opts.0.split(',').find(|x| x.starts_with("svname="))?;
+
+                let s = s.split('=').nth(1)?;
+
+                Some(s.to_string())
+            });
+    }
+
+    return Ok(vec![]);
+}
+
+async fn get_snapshot_label(name: &str, target: &str) -> Result<Option<String>, ImlAgentError> {
+    let x = lctl(vec!["--device", target, "snapshot", "--get_label", name]).await?;
+
+    match x.trim() {
+        "" => Ok(None),
+        _ => Ok(Some(x)),
     }
 }
 
-fn parse_snapshot_list(input: &str) -> Result<Vec<Snapshot>, easy::Errors<char, String, usize>> {
-    let (snapshots, _) = parse::parse().easy_parse(input).map_err(|err| {
-        err.map_position(|p| p.translate_position(input))
-            .map_range(String::from)
-    })?;
-    Ok(snapshots)
+fn parse_device_snapshots(x: &str) -> Vec<(String, DateTime<Utc>, DateTime<Utc>, Option<String>)> {
+    x.trim()
+        .lines()
+        .map(|x| x.splitn(4, ' ').collect::<Vec<_>>())
+        .filter_map(|xs| {
+            let mut it = xs.into_iter();
+
+            let name = it.next()?.to_string();
+            let create = chrono::Utc.timestamp(it.next()?.parse().ok()?, 0);
+            let update = chrono::Utc.timestamp(it.next()?.parse().ok()?, 0);
+            let comment = it.next().map(String::from);
+
+            Some((name, create, update, comment))
+        })
+        .collect()
 }
 
 pub async fn create(c: Create) -> Result<(), ImlAgentError> {
@@ -72,4 +109,41 @@ pub async fn mount(m: Mount) -> Result<(), ImlAgentError> {
 pub async fn unmount(u: Unmount) -> Result<(), ImlAgentError> {
     let args = &["snapshot_umount", "--fsname", &u.fsname, "--name", &u.name];
     lctl(args).await.map(drop)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_device_list() {
+        let fixture = r#"
+testsnapa 1604388443 1604388443
+abcd 1604331109 1604331109
+testabc 1604331284 1604331284
+snaptwo 1604469817 1604469817
+testabc4 1604332160 1604332160
+1-es01a-2020-11-02T16:10:24Z 1604333425 1604333425 automatically created by IML
+1-es01a-2020-11-02T16:40:24Z 1604335225 1604335225 automatically created by IML
+snapone 1604469809 1604469809
+testsnapz 1604468838 1604468838
+1-es01a-2020-11-02T16:20:24Z 1604334025 1604334025 automatically created by IML
+1-es01a-2020-11-02T16:30:24Z 1604334625 1604334625 automatically created by IML
+1-es01a-2020-11-02T16:00:24Z 1604332825 1604332825 automatically created by IML
+snapthree 1604470070 1604470070
+testsnapd 1604469760 1604469760
+tstsnap 1604335880 1604335880
+testsnapb 1604416099 1604416099
+1-es01a-2020-11-02T15:50:24Z 1604332227 1604332227 automatically created by IML
+testabc3 1604331898 1604331898
+mysnap 1604330923 1604330922 mynew snapshot
+Test3 1604416497 1604416497
+testsnap 1604330047 1604075186
+        "#;
+        let fixture = fixture;
+
+        let xs = parse_device_snapshots(fixture);
+
+        insta::assert_debug_snapshot!(xs);
+    }
 }

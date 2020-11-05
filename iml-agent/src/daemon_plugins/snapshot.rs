@@ -12,7 +12,7 @@ use crate::{
     action_plugins::lustre::snapshot,
     agent_error::ImlAgentError,
     daemon_plugins::{DaemonPlugin, Output},
-    lustre::lctl,
+    lustre::{lctl, list_mdt0s},
 };
 use async_trait::async_trait;
 use futures::{
@@ -47,54 +47,47 @@ pub(crate) fn create() -> SnapshotList {
 }
 
 async fn list() -> Result<Vec<Snapshot>, ()> {
-    let fss: Vec<String> = lctl(vec!["get_param", "-N", "mgs.MGS.live.*"])
-        .await
-        .map_err(|e| {
-            // XXX debug because of false positives
-            tracing::debug!("listing filesystems failed: {}", e);
-        })
-        .map(|o| {
-            o.lines()
-                .map(|line| line.split('.').nth(3).unwrap().to_string())
-                .filter(|n| n != "params")
-                .collect()
-        })?;
+    let xs = list_mdt0s().await;
 
-    tracing::debug!("filesystems: {:?}", &fss);
+    tracing::debug!("mdt0s: {:?}", &xs);
 
-    let futs = fss.into_iter().map(|fs| async move {
-        snapshot::list(List {
-            fsname: fs.clone(),
-            name: None,
-        })
-        .await
-        .map_err(|e| (fs, e))
-    });
+    xs.into_iter().map(|x| async move {});
 
-    let (oks, errs): (Vec<_>, Vec<_>) = join_all(futs).await.into_iter().partition(Result::is_ok);
+    Ok(vec![])
 
-    let snaps = oks
-        .into_iter()
-        .map(|x| x.unwrap())
-        .flatten()
-        .collect::<Vec<Snapshot>>();
+    // let futs = fss.into_iter().map(|fs| async move {
+    //     snapshot::list(List {
+    //         fsname: fs.clone(),
+    //         name: None,
+    //     })
+    //     .await
+    //     .map_err(|e| (fs, e))
+    // });
 
-    let snapshot_fsnames = snaps
-        .iter()
-        .map(|s| &s.snapshot_fsname)
-        .collect::<BTreeSet<&String>>();
+    // let (oks, errs): (Vec<_>, Vec<_>) = join_all(futs).await.into_iter().partition(Result::is_ok);
 
-    let really_failed_fss = errs
-        .into_iter()
-        .map(|x| x.unwrap_err())
-        .filter(|x| !snapshot_fsnames.contains(&x.0))
-        .collect::<Vec<_>>();
+    // let snaps = oks
+    //     .into_iter()
+    //     .map(|x| x.unwrap())
+    //     .flatten()
+    //     .collect::<Vec<Snapshot>>();
 
-    if !really_failed_fss.is_empty() {
-        // XXX debug because of false positives
-        tracing::debug!("listing failed: {:?}", really_failed_fss);
-    }
-    Ok(snaps)
+    // let snapshot_fsnames = snaps
+    //     .iter()
+    //     .map(|s| &s.snapshot_fsname)
+    //     .collect::<BTreeSet<&String>>();
+
+    // let really_failed_fss = errs
+    //     .into_iter()
+    //     .map(|x| x.unwrap_err())
+    //     .filter(|x| !snapshot_fsnames.contains(&x.0))
+    //     .collect::<Vec<_>>();
+
+    // if !really_failed_fss.is_empty() {
+    //     // XXX debug because of false positives
+    //     tracing::debug!("listing failed: {:?}", really_failed_fss);
+    // }
+    // Ok(snaps)
 }
 
 #[async_trait]
