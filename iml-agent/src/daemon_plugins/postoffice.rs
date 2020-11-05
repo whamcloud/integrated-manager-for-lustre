@@ -67,14 +67,9 @@ fn start_route(client: Client, mailbox: String) -> Trigger {
             match inbound {
                 Ok(inbound) => {
                     let xs = FramedRead::new(inbound, LinesCodec::new())
-                        .chunks(10)
-                        .map(Ok)
+                        .err_into()
                         .try_for_each(move |xs| {
-                            let mut data = xs
-                                .into_iter()
-                                .filter_map(|x| x.ok())
-                                .collect::<Vec<String>>()
-                                .join("\n");
+                            let mut data = xs;
                             data.push('\n');
                             tracing::trace!("{} <- {:?}", mailbox, data);
                             let body = Body::from(data);
