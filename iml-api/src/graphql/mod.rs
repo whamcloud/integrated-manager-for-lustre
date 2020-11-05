@@ -16,8 +16,7 @@ use iml_postgres::{sqlx, sqlx::postgres::types::PgInterval, PgPool};
 use iml_rabbit::{ImlRabbitError, Pool};
 use iml_wire_types::{
     db::{LogMessageRecord, ServerProfileRecord},
-    graphql::ServerProfileInput,
-    graphql::{ServerProfile, ServerProfileResponse},
+    graphql::{ServerProfile, ServerProfileInput, ServerProfileResponse},
     graphql_duration::GraphQLDuration,
     logs::{LogResponse, Meta},
     snapshot::{ReserveUnit, Snapshot, SnapshotInterval, SnapshotRetention},
