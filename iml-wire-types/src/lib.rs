@@ -2413,6 +2413,30 @@ pub struct LNet {
     pub net: Vec<Net>,
 }
 
+pub trait LNetState {
+    fn get_state(&self) -> String;
+}
+
+impl LNetState for LNet {
+    fn get_state(&self) -> String {
+        let up = self.net
+            .iter()
+            .flat_map(|x| {
+                x
+                    .local_nis
+                    .iter()
+                    .map(|x| x.status.as_str())
+                    .collect::<Vec<&str>>()
+            })
+            .any(|x| x == "UP");
+
+        match up {
+            true => "UP".into(),
+            false => "DOWN".into(),
+        }
+    }
+}
+
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct NetworkData {
     pub network_interfaces: Vec<NetworkInterface>,
