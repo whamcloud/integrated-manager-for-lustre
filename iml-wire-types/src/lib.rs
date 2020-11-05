@@ -2534,11 +2534,11 @@ impl LNetState for LNet {
                     .map(|x| x.status.as_str())
                     .collect::<Vec<&str>>()
             })
-            .any(|x| x == "UP");
+            .any(|x| x.to_ascii_lowercase() == "up");
 
         match up {
-            true => "UP".into(),
-            false => "DOWN".into(),
+            true => "up".into(),
+            false => "down".into(),
         }
     }
 }
