@@ -2080,30 +2080,6 @@
       "nullable": []
     }
   },
-  "702b84c5aa632cd6f2bb72db85a1368e5c51da67266b000386482c54b6967169": {
-    "query": "\n            INSERT INTO nid\n            (net_type, host_id, nid, status, interfaces)\n            SELECT net_type, host_id, nid, status, string_to_array(interfaces, ',')::text[]\n            FROM UNNEST($1::text[], $2::int[], $3::text[], $4::text[], $5::text[])\n            AS t(net_type, host_id, nid, status, interfaces)\n            ON CONFLICT (host_id, nid)\n                DO\n                UPDATE SET  net_type      = EXCLUDED.net_type,\n                            status        = EXCLUDED.status,\n                            interfaces    = EXCLUDED.interfaces\n            RETURNING id",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "id",
-          "type_info": "Int4"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "TextArray",
-          "Int4Array",
-          "TextArray",
-          "TextArray",
-          "TextArray"
-        ]
-      },
-      "nullable": [
-        false
-      ]
-    }
-  },
   "7bee1c38d05ac3f8bcf4d48b375c740341121c04d2f5b04ceb1d58ef0a006c08": {
     "query": "\n        SELECT * FROM chroma_core_lustreclientmount\n        WHERE\n            state = 'mounted'\n            AND not_deleted = 't'\n            AND id != ALL($1)\n        LIMIT $2\n        ",
     "describe": {
@@ -3816,20 +3792,6 @@
       "nullable": [
         false
       ]
-    }
-  },
-  "d9f58f440d3a24833e2dcd8e9d9561ba0a0e26353f9418939f9f912baf517e89": {
-    "query": "\n            INSERT INTO lnet\n            (host_id, state, nids)\n            VALUES($1, $2, $3)\n            ON CONFLICT (host_id)\n                DO\n                UPDATE SET nids  = EXCLUDED.nids,\n                           state = EXCLUDED.state",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": [
-          "Int4",
-          "Text",
-          "Int4Array"
-        ]
-      },
-      "nullable": []
     }
   },
   "da7a10e4d6f2a2456eccd0753df9d743ebcaebff8c13bae8f93c036dcfc8171b": {

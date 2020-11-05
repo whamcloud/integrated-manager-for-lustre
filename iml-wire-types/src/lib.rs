@@ -2525,11 +2525,11 @@ pub trait LNetState {
 
 impl LNetState for LNet {
     fn get_state(&self) -> String {
-        let up = self.net
+        let up = self
+            .net
             .iter()
             .flat_map(|x| {
-                x
-                    .local_nis
+                x.local_nis
                     .iter()
                     .map(|x| x.status.as_str())
                     .collect::<Vec<&str>>()
