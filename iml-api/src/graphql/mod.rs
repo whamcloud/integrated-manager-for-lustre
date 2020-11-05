@@ -1084,24 +1084,24 @@ async fn get_fs_cluster_hosts(
 }
 
 async fn get_banned_targets(pool: &PgPool) -> Result<Vec<BannedTargetResource>, ImlApiError> {
-    let xs = sqlx::query!(r#"
+    let xs = sqlx::query!(
+        r#"
             SELECT b.id, b.resource, b.node, b.cluster_id, nh.host_id, t.mount_point
             FROM corosync_resource_bans b
             INNER JOIN corosync_node_managed_host nh ON (nh.corosync_node_id).name = b.node
             AND nh.cluster_id = b.cluster_id
             INNER JOIN corosync_resource t ON t.id = b.resource AND b.cluster_id = t.cluster_id
-        "#)
-        .fetch(pool)
-        .map_ok(|x| {
-            BannedTargetResource {
-                resource: x.resource,
-                cluster_id: x.cluster_id,
-                host_id: x.host_id,
-                mount_point: x.mount_point,
-            }
-        })
-        .try_collect()
-        .await?;
+        "#
+    )
+    .fetch(pool)
+    .map_ok(|x| BannedTargetResource {
+        resource: x.resource,
+        cluster_id: x.cluster_id,
+        host_id: x.host_id,
+        mount_point: x.mount_point,
+    })
+    .try_collect()
+    .await?;
 
     Ok(xs)
 }
