@@ -17,7 +17,6 @@ networkx==1.7
 ordereddict==1.1
 paramiko==2.1.1
 pexpect
-prettytable==0.6
 psycopg2==2.7.7
 pyparsing==1.5.6
 python-daemon==1.6
@@ -26,7 +25,6 @@ pytz==2014.4
 requests_unixsocket==0.1.5
 requests==2.12.5
 setuptools
-tablib==0.9.11
 toolz==0.10.0
 tzlocal
 urllib3

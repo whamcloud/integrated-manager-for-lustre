@@ -22,19 +22,6 @@ jobs:
         - echo -e "/^DEBUG =/s/= .*$/= True/\nwq" | ed settings.py 2>/dev/null
         - python -W always manage.py test tests/unit/
     - stage: test
-      name: "Behave tests"
-      install:
-        - pip install -r requirements.txt
-        - pip install -r requirements.test
-      before_script:
-        - psql -c "CREATE USER chroma;" -U postgres
-        - psql -c "ALTER USER chroma CREATEDB;" -U postgres
-        - psql -c "CREATE DATABASE chroma OWNER chroma;" -U postgres
-        - psql -c 'CREATE EXTENSION IF NOT EXISTS btree_gist;' -U postgres -d template1
-      script:
-        - export IML_DISABLE_THREADS=1
-        - behave --format plain tests/feature/cli/features
-    - stage: test
       name: "Service tests"
       script:
         - docker run -dit --privileged --name systemd --mount type=bind,source="$(pwd)",target=/integrated-manager-for-lustre  -v /sys/fs/cgroup:/sys/fs/cgroup:ro centos/systemd
