@@ -186,10 +186,9 @@ async fn update_lnet_data(
             SELECT net_type, host_id, nid, status, string_to_array(interfaces, ',')::text[]
             FROM UNNEST($1::text[], $2::int[], $3::text[], $4::text[], $5::text[])
             AS t(net_type, host_id, nid, status, interfaces)
-            ON CONFLICT (nid)
+            ON CONFLICT (host_id, nid)
                 DO
-                UPDATE SET  host_id       = EXCLUDED.host_id,
-                            net_type      = EXCLUDED.net_type,
+                UPDATE SET  net_type      = EXCLUDED.net_type,
                             status        = EXCLUDED.status,
                             interfaces    = EXCLUDED.interfaces
             RETURNING id"#,

@@ -1967,108 +1967,28 @@
       "nullable": []
     }
   },
-  "6f3c08f058a72efb6a3926dbe47380662c1eb80ec3001bf551792719fcd51e74": {
-    "query": "\n                SELECT jsonb_agg((r.repo_name, r.location))\n                    AS repos, sp.*\n                    FROM chroma_core_repo AS r\n                    INNER JOIN chroma_core_serverprofile_repolist AS rl ON r.repo_name = rl.repo_id\n                    INNER JOIN chroma_core_serverprofile AS sp ON rl.serverprofile_id = sp.name\n                    GROUP BY sp.name;\n            ",
+  "702b84c5aa632cd6f2bb72db85a1368e5c51da67266b000386482c54b6967169": {
+    "query": "\n            INSERT INTO nid\n            (net_type, host_id, nid, status, interfaces)\n            SELECT net_type, host_id, nid, status, string_to_array(interfaces, ',')::text[]\n            FROM UNNEST($1::text[], $2::int[], $3::text[], $4::text[], $5::text[])\n            AS t(net_type, host_id, nid, status, interfaces)\n            ON CONFLICT (host_id, nid)\n                DO\n                UPDATE SET  net_type      = EXCLUDED.net_type,\n                            status        = EXCLUDED.status,\n                            interfaces    = EXCLUDED.interfaces\n            RETURNING id",
     "describe": {
       "columns": [
         {
           "ordinal": 0,
-          "name": "repos",
-          "type_info": "Jsonb"
-        },
-        {
-          "ordinal": 1,
-          "name": "name",
-          "type_info": "Varchar"
-        },
-        {
-          "ordinal": 2,
-          "name": "ui_name",
-          "type_info": "Varchar"
-        },
-        {
-          "ordinal": 3,
-          "name": "ui_description",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 4,
-          "name": "managed",
-          "type_info": "Bool"
-        },
-        {
-          "ordinal": 5,
-          "name": "worker",
-          "type_info": "Bool"
-        },
-        {
-          "ordinal": 6,
-          "name": "user_selectable",
-          "type_info": "Bool"
-        },
-        {
-          "ordinal": 7,
-          "name": "initial_state",
-          "type_info": "Varchar"
-        },
-        {
-          "ordinal": 8,
-          "name": "ntp",
-          "type_info": "Bool"
-        },
-        {
-          "ordinal": 9,
-          "name": "corosync",
-          "type_info": "Bool"
-        },
-        {
-          "ordinal": 10,
-          "name": "corosync2",
-          "type_info": "Bool"
-        },
-        {
-          "ordinal": 11,
-          "name": "pacemaker",
-          "type_info": "Bool"
-        },
-        {
-          "ordinal": 12,
-          "name": "default",
-          "type_info": "Bool"
+          "name": "id",
+          "type_info": "Int4"
         }
       ],
       "parameters": {
-        "Left": []
-      },
-      "nullable": [
-        null,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false
-      ]
-    }
-  },
-  "7ba0b27a4f4fca50c30701d9adbbf0c0421c310b6b99453bffb4bc7834fa765c": {
-    "query": "\n                INSERT INTO corosync_resource_managed_host (host_id, cluster_id, corosync_resource_id)\n                SELECT $1, $2, corosync_resource_id FROM UNNEST($3::text[]) as corosync_resource_id\n                ON CONFLICT (host_id, corosync_resource_id, cluster_id)\n                DO NOTHING\n            ",
-    "describe": {
-      "columns": [],
-      "parameters": {
         "Left": [
-          "Int4",
-          "Int4",
+          "TextArray",
+          "Int4Array",
+          "TextArray",
+          "TextArray",
           "TextArray"
         ]
       },
-      "nullable": []
+      "nullable": [
+        false
+      ]
     }
   },
   "7bee1c38d05ac3f8bcf4d48b375c740341121c04d2f5b04ceb1d58ef0a006c08": {
@@ -4480,30 +4400,6 @@
         ]
       },
       "nullable": []
-    }
-  },
-  "f5cdeb67899f24f21974247c6e3680549403a55353af16bba53871433ab9000c": {
-    "query": "\n            INSERT INTO nid\n            (net_type, host_id, nid, status, interfaces)\n            SELECT net_type, host_id, nid, status, string_to_array(interfaces, ',')::text[]\n            FROM UNNEST($1::text[], $2::int[], $3::text[], $4::text[], $5::text[])\n            AS t(net_type, host_id, nid, status, interfaces)\n            ON CONFLICT (nid)\n                DO\n                UPDATE SET  host_id       = EXCLUDED.host_id,\n                            net_type      = EXCLUDED.net_type,\n                            status        = EXCLUDED.status,\n                            interfaces    = EXCLUDED.interfaces\n            RETURNING id",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "id",
-          "type_info": "Int4"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "TextArray",
-          "Int4Array",
-          "TextArray",
-          "TextArray",
-          "TextArray"
-        ]
-      },
-      "nullable": [
-        false
-      ]
     }
   },
   "f8cd2baf66e0d74fea5babd851be21a3badca94a53aee6bac038141cece53646": {
