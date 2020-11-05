@@ -1,0 +1,2 @@
+ALTER TABLE corosync_target_resource RENAME TO corosync_resource;
+ALTER TABLE corosync_target_resource_managed_host RENAME TO corosync_resource_managed_host;

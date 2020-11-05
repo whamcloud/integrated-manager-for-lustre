@@ -147,8 +147,8 @@ pub async fn delete_target_resources(
 ) -> Result<(), ImlCorosyncError> {
     sqlx::query!(
         r#"
-            DELETE FROM corosync_target_resource
-            USING corosync_target_resource_managed_host
+            DELETE FROM corosync_resource
+            USING corosync_resource_managed_host
             WHERE id = corosync_resource_id
             AND corosync_resource_id != ALL($1)
             AND host_id = $2
@@ -161,7 +161,7 @@ pub async fn delete_target_resources(
 
     sqlx::query!(
         r#"
-            DELETE FROM corosync_target_resource_managed_host
+            DELETE FROM corosync_resource_managed_host
             WHERE corosync_resource_id != ALL($1)
             AND host_id = $2
         "#,
@@ -279,7 +279,7 @@ pub async fn upsert_target_resources(
 
     sqlx::query!(
         r#"
-        INSERT INTO corosync_target_resource (
+        INSERT INTO corosync_resource (
             id,
             cluster_id,
             resource_agent,
@@ -527,7 +527,7 @@ pub async fn upsert_target_resource_managed_host(
 ) -> Result<(), ImlCorosyncError> {
     sqlx::query!(
         r#"
-                INSERT INTO corosync_target_resource_managed_host (host_id, cluster_id, corosync_resource_id)
+                INSERT INTO corosync_resource_managed_host (host_id, cluster_id, corosync_resource_id)
                 SELECT $1, $2, corosync_resource_id FROM UNNEST($3::text[]) as corosync_resource_id
                 ON CONFLICT (host_id, corosync_resource_id, cluster_id)
                 DO NOTHING

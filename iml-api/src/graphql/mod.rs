@@ -1010,8 +1010,8 @@ async fn get_fs_target_resources(
     let xs = sqlx::query!(r#"
             SELECT rh.cluster_id, r.id, t.name, t.mount_path, t.filesystems, array_agg(DISTINCT rh.host_id) AS "cluster_hosts!"
             FROM target t
-            INNER JOIN corosync_target_resource r ON r.mount_point = t.mount_path
-            INNER JOIN corosync_target_resource_managed_host rh ON rh.corosync_resource_id = r.id AND rh.host_id = ANY(t.host_ids)
+            INNER JOIN corosync_resource r ON r.mount_point = t.mount_path
+            INNER JOIN corosync_resource_managed_host rh ON rh.corosync_resource_id = r.id AND rh.host_id = ANY(t.host_ids)
             WHERE CARDINALITY(t.filesystems) > 0
             GROUP BY rh.cluster_id, t.name, r.id, t.mount_path, t.filesystems
         "#)
@@ -1089,7 +1089,7 @@ async fn get_banned_targets(pool: &PgPool) -> Result<Vec<BannedTargetResource>, 
             FROM corosync_resource_bans b
             INNER JOIN corosync_node_managed_host nh ON (nh.corosync_node_id).name = b.node
             AND nh.cluster_id = b.cluster_id
-            INNER JOIN corosync_target_resource t ON t.id = b.resource AND b.cluster_id = t.cluster_id
+            INNER JOIN corosync_resource t ON t.id = b.resource AND b.cluster_id = t.cluster_id
         "#)
         .fetch(pool)
         .map_ok(|x| {
