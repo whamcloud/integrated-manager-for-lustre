@@ -17,8 +17,8 @@ use structopt::StructOpt;
 #[cfg_attr(feature = "cli", derive(StructOpt))]
 /// Ask agent to list snapshots
 pub struct List {
-    /// Filesystem name
-    pub fsname: String,
+    /// Target name
+    pub target: String,
     /// Name of the snapshot to list
     pub name: Option<String>,
 }
