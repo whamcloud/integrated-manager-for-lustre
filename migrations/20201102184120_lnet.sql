@@ -1,6 +1,7 @@
 CREATE TABLE IF NOT EXISTS lnet (
     id                  serial PRIMARY KEY,
     host_id             int NOT NULL UNIQUE,
+    state               text NOT NULL,
     nids                int[] NOT NULL
 );
 
