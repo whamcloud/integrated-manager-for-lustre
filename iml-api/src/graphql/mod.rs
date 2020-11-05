@@ -16,6 +16,7 @@ use iml_postgres::{sqlx, sqlx::postgres::types::PgInterval, PgPool};
 use iml_rabbit::{ImlRabbitError, Pool};
 use iml_wire_types::{
     db::{LogMessageRecord, ServerProfileRecord},
+    graphql::ServerProfileInput,
     graphql::{ServerProfile, ServerProfileResponse},
     graphql_duration::GraphQLDuration,
     logs::{LogResponse, Meta},
@@ -585,6 +586,7 @@ impl QueryRoot {
         let server_profiles: Vec<_> = server_profile_records
             .into_iter()
             .filter_map(|spr| {
+                // TODO: Try to derive this somehow
                 let record = ServerProfileRecord {
                     corosync: spr.corosync,
                     corosync2: spr.corosync2,
@@ -962,6 +964,109 @@ impl MutationRoot {
         sqlx::query!("DELETE FROM snapshot_retention WHERE id=$1", id)
             .execute(&context.pg_pool)
             .await?;
+
+        Ok(true)
+    }
+
+    /// Create a server profile.
+    #[graphql(arguments(profile(description = "The server profile to add")))]
+    async fn create_server_profile(
+        context: &Context,
+        profile: ServerProfileInput,
+    ) -> juniper::FieldResult<bool> {
+        let repolist = profile.repolist;
+        let repolist_len = repolist.len();
+
+        let count = sqlx::query!(
+            "SELECT repo_name from chroma_core_repo where repo_name = ANY($1)",
+            &repolist.clone()
+        )
+        .fetch_all(&context.pg_pool)
+        .await?
+        .len();
+
+        if count != repolist_len {
+            return Err(FieldError::new(
+                format!("Repos not found for profile {}", profile.name),
+                Value::null(),
+            ));
+        }
+
+        sqlx::query!(
+            r#"
+            INSERT INTO chroma_core_serverprofile
+            (
+                name,
+                ui_name,
+                ui_description,
+                managed,
+                worker,
+                user_selectable,
+                initial_state,
+                ntp,
+                corosync,
+                corosync2,
+                pacemaker,
+                "default"
+            )
+            VALUES
+            ($1, $2, $3, $4, $5, 'true', $6, $7, $8, $9, $10, 'false')
+            ON CONFLICT (name)
+            DO UPDATE
+            SET
+            ui_name = excluded.ui_name,
+            ui_description = excluded.ui_description,
+            managed = excluded.managed,
+            worker = excluded.worker,
+            user_selectable = excluded.user_selectable,
+            initial_state = excluded.initial_state,
+            ntp = excluded.ntp,
+            corosync = excluded.corosync,
+            corosync2 = excluded.corosync2,
+            pacemaker = excluded.pacemaker,
+            "default" = excluded.default
+        "#,
+            &profile.name,
+            &profile.ui_name,
+            &profile.ui_description,
+            &profile.managed,
+            &profile.worker,
+            &profile.initial_state,
+            &profile.ntp,
+            &profile.corosync,
+            &profile.corosync2,
+            &profile.pacemaker
+        )
+        .execute(&context.pg_pool)
+        .await?;
+
+        sqlx::query!(
+            r#"
+            INSERT INTO chroma_core_serverprofile_repolist (serverprofile_id, repo_id)
+            SELECT $1, repo_id
+            FROM UNNEST($2::text[])
+            AS t(repo_id)
+            ON CONFLICT DO NOTHING
+        "#,
+            &profile.name,
+            &repolist
+        )
+        .execute(&context.pg_pool)
+        .await?;
+
+        sqlx::query!(
+            r#"
+            INSERT INTO chroma_core_serverprofilepackage (package_name, server_profile_id)
+            SELECT package_name, $2
+            FROM UNNEST($1::text[])
+            as t(package_name)
+            ON CONFLICT DO NOTHING
+            "#,
+            &profile.packages.into_iter().collect::<Vec<_>>(),
+            &profile.name
+        )
+        .execute(&context.pg_pool)
+        .await?;
 
         Ok(true)
     }
