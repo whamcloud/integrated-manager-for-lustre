@@ -179,7 +179,7 @@ async fn update_lnet_data(
 ) -> Result<(), sqlx::Error> {
     let xs = parse_lnet_data(lnet_data, host_id);
 
-    let x = sqlx::query!(
+    let xs = sqlx::query!(
         r#"
             INSERT INTO nid
             (net_type, host_id, nid, status, interfaces)
@@ -199,9 +199,25 @@ async fn update_lnet_data(
         &xs.4,
     )
     .fetch_all(pool)
-    .await?;
+    .await?
+    .into_iter()
+    .map(|x| x.id)
+    .collect::<Vec<i32>>();
 
-    tracing::error!("ids: {:?}", x);
+    // Update the lnet table with the list of nids for the current host_id
+    sqlx::query!(
+        r#"
+            INSERT INTO lnet
+            (host_id, nids)
+            VALUES($1, $2)
+            ON CONFLICT (host_id)
+                DO
+                UPDATE SET nids = EXCLUDED.nids"#,
+        &host_id,
+        &xs
+    )
+    .execute(pool)
+    .await?;
 
     Ok(())
 }
@@ -314,7 +330,7 @@ mod tests {
                                     .into_iter()
                                     .collect::<BTreeMap<i32, String>>(),
                             ),
-                        }
+                        },
                     ],
                 },
             ],
