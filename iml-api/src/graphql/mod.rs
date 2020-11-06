@@ -991,6 +991,8 @@ impl MutationRoot {
             ));
         }
 
+        let mut transaction = context.pg_pool.begin().await?;
+
         sqlx::query!(
             r#"
             INSERT INTO chroma_core_serverprofile
@@ -1036,7 +1038,7 @@ impl MutationRoot {
             &profile.corosync2,
             &profile.pacemaker
         )
-        .execute(&context.pg_pool)
+        .execute(&mut transaction)
         .await?;
 
         sqlx::query!(
@@ -1050,7 +1052,7 @@ impl MutationRoot {
             &profile.name,
             &repolist
         )
-        .execute(&context.pg_pool)
+        .execute(&mut transaction)
         .await?;
 
         sqlx::query!(
@@ -1064,7 +1066,7 @@ impl MutationRoot {
             &profile.packages.into_iter().collect::<Vec<_>>(),
             &profile.name
         )
-        .execute(&context.pg_pool)
+        .execute(&mut transaction)
         .await?;
 
         Ok(true)
@@ -1075,25 +1077,27 @@ impl MutationRoot {
         context: &Context,
         profile_name: String,
     ) -> juniper::FieldResult<bool> {
+        let mut transaction = context.pg_pool.begin().await?;
+
         sqlx::query!(
             "DELETE FROM chroma_core_serverprofile_repolist WHERE serverprofile_id = $1",
             &profile_name
         )
-        .execute(&context.pg_pool)
+        .execute(&mut transaction)
         .await?;
 
         sqlx::query!(
             "DELETE FROM chroma_core_serverprofilepackage WHERE server_profile_id = $1",
             &profile_name
         )
-        .execute(&context.pg_pool)
+        .execute(&mut transaction)
         .await?;
 
         sqlx::query!(
             "DELETE FROM chroma_core_serverprofile WHERE name = $1",
             &profile_name
         )
-        .execute(&context.pg_pool)
+        .execute(&mut transaction)
         .await?;
 
         Ok(true)
