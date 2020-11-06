@@ -1613,6 +1613,18 @@
       ]
     }
   },
+  "51821abfce4a8ca997b828a00827732cd3c862873d130ee484b920df363c2a14": {
+    "query": "DELETE FROM chroma_core_serverprofile WHERE name = $1",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      },
+      "nullable": []
+    }
+  },
   "554681d480739b966bb4fafc141ce924e3d4edafbad3cc811dd67b3f3295dabb": {
     "query": "\n        SELECT\n            id,\n            is_superuser,\n            username,\n            first_name,\n            last_name,\n            email,\n            is_staff,\n            is_active\n        FROM auth_user\n    ",
     "describe": {
