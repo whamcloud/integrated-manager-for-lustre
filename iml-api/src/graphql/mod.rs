@@ -1090,7 +1090,7 @@ impl MutationRoot {
         .await?;
 
         sqlx::query!(
-            "DELETE FROM chroma_core_serverprofile where name = $1",
+            "DELETE FROM chroma_core_serverprofile WHERE name = $1",
             &profile_name
         )
         .execute(&context.pg_pool)
