@@ -245,7 +245,7 @@ pub enum StratagemClientCommand {
 
         #[structopt(short = "r", long = "remote")]
         /// remote fs path
-        target_fs: String,
+        target_fs: PathBuf,
 
         #[structopt(parse(from_os_str), min_values = 1, required = true)]
         files: Vec<PathBuf>,
@@ -552,58 +552,85 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 target_fs,
                 files,
             } => {
-                if action == action_filesync::ActionType::Pull {
-                    eprintln!("Pull is not available as an option");
-                    exit(exitcode::USAGE);
-                }
-                let llapi =
-                    search_rootpath(files[0].clone().into_os_string().into_string().unwrap())
-                        .await?;
+                let task_args: action_filesync::TaskArgs;
 
-                let (fids, errors): (Vec<_>, Vec<_>) = files
-                    .into_iter()
-                    .map(|file| llapi.path2fid(&file))
-                    .partition(Result::is_ok);
-                let fids: Vec<_> = fids.into_iter().map(Result::unwrap).collect();
-                let errors: Vec<_> = errors.into_iter().map(Result::unwrap_err).collect();
-                if !errors.is_empty() {
-                    eprintln!("files not found, ignoring: {:?}", errors);
-                }
-                let fidlist: Vec<FidItem> = fids
-                    .into_iter()
-                    .map(|fid| FidItem {
-                        fid: fid.clone(),
-                        data: fid.into(),
-                    })
-                    .collect();
-                let task_args = action_filesync::TaskArgs {
-                    remote: target_fs,
-                    action,
-                };
+                if action == action_filesync::ActionType::Push {
+                    let fidlist: Vec<FidItem>;
 
-                let result =
-                    action_filesync::process_fids((llapi.mntpt(), task_args, fidlist)).await;
+                    let llapi =
+                        search_rootpath(files[0].clone().into_os_string().into_string().unwrap())
+                            .await?;
 
-                match result {
-                    Ok(reslist) => {
-                        if reslist.is_empty() {
-                            println!("success");
-                            exit(0);
+                    let (fids, errors): (Vec<_>, Vec<_>) = files
+                        .into_iter()
+                        .map(|file| llapi.path2fid(&file))
+                        .partition(Result::is_ok);
+                    let fids: Vec<_> = fids.into_iter().map(Result::unwrap).collect();
+                    let errors: Vec<_> = errors.into_iter().map(Result::unwrap_err).collect();
+                    if !errors.is_empty() {
+                        eprintln!("files not found, ignoring: {:?}", errors);
+                    }
+                    fidlist = fids
+                        .into_iter()
+                        .map(|fid| FidItem {
+                            fid: fid.clone(),
+                            data: fid.into(),
+                        })
+                        .collect();
+                    task_args = action_filesync::TaskArgs {
+                        remote: target_fs.to_str().unwrap().to_string(),
+                        action,
+                    };
+                    let result =
+                        action_filesync::process_fids((llapi.mntpt(), task_args, fidlist)).await;
+                    match result {
+                        Ok(reslist) => {
+                            if reslist.is_empty() {
+                                println!("success");
+                                exit(0);
+                            }
+
+                            for err in reslist.iter() {
+                                eprintln!(
+                                    "Failed to sync {} {}",
+                                    llapi
+                                        .fid2path(&err.fid)
+                                        .unwrap_or_else(|_| err.fid.to_string()),
+                                    std::io::Error::from_raw_os_error(err.errno.into())
+                                );
+                            }
                         }
-
-                        for err in reslist.iter() {
-                            eprintln!(
-                                "Failed to sync {} {}",
-                                llapi
-                                    .fid2path(&err.fid)
-                                    .unwrap_or_else(|_| err.fid.to_string()),
-                                std::io::Error::from_raw_os_error(err.errno.into())
-                            );
+                        Err(e) => {
+                            eprintln!("filesync failed {}", e);
+                            exit(exitcode::SOFTWARE);
                         }
                     }
-                    Err(e) => {
-                        eprintln!("filesync failed {}", e);
-                        exit(exitcode::SOFTWARE);
+                } else if action == action_filesync::ActionType::Pull {
+                    task_args = action_filesync::TaskArgs {
+                        remote: target_fs.to_str().unwrap().to_string(),
+                        action,
+                    };
+                    let result =
+                        action_filesync::process_files((target_fs, task_args, files)).await;
+                    match result {
+                        Ok(reslist) => {
+                            if reslist.is_empty() {
+                                println!("success");
+                                exit(0);
+                            }
+
+                            for err in reslist.iter() {
+                                eprintln!(
+                                    "Failed to sync {} {}",
+                                    err.fid.to_string(),
+                                    std::io::Error::from_raw_os_error(err.errno.into())
+                                );
+                            }
+                        }
+                        Err(e) => {
+                            eprintln!("filesync failed {}", e);
+                            exit(exitcode::SOFTWARE);
+                        }
                     }
                 }
             }
