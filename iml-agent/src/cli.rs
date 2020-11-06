@@ -21,6 +21,7 @@ use prettytable::{cell, row, Table};
 use spinners::{Spinner, Spinners};
 use std::{
     convert::TryInto,
+    env,
     fs::File,
     io::{self, BufRead, BufReader},
     path::PathBuf,
@@ -269,14 +270,14 @@ pub enum StratagemClientCommand {
 #[derive(Debug, StructOpt)]
 pub enum NtpClientCommand {
     #[structopt(name = "configure")]
-    /// Configure Ntp for IML
+    /// Configure Ntp
     Configure {
         #[structopt(short = "s")]
         server: Option<String>,
     },
 
     #[structopt(name = "is_configured")]
-    /// Is Ntp configured for IML?
+    /// Is Ntp configured?
     IsConfigured,
 }
 
@@ -318,8 +319,7 @@ pub enum HighAvailability {
 }
 
 #[derive(StructOpt, Debug)]
-#[structopt(name = "iml-agent", setting = structopt::clap::AppSettings::ColoredHelp)]
-/// The Integrated Manager for Lustre Agent CLI
+#[structopt(setting = structopt::clap::AppSettings::ColoredHelp)]
 pub enum App {
     #[structopt(name = "stratagem")]
     /// Work with Stratagem server
@@ -496,13 +496,32 @@ fn add_counter_entry(x: impl Counter, t: &mut Table, h: &mut v_hist::Histogram) 
     h.add_entry(name, x.count().try_into().unwrap());
 }
 
+fn exe_name() -> Option<String> {
+    Some(
+        std::env::current_exe()
+            .ok()?
+            .file_stem()?
+            .to_str()?
+            .to_string(),
+    )
+}
+
+// FIXME: dedup with iml-manager-cli
+fn selfname(suffix: Option<&str>) -> Option<String> {
+    match env::var("CLI_NAME") {
+        Ok(n) => suffix.map(|s| format!("{}-{}", n, s)).or_else(|| Some(n)),
+        Err(_) => exe_name(),
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     iml_tracing::init();
 
-    dotenv::from_path("/etc/iml/iml-agent.conf").expect("Could not load cli env");
+    let name = selfname(Some("agent")).unwrap_or_else(|| "iml-agent".to_string());
+    let matches = App::from_clap(&App::clap().bin_name(&name).name(&name).get_matches());
 
-    let matches = App::from_args();
+    dotenv::from_path("/etc/iml/iml-agent.conf").expect("Could not load cli env");
 
     match matches {
         App::StratagemClient { command: cmd } => match cmd {
@@ -768,9 +787,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 match is_ntp_configured::is_ntp_configured(()).await {
                     Ok(configured) => {
                         if configured {
-                            println!("Ntp is configured for IML on this server.");
+                            println!("Ntp is configured on this server.");
                         } else {
-                            println!("Ntp is not configured for IML on this server.");
+                            println!("Ntp is not configured on this server.");
                         }
                     }
                     Err(e) => eprintln!("{:?}", e),
