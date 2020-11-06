@@ -40,6 +40,9 @@ After=iml-agent-comms.service
 Requires=iml-api.service
 After=iml-api.service
 
+Requires=iml-network.service
+After=iml-network.service
+
 Requires=iml-ntp.service
 After=iml-ntp.service
 
@@ -110,6 +113,7 @@ Also=iml-job-scheduler.service
 Also=iml-journal.service
 Also=iml-lustre-audit.service
 Also=iml-mailbox.service
+Also=iml-network.service
 Also=iml-ntp.service
 Also=iml-plugin-runner.service
 Also=iml-power-control.service

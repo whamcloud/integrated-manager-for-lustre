@@ -1871,6 +1871,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "iml-network"
+version = "0.4.0"
+dependencies = [
+ "futures",
+ "iml-influx",
+ "iml-manager-env",
+ "iml-postgres",
+ "iml-rabbit",
+ "iml-service-queue",
+ "iml-tracing",
+ "iml-wire-types",
+ "tokio",
+ "tracing",
+ "url",
+]
+
+[[package]]
 name = "iml-ntp"
 version = "0.4.0"
 dependencies = [

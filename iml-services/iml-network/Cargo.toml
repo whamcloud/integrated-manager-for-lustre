@@ -1,0 +1,18 @@
+[package]
+authors = ["IML Team <iml@whamcloud.com>"]
+edition = "2018"
+name = "iml-network"
+version = "0.4.0"
+
+[dependencies]
+futures = "0.3"
+iml-influx = {path = "../../iml-influx", version = "0.2", features = ["with-db-client"]}
+iml-manager-env = {path = "../../iml-manager-env", version = "0.4"}
+iml-postgres = {path = "../../iml-postgres", version = "0.4"}
+iml-rabbit = {path = "../../iml-rabbit", version = "0.4"}
+iml-service-queue = {path = "../iml-service-queue", version = "0.4"}
+iml-tracing = {version = "0.3", path = "../../iml-tracing"}
+iml-wire-types = {path = "../../iml-wire-types", version = "0.4"}
+tokio = {version = "0.2", features = ["rt-threaded", "blocking"]}
+tracing = "0.1"
+url = "2.1"

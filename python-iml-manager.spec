@@ -88,6 +88,7 @@ Requires:       rust-iml-device >= 0.4.0
 Requires:       rust-iml-gui >= 0.3.0
 Requires:       rust-iml-journal >= 0.4.0
 Requires:       rust-iml-mailbox >= 0.4.0
+Requires:       rust-iml-network >= 0.4.0
 Requires:       rust-iml-ntp >= 0.4.0
 Requires:       rust-iml-ostpool >= 0.4.0
 Requires:       rust-iml-postoffice >= 0.4.0
