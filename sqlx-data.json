@@ -657,20 +657,6 @@
       ]
     }
   },
-  "26c11ec900d262a2db413b7dc85660856a16b92e6a444b163c5aa727f3d99cf8": {
-    "query": "\n                INSERT INTO corosync_target_resource_managed_host (host_id, cluster_id, corosync_resource_id)\n                SELECT $1, $2, corosync_resource_id FROM UNNEST($3::text[]) as corosync_resource_id\n                ON CONFLICT (host_id, corosync_resource_id, cluster_id)\n                DO NOTHING\n            ",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": [
-          "Int4",
-          "Int4",
-          "TextArray"
-        ]
-      },
-      "nullable": []
-    }
-  },
   "27587242d9b9eadb5c86e46d254d308068d8e5d50a4de7bad19e2e01cd39e9d2": {
     "query": "select * from snapshot",
     "describe": {
@@ -972,6 +958,29 @@
       "nullable": []
     }
   },
+  "374ad6635a835d9d4d511f75f80c9e83cfd39093baa8225c2748014236baf13e": {
+    "query": "\n        INSERT INTO corosync_resource (\n            id,\n            cluster_id,\n            resource_agent,\n            role,\n            active,\n            orphaned,\n            managed,\n            failed,\n            failure_ignored,\n            nodes_running_on,\n            active_node,\n            mount_point\n        )\n        SELECT\n            id,\n            $12,\n            resource_agent,\n            role,\n            active,\n            orphaned,\n            managed,\n            failed,\n            failure_ignored,\n            nodes_running_on,\n            active_node::corosync_node_key,\n            mount_point\n        FROM UNNEST(\n                $1::text[],\n                $2::text[],\n                $3::text[],\n                $4::bool[],\n                $5::bool[],\n                $6::bool[],\n                $7::bool[],\n                $8::bool[],\n                $9::int[],\n                $10::text[],\n                $11::text[]\n            )\n            AS t(\n            id,\n            resource_agent,\n            role,\n            active,\n            orphaned,\n            managed,\n            failed,\n            failure_ignored,\n            nodes_running_on,\n            active_node,\n            mount_point\n            )\n            ON CONFLICT (id, cluster_id) DO UPDATE\n            SET\n                resource_agent = excluded.resource_agent,\n                role = excluded.role,\n                active = excluded.active,\n                orphaned = excluded.orphaned,\n                managed = excluded.managed,\n                failed = excluded.failed,\n                failure_ignored = excluded.failure_ignored,\n                nodes_running_on = excluded.nodes_running_on,\n                active_node = excluded.active_node,\n                mount_point = excluded.mount_point\n    ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "TextArray",
+          "TextArray",
+          "TextArray",
+          "BoolArray",
+          "BoolArray",
+          "BoolArray",
+          "BoolArray",
+          "BoolArray",
+          "Int4Array",
+          "TextArray",
+          "TextArray",
+          "Int4"
+        ]
+      },
+      "nullable": []
+    }
+  },
   "39fc1211724cef9afd733459348bcd3eb6f3af9a89dc1ca470593ea8beb3678c": {
     "query": "\n        SELECT * FROM chroma_core_job\n        WHERE id IN (SELECT job_id from chroma_core_command_jobs\n            WHERE command_id = $1)\n    ",
     "describe": {
@@ -1059,54 +1068,6 @@
       },
       "nullable": [
         false
-      ]
-    }
-  },
-  "3a2378b67c524f8238921aa4591651fdd3afcab839f350be4c4684f399054961": {
-    "query": "\n            SELECT rh.cluster_id, r.id, t.name, t.mount_path, t.filesystems, array_agg(DISTINCT rh.host_id) AS \"cluster_hosts!\"\n            FROM target t\n            INNER JOIN corosync_target_resource r ON r.mount_point = t.mount_path\n            INNER JOIN corosync_target_resource_managed_host rh ON rh.corosync_resource_id = r.id AND rh.host_id = ANY(t.host_ids)\n            WHERE CARDINALITY(t.filesystems) > 0\n            GROUP BY rh.cluster_id, t.name, r.id, t.mount_path, t.filesystems\n        ",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "cluster_id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 1,
-          "name": "id",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 2,
-          "name": "name",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 3,
-          "name": "mount_path",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 4,
-          "name": "filesystems",
-          "type_info": "TextArray"
-        },
-        {
-          "ordinal": 5,
-          "name": "cluster_hosts!",
-          "type_info": "Int4Array"
-        }
-      ],
-      "parameters": {
-        "Left": []
-      },
-      "nullable": [
-        false,
-        false,
-        false,
-        true,
-        false,
-        null
       ]
     }
   },
@@ -1231,6 +1192,54 @@
         true,
         true,
         false
+      ]
+    }
+  },
+  "3cb1094d7efdccbf02af2f702d8c6accea293012eb426d70648c32c1682cc1b8": {
+    "query": "\n            SELECT b.id, b.resource, b.node, b.cluster_id, nh.host_id, t.mount_point\n            FROM corosync_resource_bans b\n            INNER JOIN corosync_node_managed_host nh ON (nh.corosync_node_id).name = b.node\n            AND nh.cluster_id = b.cluster_id\n            INNER JOIN corosync_resource t ON t.id = b.resource AND b.cluster_id = t.cluster_id\n            WHERE t.mount_point != NULL\n        ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 1,
+          "name": "resource",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "node",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 3,
+          "name": "cluster_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 4,
+          "name": "host_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 5,
+          "name": "mount_point",
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        true
       ]
     }
   },
@@ -2010,6 +2019,20 @@
           "TimestampArray",
           "TextArray",
           "BoolArray",
+          "TextArray"
+        ]
+      },
+      "nullable": []
+    }
+  },
+  "7ba0b27a4f4fca50c30701d9adbbf0c0421c310b6b99453bffb4bc7834fa765c": {
+    "query": "\n                INSERT INTO corosync_resource_managed_host (host_id, cluster_id, corosync_resource_id)\n                SELECT $1, $2, corosync_resource_id FROM UNNEST($3::text[]) as corosync_resource_id\n                ON CONFLICT (host_id, corosync_resource_id, cluster_id)\n                DO NOTHING\n            ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Int4",
           "TextArray"
         ]
       },
@@ -3096,29 +3119,6 @@
       ]
     }
   },
-  "ac70df86a340aefc11b2e55dbfc1ce6720f52d9055bc892c98779daf83ea849f": {
-    "query": "\n        INSERT INTO corosync_target_resource (\n            id,\n            cluster_id,\n            resource_agent,\n            role,\n            active,\n            orphaned,\n            managed,\n            failed,\n            failure_ignored,\n            nodes_running_on,\n            active_node,\n            mount_point\n        )\n        SELECT\n            id,\n            $12,\n            resource_agent,\n            role,\n            active,\n            orphaned,\n            managed,\n            failed,\n            failure_ignored,\n            nodes_running_on,\n            active_node::corosync_node_key,\n            mount_point\n        FROM UNNEST(\n                $1::text[],\n                $2::text[],\n                $3::text[],\n                $4::bool[],\n                $5::bool[],\n                $6::bool[],\n                $7::bool[],\n                $8::bool[],\n                $9::int[],\n                $10::text[],\n                $11::text[]\n            )\n            AS t(\n            id,\n            resource_agent,\n            role,\n            active,\n            orphaned,\n            managed,\n            failed,\n            failure_ignored,\n            nodes_running_on,\n            active_node,\n            mount_point\n            )\n            ON CONFLICT (id, cluster_id) DO UPDATE\n            SET\n                resource_agent = excluded.resource_agent,\n                role = excluded.role,\n                active = excluded.active,\n                orphaned = excluded.orphaned,\n                managed = excluded.managed,\n                failed = excluded.failed,\n                failure_ignored = excluded.failure_ignored,\n                nodes_running_on = excluded.nodes_running_on,\n                active_node = excluded.active_node,\n                mount_point = excluded.mount_point\n    ",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": [
-          "TextArray",
-          "TextArray",
-          "TextArray",
-          "BoolArray",
-          "BoolArray",
-          "BoolArray",
-          "BoolArray",
-          "BoolArray",
-          "Int4Array",
-          "TextArray",
-          "TextArray",
-          "Int4"
-        ]
-      },
-      "nullable": []
-    }
-  },
   "acce0ef57e02705ad538be4229e49aca7b61cab3e9755149a9382d86717467fb": {
     "query": "\n                INSERT INTO corosync_cluster (corosync_nodes)\n                VALUES ($1::corosync_node_key[])\n                ON CONFLICT (corosync_nodes) DO NOTHING\n            ",
     "describe": {
@@ -3437,6 +3437,54 @@
       ]
     }
   },
+  "b92506b46f4f927f6900c498084e5a60d76bc004d82fa2988e225357a6ddd322": {
+    "query": "\n            SELECT rh.cluster_id, r.id, t.name, t.mount_path, t.filesystems, array_agg(DISTINCT rh.host_id) AS \"cluster_hosts!\"\n            FROM target t\n            INNER JOIN corosync_resource r ON r.mount_point = t.mount_path\n            INNER JOIN corosync_resource_managed_host rh ON rh.corosync_resource_id = r.id AND rh.host_id = ANY(t.host_ids)\n            WHERE CARDINALITY(t.filesystems) > 0\n            GROUP BY rh.cluster_id, t.name, r.id, t.mount_path, t.filesystems\n        ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "cluster_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "id",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 3,
+          "name": "mount_path",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 4,
+          "name": "filesystems",
+          "type_info": "TextArray"
+        },
+        {
+          "ordinal": 5,
+          "name": "cluster_hosts!",
+          "type_info": "Int4Array"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        true,
+        false,
+        null
+      ]
+    }
+  },
   "bb7fb337cfeac9a17eefb21a498e76be70c2f395473ba42331f51cc5e6d48679": {
     "query": "\n        INSERT INTO chroma_core_device\n        (fqdn, devices)\n        VALUES ($1, $2)\n        ON CONFLICT (fqdn) DO UPDATE\n        SET devices = EXCLUDED.devices\n    ",
     "describe": {
@@ -3630,21 +3678,8 @@
       "nullable": []
     }
   },
-  "cd9faf5b3fa09dd6d01b62b3957a7624d1462fb5789a7729f59215982a090ec1": {
-    "query": "\n            DELETE FROM corosync_target_resource_managed_host\n            WHERE corosync_resource_id != ALL($1)\n            AND host_id = $2\n        ",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": [
-          "TextArray",
-          "Int4"
-        ]
-      },
-      "nullable": []
-    }
-  },
-  "d19b1c5df2f3255db472f6c55aaf0fedd6885e0981ec1d4e81304816f0959809": {
-    "query": "\n            DELETE FROM corosync_target_resource\n            USING corosync_target_resource_managed_host\n            WHERE id = corosync_resource_id\n            AND corosync_resource_id != ALL($1)\n            AND host_id = $2\n        ",
+  "d164e8a38cf147e2c759e39ab1986dac7b33a4927e3af78f624df1ad7cd8e02b": {
+    "query": "\n            DELETE FROM corosync_resource\n            USING corosync_resource_managed_host\n            WHERE id = corosync_resource_id\n            AND corosync_resource_id != ALL($1)\n            AND host_id = $2\n        ",
     "describe": {
       "columns": [],
       "parameters": {
@@ -3953,52 +3988,17 @@
       "nullable": []
     }
   },
-  "deaee07e76da2ede012a4dd01affed0969522678fac3e57c6471c14bee58a484": {
-    "query": "\n            SELECT b.id, b.resource, b.node, b.cluster_id, nh.host_id, t.mount_point\n            FROM corosync_resource_bans b\n            INNER JOIN corosync_node_managed_host nh ON (nh.corosync_node_id).name = b.node\n            AND nh.cluster_id = b.cluster_id\n            INNER JOIN corosync_target_resource t ON t.id = b.resource AND b.cluster_id = t.cluster_id\n        ",
+  "dd61465efa2dff810cdba4f03b23919dfe84e4fa00f79039e20388a33fc5c7ec": {
+    "query": "\n            DELETE FROM corosync_resource_managed_host\n            WHERE corosync_resource_id != ALL($1)\n            AND host_id = $2\n        ",
     "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "id",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 1,
-          "name": "resource",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 2,
-          "name": "node",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 3,
-          "name": "cluster_id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 4,
-          "name": "host_id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 5,
-          "name": "mount_point",
-          "type_info": "Text"
-        }
-      ],
+      "columns": [],
       "parameters": {
-        "Left": []
+        "Left": [
+          "TextArray",
+          "Int4"
+        ]
       },
-      "nullable": [
-        false,
-        false,
-        false,
-        false,
-        false,
-        true
-      ]
+      "nullable": []
     }
   },
   "e0f0ada5205a6f2d4f62861c2f7f5eb3c7d227588e25f056038bd1f87f7a2ff3": {

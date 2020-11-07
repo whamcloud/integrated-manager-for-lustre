@@ -79,6 +79,10 @@ async fn get_lustre_resource_mounts(
     Ok(out)
 }
 
+fn is_lustre_ra(x: &str) -> bool {
+    x == "ocf::ddn:lustre-server" || x == "ocf::lustre:Lustre"
+}
+
 pub async fn get_crm_mon() -> Result<Option<Cluster>, ImlAgentError> {
     if !file_exists(CRM_MON_PATH).await {
         return Ok(None);
@@ -88,9 +92,19 @@ pub async fn get_crm_mon() -> Result<Option<Cluster>, ImlAgentError> {
 
     let mut x = read_crm_output(&crm_output.stdout)?;
 
-    let resource_ids = x.resources.iter().map(|x| x.id.to_string()).collect();
+    let lustre_resource_ids = x
+        .resources
+        .iter()
+        .filter_map(|x| {
+            if is_lustre_ra(&x.resource_agent) {
+                Some(x.id.to_string())
+            } else {
+                None
+            }
+        })
+        .collect();
 
-    let mounts = get_lustre_resource_mounts(resource_ids).await?;
+    let mounts = get_lustre_resource_mounts(lustre_resource_ids).await?;
 
     x.resource_mounts = mounts;
 
@@ -281,10 +295,6 @@ fn parse_resource_xml(x: &[u8]) -> Result<Option<String>, ImlAgentError> {
     Ok(current_ra.and_then(|x| x.inner()))
 }
 
-fn is_lustre_ra(x: &str) -> bool {
-    x == "ocf::ddn:lustre-server" || x == "ocf::lustre:Lustre"
-}
-
 fn read_resources(reader: &mut Reader<&[u8]>) -> Result<Vec<Resource>, ImlAgentError> {
     let mut buf = vec![];
     let mut xs = vec![];
@@ -297,13 +307,6 @@ fn read_resources(reader: &mut Reader<&[u8]>) -> Result<Vec<Resource>, ImlAgentE
         match reader.read_event(&mut buf)? {
             Event::Start(x) if x.name() == b"resource" => {
                 let x = attrs_to_hashmap(x.attributes(), reader)?;
-
-                if x.get("resource_agent")
-                    .filter(|x| is_lustre_ra(x))
-                    .is_none()
-                {
-                    continue;
-                }
 
                 current_resource = Some(resource_from_map(&x)?);
             }
@@ -318,13 +321,6 @@ fn read_resources(reader: &mut Reader<&[u8]>) -> Result<Vec<Resource>, ImlAgentE
                 }
                 b"resource" => {
                     let x = attrs_to_hashmap(x.attributes(), reader)?;
-
-                    if x.get("resource_agent")
-                        .filter(|x| is_lustre_ra(x))
-                        .is_none()
-                    {
-                        continue;
-                    }
 
                     xs.push(resource_from_map(&x)?);
                 }

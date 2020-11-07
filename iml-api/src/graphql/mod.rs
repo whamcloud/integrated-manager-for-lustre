@@ -1010,8 +1010,8 @@ async fn get_fs_target_resources(
     let xs = sqlx::query!(r#"
             SELECT rh.cluster_id, r.id, t.name, t.mount_path, t.filesystems, array_agg(DISTINCT rh.host_id) AS "cluster_hosts!"
             FROM target t
-            INNER JOIN corosync_target_resource r ON r.mount_point = t.mount_path
-            INNER JOIN corosync_target_resource_managed_host rh ON rh.corosync_resource_id = r.id AND rh.host_id = ANY(t.host_ids)
+            INNER JOIN corosync_resource r ON r.mount_point = t.mount_path
+            INNER JOIN corosync_resource_managed_host rh ON rh.corosync_resource_id = r.id AND rh.host_id = ANY(t.host_ids)
             WHERE CARDINALITY(t.filesystems) > 0
             GROUP BY rh.cluster_id, t.name, r.id, t.mount_path, t.filesystems
         "#)
@@ -1084,24 +1084,25 @@ async fn get_fs_cluster_hosts(
 }
 
 async fn get_banned_targets(pool: &PgPool) -> Result<Vec<BannedTargetResource>, ImlApiError> {
-    let xs = sqlx::query!(r#"
+    let xs = sqlx::query!(
+        r#"
             SELECT b.id, b.resource, b.node, b.cluster_id, nh.host_id, t.mount_point
             FROM corosync_resource_bans b
             INNER JOIN corosync_node_managed_host nh ON (nh.corosync_node_id).name = b.node
             AND nh.cluster_id = b.cluster_id
-            INNER JOIN corosync_target_resource t ON t.id = b.resource AND b.cluster_id = t.cluster_id
-        "#)
-        .fetch(pool)
-        .map_ok(|x| {
-            BannedTargetResource {
-                resource: x.resource,
-                cluster_id: x.cluster_id,
-                host_id: x.host_id,
-                mount_point: x.mount_point,
-            }
-        })
-        .try_collect()
-        .await?;
+            INNER JOIN corosync_resource t ON t.id = b.resource AND b.cluster_id = t.cluster_id
+            WHERE t.mount_point != NULL
+        "#
+    )
+    .fetch(pool)
+    .map_ok(|x| BannedTargetResource {
+        resource: x.resource,
+        cluster_id: x.cluster_id,
+        host_id: x.host_id,
+        mount_point: x.mount_point,
+    })
+    .try_collect()
+    .await?;
 
     Ok(xs)
 }
