@@ -94,20 +94,20 @@ iml-srpm: iml-deps substs
 	mkdir -p ${TMPDIR}/_topdir/{SOURCES,SPECS}
 	mkdir -p ${TMPDIR}/{scratch,configuration}
 
-	cp -r ${BUILDROOT}/{chroma_*,chroma-*,__init__.py,manage.py,scm_version.py,setup.py,settings.py,urls.py,wsgi.py,agent-bootstrap-script.template,*.profile} ${TMPDIR}/scratch
-	cp -r ${BUILDROOT}/{*.repo,README.*,licenses,polymorphic,scripts,example_storage_plugin_package,tests,MANIFEST.in} ${TMPDIR}/scratch
+	cp -r ./{chroma_*,chroma-*,__init__.py,manage.py,scm_version.py,setup.py,settings.py,urls.py,wsgi.py,agent-bootstrap-script.template,*.profile} ${TMPDIR}/scratch
+	cp -r ./{*.repo,README.*,licenses,polymorphic,scripts,example_storage_plugin_package,tests,MANIFEST.in} ${TMPDIR}/scratch
 
-	cp ${BUILDROOT}/python-iml-manager.spec ${TMPDIR}/_topdir/SPECS
+	cp ./python-iml-manager.spec ${TMPDIR}/_topdir/SPECS
 
-	cp -r ${BUILDROOT}/grafana ${TMPDIR}/configuration
-	cp -r ${BUILDROOT}/nginx ${TMPDIR}/configuration
-	cp ${BUILDROOT}/iml-*.service \
-		${BUILDROOT}/rabbitmq-env.conf \
-		${BUILDROOT}/rabbitmq-server-dropin.conf \
-		${BUILDROOT}/iml-manager-redirect.conf \
-		${BUILDROOT}/iml-manager.target \
-		${BUILDROOT}/chroma-config.1 \
-		${BUILDROOT}/logrotate.cfg \
+	cp -r ./grafana ${TMPDIR}/configuration
+	cp -r ./nginx ${TMPDIR}/configuration
+	cp ./iml-*.service \
+		./rabbitmq-env.conf \
+		./rabbitmq-server-dropin.conf \
+		./iml-manager-redirect.conf \
+		./iml-manager.target \
+		./chroma-config.1 \
+		./logrotate.cfg \
 		${TMPDIR}/configuration
 
 	tar -czvf ${TMPDIR}/_topdir/SOURCES/configuration.tar.gz -C ${TMPDIR}/configuration .

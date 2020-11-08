@@ -61,11 +61,13 @@ def generate_csr(common_name):
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
+
     csr = subprocess.Popen(
         ["openssl", "req", "-new", "-sha256", "-subj", "/C=/ST=/L=/O=/CN=%s" % common_name, "-key", client_key.name],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     ).communicate()[0]
+
     return csr
 
 

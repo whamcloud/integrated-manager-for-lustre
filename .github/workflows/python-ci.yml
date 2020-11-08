@@ -1,0 +1,91 @@
+name: iml-python
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+  schedule:
+    - cron: "00 01 * * *"
+
+jobs:
+  black:
+    name: black
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Set up Python 3.x
+        uses: actions/setup-python@v2
+        with:
+          python-version: "3.x"
+
+      - name: Install dependencies
+        run: python -m pip install --upgrade pip black
+
+      - name: check
+        run: black --check ./
+
+  unit_tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:9.6.17
+        env:
+          POSTGRES_USER: chroma
+          POSTGRES_PASSWORD: chroma
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Set up Python 2.7
+        uses: actions/setup-python@v2
+        with:
+          python-version: "2.7"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools pipenv
+          pipenv install --dev
+
+      - name: Run tests
+        run: |
+          sudo PGPASSWORD=chroma psql -h localhost -p 5432 -c 'CREATE EXTENSION IF NOT EXISTS btree_gist;' -U chroma -d template1
+
+          echo "CRYPTO_FOLDER='./'" > local_settings.py
+          echo -e "/^DEBUG =/s/= .*$/= True/\nwq" | ed settings.py 2>/dev/null
+          pipenv run ./manage.py test tests/unit/
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          IML_DISABLE_THREADS: 1
+          PGPASSWORD: chroma
+
+  check_rpm_build:
+    name: Check RPM build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Build rpm
+        uses: ./.github/actions/copr
+        env:
+          SPEC: python-iml-manager.spec
+          LOCAL_ONLY: true
+          SRPM_TASK: iml-srpm
+          WORKSPACE: ${{ github.workspace }}
+
+      - name: Archive rpm
+        uses: actions/upload-artifact@v1
+        with:
+          name: rpm
+          path: _topdir/RPMS/noarch

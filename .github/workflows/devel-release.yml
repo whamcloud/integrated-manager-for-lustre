@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v1
+        uses: actions/checkout@v2
 
       - name: Push RPM
         uses: ./.github/actions/copr-rust
@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v1
+        uses: actions/checkout@v2
 
       - name: Push RPM
         uses: ./.github/actions/copr-wasm
@@ -47,7 +47,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v1
+        uses: actions/checkout@v2
 
       - name: Push rpm
         uses: ./.github/actions/copr-zfs
@@ -68,7 +68,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v1
+        uses: actions/checkout@v2
 
       - name: Fetch older docker-compose
         run: |
@@ -91,6 +91,26 @@ jobs:
           PACKAGE: iml-docker
           SRPM_TASK: iml-docker-srpm
           SPEC: iml-docker.spec
+          WORKSPACE: ${{ github.workspace }}
+          KEY: ${{ secrets.key }}
+          IV: ${{ secrets.iv }}
+
+  push_python_iml:
+    name: Push to Copr devel (python-iml)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Push rpm
+        uses: ./.github/actions/copr
+        env:
+          PROD: false
+          OWNER: managerforlustre
+          PROJECT: manager-for-lustre-devel
+          PACKAGE: python-iml-manager
+          SPEC: python-iml-manager.spec
+          SRPM_TASK: iml-srpm
           WORKSPACE: ${{ github.workspace }}
           KEY: ${{ secrets.key }}
           IV: ${{ secrets.iv }}
