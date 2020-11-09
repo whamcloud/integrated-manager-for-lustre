@@ -7,18 +7,25 @@ pub(crate) mod pacemaker;
 
 use crate::{
     agent_error::{ImlAgentError, RequiredError},
-    high_availability::{crm_mon_cmd, read_crm_output},
+    high_availability::{
+        cibcreate, cibxpath, crm_mon_cmd, crm_resource, read_crm_output, set_resource_role,
+    },
 };
 use elementtree::Element;
 use futures::{future::try_join_all, try_join};
 use iml_cmd::{CheckedCommandExt, Command};
 use iml_fs::file_exists;
 use iml_wire_types::{
-    ComponentState, ConfigState, PacemakerOperations, ResourceAgentInfo, ResourceAgentType,
+    ComponentState, ConfigState, LossPolicy, PacemakerActions, PacemakerKindOrScore,
+    PacemakerOperations, PacemakerScore, ResourceAgentInfo, ResourceAgentType, ResourceConstraint,
     ServiceState,
 };
-use std::{collections::HashMap, ffi::OsStr, time::Duration};
+use std::{collections::HashMap, time::Duration};
 use tokio::time::delay_for;
+
+pub use crate::high_availability::{crm_attribute, pcs};
+
+const NO_EXTRA: Vec<String> = vec![];
 
 fn create(elem: &Element) -> ResourceAgentInfo {
     ResourceAgentInfo {
@@ -68,48 +75,6 @@ fn create(elem: &Element) -> ResourceAgentInfo {
     }
 }
 
-pub(crate) async fn crm_attribute(args: Vec<String>) -> Result<String, ImlAgentError> {
-    let o = Command::new("crm_attribute")
-        .args(args)
-        .checked_output()
-        .await?;
-
-    Ok(String::from_utf8_lossy(&o.stdout).to_string())
-}
-
-pub(crate) async fn crm_resource<I, S>(args: I) -> Result<String, ImlAgentError>
-where
-    I: IntoIterator<Item = S>,
-    S: AsRef<OsStr>,
-{
-    let o = Command::new("crm_resource")
-        .args(args)
-        .checked_output()
-        .await?;
-
-    Ok(String::from_utf8_lossy(&o.stdout).to_string())
-}
-
-pub(crate) async fn pcs(args: Vec<String>) -> Result<String, ImlAgentError> {
-    let o = Command::new("pcs").args(args).checked_output().await?;
-
-    Ok(String::from_utf8_lossy(&o.stdout).to_string())
-}
-
-async fn set_resource_role(resource: &str, running: bool) -> Result<(), ImlAgentError> {
-    let args = &[
-        "--resource",
-        resource,
-        "--set-parameter",
-        "target-role",
-        "--meta",
-        "--parameter-value",
-        if running { "Started" } else { "Stopped" },
-    ];
-    crm_resource(args).await?;
-    Ok(())
-}
-
 async fn wait_resource(resource: &str, running: bool) -> Result<(), ImlAgentError> {
     let sec_to_wait = 300;
     let sec_delay = 2;
@@ -152,7 +117,7 @@ fn process_resource(output: &[u8]) -> Result<ResourceAgentInfo, ImlAgentError> {
     Ok(create(&element))
 }
 
-pub async fn get_ha_resource_list(_: ()) -> Result<Vec<ResourceAgentInfo>, ImlAgentError> {
+async fn resource_list() -> Result<Vec<String>, ImlAgentError> {
     let resources = match crm_resource(&["--list-raw"]).await {
         Ok(res) => res,
         Err(e) => {
@@ -161,7 +126,7 @@ pub async fn get_ha_resource_list(_: ()) -> Result<Vec<ResourceAgentInfo>, ImlAg
         }
     };
 
-    let xs = resources
+    Ok(resources
         .trim()
         .lines()
         .filter(|res| {
@@ -176,15 +141,377 @@ pub async fn get_ha_resource_list(_: ()) -> Result<Vec<ResourceAgentInfo>, ImlAg
                 true
             }
         })
-        .map(|res| async move {
-            let output = crm_resource(&["--query-xml", "--resource", res]).await?;
-            if let Some(xml) = output.split("xml:").last() {
-                process_resource(xml.as_bytes())
-            } else {
-                Err(ImlAgentError::MarkerNotFound)
-            }
-        });
+        .map(str::to_string)
+        .collect())
+}
+
+pub async fn get_ha_resource_list(_: ()) -> Result<Vec<ResourceAgentInfo>, ImlAgentError> {
+    let xs = resource_list().await?.into_iter().map(|res| async move {
+        let output = crm_resource(&["--query-xml", "--resource", &res]).await?;
+        if let Some(xml) = output.split("xml:").last() {
+            process_resource(xml.as_bytes())
+        } else {
+            Err(ImlAgentError::MarkerNotFound)
+        }
+    });
     try_join_all(xs).await
+}
+
+fn xml_add_op(
+    res: &mut Element,
+    id: &str,
+    name: &str,
+    timeout: &Option<String>,
+    interval: &Option<String>,
+) {
+    if timeout.is_none() && interval.is_none() {
+        return;
+    }
+
+    let op = res.append_new_child("op");
+    op.set_attr("name", name);
+    if let Some(value) = interval {
+        op.set_attr("id", format!("{}-{}-interval-{}", id, name, value))
+            .set_attr("interval", value);
+    } else {
+        // Interval is ALWAYS required
+        op.set_attr("interval", "0");
+    }
+    if let Some(value) = timeout {
+        op.set_attr("id", format!("{}-{}-timeout-{}", id, name, value))
+            .set_attr("timeout", value);
+    }
+}
+
+fn xml_add_nvpair(elem: &mut Element, id: &str, name: &str, value: &str) {
+    let nvpair = elem.append_new_child("nvpair");
+    nvpair
+        .set_attr("id", format!("{}-{}", &id, name))
+        .set_attr("name", name)
+        .set_attr("value", value);
+}
+
+pub async fn create_single_resource(
+    (agent, constraints): (ResourceAgentInfo, Vec<ResourceConstraint>),
+) -> Result<(), ImlAgentError> {
+    let ids = resource_list().await?;
+
+    if ids.contains(&agent.id) {
+        return Ok(());
+    }
+
+    create_resource(agent, false, constraints, true).await
+}
+
+pub async fn destroy_cloned_client(fsname: String) -> Result<(), ImlAgentError> {
+    let ids = resource_list().await?;
+
+    let id = format!("cl-{}-client", fsname);
+
+    if !ids.contains(&format!("{}-client:0", fsname)) {
+        return Ok(());
+    }
+
+    let mut paths = vec![];
+
+    // Remove constraints added in create_clone_client()
+    if let Ok(o) = cibxpath("query", "//template[@type=\"lustre-server\"]", &["-e"]).await {
+        for line in o.lines() {
+            if let Some(id) = line.split('\'').nth(2) {
+                if !id.starts_with(&format!("lustre-{}-", fsname)) {
+                    tracing::debug!("Found resource template from different filesystem: {} ", id);
+                    continue;
+                }
+                if let Some(serv) = id.split('-').last() {
+                    paths.push(format!(
+                        "//constraints/rsc_order[@id=\"{}-client-after-{}\"]",
+                        fsname, serv
+                    ))
+                }
+            }
+        }
+    }
+    if ids.contains(&fsname) {
+        paths.push(format!(
+            "//constraints/rsc_ticket[@id=\"ticket-{}-allocated-client\"]",
+            fsname,
+        ));
+    }
+    if ids.contains(&"mgs".to_string()) {
+        paths.push(format!(
+            "//constraints/rsc_order[@id=\"{}-client-after-mgs\"]",
+            fsname
+        ));
+    }
+    paths.push(format!("//resources/clone[@id=\"{}\"]", id));
+
+    cibxpath("delete-all", &paths.join("|"), &["--force"]).await?;
+
+    Ok(())
+}
+
+pub async fn create_cloned_client(
+    (fsname, mountpoint): (String, String),
+) -> Result<(), ImlAgentError> {
+    let ids = resource_list().await?;
+
+    if ids.contains(&format!("{}-client:0", fsname)) {
+        return Ok(());
+    }
+
+    let unit = format!(
+        "{}.mount",
+        mountpoint
+            .trim_start_matches('/')
+            .replace("-", "--")
+            .replace("/", "-")
+    );
+
+    let agent = ResourceAgentInfo {
+        agent: ResourceAgentType {
+            standard: "systemd".into(),
+            provider: None,
+            ocftype: unit,
+        },
+        id: format!("{}-client", fsname),
+        args: HashMap::new(),
+        ops: PacemakerOperations::new("900s".to_string(), "60s".to_string(), None),
+    };
+
+    let mut constraints = vec![];
+    if ids.contains(&fsname) {
+        constraints.push(ResourceConstraint::Ticket {
+            id: format!("ticket-{}-allocated-client", fsname),
+            rsc: agent.id.clone(),
+            ticket: format!("{}-allocated", fsname),
+            loss_policy: Some(LossPolicy::Stop),
+        });
+    }
+    if ids.contains(&"mgs".to_string()) {
+        constraints.push(ResourceConstraint::Order {
+            id: format!("{}-client-after-mgs", fsname),
+            first: "mgs".to_string(),
+            first_action: Some(PacemakerActions::Start),
+            then: agent.id.clone(),
+            then_action: Some(PacemakerActions::Start),
+            kind: Some(PacemakerKindOrScore::Score(PacemakerScore::Value(0))),
+        });
+    }
+    if let Ok(o) = cibxpath("query", "//template[@type=\"lustre-server\"]", &["-e"]).await {
+        for line in o.lines() {
+            if let Some(id) = line.split('\'').nth(2) {
+                if !id.starts_with(&format!("lustre-{}-", fsname)) {
+                    tracing::debug!("Found resource template from different filesystem: {} ", id);
+                    continue;
+                }
+                if let Some(serv) = id.split('-').last() {
+                    constraints.push(ResourceConstraint::Order {
+                        id: format!("{}-client-after-{}", fsname, serv),
+                        first: id.to_string(),
+                        first_action: Some(PacemakerActions::Start),
+                        then: agent.id.clone(),
+                        then_action: Some(PacemakerActions::Start),
+                        kind: Some(PacemakerKindOrScore::Score(PacemakerScore::Value(0))),
+                    });
+                    continue;
+                }
+            }
+            tracing::error!("Could not parse cibxpath query output: {}", line);
+        }
+    } else {
+        tracing::debug!("No lustre-server templates");
+    }
+
+    create_resource(agent, true, constraints, false).await?;
+
+    wait_resource(&format!("cl-{}-client", fsname), false).await
+}
+
+pub async fn create_cloned_resource(
+    (agent, constraints): (ResourceAgentInfo, Vec<ResourceConstraint>),
+) -> Result<(), ImlAgentError> {
+    let ids = resource_list().await?;
+
+    if ids.contains(&format!("cl-{}", agent.id)) {
+        return Ok(());
+    }
+
+    create_resource(agent, true, constraints, true).await
+}
+
+fn check_id(cloned: bool, id: &str, res: String) -> String {
+    if cloned && id == res {
+        format!("cl-{}", id)
+    } else {
+        res
+    }
+}
+
+fn resource_xml_string(agent: &ResourceAgentInfo, cloned: bool) -> Result<String, ImlAgentError> {
+    let mut res = Element::new("primitive");
+    res.set_attr("id", &agent.id)
+        .set_attr("class", &agent.agent.standard)
+        .set_attr("type", &agent.agent.ocftype);
+
+    if let Some(provider) = &agent.agent.provider {
+        res.set_attr("provider", provider);
+    }
+
+    if !agent.args.is_empty() {
+        let ia = res.append_new_child("instance_attributes");
+        let iaid = format!("{}-instance_attributes", &agent.id);
+        ia.set_attr("id", &iaid);
+        for (k, v) in agent.args.iter() {
+            xml_add_nvpair(ia, &iaid, k, v);
+        }
+    }
+
+    if agent.ops.is_any_some() {
+        let ops = res.append_new_child("operations");
+        xml_add_op(ops, &agent.id, "start", &agent.ops.start, &None);
+        xml_add_op(ops, &agent.id, "stop", &agent.ops.stop, &None);
+        xml_add_op(ops, &agent.id, "monitor", &None, &agent.ops.monitor);
+    }
+
+    // add meta_attributes so resource is created in stopped state
+    let ma = res.append_new_child("meta_attributes");
+    let maid = format!("{}-meta_attributes", &agent.id);
+    ma.set_attr("id", &maid);
+    xml_add_nvpair(ma, &maid, "target-role", "Stopped");
+
+    let rc = if cloned {
+        let mut clone = Element::new("clone");
+        let id = format!("cl-{}", &agent.id);
+        clone.set_attr("id", id).append_child(res);
+        clone.to_string()?
+    } else {
+        res.to_string()?
+    };
+
+    Ok(rc)
+}
+
+async fn create_resource(
+    agent: ResourceAgentInfo,
+    cloned: bool,
+    constraints: Vec<ResourceConstraint>,
+    started: bool,
+) -> Result<(), ImlAgentError> {
+    let xml = resource_xml_string(&agent, cloned)?;
+    cibcreate("resources", &xml).await?;
+
+    for constraint in constraints {
+        let xml = {
+            let con = match constraint {
+                ResourceConstraint::Order {
+                    id,
+                    first,
+                    first_action,
+                    then,
+                    then_action,
+                    kind,
+                } => {
+                    let mut con = Element::new("rsc_order");
+                    match kind {
+                        Some(PacemakerKindOrScore::Kind(kind)) => {
+                            con.set_attr("kind", kind.to_string());
+                        }
+                        Some(PacemakerKindOrScore::Score(score)) => {
+                            con.set_attr("score", score.to_string());
+                        }
+                        None => (),
+                    }
+                    con.set_attr("id", id)
+                        .set_attr("first", check_id(cloned, &agent.id, first))
+                        .set_attr("then", check_id(cloned, &agent.id, then));
+                    if let Some(action) = first_action {
+                        con.set_attr("first-action", action.to_string());
+                    }
+                    if let Some(action) = then_action {
+                        con.set_attr("then-action", action.to_string());
+                    }
+                    con
+                }
+                ResourceConstraint::Location {
+                    id,
+                    rsc,
+                    node,
+                    score,
+                } => {
+                    let mut con = Element::new("rsc_location");
+                    con.set_attr("id", id)
+                        .set_attr("rsc", check_id(cloned, &agent.id, rsc))
+                        .set_attr("node", node)
+                        .set_attr("score", score.to_string());
+                    con
+                }
+                ResourceConstraint::Colocation {
+                    id,
+                    rsc,
+                    with_rsc,
+                    score,
+                } => {
+                    let mut con = Element::new("rsc_colocation");
+                    con.set_attr("id", id)
+                        .set_attr("rsc", check_id(cloned, &agent.id, rsc))
+                        .set_attr("with-rsc", check_id(cloned, &agent.id, with_rsc))
+                        .set_attr("score", score.to_string());
+                    con
+                }
+                ResourceConstraint::Ticket {
+                    id,
+                    rsc,
+                    ticket,
+                    loss_policy,
+                } => {
+                    let mut con = Element::new("rsc_ticket");
+                    con.set_attr("id", id)
+                        .set_attr("rsc", check_id(cloned, &agent.id, rsc))
+                        .set_attr("ticket", ticket);
+                    if let Some(policy) = loss_policy {
+                        con.set_attr("loss-policy", policy.to_string());
+                    }
+                    con
+                }
+            };
+
+            con.to_string()?
+        };
+        cibcreate("constraints", &xml).await?;
+    }
+
+    // The reason the resource is ALWAYS created in the stopped state,
+    // is that we need to add constraints prior to starting so it will
+    // start on the correct node, or wait for other resources to
+    // start.
+    if started {
+        cibxpath(
+            "delete",
+            &format!(
+                "//resources/primitive[@id=\"{}\"]/meta_attributes",
+                &agent.id
+            ),
+            NO_EXTRA,
+        )
+        .await?;
+    }
+
+    Ok(())
+}
+
+/// Destroy resource primitive with label and list of constraint ids
+pub async fn destroy_resource(
+    (label, constraints): (String, Vec<String>),
+) -> Result<(), ImlAgentError> {
+    let mut paths = vec![format!("//resources/primitive[@id=\"{}\"]", label)];
+    paths.extend(
+        constraints
+            .into_iter()
+            .map(|id| format!("//constraints/*[@id=\"{}\"]", id)),
+    );
+    cibxpath("delete-all", &paths.join("|"), &["--force"]).await?;
+
+    Ok(())
 }
 
 async fn systemd_unit_servicestate(name: &str) -> Result<ServiceState, ImlAgentError> {
