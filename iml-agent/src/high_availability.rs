@@ -14,7 +14,7 @@ use std::{collections::HashMap, convert::TryInto};
 
 static CRM_MON_PATH: &str = "/usr/sbin/crm_mon";
 
-fn crm_mon_cmd() -> Command {
+pub(crate) fn crm_mon_cmd() -> Command {
     let mut cmd = Command::new(CRM_MON_PATH);
 
     cmd.arg("--one-shot").arg("--inactive").arg("--as-xml");
@@ -300,16 +300,23 @@ fn read_resources(reader: &mut Reader<&[u8]>) -> Result<Vec<Resource>, ImlAgentE
     let mut xs = vec![];
 
     let mut current_resource = None;
+    let mut clone_index = -1;
 
     loop {
         buf.clear();
 
         match reader.read_event(&mut buf)? {
-            Event::Start(x) if x.name() == b"resource" => {
-                let x = attrs_to_hashmap(x.attributes(), reader)?;
+            Event::Start(x) => match x.name() {
+                b"resource" => {
+                    let x = attrs_to_hashmap(x.attributes(), reader)?;
 
-                current_resource = Some(resource_from_map(&x)?);
-            }
+                    current_resource = Some(resource_from_map(&x)?);
+                }
+                b"clone" => {
+                    clone_index = 0;
+                }
+                _ => {}
+            },
             Event::Empty(x) => match x.name() {
                 b"node" => {
                     let mut x = attrs_to_hashmap(x.attributes(), reader)?;
@@ -321,16 +328,28 @@ fn read_resources(reader: &mut Reader<&[u8]>) -> Result<Vec<Resource>, ImlAgentE
                 }
                 b"resource" => {
                     let x = attrs_to_hashmap(x.attributes(), reader)?;
+                    let mut r = resource_from_map(&x)?;
+                    if clone_index >= 0 {
+                        r.id = format!("{}:{}", &r.id, clone_index);
+                        clone_index += 1;
+                    }
 
-                    xs.push(resource_from_map(&x)?);
+                    xs.push(r);
                 }
                 _ => {}
             },
             Event::End(x) => match x.name() {
                 b"resource" => {
-                    if let Some(x) = current_resource.take() {
+                    if let Some(mut x) = current_resource.take() {
+                        if clone_index >= 0 {
+                            x.id = format!("{}:{}", &x.id, clone_index);
+                            clone_index += 1;
+                        }
                         xs.push(x);
                     }
+                }
+                b"clone" => {
+                    clone_index = -1;
                 }
                 b"resources" => {
                     break;
@@ -368,7 +387,7 @@ fn read_bans(reader: &mut Reader<&[u8]>) -> Result<Vec<Ban>, ImlAgentError> {
     Ok(xs)
 }
 
-fn read_crm_output(crm_output: &[u8]) -> Result<Cluster, ImlAgentError> {
+pub(crate) fn read_crm_output(crm_output: &[u8]) -> Result<Cluster, ImlAgentError> {
     let x = std::str::from_utf8(crm_output)?;
 
     let mut reader = Reader::from_str(x);

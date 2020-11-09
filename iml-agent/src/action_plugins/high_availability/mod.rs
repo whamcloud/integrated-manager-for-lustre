@@ -5,7 +5,10 @@
 pub(crate) mod corosync_conf;
 pub(crate) mod pacemaker;
 
-use crate::agent_error::{ImlAgentError, RequiredError};
+use crate::{
+    agent_error::{ImlAgentError, RequiredError},
+    high_availability::{crm_mon_cmd, read_crm_output},
+};
 use elementtree::Element;
 use futures::{future::try_join_all, try_join};
 use iml_cmd::{CheckedCommandExt, Command};
@@ -93,55 +96,6 @@ pub(crate) async fn pcs(args: Vec<String>) -> Result<String, ImlAgentError> {
     Ok(String::from_utf8_lossy(&o.stdout).to_string())
 }
 
-async fn crm_mon_status() -> Result<Element, ImlAgentError> {
-    let o = Command::new("crm_mon")
-        .args(&["--as-xml", "--inactive"])
-        .checked_output()
-        .await?;
-
-    Ok(Element::from_reader(o.stdout.as_slice())?)
-}
-
-fn resource_status(tree: Element) -> HashMap<String, String> {
-    let resources = tree.find("resources").unwrap();
-    resources
-        .children()
-        .filter_map(|e| {
-            e.get_attr("id")
-                .map(|id| match e.tag().name() {
-                    "resource" => e.get_attr("role").map(|r| vec![(id, r)]),
-                    "clone" => e
-                        .children()
-                        .filter_map(|res| res.get_attr("role"))
-                        .max_by(|x, y| pacemaker::Role::from(*x).cmp(&pacemaker::Role::from(*y)))
-                        .map(|r| vec![(id, r)]),
-                    "group" => Some(
-                        e.children()
-                            .filter_map(|e| {
-                                e.get_attr("id").map(|id| match e.tag().name() {
-                                    "resource" => e.get_attr("role").map(|r| vec![(id, r)]),
-                                    other => {
-                                        tracing::warn!("Unknown sub-Resource tag: {}", other);
-                                        None
-                                    }
-                                })
-                            })
-                            .flatten()
-                            .flatten()
-                            .collect::<Vec<(&str, &str)>>(),
-                    ),
-                    other => {
-                        tracing::warn!("Unknown Resource tag: {}", other);
-                        None
-                    }
-                })
-                .flatten()
-        })
-        .flatten()
-        .map(|(x, y)| (x.to_string(), y.to_string()))
-        .collect()
-}
-
 async fn set_resource_role(resource: &str, running: bool) -> Result<(), ImlAgentError> {
     let args = &[
         "--resource",
@@ -161,20 +115,26 @@ async fn wait_resource(resource: &str, running: bool) -> Result<(), ImlAgentErro
     let sec_delay = 2;
     let delay_duration = Duration::new(sec_delay, 0);
     for _ in 0..(sec_to_wait / sec_delay) {
-        let resources = resource_status(crm_mon_status().await?);
-        tracing::debug!(
-            "crm mon status (waiting for {}): {:?}",
-            resource,
-            &resources
-        );
-        if let Some(status) = resources.get(resource) {
-            if running {
-                if status == "Started" {
-                    return Ok(());
+        let output = crm_mon_cmd().checked_output().await?;
+
+        let cluster = read_crm_output(&output.stdout)?;
+
+        let check = if running { "Started" } else { "Stopped" };
+
+        let mut stati = cluster
+            .resources
+            .into_iter()
+            .filter_map(|r| {
+                let id = r.id.split(':').next().unwrap_or("");
+                if id == resource {
+                    Some(r.role)
+                } else {
+                    None
                 }
-            } else if status == "Stopped" {
-                return Ok(());
-            }
+            })
+            .peekable();
+        if stati.peek() != None && stati.all(|s| s == check) {
+            return Ok(());
         }
         delay_for(delay_duration).await;
     }
@@ -334,11 +294,7 @@ pub async fn stop_resource(resource: String) -> Result<(), ImlAgentError> {
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        process_resource, resource_status, PacemakerOperations, ResourceAgentInfo,
-        ResourceAgentType,
-    };
-    use elementtree::Element;
+    use super::{process_resource, PacemakerOperations, ResourceAgentInfo, ResourceAgentType};
     use std::collections::HashMap;
 
     #[test]
@@ -407,31 +363,5 @@ mod tests {
         };
 
         assert_eq!(process_resource(testxml).unwrap(), r1);
-    }
-
-    #[test]
-    fn test_resource_status() {
-        let testxml = include_bytes!("fixtures/crm-mon-complex.xml");
-
-        let tree = Element::from_reader(testxml as &[u8]).unwrap();
-
-        let r1: HashMap<String, String> = vec![
-            ("cl-sfa-home-vd", "Started"),
-            ("cl-ifspeed-lnet-o2ib0-o2ib0", "Starting"),
-            ("mgs", "Started"),
-            ("mdt0000-fs0a9c", "Started"),
-            ("ost0000-fs0a9c", "Started"),
-            ("ost0001-fs0a9c", "Started"),
-            ("ost0002-fs0a9c", "Started"),
-            ("ost0003-fs0a9c", "Starting"),
-            ("docker", "Started"),
-            ("docker-service", "Starting"),
-            ("cl-fs0a9c-client", "Stopped"),
-        ]
-        .into_iter()
-        .map(|(x, y)| (x.to_string(), y.to_string()))
-        .collect();
-
-        assert_eq!(resource_status(tree), r1);
     }
 }
