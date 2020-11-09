@@ -4,12 +4,9 @@
 # license that can be found in the LICENSE file.
 
 
-import os
 import json
 import logging
-from collections import defaultdict
 import datetime
-import requests
 
 from django.db import models
 from django.db import transaction
@@ -17,30 +14,30 @@ from django.db import IntegrityError
 from django.db.models import CASCADE
 from django.utils.timezone import now as tznow
 
-from django.db.models.aggregates import Aggregate, Count
-
 from django.db.models.query_utils import Q
 
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.lib.influx import influx_post
-from chroma_core.models import StateChangeJob
-from chroma_core.models import DeletableStatefulObject
-from chroma_core.models import NullStateChangeJob
-from chroma_core.models import AlertState
-from chroma_core.models import ServerProfile
-from chroma_core.models import AlertStateBase
-from chroma_core.models import PacemakerConfiguration
-from chroma_core.models import CorosyncConfiguration
-from chroma_core.models import Corosync2Configuration
-from chroma_core.models import NTPConfiguration
-from chroma_core.models import TimeOutOfSyncAlert
-from chroma_core.models import NoTimeSyncAlert
-from chroma_core.models import UnknownTimeSyncAlert
-from chroma_core.models import MultipleTimeSyncAlert
-from chroma_core.models import Job
-from chroma_core.models import AdvertisedJob
-from chroma_core.models import StateLock
-from chroma_core.models import AlertEvent
+from chroma_core.models.jobs import (
+    StateChangeJob,
+    DeletableStatefulObject,
+    NullStateChangeJob,
+    StateLock,
+    Job,
+    AdvertisedJob,
+)
+from chroma_core.models.alert import AlertState, AlertStateBase
+from chroma_core.models.pacemaker import PacemakerConfiguration
+from chroma_core.models.corosync import CorosyncConfiguration
+from chroma_core.models.corosync2 import Corosync2Configuration
+from chroma_core.models.ntp import (
+    NTPConfiguration,
+    TimeOutOfSyncAlert,
+    NoTimeSyncAlert,
+    UnknownTimeSyncAlert,
+    MultipleTimeSyncAlert,
+)
+from chroma_core.models.event import AlertEvent
 from chroma_core.lib.job import job_log
 from chroma_core.lib.job import DependOn
 from chroma_core.lib.job import DependAll
@@ -52,7 +49,6 @@ from chroma_help.help import help_text
 from chroma_core.services.job_scheduler import job_scheduler_notify
 from iml_common.lib.util import ExceptionThrowingThread
 from chroma_core.models.sparse_model import VariantDescriptor
-from django.contrib.postgres.aggregates import BoolOr
 
 import settings
 
@@ -157,28 +153,6 @@ class ManagedHost(DeletableStatefulObject):
     def is_monitored(self):
         return not self.server_profile.managed
 
-    @property
-    def member_of_active_filesystem(self):
-        """Return True if any part of this host or its FK dependents are related to an available filesystem
-
-        See usage in chroma_apy/host.py:  used to determine if safe to configure LNet.
-        """
-
-        # To prevent circular imports
-        from chroma_core.models.filesystem import ManagedFilesystem
-
-        # Host is part of an available filesystem.
-        for filesystem in ManagedFilesystem.objects.filter(state__in=["available", "unavailable"]):
-            if self in filesystem.get_servers():
-                return True
-
-        # Host has any associated copytools related to an available filesystem.
-        if self.copytools.filter(filesystem__state__in=["available", "unavailable"]).exists():
-            return True
-
-        # This host is not related to any available filesystems.
-        return False
-
     def get_label(self):
         """Return the FQDN if it is known, else the address"""
         name = self.fqdn
@@ -208,53 +182,6 @@ class ManagedHost(DeletableStatefulObject):
             return ["removed"]
         else:
             return super(ManagedHost, self).get_available_states(begin_state)
-
-    @classmethod
-    def get_by_nid(cls, nid_string):
-        """Resolve a NID string to a ManagedHost (best effort).  Not guaranteed to work:
-        * The NID might not exist for any host
-        * The NID might exist for multiple hosts
-
-        Note: this function may return deleted hosts (useful behaviour if you're e.g. resolving
-        NID to hostname for historical logs).
-        """
-
-        from chroma_core.models import Nid
-
-        # Check we at least have a @
-        if "@" not in nid_string:
-            raise ManagedHost.DoesNotExist()
-
-        nid = Nid.split_nid_string(nid_string)
-
-        hosts = ManagedHost._base_manager.filter(
-            networkinterface__inet4_address=nid.nid_address, networkinterface__type=nid.lnd_type, not_deleted=True
-        )
-        # We can resolve the NID to a host if there is exactly one not-deleted
-        # host with that NID (and 0 or more deleted hosts), or if there are
-        # no not-deleted hosts with that NID but exactly one deleted host with that NID
-        if hosts.count() == 0:
-            raise ManagedHost.DoesNotExist()
-        elif hosts.count() == 1:
-            return hosts[0]
-        else:
-            active_hosts = [h for h in hosts if h.not_deleted]
-            if len(active_hosts) > 1:
-                # If more than one not-deleted host has this NID, we cannot pick one
-                raise ManagedHost.MultipleObjectsReturned()
-            else:
-                fqdns = set([h.fqdn for h in hosts])
-                if len(fqdns) == 1:
-                    # If all the hosts with this NID had the same FQDN, pick one to return
-                    if len(active_hosts) > 0:
-                        # If any of the hosts were not deleted, prioritize that
-                        return active_hosts[0]
-                    else:
-                        # Else return an arbitrary one
-                        return hosts[0]
-                else:
-                    # If the hosts with this NID had different FQDNs, refuse to pick one
-                    raise ManagedHost.MultipleObjectsReturned()
 
     def _get_configuration(self, configuration_name):
         """
@@ -314,59 +241,6 @@ class Volume(models.Model):
         unique_together = ("storage_resource",)
         app_label = "chroma_core"
         ordering = ["id"]
-
-    @classmethod
-    def get_unused_luns(cls, queryset):
-        """
-        Get all Luns which are not used by Targets but are of a type that could be used by Targets.
-
-        The obvious (and previous) method of just looking for a managed_target_mount referencing the VolumeNode and
-        excluding it fails, because if a Volume is removed and then re-added (so becoming a new Volume) at the same path
-        (or any device moved to the same path) then that would be presented as an unused target when actually the 'path'
-        and so effectively the 'target' is in use.
-
-        For this reason we build a list of (host,paths) for all the current ManagedTargetMount's then build a list of all
-        Volumes that match this (host:path) and exclude them from the result. This might be possible as a straight
-        query but it is probably as quick, easier to read to issue the query to get the list.
-        """
-
-        from chroma_core.models import ManagedTargetMount
-
-        # There is an existing behaviour(!) that ManagedTargetMounts are not deleted when a Target is deleted and so we must
-        # filter ManagedTargetMount by undeleted Targets.
-        mtm_host_paths = [
-            (mtm.host.id, mtm.volume_node.path)
-            for mtm in ManagedTargetMount.objects.filter(managedtarget__not_deleted=True)
-        ]
-        volume_node_ids = [
-            volume_node.volume_id
-            for volume_node in VolumeNode.objects.all()
-            if ((volume_node.host.id, volume_node.path)) in mtm_host_paths
-        ]
-
-        queryset = queryset.filter(usable_for_lustre=True).exclude(id__in=volume_node_ids)
-
-        return queryset
-
-    @classmethod
-    def get_usable_luns(cls, queryset):
-        """
-        Get all Luns which are not used by Targets and have enough VolumeNode configuration
-        to be used as a Target (i.e. have only one node or at least have a primary node set)
-
-        Luns are usable if they have only one VolumeNode (i.e. no HA available but
-        we can definitively say where it should be mounted) or if they have
-        a primary VolumeNode (i.e. one or more VolumeNodes is available and we
-        know at least where the primary mount should be)
-        """
-        queryset = (
-            cls.get_unused_luns(queryset)
-            .filter(volumenode__host__not_deleted=True)
-            .annotate(has_primary=BoolOr("volumenode__primary"), num_volumenodes=Count("volumenode"))
-            .filter(Q(num_volumenodes=1) | Q(has_primary=True))
-        )
-
-        return queryset
 
     def get_kind(self):
         if not hasattr(self, "kind"):
@@ -482,44 +356,6 @@ class LearnDevicesStep(Step):
                 self.log("No data for plugin %s from host %s" % (plugin, host))
 
         AgentDaemonRpcInterface().setup_host(host.id, plugin_data)
-
-
-class UpdateDevicesStep(Step):
-    idempotent = True
-
-    # Require database to talk to plugin_manager
-    database = True
-
-    def update_devices(self, host, plugin_data):
-        from chroma_core.services.job_scheduler.agent_rpc import AgentException
-
-        from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
-
-        for plugin in storage_plugin_manager.loaded_plugin_names:
-            try:
-                plugin_data[plugin] = self.invoke_agent(host, "device_plugin", {"plugin": plugin})[plugin]
-            except AgentException as e:
-                self.log("No data for plugin %s from host %s due to exception %s" % (plugin, host, e))
-
-    def run(self, kwargs):
-        from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemonRpcInterface
-
-        threads = []
-        plugins_data = defaultdict(dict)
-
-        for host in kwargs["hosts"]:
-            thread = ExceptionThrowingThread(target=self.update_devices, args=(host, plugins_data[host]))
-            thread.start()
-            threads.append(thread)
-
-        ExceptionThrowingThread.wait_for_threads(
-            threads
-        )  # This will raise an exception if any of the threads raise an exception
-
-        for host, plugin_data in plugins_data.items():
-            # This enables services tests to run see - _handle_action_respond in test_agent_rpc.py for more info
-            if plugin_data != {}:
-                AgentDaemonRpcInterface().update_host_resources(host.id, plugin_data)
 
 
 class TriggerPluginUpdatesStep(Step):
@@ -925,66 +761,6 @@ class SetupWorkerJob(BaseSetupHostJob):
         return host.is_managed and host.is_worker and (host.state != "unconfigured")
 
 
-class DetectTargetsStep(Step):
-    database = True
-
-    def is_dempotent(self):
-        return True
-
-    def detect_scan(self, host, host_data, target_devices):
-        host_data[host] = self.invoke_agent(host, "detect_scan", {"target_devices": target_devices})
-
-    def detect_ha(self, host, ha_data):
-        ha_list = self.invoke_rust_agent_expect_result(host.fqdn, "get_ha_resource_list", args=None)
-        ha_data[host] = dict([(x["id"], x) for x in ha_list])
-
-    def run(self, kwargs):
-        from chroma_core.models import ManagedHost
-        from chroma_core.lib.detection import DetectScan
-
-        # Get all the host data
-        host_data = {}
-        ha_data = {}
-        threads = []
-        host_target_devices = defaultdict(list)
-
-        for host in ManagedHost.objects.filter(id__in=kwargs["host_ids"]):
-            volume_nodes = VolumeNode.objects.filter(host=host)
-
-            for volume_node in volume_nodes:
-                resource = volume_node.volume.storage_resource.to_resource()
-                try:
-                    uuid = resource.uuid
-                except AttributeError:
-                    uuid = None
-
-                host_target_devices[host].append(
-                    {"path": volume_node.path, "type": resource.device_type(), "uuid": uuid}
-                )
-
-            self.log("Scanning server %s..." % host)
-
-            thread = ExceptionThrowingThread(target=self.detect_scan, args=(host, host_data, host_target_devices[host]))
-            thread.start()
-            threads.append(thread)
-
-            thread = ExceptionThrowingThread(target=self.detect_ha, args=(host, ha_data))
-            thread.start()
-            threads.append(thread)
-
-        ExceptionThrowingThread.wait_for_threads(
-            threads
-        )  # This will raise an exception if any of the threads raise an exception
-
-        for host in host_data:
-            if host in ha_data:
-                host_data[host]["ha_list"] = ha_data[host]
-            else:
-                host_data[host]["ha_list"] = {}
-
-        DetectScan(self).run(host_data)
-
-
 class DetectTargetsJob(HostListMixin):
     class Meta:
         app_label = "chroma_core"
@@ -998,10 +774,7 @@ class DetectTargetsJob(HostListMixin):
         return "Scan for Lustre targets"
 
     def get_steps(self):
-        return [
-            (UpdateDevicesStep, {"hosts": self.hosts}),
-            (DetectTargetsStep, {"host_ids": [h.id for h in self.hosts]}),
-        ]
+        pass
 
 
 class SetHostProfileStep(Step):
@@ -1011,8 +784,6 @@ class SetHostProfileStep(Step):
         return True
 
     def run(self, kwargs):
-        from chroma_core.services.job_scheduler.agent_rpc import AgentRpc
-
         host = kwargs["host"]
         server_profile = kwargs["server_profile"]
 
@@ -1025,28 +796,6 @@ class SetHostProfileStep(Step):
     @classmethod
     def describe(cls, kwargs):
         return help_text["set_host_profile_on"] % kwargs["host"]
-
-
-class UpdateDevicesJob(HostListMixin):
-    @classmethod
-    def long_description(cls, stateful_object):
-        return help_text["update_devices"]
-
-    def description(self):
-        return "Update the device info held for hosts %s" % ",".join([h.fqdn for h in self.hosts])
-
-    def get_deps(self):
-        return DependAll(DependOn(host.lnet_configuration, "lnet_up") for host in self.hosts)
-
-    def create_locks(self):
-        return [StateLock(job=self, locked_item=host, write=True) for host in self.hosts]
-
-    def get_steps(self):
-        return [(UpdateDevicesStep, {"hosts": self.hosts})]
-
-    class Meta:
-        app_label = "chroma_core"
-        ordering = ["id"]
 
 
 class TriggerPluginUpdatesJob(HostListMixin):
@@ -1599,14 +1348,6 @@ class UpdateJob(Job):
         app_label = "chroma_core"
 
 
-class ReplaceNidsStep(Step):
-    def run(self, args):
-        target = args["target"]
-        nids = args["nids"]
-        agent_args = ["replace_nids", target] + [":".join([",".join(x) for x in nids])]
-        return self.invoke_rust_agent_expect_result(args["fqdn"], "lctl", agent_args)
-
-
 class ResetConfParamsStep(Step):
     database = True
 
@@ -1616,113 +1357,6 @@ class ResetConfParamsStep(Step):
         mgt = args["mgt"]
         mgt.conf_param_version_applied = 0
         mgt.save()
-
-
-class UpdateNidsJob(HostListMixin):
-    @classmethod
-    def long_description(cls, stateful_object):
-        return help_text["update_nids"]
-
-    def description(self):
-        if len(self.hosts) > 1:
-            return "Update NIDs on %d hosts" % len(self.hosts)
-        else:
-            return "Update NIDs on host %s" % self.hosts[0]
-
-    def _targets_on_hosts(self):
-        from chroma_core.models.target import ManagedMgs, ManagedTarget, FilesystemMember
-        from chroma_core.models.filesystem import ManagedFilesystem
-
-        filesystems = set()
-        targets = set()
-        for target in ManagedTarget.objects.filter(managedtargetmount__host__in=self.hosts):
-            targets.add(target)
-            if issubclass(target.downcast_class, FilesystemMember):
-                # FIXME: N downcasts :-(
-                filesystems.add(target.downcast().filesystem)
-
-            if issubclass(target.downcast_class, ManagedMgs):
-                for fs in target.downcast().managedfilesystem_set.all():
-                    filesystems.add(fs)
-
-        for fs in filesystems:
-            targets |= set(fs.get_targets())
-
-        targets = [ObjectCache.get_by_id(ManagedTarget, t.id) for t in targets]
-        filesystems = [ObjectCache.get_by_id(ManagedFilesystem, f.id) for f in filesystems]
-
-        return filesystems, targets
-
-    def get_deps(self):
-        from chroma_core.models.target import ManagedMgs
-
-        filesystems, targets = self._targets_on_hosts()
-
-        target_hosts = set()
-        target_primary_hosts = set()
-        for target in targets:
-            for mtm in target.managedtargetmount_set.all():
-                if mtm.primary:
-                    target_primary_hosts.add(mtm.host)
-                target_hosts.add(mtm.host)
-
-        return DependAll(
-            [DependOn(host.lnet_configuration, "lnet_up") for host in target_primary_hosts]
-            + [DependOn(fs, "stopped") for fs in filesystems]
-            + [DependOn(t, "mounted") for t in targets if issubclass(t.downcast_class, ManagedMgs)]
-        )
-
-    def create_locks(self):
-        from chroma_core.models.target import ManagedMgs
-
-        locks = []
-        filesystems, targets = self._targets_on_hosts()
-
-        for target in targets:
-            if issubclass(target.downcast_class, ManagedMgs):
-                state = "mounted"
-            else:
-                state = "unmounted"
-
-            locks.append(StateLock(job=self, locked_item=target, begin_state=state, end_state=state, write=True))
-
-        return locks
-
-    def get_steps(self):
-        from chroma_core.models.target import ManagedMgs
-        from chroma_core.models.target import UnmountStep
-        from chroma_core.models.target import FilesystemMember
-        from chroma_core.models.target import MountOrImportStep
-
-        _, targets = self._targets_on_hosts()
-
-        steps = []
-        for target in targets:
-            target = target.downcast()
-            if issubclass(target.downcast_class, FilesystemMember):
-                steps.append(
-                    (
-                        ReplaceNidsStep,
-                        {
-                            "target": "%s" % target,
-                            "nids": target.nids(),
-                            "fqdn": target.filesystem.mgs.best_available_host().fqdn,
-                        },
-                    )
-                )
-
-        # FIXME: HYD-1133: should be marking targets as unregistered
-        # so that they get started in the correct order next time
-        # NB in that case also need to ensure that the start
-        # of all the targets happens before StateManager calls
-        # the completion hook that tries to apply configuration params
-        # for targets that haven't been set up yet.
-
-        return steps
-
-    class Meta:
-        app_label = "chroma_core"
-        ordering = ["id"]
 
 
 class HostContactAlert(AlertStateBase):
@@ -1742,11 +1376,11 @@ class HostContactAlert(AlertStateBase):
         return "Lost contact with host %s" % self.alert_item
 
     def affected_targets(self, affect_target):
-        from chroma_core.models.target import ManagedTargetMount
+        from chroma_core.models.target import get_host_targets
 
-        tms = ManagedTargetMount.objects.filter(host=self.alert_item)
-        for tm in tms:
-            affect_target(tm.target)
+        ts = get_host_targets(self.alert_item.id)
+        for t in ts:
+            affect_target(t)
 
     def end_event(self):
         return AlertEvent(

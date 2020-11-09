@@ -3,7 +3,7 @@
 # license that can be found in the LICENSE file.
 
 
-from chroma_core.models import Volume, ManagedFilesystem, HaCluster, ManagedHost
+from chroma_core.models import Volume, HaCluster, ManagedHost
 
 from tastypie.exceptions import ImmediateHttpResponse
 from tastypie.http import HttpBadRequest
@@ -127,18 +127,6 @@ class VolumeResource(ChromaModelResource):
         objects = super(VolumeResource, self).apply_filters(request, filters)
 
         try:
-            category = request.GET["category"]
-            if not category in ["unused", "usable", None]:
-                raise ImmediateHttpResponse(response=HttpBadRequest())
-            if category == "unused":
-                objects = Volume.get_unused_luns(objects)
-            elif category == "usable":
-                objects = Volume.get_usable_luns(objects)
-        except KeyError:
-            # Not filtering on category
-            pass
-
-        try:
             try:
                 objects = objects.filter(
                     Q(volumenode__primary=request.GET["primary"])
@@ -152,20 +140,6 @@ class VolumeResource(ChromaModelResource):
                 ).distinct()
         except KeyError:
             # Not filtering on host_id
-            pass
-
-        try:
-            try:
-                fs = ManagedFilesystem.objects.get(pk=request.GET["filesystem_id"])
-            except ManagedFilesystem.DoesNotExist:
-                objects = objects.filter(id=-1)  # No filesystem so we want to produce an empty list.
-            else:
-                objects = objects.filter(
-                    (Q(managedtarget__managedmdt__filesystem=fs) | Q(managedtarget__managedost__filesystem=fs))
-                    | Q(managedtarget__id=fs.mgs.id)
-                )
-        except KeyError:
-            # Not filtering on filesystem_id
             pass
 
         return objects

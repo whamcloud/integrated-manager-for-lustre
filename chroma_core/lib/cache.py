@@ -18,36 +18,32 @@ class ObjectCache(object):
         from chroma_core.models import PacemakerConfiguration, CorosyncConfiguration, Corosync2Configuration
         from chroma_core.models import ServerProfile
         from chroma_core.models import NTPConfiguration, StratagemConfiguration, Ticket
-        from chroma_core.models.target import ManagedTarget, ManagedTargetMount
+        from chroma_core.models.target import ManagedTarget
         from chroma_core.models.copytool import Copytool
 
         self.objects = defaultdict(dict)
-        filter_args = {
-            ManagedTargetMount: {"target__not_deleted": True},
+        self.filter_args = {
             LNetConfiguration: {"host__not_deleted": True},
         }
 
         self._cached_models = [
-            ManagedTarget,
+            Copytool,
+            Corosync2Configuration,
+            CorosyncConfiguration,
+            LNetConfiguration,
+            LustreClientMount,
             ManagedFilesystem,
             ManagedHost,
-            ManagedTargetMount,
-            LustreClientMount,
-            LNetConfiguration,
-            Copytool,
-            PacemakerConfiguration,
-            CorosyncConfiguration,
-            Corosync2Configuration,
+            ManagedTarget,
             NTPConfiguration,
+            PacemakerConfiguration,
+            ServerProfile,
             StratagemConfiguration,
             Ticket,
-            ServerProfile,
         ]
 
         for klass in self._cached_models:
-            args = filter_args.get(klass, {})
-            for obj in klass.objects.filter(**args):
-                self._add(klass, obj)
+            self._add_to_cache(klass)
 
     def _add(self, klass, instance):
         assert instance.__class__ in self._cached_models
@@ -55,6 +51,13 @@ class ObjectCache(object):
         log.debug("_add %s %s %s" % (instance.__class__, instance.id, id(instance)))
 
         self.objects[klass][instance.pk] = instance
+
+    def _add_to_cache(self, klass, args={}):
+        filter_args = self.filter_args.get(klass, {}).copy()
+        filter_args.update(args)
+
+        for obj in klass.objects.filter(**args):
+            self._add(klass, obj)
 
     @classmethod
     def add(cls, klass, instance):
@@ -66,12 +69,17 @@ class ObjectCache(object):
         return [o for o in cls.getInstance().objects[klass].values() if not filter or filter(o)]
 
     @classmethod
-    def get_by_id(cls, klass, instance_id):
+    def get_by_id(cls, klass, instance_id, fill_on_miss=False):
         assert klass in cls.getInstance()._cached_models
+
         try:
             return cls.getInstance().objects[klass][instance_id]
         except KeyError:
-            raise klass.DoesNotExist()
+            if not fill_on_miss:
+                raise klass.DoesNotExist()
+            else:
+                cls.getInstance()._add_to_cache(klass, {"id": instance_id})
+                return cls.getInstance().objects[klass][instance_id]
 
     @classmethod
     def get_targets_by_filesystem(cls, filesystem_id):
@@ -91,18 +99,18 @@ class ObjectCache(object):
 
         # FIXME: This is reasonably efficient but could be improved further by caching the filesystem membership of targets.
         targets = []
-        mgs_id = self.objects[ManagedFilesystem][filesystem_id].mgs_id
+        mgs_id = self.get_by_id(ManagedFilesystem, filesystem_id, fill_on_miss=True).mgs_id
         targets.append(self.objects[ManagedTarget][mgs_id])
 
         targets.extend(
             [
-                self.objects[ManagedTarget][mdt["id"]]
+                self.get_by_id(ManagedTarget, mdt["id"], fill_on_miss=True)
                 for mdt in ManagedMdt.objects.filter(filesystem=filesystem_id).values("id")
             ]
         )
         targets.extend(
             [
-                self.objects[ManagedTarget][ost["id"]]
+                self.get_by_id(ManagedTarget, ost["id"], fill_on_miss=True)
                 for ost in ManagedOst.objects.filter(filesystem=filesystem_id).values("id")
             ]
         )
@@ -110,22 +118,19 @@ class ObjectCache(object):
         return targets
 
     @classmethod
-    def get_one(cls, klass, filter=None):
+    def get_one(cls, klass, filter=None, fill_on_miss=False):
         assert klass in cls.getInstance()._cached_models
         r = [o for o in cls.getInstance().objects[klass].values() if not filter or filter(o)]
         if len(r) > 1:
             raise klass.MultipleObjectsReturned
         elif not r:
-            raise klass.DoesNotExist
+            if not fill_on_miss:
+                raise klass.DoesNotExist
+            else:
+                cls.getInstance()._add_to_cache(klass)
+                return cls.get_one(klass, filter)
         else:
             return r[0]
-
-    @classmethod
-    def target_primary_server(cls, target):
-        from chroma_core.models.target import ManagedTargetMount
-
-        primary_mtm = cls.get_one(ManagedTargetMount, lambda mtm: mtm.target.id == target.id and mtm.primary == True)
-        return primary_mtm.host
 
     @classmethod
     def getInstance(cls):
@@ -152,17 +157,6 @@ class ObjectCache(object):
             return []
 
     @classmethod
-    def host_targets(cls, host_id):
-        from chroma_core.models.target import ManagedTargetMount, ManagedTarget
-
-        mtms = cls.get(ManagedTargetMount, lambda mtm: mtm.host_id == host_id)
-
-        # FIXME: We have to explicitly restrict to non-deleted targets because ManagedTargetMount
-        # instances aren't cleaned up on target deletion.
-        target_ids = set([mtm.target_id for mtm in mtms]) & set(cls.getInstance().objects[ManagedTarget].keys())
-        return [cls.getInstance().objects[ManagedTarget][i] for i in target_ids]
-
-    @classmethod
     def purge(cls, klass, filter):
         cls.getInstance().objects[klass] = dict(
             [(o.pk, o) for o in cls.getInstance().objects[klass].values() if not filter(o)]
@@ -184,10 +178,3 @@ class ObjectCache(object):
     @classmethod
     def update(cls, obj):
         return cls.getInstance()._update(obj)
-
-    @classmethod
-    def mtm_targets(cls, mtm_id):
-        from chroma_core.models.target import ManagedTargetMount, ManagedTarget
-
-        mtms = cls.get(ManagedTargetMount, lambda mtm: mtm.id == mtm_id)
-        return [cls.getInstance().objects[ManagedTarget][mtm.target_id] for mtm in mtms]

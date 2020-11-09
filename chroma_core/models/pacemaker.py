@@ -230,23 +230,23 @@ class UnconfigurePacemakerJob(StateChangeJob):
         deps.append(DependOn(self.pacemaker_configuration.host.corosync_configuration, "started"))
 
         # Any targets will have to be removed.
-        from chroma_core.models import ManagedTargetMount
+        from chroma_core.models.target import get_host_targets
 
-        for managed_target_mount in ManagedTargetMount.objects.filter(host=self.pacemaker_configuration.host):
-            deps.append(DependOn(managed_target_mount.target, "removed"))
+        for t in get_host_targets(self.pacemaker_configuration.host.id):
+            deps.append(DependOn(target, "removed"))
 
         return DependAll(deps)
 
     @classmethod
     def can_run(cls, instance):
-        """We don't want people to unconfigure pacemaker on a node that has a ManagedTargetMount so make the command
+        """We don't want people to unconfigure pacemaker on a node that has a target so make the command
         available only when that is not the case.
         :param instance: PacemakerConfiguration instance being queried
-        :return: True if no ManagedTargetMounts exist on the host in question.
+        :return: True if no target exist on the host in question.
         """
-        from chroma_core.models import ManagedTargetMount
+        from chroma_core.models.target import get_host_targets
 
-        return len(ManagedTargetMount.objects.filter(host=instance.host)) == 0
+        return len(get_host_targets(instance.host.id)) == 0
 
 
 class StartPacemakerStep(Step):

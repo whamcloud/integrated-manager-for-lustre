@@ -38,14 +38,10 @@ class LearnEvent(AlertStateBase):
         return "Autodetection"
 
     def alert_message(self):
-        from chroma_core.models import ManagedTarget, ManagedFilesystem, ManagedTargetMount
+        from chroma_core.models import ManagedTarget
 
-        if isinstance(self.learned_item, ManagedTargetMount):
-            return "Discovered mount point of %s on %s" % (self.learned_item, self.learned_item.host)
-        elif isinstance(self.learned_item, ManagedTarget):
+        if isinstance(self.learned_item, ManagedTarget):
             return "Discovered formatted target %s" % self.learned_item
-        elif isinstance(self.learned_item, ManagedFilesystem):
-            return "Discovered filesystem %s on MGS %s" % (self.learned_item, self.learned_item.mgs.primary_host)
         else:
             return "Discovered %s" % self.learned_item
 

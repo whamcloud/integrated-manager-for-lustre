@@ -245,9 +245,7 @@ pub struct ManagedTargetRecord {
     pub inode_count: Option<i64>,
     pub reformat: bool,
     pub not_deleted: Option<bool>,
-    pub active_mount_id: Option<i32>,
     pub content_type_id: Option<i32>,
-    pub volume_id: i32,
 }
 
 impl Id for ManagedTargetRecord {
@@ -335,10 +333,8 @@ pub struct TargetRecord {
     pub dev_path: Option<String>,
     /// The `host.id` of the host running this target
     pub active_host_id: Option<i32>,
-    /// The list of `hosts.id`s the target can be mounted on.
-    ///
-    /// *Note*. This list represents where the backing storage can be mounted,
-    /// it does not represent any HA configuration.
+    /// The list of `hosts.id`s the target can be mounted on
+    /// taking HA configuration into account.
     pub host_ids: Vec<i32>,
     /// The list of `filesystem.name`s this target belongs to.
     /// Only an `MGS` may have more than one filesystem.

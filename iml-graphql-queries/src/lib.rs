@@ -3,6 +3,7 @@
 // license that can be found in the LICENSE file.
 
 pub mod client_mount;
+pub mod filesystem;
 pub mod log;
 pub mod server_profile;
 pub mod snapshot;

@@ -8,8 +8,6 @@ from tastypie import fields
 from tastypie.constants import ALL_WITH_RELATIONS
 
 from chroma_core.models import LNetConfiguration
-from chroma_core.models import ManagedHost
-from chroma_core.models import Nid
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 from chroma_core.services import log_register
 from chroma_api.utils import dehydrate_command

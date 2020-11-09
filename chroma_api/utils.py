@@ -25,7 +25,6 @@ from tastypie.exceptions import ImmediateHttpResponse
 
 from chroma_core.models.command import Command
 from chroma_core.models.target import ManagedMgs
-from chroma_core.models import StorageResourceRecord
 from chroma_core.services import log_register
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 from chroma_api.chroma_model_resource import ChromaModelResource
@@ -192,7 +191,7 @@ class StatefulModelResource(CustomModelResource):
             )
 
         request = bundle.request
-        bundle.obj = self.cached_obj_get(bundle, **self.remove_api_resource_names(kwargs))
+        bundle.obj = self.obj_get(bundle, **self.remove_api_resource_names(kwargs))
 
         stateful_object = bundle.obj
 

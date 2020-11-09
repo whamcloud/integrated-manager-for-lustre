@@ -3,22 +3,23 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    api_utils::{
-        create_command, get_all, get_hosts, get_influx, get_one, graphql, wait_for_cmds_success,
-        SendCmd, SendJob,
-    },
+    api_utils::{get_all, get_hosts, get_influx, get_one, graphql, put, wait_for_cmds_success},
     display_utils::{usage, wrap_fut, DisplayType, IntoDisplayType as _},
     error::ImlManagerCliError,
     ostpool::{ostpool_cli, OstPoolCommand},
 };
 use console::Term;
 use futures::future::{try_join, try_join5};
-use iml_graphql_queries::{client_mount, target as target_queries};
-use iml_wire_types::{db::TargetKind, Filesystem};
+use iml_graphql_queries::{client_mount, filesystem as fs_queries, target as target_queries};
+use iml_wire_types::{db::TargetKind, CmdWrapper, Filesystem};
 use number_formatter::{format_bytes, format_number};
 use prettytable::{Row, Table};
-use std::collections::{BTreeMap, HashMap};
 use structopt::StructOpt;
+
+#[derive(serde::Serialize, serde::Deserialize)]
+struct StateChange {
+    state: String,
+}
 
 #[derive(Debug, StructOpt)]
 pub enum FilesystemCommand {
@@ -43,9 +44,14 @@ pub enum FilesystemCommand {
     },
     /// Detect existing filesystem
     #[structopt(name = "detect")]
-    Detect {
-        #[structopt(short, long)]
-        hosts: Option<String>,
+    Detect,
+    /// Forget existing filesystem
+    /// This will remove knowledge of the filesystem
+    /// from the manager, but will not effect it on storage servers
+    #[structopt(name = "forget")]
+    Forget {
+        #[structopt(name = "FSNAME")]
+        fs_name: String,
     },
     /// Client mount command
     #[structopt(name = "list-client-mount")]
@@ -59,51 +65,41 @@ fn option_sub(a: Option<u64>, b: Option<u64>) -> Option<u64> {
     Some(a?.saturating_sub(b?))
 }
 
-async fn detect_filesystem(hosts: Option<String>) -> Result<(), ImlManagerCliError> {
-    let hosts = if let Some(hl) = hosts {
-        let hostlist = hostlist_parser::parse(&hl)?;
-        tracing::debug!("Host Names: {:?}", hostlist);
-        let all_hosts = get_hosts().await?;
+async fn detect_filesystem() -> Result<(), ImlManagerCliError> {
+    let query = fs_queries::detect::build();
 
-        let hostmap: BTreeMap<&str, &str> = all_hosts
-            .objects
-            .iter()
-            .map(|h| {
-                vec![
-                    (h.nodename.as_str(), h.resource_uri.as_str()),
-                    (h.fqdn.as_str(), h.resource_uri.as_str()),
-                ]
-            })
-            .flatten()
-            .collect();
+    let resp: iml_graphql_queries::Response<fs_queries::detect::Resp> =
+        wrap_fut("Detecting Filesystem...", graphql(query)).await?;
 
-        hostlist
-            .iter()
-            .filter_map(|h| hostmap.get(h.as_str()))
-            .map(|x| (*x).to_string())
-            .collect()
-    } else {
-        vec![]
-    };
+    let _ = Result::from(resp)?;
 
-    tracing::debug!("Host APIs: {:?}", hosts);
+    let term = Term::stdout();
 
-    let args = if hosts.is_empty() {
-        vec![]
-    } else {
-        vec![("hosts".to_string(), hosts)]
-    };
+    term.write_line("Detected Filesystems").unwrap();
 
-    let cmd = SendCmd {
-        message: "Detecting filesystems".into(),
-        jobs: vec![SendJob::<HashMap<String, Vec<String>>> {
-            class_name: "DetectTargetsJob".into(),
-            args: args.into_iter().collect(),
-        }],
-    };
-    let cmd = wrap_fut("Detecting filesystems...", create_command(cmd)).await?;
+    Ok(())
+}
 
-    wait_for_cmds_success(&[cmd]).await?;
+async fn forget_filesystem(fsname: String) -> Result<(), ImlManagerCliError> {
+    let fs = wrap_fut(
+        "Fetching Filesystem...",
+        get_one::<Filesystem>(vec![("name", &fsname)]),
+    )
+    .await?;
+
+    let r = put(
+        &fs.resource_uri,
+        StateChange {
+            state: "forgotten".into(),
+        },
+    )
+    .await?
+    .error_for_status()?;
+
+    let CmdWrapper { command } = r.json().await?;
+
+    wait_for_cmds_success(&vec![command]).await?;
+
     Ok(())
 }
 
@@ -237,16 +233,17 @@ pub async fn filesystem_cli(command: FilesystemCommand) -> Result<(), ImlManager
             term.write_line(&cmd).unwrap();
         }
         FilesystemCommand::Pool { command } => ostpool_cli(command).await?,
-        FilesystemCommand::Detect { hosts } => detect_filesystem(hosts).await?,
+        FilesystemCommand::Detect => detect_filesystem().await?,
+        FilesystemCommand::Forget { fs_name } => forget_filesystem(fs_name).await?,
     };
 
     Ok(())
 }
 
 async fn get_fs_mount_cmd(fsname: &str) -> Result<String, ImlManagerCliError> {
-    let query = client_mount::list::build(fsname);
+    let query = client_mount::list_mount_command::build(fsname);
 
-    let resp: iml_graphql_queries::Response<client_mount::list::Resp> =
+    let resp: iml_graphql_queries::Response<client_mount::list_mount_command::Resp> =
         wrap_fut("Fetching client mount", graphql(query)).await?;
 
     let x = Result::from(resp)?.data.client_mount_command;

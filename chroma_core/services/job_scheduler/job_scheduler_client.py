@@ -28,11 +28,9 @@ class JobSchedulerRpc(ServiceRpcInterface):
         "cancel_job",
         "create_host_ssh",
         "test_host_contact",
-        "create_filesystem",
         "create_ostpool",
         "update_ostpool",
         "delete_ostpool",
-        "create_client_mount",
         "create_copytool",
         "register_copytool",
         "unregister_copytool",
@@ -40,7 +38,6 @@ class JobSchedulerRpc(ServiceRpcInterface):
         "trigger_plugin_update",
         "update_lnet_configuration",
         "create_host",
-        "create_targets",
         "available_transitions",
         "available_jobs",
         "get_locks",
@@ -170,10 +167,6 @@ class JobSchedulerClient(object):
         return Command.objects.get(pk=command_id)
 
     @classmethod
-    def create_filesystem(cls, fs_data):
-        return JobSchedulerRpc().create_filesystem(fs_data)
-
-    @classmethod
     def create_ostpool(cls, pool_data):
         return JobSchedulerRpc().create_ostpool(pool_data)
 
@@ -222,20 +215,6 @@ class JobSchedulerClient(object):
         host_id, command_id = JobSchedulerRpc().create_host(fqdn, nodename, address, server_profile_id)
 
         return (ManagedHost.objects.get(pk=host_id), Command.objects.get(pk=command_id))
-
-    @classmethod
-    def create_targets(cls, targets_data):
-        from chroma_core.models import ManagedTarget, Command
-
-        target_ids, command_id = JobSchedulerRpc().create_targets(targets_data)
-        return (list(ManagedTarget.objects.filter(id__in=target_ids)), Command.objects.get(pk=command_id))
-
-    @classmethod
-    def create_client_mount(cls, host, filesystem_name, mountpoint):
-        from chroma_core.models import LustreClientMount
-
-        client_mount_id = JobSchedulerRpc().create_client_mount(host.id, filesystem_name, mountpoint)
-        return LustreClientMount.objects.get(id=client_mount_id)
 
     @classmethod
     def create_copytool(cls, copytool_data):

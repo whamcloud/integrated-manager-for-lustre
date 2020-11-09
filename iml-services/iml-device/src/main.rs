@@ -17,12 +17,13 @@ use iml_device::{
 };
 use iml_influx::Client;
 use iml_manager_env::{get_influxdb_addr, get_influxdb_metrics_db, get_pool_limit};
-use iml_postgres::{get_db_pool, sqlx};
+use iml_postgres::{get_db_pool, sqlx, PgPool};
 use iml_service_queue::service_queue::consume_data;
 use iml_tracing::tracing;
 use iml_wire_types::Fqdn;
 use std::{
     collections::{BTreeMap, HashMap},
+    iter::FromIterator,
     sync::Arc,
 };
 use url::Url;
@@ -160,6 +161,12 @@ async fn main() -> Result<(), ImlDeviceError> {
 
         let xs = iml_device::build_updates(x);
 
+        let fses: std::collections::HashSet<String> = xs
+            .iter()
+            .flat_map(|x| x.filesystems.as_slice())
+            .map(From::from)
+            .collect();
+
         let x = xs.into_iter().fold(
             (
                 vec![],
@@ -221,7 +228,117 @@ async fn main() -> Result<(), ImlDeviceError> {
         )
         .execute(&pool)
         .await?;
+
+        update_managed_targets(&pool, &x.0, &x.5).await?;
+
+        update_managed_filesystems(&pool, Vec::from_iter(fses)).await?;
     }
+
+    Ok(())
+}
+
+/// Update the state of any `ManagedTarget` records as we learn about state changes.
+/// This should hopefully be removed in short order.
+async fn update_managed_targets(
+    pool: &PgPool,
+    states: &Vec<String>,
+    uuids: &Vec<String>,
+) -> Result<(), ImlDeviceError> {
+    sqlx::query!(
+        r#"
+        UPDATE chroma_core_managedtarget t
+        SET state = updates.state
+        FROM (
+            SELECT state, uuid
+            FROM UNNEST($1::text[], $2::text[])
+            AS t(state, uuid)
+        ) as updates
+        WHERE t.uuid = updates.uuid
+            AND t.not_deleted = 't'
+    "#,
+        states,
+        uuids
+    )
+    .execute(pool)
+    .await?;
+
+    Ok(())
+}
+
+/// Update the state of any `ManagedFilesystem` records as we learn about state changes.
+/// This should hopefully be removed in short order.
+async fn update_managed_filesystems(
+    pool: &PgPool,
+    filesystems: Vec<String>,
+) -> Result<(), ImlDeviceError> {
+    let filesystems = sqlx::query!(
+        r#"
+        SELECT 
+            mt.state,
+            t.name,
+            t.filesystems
+            FROM chroma_core_managedtarget mt
+            INNER JOIN target t
+            ON t.uuid = mt.uuid
+            WHERE mt.not_deleted = 't'
+            AND $1::text[]  @> t.filesystems;
+        "#,
+        &filesystems
+    )
+    .fetch(pool)
+    .try_fold(HashMap::new(), |mut acc, x| async {
+        for fs in x.filesystems {
+            let h = acc.entry(fs.to_string()).or_insert_with(|| HashMap::new());
+
+            h.insert(x.name.to_string(), x.state.to_string());
+        }
+
+        Ok(acc)
+    })
+    .await?;
+
+    let x = filesystems
+        .into_iter()
+        .fold((vec![], vec![]), |mut acc, (fsname, x)| {
+            let is_stopped = x.values().all(|x| x == "unmounted");
+            let is_unavailable = x
+                .get(&format!("{}-MDT0000", fsname))
+                .map(|x| x == "unmounted")
+                .unwrap_or_default();
+
+            let state = if is_stopped {
+                "stopped"
+            } else if is_unavailable {
+                "unavailable"
+            } else {
+                "available"
+            };
+
+            acc.0.push(state.to_string());
+            acc.1.push(fsname);
+
+            acc
+        });
+
+    sqlx::query!(
+        r#"
+        UPDATE chroma_core_managedfilesystem
+        SET 
+            state = updates.state
+        FROM (
+                SELECT state, fsname
+                FROM UNNEST($1::text[], $2::text[])
+                AS t(state, fsname)
+            ) AS updates
+        WHERE 
+        name = updates.fsname
+        AND not_deleted = 't'
+    "#,
+        &x.0,
+        &x.1,
+    )
+    .execute(pool)
+    .await?;
 
     Ok(())
 }
