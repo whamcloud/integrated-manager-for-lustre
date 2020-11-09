@@ -374,106 +374,6 @@ class ResourceManager(object):
                     host, command = JobSchedulerClient.create_host_ssh(resource.address)
                     record.update_attribute("host_id", host.pk)
 
-    def _balance_volume_nodes(self, volumes_to_balance, volume_id_to_nodes):
-        # The sort by label is not functionally necessary but makes the list
-        # of volumes look 'right' to a human being.
-        volume_ids_to_balance = [v.id for v in sorted(volumes_to_balance, lambda a, b: cmp(a.label, b.label))]
-        hosts = set()
-        for vn_list in volume_id_to_nodes.values():
-            for vn in vn_list:
-                hosts.add(vn.host_id)
-
-        ha_clusters = [[peer.pk for peer in cluster.peers] for cluster in HaCluster.all_clusters()]
-        log.debug("HA clusters: %s" % ha_clusters)
-
-        outer_host_to_primary_count = dict.fromkeys(hosts, 0)
-        outer_host_to_used_count = dict.fromkeys(hosts, 0)
-
-        host_volumes = Volume.objects.filter(volumenode__host__in=hosts).distinct()
-        volume_to_volume_nodes = defaultdict(list)
-        all_vns = []
-        for vn in VolumeNode.objects.filter(volume__in=host_volumes):
-            volume_to_volume_nodes[vn.volume_id].append(vn)
-            all_vns.append(vn)
-
-        for vn in all_vns:
-            if vn.host_id in hosts:
-                if vn.primary:
-                    if len(volume_to_volume_nodes[vn.volume_id]) > 1:
-                        if not vn.volume_id in volume_ids_to_balance:
-                            outer_host_to_primary_count[vn.host_id] += 1
-                if vn.use:
-                    if not vn.volume_id in volume_ids_to_balance:
-                        outer_host_to_used_count[vn.host_id] += 1
-
-        host_id_to_fqdn = dict([(v["id"], v["fqdn"]) for v in ManagedHost.objects.all().values("id", "fqdn")])
-
-        with DelayedContextFrom(VolumeNode) as vn_writer:
-            for volume_id in volume_ids_to_balance:
-                volume_nodes = volume_to_volume_nodes[volume_id]
-                host_to_lun_nodes = defaultdict(list)
-                for vn in volume_nodes:
-                    if vn.host_id in hosts:
-                        host_to_lun_nodes[vn.host_id].append(vn)
-
-                for host_id in host_to_lun_nodes:
-                    # Instead of just counting primary nodes (that would include local volumes), only
-                    # give a host credit for a primary node if the node's volume also has a secondary
-                    # somewhere.
-                    log.info("primary_count %s = %s" % (host_id, outer_host_to_primary_count[host_id]))
-
-                # pick the host with fewest primary mounts on it, using fqdn as a tie-breaker
-                chosen_host = min(host_to_lun_nodes, key=lambda h: (outer_host_to_primary_count[h], host_id_to_fqdn[h]))
-                primary_lun_node = host_to_lun_nodes[chosen_host][0]
-                outer_host_to_primary_count[chosen_host] += 1
-                outer_host_to_used_count[chosen_host] += 1
-                vn_writer.update({"id": primary_lun_node.id, "use": True, "primary": True})
-                log.info("affinity_balance: picked %s for %s primary" % (primary_lun_node.host_id, volume_id))
-
-                # Remove the primary host from consideration for the secondary mount
-                del host_to_lun_nodes[primary_lun_node.host_id]
-
-                lun_ha_cluster = None
-                for i, cluster in enumerate(ha_clusters):
-                    log.debug("Checking for %s in %s" % (primary_lun_node.host_id, cluster))
-                    if primary_lun_node.host_id in cluster:
-                        if lun_ha_cluster is not None:
-                            raise RuntimeError("%s found in more than one HA cluster" % primary_lun_node)
-                        else:
-                            lun_ha_cluster = i
-                            log.debug("Found %s in %s" % (primary_lun_node.host_id, ha_clusters[lun_ha_cluster]))
-
-                if lun_ha_cluster is not None:
-                    # Remove any hosts not in the same HA cluster as the
-                    # primary so that we can only assign primary/secondary
-                    # relationships within the same HA cluster.
-                    to_delete = []
-                    for host_id in host_to_lun_nodes:
-                        if host_id not in ha_clusters[lun_ha_cluster]:
-                            to_delete.append(host_id)
-                    for host_id in to_delete:
-                        del host_to_lun_nodes[host_id]
-                else:
-                    log.info("%s was not found in any HA cluster" % primary_lun_node)
-                    host_to_lun_nodes.clear()
-
-                if len(host_to_lun_nodes) > 0:
-                    fewest_used_nodes = min(host_to_lun_nodes, key=outer_host_to_used_count.__getitem__)
-                    outer_host_to_used_count[fewest_used_nodes] += 1
-                    secondary_lun_node = host_to_lun_nodes[fewest_used_nodes][0]
-
-                    vn_writer.update({"id": secondary_lun_node.id, "use": True, "primary": False})
-
-                    log.info(
-                        "affinity_balance: picked %s for %s volume secondary" % (secondary_lun_node.host_id, volume_id)
-                    )
-                else:
-                    secondary_lun_node = None
-
-                for volume_node in volume_nodes:
-                    if not volume_node in (primary_lun_node, secondary_lun_node):
-                        vn_writer.update({"id": volume_node.id, "use": False, "primary": False})
-
     def get_label(self, record_id):
         try:
             if (
@@ -694,18 +594,6 @@ class ResourceManager(object):
         for vn in VolumeNode.objects.filter(volume__in=volumes_for_affinity_checks):
             volume_to_volume_nodes[vn.volume_id].append(vn)
 
-        occupied_volumes = set(
-            [
-                t["volume_id"]
-                for t in ManagedTarget.objects.filter(volume__in=volumes_for_affinity_checks).values("volume_id")
-            ]
-        )
-        volumes_for_affinity_checks = [
-            v for v in volumes_for_affinity_checks if v.id not in occupied_volumes and volume_to_volume_nodes[v.id]
-        ]
-
-        self.balance_unweighted_volume_nodes(volumes_for_affinity_checks, volume_to_volume_nodes)
-
         # For all VolumeNodes, if its storage resource was in this scope, and it
         # was not included in the set of usable DeviceNode resources, remove
         # the VolumeNode
@@ -721,68 +609,6 @@ class ResourceManager(object):
             )
             if volume_node.storage_resource_id not in usable_node_resource_ids:
                 self._remove_volume_node(volume_node, True)
-
-    def _set_affinity_weights(self, volume, volume_nodes):
-        from chroma_core.lib.storage_plugin.api.resources import PathWeight
-
-        weights = {}
-        for volume_node in volume_nodes:
-            if not volume_node.storage_resource_id:
-                log.info("affinity_weights: no storage_resource for VolumeNode %s" % volume_node.id)
-                return False
-
-            weight_resource_ids = self._record_find_ancestors(volume_node.storage_resource_id, PathWeight)
-            if len(weight_resource_ids) == 0:
-                log.info("affinity_weights: no PathWeights for VolumeNode %s" % volume_node.id)
-                return False
-
-            attr_model_class = (
-                StorageResourceRecord.objects.get(id=weight_resource_ids[0])
-                .resource_class.get_class()
-                .attr_model_class("weight")
-            )
-
-            ancestor_weights = [
-                json.loads(w["value"])
-                for w in attr_model_class.objects.filter(resource__in=weight_resource_ids, key="weight").values("value")
-            ]
-            vol_weight = reduce(lambda x, y: x + y, ancestor_weights)
-            weights[volume_node] = vol_weight
-
-        log.info("affinity_weights: %s" % weights)
-
-        sorted_volume_nodes = [
-            volume_node for volume_node, weight in sorted(weights.items(), lambda x, y: cmp(x[1], y[1]))
-        ]
-        sorted_volume_nodes.reverse()
-        primary = sorted_volume_nodes[0]
-        primary.primary = True
-        primary.use = True
-        primary.save()
-        if len(sorted_volume_nodes) > 1:
-            secondary = sorted_volume_nodes[1]
-            secondary.use = True
-            secondary.primary = False
-            secondary.save()
-        for volume_node in sorted_volume_nodes[2:]:
-            volume_node.use = False
-            volume_node.primary = False
-            volume_node.save()
-
-        return True
-
-    def balance_unweighted_volume_nodes(self, candidate_volumes, volume_to_volume_nodes=None):
-        if volume_to_volume_nodes is None:
-            volume_to_volume_nodes = defaultdict(list)
-            for vn in VolumeNode.objects.filter(volume__in=candidate_volumes):
-                volume_to_volume_nodes[vn.volume_id].append(vn)
-
-        volumes_for_balancing = []
-        for volume in candidate_volumes:
-            if not self._set_affinity_weights(volume, volume_to_volume_nodes[volume.id]):
-                volumes_for_balancing.append(volume)
-
-        self._balance_volume_nodes(volumes_for_balancing, volume_to_volume_nodes)
 
     def _try_removing_volume(self, volume):
         nodes = VolumeNode.objects.filter(volume=volume)

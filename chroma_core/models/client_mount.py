@@ -6,7 +6,6 @@
 from django.db import models
 from django.db.models import CASCADE
 from django.contrib.postgres.fields import ArrayField
-from chroma_core.models.utils import CHARFIELD_MAX_LENGTH
 from chroma_core.models.host import ManagedHost, HostOfflineAlert, HostContactAlert
 from chroma_core.models.filesystem import ManagedFilesystem
 from chroma_core.models.jobs import DeletableStatefulObject
@@ -48,7 +47,7 @@ class LustreClientMount(DeletableStatefulObject):
     )
     mountpoints = ArrayField(models.TextField(), default=list, help_text="Filesystem mountpoints on host")
 
-    states = ["unmounted", "mounted", "removed"]
+    states = ["unmounted", "mounted", "removed", "forgotten"]
     initial_state = "unmounted"
 
     def __str__(self):
@@ -76,7 +75,14 @@ class LustreClientMount(DeletableStatefulObject):
                 fs = ManagedFilesystem.objects.get(name=self.filesystem)
 
                 # Depend on the fs being available.
-                deps.append(DependOn(fs, "available", fix_state="unmounted"))
+                deps.append(
+                    DependOn(
+                        fs,
+                        "available",
+                        acceptable_states=list(set(fs.states) - set(["stopped", "removed"])),
+                        fix_state="unmounted",
+                    )
+                )
 
                 # If the filesystem is removed, the
                 # mount should follow.
@@ -85,7 +91,7 @@ class LustreClientMount(DeletableStatefulObject):
                         fs,
                         "available",
                         acceptable_states=list(set(fs.states) - set(["removed", "forgotten"])),
-                        fix_state="removed",
+                        fix_state="forgotten",
                     )
                 )
             except ManagedFilesystem.DoesNotExist:
@@ -182,8 +188,11 @@ class MountLustreClientJob(StateChangeJob):
         return "Mount %s" % self.lustre_client_mount
 
     def get_steps(self):
+        from chroma_core.lib.graphql import get_client_mount_source
+
         host = ManagedHost.objects.filter(id=self.lustre_client_mount.host_id).values("fqdn").first()
-        filesystem = ManagedFilesystem.objects.get(name=self.lustre_client_mount.filesystem)
+
+        mountspec = get_client_mount_source(fs_name=self.lustre_client_mount.filesystem)
 
         mountpoint = (
             self.lustre_client_mount.mountpoints[0]
@@ -193,7 +202,7 @@ class MountLustreClientJob(StateChangeJob):
 
         args = {
             "host": host.get("fqdn"),
-            "filesystems": [{"mountspec": filesystem.mount_path(), "mountpoint": mountpoint, "persist": False}],
+            "filesystems": [{"mountspec": mountspec, "mountpoint": mountpoint, "persist": False}],
         }
         return [(MountLustreFilesystemsStep, args)]
 
@@ -234,11 +243,12 @@ class UnmountLustreClientMountJob(StateChangeJob):
         return ManagedFilesystem.objects.filter(name=client_mount.filesystem).exists()
 
     def get_steps(self):
+        from chroma_core.lib.graphql import get_client_mount_source
+
         client_mount = self.lustre_client_mount
         host = ManagedHost.objects.filter(id=client_mount.host_id).values("fqdn").first()
-        filesystem = ManagedFilesystem.objects.get(name=client_mount.filesystem)
-        mount_path = filesystem.mount_path()
-        filesystems = [{"mountspec": mount_path, "mountpoint": x} for x in client_mount.mountpoints]
+        mount_spec = get_client_mount_source(fs_name=client_mount.filesystem)
+        filesystems = [{"mountspec": mount_spec, "mountpoint": x} for x in client_mount.mountpoints]
 
         args = {"host": host.get("fqdn"), "filesystems": filesystems}
         return [(UnmountLustreFilesystemsStep, args)]
@@ -278,6 +288,30 @@ class RemoveLustreClientJob(StateChangeJob):
     class Meta:
         app_label = "chroma_core"
         ordering = ["id"]
+
+
+class ForgetLustreClientJob(StateChangeJob):
+    class Meta:
+        app_label = "chroma_core"
+        ordering = ["id"]
+
+    state_transition = StateChangeJob.StateTransition(LustreClientMount, ["unmounted", "mounted"], "forgotten")
+    stateful_object = "lustre_client_mount"
+    state_verb = "Forget"
+    lustre_client_mount = models.ForeignKey(LustreClientMount, on_delete=CASCADE)
+    requires_confirmation = True
+
+    @classmethod
+    def long_description(cls, stateful_object):
+        return "Forget this client mount on the manager. The actual client mount will not be altered."
+
+    def description(self):
+        return "Forget client mount {}".format(self.lustre_client_mount)
+
+    def on_success(self):
+        super(ForgetLustreClientJob, self).on_success()
+
+        self.lustre_client_mount.mark_deleted()
 
 
 class MountLustreFilesystemsJob(AdvertisedJob):
@@ -334,13 +368,15 @@ class MountLustreFilesystemsJob(AdvertisedJob):
         return "Mount associated Lustre filesystem(s) on host %s" % self.host
 
     def get_steps(self):
+        from chroma_core.lib.graphql import get_client_mount_source
+
         unmounted = LustreClientMount.objects.filter(state="unmounted", host=self.host)
 
         args = {
             "host": self.host.fqdn,
             "filesystems": [
                 {
-                    "mountspec": ManagedFilesystem.objects.get(name=m.filesystem).mount_path(),
+                    "mountspec": get_client_mount_source(fs_name=m.filesystem),
                     "mountpoint": m.mountpoints[0] if m.mountpoints else "/mnt/{}".format(m.filesystem),
                     "persist": False,
                 }
@@ -405,14 +441,16 @@ class UnmountLustreFilesystemsJob(AdvertisedJob):
         return "Unmount associated Lustre filesystem(s) on host %s" % self.host
 
     def get_steps(self):
+        from chroma_core.lib.graphql import get_client_mount_source
+
         mounted = LustreClientMount.objects.filter(state="mounted", host=self.host)
 
         filesystems = []
 
         for m in mounted:
-            mount_path = ManagedFilesystem.objects.get(name=m.filesystem).mount_path()
+            mount_spec = get_client_mount_source(fs_name=m.filesystem)
 
-            filesystems.extend([{"mountspec": mount_path, "mountpoint": x} for x in m.mountpoints])
+            filesystems.extend([{"mountspec": mount_spec, "mountpoint": x} for x in m.mountpoints])
 
         args = {
             "host": self.host.fqdn,

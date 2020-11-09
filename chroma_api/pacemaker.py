@@ -6,7 +6,7 @@
 from tastypie import fields
 from tastypie.constants import ALL_WITH_RELATIONS
 
-from chroma_core.models import PacemakerConfiguration
+from chroma_core.models.pacemaker import PacemakerConfiguration
 from chroma_core.services import log_register
 from chroma_api.utils import StatefulModelResource
 from chroma_api.utils import BulkResourceOperation

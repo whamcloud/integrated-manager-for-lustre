@@ -873,26 +873,6 @@
             "severity": "ERROR",
             "variant": "{}"
         },
-        "21166": {
-            "_message": "Target fs-OST0002 running on secondary server",
-            "active": true,
-            "affected": ["/api/filesystem/2/", "/api/target/21/"],
-            "affected_composite_ids": ["27:2", "54:21"],
-            "alert_item": "/api/target/21/",
-            "alert_item_id": 21,
-            "alert_item_str": "fs-OST0002",
-            "alert_type": "TargetFailoverAlert",
-            "begin": "2020-11-12T14:32:38.366797+00:00",
-            "dismissed": false,
-            "end": null,
-            "id": 21166,
-            "lustre_pid": null,
-            "message": "Target fs-OST0002 running on secondary server",
-            "record_type": "TargetFailoverAlert",
-            "resource_uri": "/api/alert/21166/",
-            "severity": "WARNING",
-            "variant": "{}"
-        },
         "460": {
             "_message": "Time is out of sync on server mds1.local",
             "active": true,
@@ -911,66 +891,6 @@
             "record_type": "TimeOutOfSyncAlert",
             "resource_uri": "/api/alert/460/",
             "severity": "ERROR",
-            "variant": "{}"
-        },
-        "23870": {
-            "_message": "Target fs-OST0009 running on secondary server",
-            "active": true,
-            "affected": ["/api/filesystem/2/", "/api/target/20/"],
-            "affected_composite_ids": ["27:2", "54:20"],
-            "alert_item": "/api/target/20/",
-            "alert_item_id": 20,
-            "alert_item_str": "fs-OST0009",
-            "alert_type": "TargetFailoverAlert",
-            "begin": "2020-11-12T17:57:33.684935+00:00",
-            "dismissed": false,
-            "end": null,
-            "id": 23870,
-            "lustre_pid": null,
-            "message": "Target fs-OST0009 running on secondary server",
-            "record_type": "TargetFailoverAlert",
-            "resource_uri": "/api/alert/23870/",
-            "severity": "WARNING",
-            "variant": "{}"
-        },
-        "21180": {
-            "_message": "Target fs-OST0003 running on secondary server",
-            "active": true,
-            "affected": ["/api/filesystem/2/", "/api/target/14/"],
-            "affected_composite_ids": ["27:2", "54:14"],
-            "alert_item": "/api/target/14/",
-            "alert_item_id": 14,
-            "alert_item_str": "fs-OST0003",
-            "alert_type": "TargetFailoverAlert",
-            "begin": "2020-11-12T14:32:57.188215+00:00",
-            "dismissed": false,
-            "end": null,
-            "id": 21180,
-            "lustre_pid": null,
-            "message": "Target fs-OST0003 running on secondary server",
-            "record_type": "TargetFailoverAlert",
-            "resource_uri": "/api/alert/21180/",
-            "severity": "WARNING",
-            "variant": "{}"
-        },
-        "21277": {
-            "_message": "Target fs-OST0004 running on secondary server",
-            "active": true,
-            "affected": ["/api/filesystem/2/", "/api/target/19/"],
-            "affected_composite_ids": ["27:2", "54:19"],
-            "alert_item": "/api/target/19/",
-            "alert_item_id": 19,
-            "alert_item_str": "fs-OST0004",
-            "alert_type": "TargetFailoverAlert",
-            "begin": "2020-11-12T14:38:26.578755+00:00",
-            "dismissed": false,
-            "end": null,
-            "id": 21277,
-            "lustre_pid": null,
-            "message": "Target fs-OST0004 running on secondary server",
-            "record_type": "TargetFailoverAlert",
-            "resource_uri": "/api/alert/21277/",
-            "severity": "WARNING",
             "variant": "{}"
         },
         "28606": {
@@ -1063,8 +983,6 @@
             "label": "fs",
             "mdts": ["/api/target/12/", "/api/target/13/"],
             "mgt": "/api/target/1/",
-            "mount_command": "mount -t lustre 10.73.20.12@tcp0:10.73.20.11@tcp0:/fs /mnt/fs",
-            "mount_path": "10.73.20.12@tcp0:10.73.20.11@tcp0:/fs",
             "name": "fs",
             "osts": [
                 "/api/target/14/",
@@ -1092,7 +1010,6 @@
         "4": {
             "address": "oss2.local",
             "boot_time": "2020-11-12T18:20:34",
-            "client_mounts": [],
             "content_type_id": 19,
             "corosync_configuration": null,
             "corosync_ring0": "",
@@ -1102,7 +1019,6 @@
             "install_method": "existing_keys_choice",
             "label": "oss2.local",
             "lnet_configuration": "/api/lnet_configuration/4/",
-            "member_of_active_filesystem": true,
             "needs_update": false,
             "nids": ["10.73.20.22@tcp0"],
             "nodename": "oss2",
@@ -1133,7 +1049,6 @@
         "1": {
             "address": "mds1.local",
             "boot_time": "2020-11-11T08:40:48",
-            "client_mounts": [],
             "content_type_id": 19,
             "corosync_configuration": null,
             "corosync_ring0": "",
@@ -1143,7 +1058,6 @@
             "install_method": "existing_keys_choice",
             "label": "mds1.local",
             "lnet_configuration": "/api/lnet_configuration/1/",
-            "member_of_active_filesystem": true,
             "needs_update": false,
             "nids": ["10.73.20.11@tcp0"],
             "nodename": "mds1",
@@ -1174,7 +1088,6 @@
         "3": {
             "address": "oss1.local",
             "boot_time": "2020-11-11T08:18:48",
-            "client_mounts": [],
             "content_type_id": 19,
             "corosync_configuration": null,
             "corosync_ring0": "",
@@ -1184,7 +1097,6 @@
             "install_method": "existing_keys_choice",
             "label": "oss1.local",
             "lnet_configuration": "/api/lnet_configuration/3/",
-            "member_of_active_filesystem": true,
             "needs_update": false,
             "nids": ["10.73.20.21@tcp0"],
             "nodename": "oss1",
@@ -1215,7 +1127,6 @@
         "2": {
             "address": "mds2.local",
             "boot_time": "2020-11-11T08:21:41",
-            "client_mounts": [],
             "content_type_id": 19,
             "corosync_configuration": null,
             "corosync_ring0": "",
@@ -1225,7 +1136,6 @@
             "install_method": "existing_keys_choice",
             "label": "mds2.local",
             "lnet_configuration": "/api/lnet_configuration/2/",
-            "member_of_active_filesystem": true,
             "needs_update": false,
             "nids": ["10.73.20.12@tcp0"],
             "nodename": "mds2",
@@ -1326,7 +1236,6 @@
             "inode_count": null,
             "reformat": false,
             "not_deleted": true,
-            "active_mount_id": 27,
             "content_type_id": 54,
             "volume_id": 14
         },
@@ -1343,7 +1252,6 @@
             "inode_count": null,
             "reformat": false,
             "not_deleted": true,
-            "active_mount_id": 23,
             "content_type_id": 38,
             "volume_id": 27
         },
@@ -1360,7 +1268,6 @@
             "inode_count": null,
             "reformat": false,
             "not_deleted": true,
-            "active_mount_id": 29,
             "content_type_id": 54,
             "volume_id": 16
         },
@@ -1377,7 +1284,6 @@
             "inode_count": null,
             "reformat": false,
             "not_deleted": true,
-            "active_mount_id": 52,
             "content_type_id": 54,
             "volume_id": 18
         },
@@ -1394,7 +1300,6 @@
             "inode_count": null,
             "reformat": false,
             "not_deleted": true,
-            "active_mount_id": 53,
             "content_type_id": 54,
             "volume_id": 15
         },
@@ -1411,7 +1316,6 @@
             "inode_count": null,
             "reformat": false,
             "not_deleted": true,
-            "active_mount_id": 43,
             "content_type_id": 54,
             "volume_id": 11
         },
@@ -1428,7 +1332,6 @@
             "inode_count": null,
             "reformat": false,
             "not_deleted": true,
-            "active_mount_id": 1,
             "content_type_id": 32,
             "volume_id": 30
         },
@@ -1445,7 +1348,6 @@
             "inode_count": null,
             "reformat": false,
             "not_deleted": true,
-            "active_mount_id": null,
             "content_type_id": 54,
             "volume_id": 12
         },
@@ -1462,7 +1364,6 @@
             "inode_count": null,
             "reformat": false,
             "not_deleted": true,
-            "active_mount_id": 28,
             "content_type_id": 54,
             "volume_id": 9
         },
@@ -1479,7 +1380,6 @@
             "inode_count": null,
             "reformat": false,
             "not_deleted": true,
-            "active_mount_id": 44,
             "content_type_id": 54,
             "volume_id": 24
         },
@@ -1496,7 +1396,6 @@
             "inode_count": null,
             "reformat": false,
             "not_deleted": true,
-            "active_mount_id": 32,
             "content_type_id": 54,
             "volume_id": 13
         },
@@ -1513,7 +1412,6 @@
             "inode_count": null,
             "reformat": false,
             "not_deleted": true,
-            "active_mount_id": 24,
             "content_type_id": 38,
             "volume_id": 28
         },
@@ -1530,7 +1428,6 @@
             "inode_count": null,
             "reformat": false,
             "not_deleted": true,
-            "active_mount_id": 49,
             "content_type_id": 54,
             "volume_id": 10
         }

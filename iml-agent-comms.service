@@ -8,7 +8,7 @@ Requires=iml-settings-populator.service
 
 [Service]
 Type=simple
-Environment=RUST_LOG=info
+Environment=RUST_LOG=info,iml_agent_comms::api=warn
 EnvironmentFile=/var/lib/chroma/iml-settings.conf
 EnvironmentFile=-/var/lib/chroma/overrides.conf
 ExecStart=/bin/iml-agent-comms

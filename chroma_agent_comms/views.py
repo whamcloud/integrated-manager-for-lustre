@@ -17,7 +17,8 @@ import settings
 from os import path
 from tastypie.http import HttpForbidden
 
-from chroma_core.models import ManagedHost, ClientCertificate, RegistrationToken, ServerProfile
+from chroma_core.models.host import ManagedHost
+from chroma_core.models import ClientCertificate, RegistrationToken, ServerProfile
 from chroma_core.models.copytool import Copytool, CopytoolEvent, CopytoolOperation, log as copytool_log, UNKNOWN_UUID
 from chroma_core.models.log import LogMessage, MessageClass
 from chroma_core.models.utils import Version

@@ -26,72 +26,6 @@ KIND_TO_MODEL_NAME = dict([(k, v.__name__.lower()) for k, v in KIND_TO_KLASS.ite
 
 
 class TargetValidation(Validation):
-    def _validate_post(self, bundle, request):
-        errors = defaultdict(list)
-
-        for mandatory_field in ["kind", "volume_id"]:
-            if mandatory_field not in bundle.data or bundle.data[mandatory_field] == None:
-                errors[mandatory_field].append("This field is mandatory")
-
-        if errors:
-            return errors
-
-        volume_id = bundle.data["volume_id"]
-        try:
-            volume = Volume.objects.get(id=volume_id)
-        except Volume.DoesNotExist:
-            errors["volume_id"].append("Volume %s not found" % volume_id)
-        else:
-            if ManagedTarget.objects.filter(volume=volume).count():
-                errors["volume_id"].append("Volume %s in use" % volume_id)
-
-        kind = bundle.data["kind"]
-        if not kind in KIND_TO_KLASS:
-            errors["kind"].append(
-                "Invalid target type '%s' (choose from [%s])" % (kind, ",".join(KIND_TO_KLASS.keys()))
-            )
-        else:
-            if issubclass(KIND_TO_KLASS[kind], FilesystemMember):
-                if not "filesystem_id" in bundle.data:
-                    errors["filesystem_id"].append("Mandatory for targets of kind '%s'" % kind)
-                else:
-                    filesystem_id = bundle.data["filesystem_id"]
-                    try:
-                        filesystem = ManagedFilesystem.objects.get(id=filesystem_id)
-                    except ManagedFilesystem.DoesNotExist:
-                        errors["filesystem_id"].append("Filesystem %s not found" % filesystem_id)
-                    else:
-                        if filesystem.immutable_state:
-                            errors["filesystem_id"].append("Filesystem %s is unmanaged" % filesystem.name)
-
-            if KIND_TO_KLASS[kind] == ManagedMgs:
-                mgt_volume = Volume.objects.get(id=volume_id)
-                hosts = [vn.host for vn in VolumeNode.objects.filter(volume=mgt_volume, use=True)]
-                conflicting_mgs_count = ManagedTarget.objects.filter(
-                    ~Q(managedmgs=None), managedtargetmount__host__in=hosts
-                ).count()
-                if conflicting_mgs_count > 0:
-                    errors["mgt"].append(
-                        "Volume %s cannot be used for MGS (only one MGS is allowed per server)" % mgt_volume.label
-                    )
-
-                if "filesystem_id" in bundle.data:
-                    bundle.data_errors["filesystem_id"].append("Cannot specify filesystem_id when creating MGT")
-
-            if "conf_params" in bundle.data:
-                conf_param_errors = chroma_core.lib.conf_param.validate_conf_params(
-                    KIND_TO_KLASS[kind], bundle.data["conf_params"]
-                )
-                if conf_param_errors:
-                    errors["conf_params"] = conf_param_errors
-
-        try:
-            errors.update(bundle.data_errors)
-        except AttributeError:
-            pass
-
-        return errors
-
     def _validate_put(self, bundle, request):
         errors = defaultdict(list)
         if "conf_params" in bundle.data and bundle.data["conf_params"] is not None:
@@ -122,9 +56,7 @@ class TargetValidation(Validation):
         return errors
 
     def is_valid(self, bundle, request=None):
-        if request.method == "POST":
-            return self._validate_post(bundle, request)
-        elif request.method == "PUT":
+        if request.method == "PUT":
             return self._validate_put(bundle, request)
         else:
             return {}
@@ -166,7 +98,7 @@ class TargetResource(ConfParamResource):
         authorization = PatchedDjangoAuthorization()
         authentication = AnonymousAuthentication()
         ordering = ["name"]
-        list_allowed_methods = ["get", "post", "patch"]
+        list_allowed_methods = ["get"]
         detail_allowed_methods = ["get", "put", "delete"]
         validation = TargetValidation()
         always_return_data = True
@@ -178,81 +110,3 @@ class TargetResource(ConfParamResource):
             "filesystem_name",
             "filesystem_id",
         ]
-
-    def patch_list(self, request, **kwargs):
-        """
-        Specialization of patch_list to do bulk target creation in a single RPC to job_scheduler (and
-        consequently in a single command).
-        """
-        deserialized = self.deserialize(
-            request, request.body, format=request.META.get("CONTENT_TYPE", "application/json")
-        )
-
-        if "objects" not in deserialized:
-            raise BadRequest("Invalid data sent.")
-
-        if len(deserialized["objects"]) and "put" not in self._meta.detail_allowed_methods:
-            raise ImmediateHttpResponse(response=http.HttpMethodNotAllowed())
-
-        # If any of the included targets is not a creation, then
-        # skip to a normal PATCH instead of this special case one
-        for target_data in deserialized["objects"]:
-            if "id" in target_data or "resource_uri" in target_data:
-                super(TargetResource, self).patch_list(request, **kwargs)
-
-        # Validate and prepare each target dict for consumption by job_scheduler
-        for target_data in deserialized["objects"]:
-            data = self.alter_deserialized_detail_data(request, target_data)
-            bundle = self.build_bundle(data=dict_strip_unicode_keys(data))
-            bundle.request = request
-            self.is_valid(bundle)
-
-            target_data["content_type"] = ContentType.objects.get_for_model(
-                KIND_TO_KLASS[target_data["kind"]]
-            ).natural_key()
-
-        targets, command = JobSchedulerClient.create_targets(deserialized["objects"])
-
-        raise custom_response(
-            self,
-            request,
-            http.HttpAccepted,
-            {"command": dehydrate_command(command), "targets": [self.get_resource_uri(target) for target in targets]},
-        )
-
-    @validate
-    def obj_create(self, bundle, **kwargs):
-        request = bundle.request
-
-        self.is_valid(bundle)
-
-        if bundle.errors:
-            raise ImmediateHttpResponse(
-                response=self.error_response(bundle.request, bundle.errors[self._meta.resource_name])
-            )
-
-        # Set up an errors dict in the bundle to allow us to carry
-        # hydration errors through to validation.
-        setattr(bundle, "data_errors", defaultdict(list))
-
-        bundle.data["content_type"] = ContentType.objects.get_for_model(
-            KIND_TO_KLASS[bundle.data["kind"]]
-        ).natural_key()
-
-        # Should really only be doing one validation pass, but this works
-        # OK for now.  It's better than raising a 404 or duplicating the
-        # filesystem validation failure if it doesn't exist, anyhow.
-        self.is_valid(bundle)
-
-        targets, command = JobSchedulerClient.create_targets([bundle.data])
-
-        if request.method == "POST":
-            raise custom_response(
-                self,
-                request,
-                http.HttpAccepted,
-                {
-                    "command": dehydrate_command(command),
-                    "target": self.full_dehydrate(self.build_bundle(obj=targets[0])).data,
-                },
-            )

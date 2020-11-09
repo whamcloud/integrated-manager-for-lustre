@@ -5,9 +5,10 @@
 use futures::TryStreamExt;
 use iml_corosync::{
     delete_cluster, delete_corosync_resource_bans, delete_nodes, delete_target_resources,
-    fetch_corosync_cluster_by_nodes, upsert_cluster_nodes, upsert_corosync_cluster,
-    upsert_node_managed_host, upsert_resource_bans, upsert_target_resource_managed_host,
-    upsert_target_resources, CorosyncNodeKey, ImlCorosyncError,
+    fetch_corosync_cluster_by_nodes, update_chroma_ticket, upsert_cluster_nodes,
+    upsert_corosync_cluster, upsert_node_managed_host, upsert_resource_bans,
+    upsert_target_resource_managed_host, upsert_target_resources, CorosyncNodeKey,
+    ImlCorosyncError,
 };
 use iml_manager_env::get_pool_limit;
 use iml_postgres::{get_db_pool, host_id_by_fqdn, sqlx};
@@ -89,6 +90,8 @@ async fn main() -> Result<(), ImlCorosyncError> {
 
         // Upsert the rest
         upsert_cluster_nodes(cluster.nodes, cluster_id, &pool).await?;
+
+        update_chroma_ticket(&cluster.resources, cluster_id, &pool).await?;
 
         upsert_target_resources(
             cluster.resources,

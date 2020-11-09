@@ -67,7 +67,7 @@ impl Model {
 #[derive(Clone, Debug)]
 pub enum Msg {
     FetchMountCommand,
-    MountCommandFetched(fetch::ResponseDataResult<Response<client_mount::list::Resp>>),
+    MountCommandFetched(fetch::ResponseDataResult<Response<client_mount::list_mount_command::Resp>>),
     FetchStats,
     StatsFetched(Box<fetch::ResponseDataResult<iml_influx::filesystem::InfluxResponse>>),
     ActionDropdown(Box<action_dropdown::IdMsg>),
@@ -95,7 +95,7 @@ pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl O
     match msg {
         Msg::FetchMountCommand => {
             model.mount_cancel = None;
-            let query = client_mount::list::build(model.fs.name.to_string());
+            let query = client_mount::list_mount_command::build(model.fs.name.to_string());
             let req = seed::fetch::Request::graphql_query(&query);
 
             orders.perform_cmd(req.fetch_json_data(|x| Msg::MountCommandFetched(x)));

@@ -20,7 +20,7 @@ class ChromaApi(Api):
         except KeyError:
             pass
 
-        for resource_name, resource in api._registry.items():
+        for _, resource in api._registry.items():
             resource_klass = getattr(resource._meta, "object_class", None)
             if resource_klass and isinstance(obj, resource_klass):
                 self._cache[obj.__class__] = resource

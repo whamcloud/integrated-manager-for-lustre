@@ -212,22 +212,6 @@ class TestSharedTarget(JobTestCaseWithHost):
         with self.assertRaises(ManagedTarget.DoesNotExist):
             ManagedTarget.objects.get(pk=self.mgt.pk)
 
-    def test_teardown_remove_primary_host(self):
-        self.mgt.managedtarget_ptr = self.set_and_assert_state(self.mgt.managedtarget_ptr, "mounted")
-        self.set_and_assert_state(self.mgt.primary_host, "removed")
-
-        # Removing the primary server removes the target
-        with self.assertRaises(ManagedTarget.DoesNotExist):
-            ManagedTarget.objects.get(pk=self.mgt.pk)
-
-    def test_teardown_remove_secondary_host(self):
-        self.mgt.managedtarget_ptr = self.set_and_assert_state(self.mgt.managedtarget_ptr, "mounted")
-        self.set_and_assert_state(self.mgt.failover_hosts[0], "removed")
-
-        # Removing the secondary server removes the target
-        with self.assertRaises(ManagedTarget.DoesNotExist):
-            ManagedTarget.objects.get(pk=self.mgt.pk)
-
     def test_teardown_friendly_user(self):
         self.mgt.managedtarget_ptr = self.set_and_assert_state(self.mgt.managedtarget_ptr, "mounted")
 

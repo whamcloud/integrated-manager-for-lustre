@@ -63,3 +63,29 @@ def get_targets(**kwargs):
     """
 
     return graphql_query(query, variables=kwargs)["targets"]
+
+
+def get_host_targets(host_id):
+    targets = get_targets()
+
+    return [t for t in targets if host_id in t["host_ids"]]
+
+
+def get_corosync_node_name_by_host_id(**kwargs):
+    query = """
+        query CorosyncNodeNameByHost($host_id: Int!) {
+          corosyncNodeNameByHost(hostId: $host_id)
+        }
+    """
+
+    return graphql_query(query, variables=kwargs)["corosyncNodeNameByHost"]
+
+
+def get_client_mount_source(**kwargs):
+    query = """
+        query ClientMountSource($fs_name: String!) {
+            clientMountSource(fsName: $fs_name)
+        }
+    """
+
+    return graphql_query(query, variables=kwargs)["clientMountSource"]

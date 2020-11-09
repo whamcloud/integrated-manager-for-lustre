@@ -6,7 +6,6 @@ from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
 from chroma_core.models import HostContactAlert, HostOfflineAlert, ServerProfile
 from chroma_core.models import (
     FailoverTargetJob,
-    FailbackTargetJob,
     RebootHostJob,
     ShutdownHostJob,
     PoweronHostJob,
@@ -75,7 +74,6 @@ class TestAdvertisedTargetJobs(TestAdvertisedCase):
 
         self.target = mock.Mock()
         self.target.immutable_state = False
-        self.target.failover_hosts = [synthetic_host()]
         self.target.primary_host = synthetic_host()
         self.target.active_host = self.target.primary_host
 
@@ -84,25 +82,12 @@ class TestAdvertisedTargetJobs(TestAdvertisedCase):
         self.assertTrue(FailoverTargetJob.can_run(self.target))
 
         # Failover
-        self.target.active_host = self.target.failover_hosts[0]
         self.assertFalse(FailoverTargetJob.can_run(self.target))
 
         # Monitor-only
         self.target.active_host = self.target.primary_host
         self.target.immutable_state = True
         self.assertFalse(FailoverTargetJob.can_run(self.target))
-
-    def test_FailbackTargetJob(self):
-        # Normal situation
-        self.assertFalse(FailbackTargetJob.can_run(self.target))
-
-        # Failback
-        self.target.active_host = self.target.failover_hosts[0]
-        self.assertTrue(FailbackTargetJob.can_run(self.target))
-
-        # Monitor-only
-        self.target.immutable_state = True
-        self.assertFalse(FailbackTargetJob.can_run(self.target))
 
 
 class TestAdvertisedHostJobs(TestAdvertisedCase):

@@ -12,7 +12,6 @@ from django.db.models import Q, CASCADE
 from chroma_core.models import AlertEvent
 from chroma_core.models import AlertStateBase
 from chroma_core.models import Volume
-from chroma_core.models import ManagedTargetMount
 from chroma_core.lib.storage_plugin.log import storage_plugin_log as log
 from chroma_core.models.sparse_model import VariantDescriptor
 
@@ -320,6 +319,8 @@ class StorageResourceAlert(AlertStateBase):
         )
 
     def affected_targets(self, affect_target):
+        from chroma_core.models.target import get_host_targets
+
         affected_srrs = [
             sap["storage_resource_id"]
             for sap in StorageAlertPropagated.objects.filter(alert_state=self).values("storage_resource_id")
@@ -328,9 +329,9 @@ class StorageResourceAlert(AlertStateBase):
         luns = Volume.objects.filter(storage_resource__in=affected_srrs)
         for l in luns:
             for ln in l.volumenode_set.all():
-                tms = ManagedTargetMount.objects.filter(volume_node=ln)
-                for tm in tms:
-                    affect_target(tm.target)
+                ts = get_host_targets(ln.host_id)
+                for t in ts:
+                    affect_target(t)
 
 
 class StorageAlertPropagated(models.Model):

@@ -8,7 +8,6 @@ import threading
 import sys
 import traceback
 import time
-import uuid
 from django.core.exceptions import ObjectDoesNotExist
 
 import os
@@ -33,33 +32,25 @@ from chroma_core.models.server_profile import ServerProfile
 from chroma_core.models import Command
 from chroma_core.models import StateLock
 from chroma_core.models import ManagedHost
-from chroma_core.models import ManagedMdt
 from chroma_core.models import FilesystemMember
 from chroma_core.models import ConfigureLNetJob
 from chroma_core.models import ManagedTarget, ApplyConfParams, ManagedOst, Job, DeletableStatefulObject
 from chroma_core.models import StepResult
 from chroma_core.models import (
-    ManagedMgs,
     ManagedFilesystem,
     NetworkInterface,
     OstPool,
     LNetConfiguration,
     get_fs_id_from_identifier,
 )
-from chroma_core.models import ManagedTargetMount, VolumeNode
+from chroma_core.models import VolumeNode
 from chroma_core.models import DeployHostJob, UpdatesAvailableAlert, LustreClientMount, Copytool
 from chroma_core.models import CorosyncConfiguration
 from chroma_core.models import Corosync2Configuration
 from chroma_core.models import PacemakerConfiguration
 from chroma_core.models import ConfigureHostFencingJob
 from chroma_core.models import TriggerPluginUpdatesJob
-from chroma_core.models import (
-    ConfigureStratagemJob,
-    UnconfigureStratagemJob,
-    RemoveStratagemJob,
-    StratagemConfiguration,
-)
-from chroma_core.models import Task, CreateTaskJob
+from chroma_core.models import StratagemConfiguration
 from chroma_core.services.job_scheduler.dep_cache import DepCache
 from chroma_core.services.job_scheduler.lock_cache import LockCache, lock_change_receiver, to_lock_json
 from chroma_core.services.job_scheduler.command_plan import CommandPlan
@@ -72,8 +63,6 @@ from disabled_connection import DISABLED_CONNECTION
 from iml_common.lib.date_time import IMLDateTime
 
 from chroma_help.help import help_text
-
-import chroma_core.lib.conf_param
 
 log = log_register(__name__.split(".")[-1])
 
@@ -664,49 +653,6 @@ class JobScheduler(object):
 
             return bool(count)
 
-        if isinstance(changed_item, ManagedTarget):
-            if issubclass(changed_item.downcast_class, FilesystemMember):
-                affected_filesystems = [changed_item.downcast().filesystem]
-            else:
-                affected_filesystems = changed_item.downcast().managedfilesystem_set.all()
-
-            for filesystem in affected_filesystems:
-                members = filesystem.get_targets()
-                states = set([t.state for t in members])
-                now = django.utils.timezone.now()
-
-                if (
-                    not filesystem.state == "available"
-                    and changed_item.state in ["mounted", "removed"]
-                    and states == set(["mounted"])
-                ):
-                    self._notify(
-                        ContentType.objects.get_for_model(filesystem).natural_key(),
-                        filesystem.id,
-                        now,
-                        {"state": "available"},
-                        ["stopped", "unavailable"],
-                    )
-                if changed_item.state == "unmounted" and filesystem.state != "stopped" and states == set(["unmounted"]):
-                    self._notify(
-                        ContentType.objects.get_for_model(filesystem).natural_key(),
-                        filesystem.id,
-                        now,
-                        {"state": "stopped"},
-                        ["stopped", "unavailable"],
-                    )
-                if changed_item.state == "unmounted" and filesystem.state == "available" and states != set(["mounted"]):
-                    # Do not alter filesystem-state available->unavailable for non-zero MDT
-                    (_, label, index) = target_label_split(changed_item.get_label())
-                    if label != "MDT" or index == 0:
-                        self._notify(
-                            ContentType.objects.get_for_model(filesystem).natural_key(),
-                            filesystem.id,
-                            now,
-                            {"state": "unavailable"},
-                            ["available"],
-                        )
-
         if isinstance(changed_item, ManagedHost):
             # Sometimes we have been removed and yet some stray messages are hanging about, I don't think this should be
             # dealt with at this level, but for now to get 2.1 out the door I will do so.
@@ -739,15 +685,6 @@ class JobScheduler(object):
                                     message="Updating configuration parameters on %s" % mgs
                                 )
                             self.CommandPlan.add_jobs([job], command, {})
-
-            # Update TargetFailoverAlert from .active_mount
-            from chroma_core.models import TargetFailoverAlert
-
-            failed_over = (
-                changed_item.active_mount is not None
-                and changed_item.active_mount != changed_item.managedtargetmount_set.get(primary=True)
-            )
-            TargetFailoverAlert.notify(changed_item, failed_over)
 
         if isinstance(changed_item, PacemakerConfiguration) and "reconfigure_fencing" in updated_attrs:
             with transaction.atomic():
@@ -926,9 +863,9 @@ class JobScheduler(object):
         # so reference to remove warnings.
         Corosync2Configuration
 
-        stateful_object = ObjectCache.get_by_id(
-            getattr(sys.modules[__name__], stateful_object_class), stateful_object_id
-        )
+        klass = getattr(sys.modules[__name__], stateful_object_class)
+
+        stateful_object = klass.objects.get(pk=stateful_object_id)
 
         return CommandPlan(LockCache(), None).get_transition_consequences(stateful_object, new_state)
 
@@ -1106,13 +1043,6 @@ class JobScheduler(object):
         # if we have an entry with 'root'=true then move it to the front of the list before returning the result
         return sorted(sorted_list, key=lambda entry: entry.get("root", False), reverse=True)
 
-    def create_client_mount(self, host_id, filesystem_name, mountpoint):
-        # RPC-callable
-        host = ObjectCache.get_one(ManagedHost, lambda mh: mh.id == host_id)
-        mount = self._create_client_mount(host, filesystem_name, mountpoint)
-        self.progress.advance()
-        return mount.id
-
     def _create_client_mount(self, host, filesystem_name, mountpoint):
         # Used for intra-JobScheduler calls
         log.debug("Creating client mount for %s as %s:%s" % (filesystem_name, host, mountpoint))
@@ -1269,129 +1199,6 @@ class JobScheduler(object):
 
         self.progress.advance()
 
-    def create_filesystem(self, fs_data):
-        # FIXME: HYD-970: check that the MGT or hosts aren't being removed while
-        # creating the filesystem
-
-        def _target_kwargs(attrs):
-            result = {}
-            for attr in ["inode_count", "inode_size", "bytes_per_inode"]:
-                try:
-                    result[attr] = attrs[attr]
-                except KeyError:
-                    pass
-            return result
-
-        with self._lock:
-            mounts = []
-            mgt_data = fs_data["mgt"]
-            if "volume_id" in mgt_data:
-                mgt, mgt_mounts = ManagedMgs.create_for_volume(
-                    mgt_data["volume_id"], reformat=mgt_data.get("reformat", False), **_target_kwargs(mgt_data)
-                )
-                mounts.extend(mgt_mounts)
-                ObjectCache.add(ManagedTarget, mgt.managedtarget_ptr)
-                mgt_id = mgt.pk
-            else:
-                mgt_id = mgt_data["id"]
-
-            with transaction.atomic():
-                mgs = ManagedMgs.objects.get(id=mgt_id)
-                fs = ManagedFilesystem(mgs=mgs, name=fs_data["name"])
-                fs.save()
-
-            # Now that the creation has committed, update ObjectCache
-            ObjectCache.add(ManagedFilesystem, fs)
-
-            with transaction.atomic():
-                chroma_core.lib.conf_param.set_conf_params(fs, fs_data["conf_params"])
-
-                mdts = []
-                for mdt_data in self.order_targets(fs_data["mdts"]):
-                    mdt, mdt_mounts = ManagedMdt.create_for_volume(
-                        mdt_data["volume_id"],
-                        reformat=mdt_data.get("reformat", False),
-                        filesystem=fs,
-                        **_target_kwargs(mdt_data)
-                    )
-                    mdts.append(mdt)
-                    mounts.extend(mdt_mounts)
-                    chroma_core.lib.conf_param.set_conf_params(mdt, mdt_data["conf_params"])
-
-                osts = []
-                for ost_data in self.order_targets(fs_data["osts"]):
-                    ost, ost_mounts = ManagedOst.create_for_volume(
-                        ost_data["volume_id"],
-                        reformat=ost_data.get("reformat", False),
-                        filesystem=fs,
-                        **_target_kwargs(ost_data)
-                    )
-                    osts.append(ost)
-                    mounts.extend(ost_mounts)
-                    chroma_core.lib.conf_param.set_conf_params(ost, ost_data["conf_params"])
-
-            for ost in osts:
-                ObjectCache.add(ManagedTarget, ost.managedtarget_ptr)
-            for mdt in mdts:
-                ObjectCache.add(ManagedTarget, mdt.managedtarget_ptr)
-            for mount in mounts:
-                ObjectCache.add(ManagedTargetMount, mount)
-
-            with transaction.atomic():
-                command = self.CommandPlan.command_set_state(
-                    [(ContentType.objects.get_for_model(fs).natural_key(), fs.id, "available")],
-                    "Creating filesystem %s" % fs_data["name"],
-                )
-
-        self.progress.advance()
-
-        return fs.id, command.id
-
-    def create_targets(self, targets_data):
-        # FIXME: HYD-970: check that the filesystem or hosts aren't being removed while
-        # creating the target
-
-        targets = []
-        with self._lock:
-            for target_data in self.order_targets(targets_data):
-                target_class = ContentType.objects.get_by_natural_key(*(target_data["content_type"])).model_class()
-                if target_class().filesystem_member:
-                    fs = ManagedFilesystem.objects.get(id=target_data["filesystem_id"])
-                    create_kwargs = {"filesystem": fs}
-                elif target_class == ManagedMgs:
-                    create_kwargs = {}
-                else:
-                    raise NotImplementedError(target_class)
-
-                with transaction.atomic():
-                    target, target_mounts = target_class.create_for_volume(
-                        target_data["volume_id"], reformat=target_data.get("reformat", False), **create_kwargs
-                    )
-
-                ObjectCache.add(ManagedTarget, target.managedtarget_ptr)
-                for mount in target_mounts:
-                    ObjectCache.add(ManagedTargetMount, mount)
-
-                targets.append(target)
-
-            if len(targets) == 1:
-                command_description = "Creating %s" % targets[0]
-            else:
-                command_description = "Creating %s targets" % len(targets)
-
-            with transaction.atomic():
-                command = self.CommandPlan.command_set_state(
-                    [
-                        (ContentType.objects.get_for_model(ManagedTarget).natural_key(), x.id, "mounted")
-                        for x in targets
-                    ],
-                    command_description,
-                )
-
-        self.progress.advance()
-
-        return [x.id for x in targets], command.id
-
     def create_host_ssh(self, address, profile, root_pw, pkey, pkey_pw):
         """
         Create a ManagedHost object and deploy the agent to its address using SSH.
@@ -1541,7 +1348,7 @@ class JobScheduler(object):
 
         model_klass = ContentType.objects.get_for_id(obj_content_type_id).model_class()
         if issubclass(model_klass, ManagedTarget):
-            stateful_object = ObjectCache.get_by_id(ManagedTarget, object_id)
+            stateful_object = ObjectCache.get_by_id(ManagedTarget, object_id, fill_on_miss=True)
         else:
             stateful_object = ObjectCache.get_by_id(model_klass, object_id)
 

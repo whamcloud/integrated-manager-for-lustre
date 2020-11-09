@@ -95,8 +95,6 @@ def synthetic_host(
         synthetic_corosync_configuration(host)
         synthetic_pacemaker_configuration(host)
 
-    log.debug("synthetic_host: %s %s" % (address, lnet_configuration.get_nids()))
-
     if storage_resource:
         from chroma_core.lib.storage_plugin.manager import storage_plugin_manager
 

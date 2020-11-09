@@ -162,16 +162,16 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
   network:
-        image: "imlteam/network:6.2.0"
-        hostname: "iml-network"
-        build:
-          context: ../
-          dockerfile: ./docker/iml-network.dockerfile
-        deploy: *default-deploy
-        volumes:
-          - "manager-config:/var/lib/chroma"
-        environment:
-          - RUST_LOG=info,sqlx::query=warn
+    image: "imlteam/network:6.2.0"
+    hostname: "iml-network"
+    build:
+      context: ../
+      dockerfile: ./docker/iml-network.dockerfile
+    deploy: *default-deploy
+    volumes:
+      - "manager-config:/var/lib/chroma"
+    environment:
+      - RUST_LOG=info,sqlx::query=warn
   ntp:
     image: "imlteam/ntp:6.2.0"
     hostname: "iml-ntp"
@@ -247,7 +247,7 @@ services:
     environment:
       - HTTP_AGENT2_PORT=8003
       - PROXY_HOST=iml-agent-comms
-      - RUST_LOG=info
+      - RUST_LOG=info,iml_agent_comms::api=warn
   job-scheduler:
     image: "imlteam/manager-job-scheduler:6.2.0"
     hostname: "job-scheduler"

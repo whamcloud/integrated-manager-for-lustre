@@ -5,19 +5,14 @@
 
 import json
 import logging
-
 from django.db import models
 from django.db.models import CASCADE
 from django.core.exceptions import ObjectDoesNotExist
-
-from chroma_core.models import AlertStateBase
-from chroma_core.models import AlertEvent
-from chroma_core.models import DeletableStatefulObject
-from chroma_core.models import StateChangeJob
-from chroma_core.models import NullStateChangeJob
-from chroma_core.models import Nid
-from chroma_core.models import Job, StateLock
-from chroma_core.models import NetworkInterface
+from chroma_core.models.alert import AlertStateBase
+from chroma_core.models.event import AlertEvent
+from chroma_core.models.jobs import DeletableStatefulObject, StateChangeJob, NullStateChangeJob, Job, StateLock
+from chroma_core.models.nid import Nid
+from chroma_core.models.network_interface import NetworkInterface
 from chroma_core.lib.job import DependOn, DependAll, Step
 from chroma_help.help import help_text
 
