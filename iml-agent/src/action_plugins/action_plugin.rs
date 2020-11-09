@@ -49,6 +49,23 @@ pub fn create_registry() -> action_plugins::Actions {
         .add_plugin("remove_fstab_entry", lustre::client::remove_fstab_entry)
         .add_plugin("ha_resource_start", high_availability::start_resource)
         .add_plugin("ha_resource_stop", high_availability::stop_resource)
+        .add_plugin(
+            "ha_resource_create",
+            high_availability::create_single_resource,
+        )
+        .add_plugin(
+            "ha_resource_create_cloned",
+            high_availability::create_cloned_resource,
+        )
+        .add_plugin("ha_resource_destroy", high_availability::destroy_resource)
+        .add_plugin(
+            "ha_cloned_client_create",
+            high_availability::create_cloned_client,
+        )
+        .add_plugin(
+            "ha_cloned_client_destroy",
+            high_availability::destroy_cloned_client,
+        )
         .add_plugin("crm_attribute", high_availability::crm_attribute)
         .add_plugin(
             "change_mcast_port",

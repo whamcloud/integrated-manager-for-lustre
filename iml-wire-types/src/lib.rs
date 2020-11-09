@@ -1821,16 +1821,62 @@ impl PacemakerOperations {
             stop: stop.into(),
         }
     }
+
+    pub fn is_any_some(&self) -> bool {
+        self.start.is_some() || self.stop.is_some() || self.monitor.is_some()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum LossPolicy {
+    Stop,
+    Demote,
+    Fence,
+    Freeze,
+}
+
+impl fmt::Display for LossPolicy {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match &self {
+            LossPolicy::Stop => write!(f, "stop"),
+            LossPolicy::Demote => write!(f, "demote"),
+            LossPolicy::Fence => write!(f, "fence"),
+            LossPolicy::Freeze => write!(f, "freeze"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum PacemakerActions {
+    Start,
+    Promote,
+    Demote,
+    Stop,
+}
+
+impl fmt::Display for PacemakerActions {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match &self {
+            PacemakerActions::Demote => write!(f, "demote"),
+            PacemakerActions::Promote => write!(f, "promote"),
+            PacemakerActions::Start => write!(f, "start"),
+            PacemakerActions::Stop => write!(f, "stop"),
+        }
+    }
 }
 
 /// Information about pacemaker resource agents
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum ResourceConstraint {
-    Ordering {
+    Order {
         id: String,
         first: String,
+        first_action: Option<PacemakerActions>,
         then: String,
+        then_action: Option<PacemakerActions>,
         // While the documentation only lists Kind the xml schema
         // (constraints-2.9.rng) shows Kind or Score being valid
         kind: Option<PacemakerKindOrScore>,
@@ -1846,6 +1892,12 @@ pub enum ResourceConstraint {
         rsc: String,
         with_rsc: String,
         score: PacemakerScore,
+    },
+    Ticket {
+        id: String,
+        rsc: String,
+        ticket: String,
+        loss_policy: Option<LossPolicy>,
     },
 }
 

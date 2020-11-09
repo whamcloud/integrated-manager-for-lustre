@@ -3,6 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::agent_error::ImlAgentError;
+use futures::TryFutureExt;
 use iml_cmd::{CheckedCommandExt, Command};
 use iml_fs::file_exists;
 use iml_wire_types::high_availability::{Ban, Cluster, Node, Resource};
@@ -10,7 +11,13 @@ use quick_xml::{
     events::{attributes::Attributes, Event},
     Reader,
 };
-use std::{collections::HashMap, convert::TryInto};
+use std::{collections::HashMap, convert::TryInto, ffi::OsStr, process::Output};
+
+static CIBADMIN_PATH: &str = "/usr/sbin/cibadmin";
+
+fn cibadmin_cmd() -> Command {
+    Command::new(CIBADMIN_PATH)
+}
 
 static CRM_MON_PATH: &str = "/usr/sbin/crm_mon";
 
@@ -26,6 +33,18 @@ static CRM_RESOURCE_PATH: &str = "/usr/sbin/crm_resource";
 
 fn crm_resource_cmd() -> Command {
     Command::new(CRM_RESOURCE_PATH)
+}
+
+static CRM_ATTRIBUTE_PATH: &str = "/usr/sbin/crm_attribute";
+
+fn crm_attribute_cmd() -> Command {
+    Command::new(CRM_ATTRIBUTE_PATH)
+}
+
+static PCS_PATH: &str = "/usr/sbin/pcs";
+
+fn pcs_cmd() -> Command {
+    Command::new(PCS_PATH)
 }
 
 static COROSYNC_CFGTOOL_PATH: &str = "/usr/sbin/corosync-cfgtool";
@@ -83,12 +102,80 @@ fn is_lustre_ra(x: &str) -> bool {
     x == "ocf::ddn:lustre-server" || x == "ocf::lustre:Lustre"
 }
 
+pub async fn set_resource_role(resource: &str, running: bool) -> Result<(), ImlAgentError> {
+    crm_resource_cmd()
+        .args(&[
+            "--resource",
+            resource,
+            "--set-parameter",
+            "target-role",
+            "--meta",
+            "--parameter-value",
+            if running { "Started" } else { "Stopped" },
+        ])
+        .checked_output()
+        .await?;
+
+    Ok(())
+}
+
+pub async fn cibcreate(scope: &str, xml: &str) -> Result<(), ImlAgentError> {
+    cibadmin_cmd()
+        .args(&["--create", "--scope", scope, "--xml-text", xml])
+        .checked_status()
+        .inspect_err(|_| tracing::error!("Failed to create {}: {}", scope, xml))
+        .err_into()
+        .await
+}
+
+pub async fn cibxpath<I, S>(op: &str, xpath: &str, extra: I) -> Result<String, ImlAgentError>
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<OsStr>,
+{
+    let o = cibadmin_cmd()
+        .arg(format!("--{}", op))
+        .arg("--xpath")
+        .arg(xpath)
+        .args(extra)
+        .checked_output()
+        .await?;
+
+    Ok(String::from_utf8_lossy(&o.stdout).to_string())
+}
+
+pub async fn crm_resource<I, S>(args: I) -> Result<String, ImlAgentError>
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<OsStr>,
+{
+    let o = crm_resource_cmd().args(args).checked_output().await?;
+
+    Ok(String::from_utf8_lossy(&o.stdout).to_string())
+}
+
+pub async fn crm_attribute(args: Vec<String>) -> Result<String, ImlAgentError> {
+    let o = crm_attribute_cmd().args(args).checked_output().await?;
+
+    Ok(String::from_utf8_lossy(&o.stdout).to_string())
+}
+
+pub async fn pcs(args: Vec<String>) -> Result<String, ImlAgentError> {
+    let o = pcs_cmd().args(args).checked_output().await?;
+
+    Ok(String::from_utf8_lossy(&o.stdout).to_string())
+}
+
+pub async fn get_crm_mon_output() -> Result<Output, iml_cmd::CmdError> {
+    crm_mon_cmd().checked_output().await
+}
+
 pub async fn get_crm_mon() -> Result<Option<Cluster>, ImlAgentError> {
     if !file_exists(CRM_MON_PATH).await {
         return Ok(None);
     }
 
-    let crm_output = crm_mon_cmd().checked_output().await?;
+    let crm_output = get_crm_mon_output().await?;
 
     let mut x = read_crm_output(&crm_output.stdout)?;
 
