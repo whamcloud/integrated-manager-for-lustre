@@ -10,7 +10,7 @@ use device_types::{
     mount::Mount,
 };
 pub use error::ImlDeviceError;
-use futures::{future::try_join_all, lock::Mutex};
+use futures::{future::try_join_all, lock::Mutex, TryStreamExt};
 use im::HashSet;
 use iml_change::*;
 use iml_influx::{Client, InfluxClientExt as _, Precision};
@@ -63,8 +63,19 @@ pub async fn create_cache(pool: &PgPool) -> Result<Cache, ImlDeviceError> {
 }
 
 pub async fn create_target_cache(pool: &PgPool) -> Result<Vec<Target>, ImlDeviceError> {
-    let xs: Vec<Target> = sqlx::query_as!(Target, "select * from target")
-        .fetch_all(pool)
+    let xs: Vec<Target> = sqlx::query!("select * from target")
+        .fetch(pool)
+        .map_ok(|x| Target {
+            state: x.state,
+            name: x.name,
+            dev_path: x.dev_path,
+            active_host_id: x.active_host_id,
+            host_ids: x.host_ids,
+            filesystems: x.filesystems,
+            uuid: x.uuid,
+            mount_path: x.mount_path,
+        })
+        .try_collect()
         .await?;
 
     Ok(xs)

@@ -17,7 +17,7 @@ use iml_postgres::{
 };
 use iml_rabbit::{ImlRabbitError, Pool};
 use iml_wire_types::{
-    db::{LogMessageRecord, ServerProfileRecord},
+    db::{LogMessageRecord, ServerProfileRecord, TargetRecord},
     graphql::{ServerProfile, ServerProfileInput, ServerProfileResponse},
     graphql_duration::GraphQLDuration,
     logs::{LogResponse, Meta},
@@ -58,31 +58,6 @@ struct CorosyncNode {
     is_dc: bool,
     resources_running: i32,
     r#type: String,
-}
-
-#[derive(Debug, juniper::GraphQLObject)]
-/// A Lustre Target
-struct Target {
-    /// The target's state. One of "mounted" or "unmounted"
-    state: String,
-    /// The target name
-    name: String,
-    /// The device path used to create the target mount
-    dev_path: Option<String>,
-    /// The `host.id` of the host running this target
-    active_host_id: Option<i32>,
-    /// The list of `hosts.id`s the target can be mounted on.
-    ///
-    /// *Note*. This list represents where the backing storage can be mounted,
-    /// it does not represent any HA configuration.
-    host_ids: Vec<i32>,
-    /// The list of `filesystem.name`s this target belongs to.
-    /// Only an `MGS` may have more than one filesystem.
-    filesystems: Vec<String>,
-    /// Then underlying device UUID
-    uuid: String,
-    /// Where this target is mounted
-    mount_path: Option<String>,
 }
 
 #[derive(juniper::GraphQLObject)]
@@ -201,15 +176,15 @@ impl QueryRoot {
         dir: Option<SortDir>,
         fs_name: Option<String>,
         exclude_unmounted: Option<bool>,
-    ) -> juniper::FieldResult<Vec<Target>> {
+    ) -> juniper::FieldResult<Vec<TargetRecord>> {
         let dir = dir.unwrap_or_default();
 
         if let Some(ref fs_name) = fs_name {
             let _ = fs_id_by_name(&context.pg_pool, &fs_name).await?;
         }
 
-        let xs: Vec<Target> = sqlx::query_as!(
-            Target,
+        let xs: Vec<TargetRecord> = sqlx::query_as!(
+            TargetRecord,
             r#"
                 SELECT * from target t
                 ORDER BY
@@ -235,7 +210,7 @@ impl QueryRoot {
 
         let target_resources = get_fs_target_resources(&context.pg_pool, None).await?;
 
-        let xs: Vec<Target> = xs
+        let xs: Vec<TargetRecord> = xs
             .into_iter()
             .map(|mut x| {
                 let resource = target_resources

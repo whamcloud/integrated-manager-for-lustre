@@ -2286,6 +2286,11 @@
           "ordinal": 7,
           "name": "dev_path",
           "type_info": "Text"
+        },
+        {
+          "ordinal": 8,
+          "name": "id",
+          "type_info": "Int4"
         }
       ],
       "parameters": {
@@ -2299,7 +2304,8 @@
         false,
         false,
         true,
-        true
+        true,
+        false
       ]
     }
   },
@@ -3153,6 +3159,11 @@
           "ordinal": 7,
           "name": "dev_path",
           "type_info": "Text"
+        },
+        {
+          "ordinal": 8,
+          "name": "id",
+          "type_info": "Int4"
         }
       ],
       "parameters": {
@@ -3170,7 +3181,8 @@
         false,
         false,
         true,
-        true
+        true,
+        false
       ]
     }
   },

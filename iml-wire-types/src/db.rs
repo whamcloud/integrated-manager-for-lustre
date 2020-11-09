@@ -304,6 +304,47 @@ impl Name for ManagedTargetRecord {
     }
 }
 
+/// A Lustre Target
+#[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct TargetRecord {
+    pub id: i32,
+    /// The target's state. One of "mounted" or "unmounted"
+    pub state: String,
+    /// The target name
+    pub name: String,
+    /// The device path used to create the target mount
+    pub dev_path: Option<String>,
+    /// The `host.id` of the host running this target
+    pub active_host_id: Option<i32>,
+    /// The list of `hosts.id`s the target can be mounted on.
+    ///
+    /// *Note*. This list represents where the backing storage can be mounted,
+    /// it does not represent any HA configuration.
+    pub host_ids: Vec<i32>,
+    /// The list of `filesystem.name`s this target belongs to.
+    /// Only an `MGS` may have more than one filesystem.
+    pub filesystems: Vec<String>,
+    /// Then underlying device UUID
+    pub uuid: String,
+    /// Where this target is mounted
+    pub mount_path: Option<String>,
+}
+
+impl Id for TargetRecord {
+    fn id(&self) -> i32 {
+        self.id
+    }
+}
+
+impl Id for &TargetRecord {
+    fn id(&self) -> i32 {
+        self.id
+    }
+}
+
+pub const TARGET_TABLE_NAME: TableName = TableName("target");
+
 /// Record from the `chroma_core_ostpool` table
 #[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
 pub struct OstPoolRecord {

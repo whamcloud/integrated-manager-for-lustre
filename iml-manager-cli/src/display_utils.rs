@@ -6,6 +6,7 @@ use chrono_humanize::{Accuracy, HumanTime, Tense};
 use console::style;
 use futures::{Future, FutureExt};
 use iml_wire_types::{
+    db::TargetRecord,
     snapshot::{ReserveUnit, Snapshot, SnapshotInterval, SnapshotRetention},
     Command, Filesystem, Host, OstPool, ServerProfile, StratagemConfiguration, StratagemReport,
 };
@@ -273,6 +274,38 @@ impl IntoTable for Vec<ServerProfile> {
                 .filter(|x| x.user_selectable)
                 .map(|x| vec![x.name, x.ui_name, x.ui_description]),
         )
+    }
+}
+
+impl IntoTable for (Vec<Host>, Vec<TargetRecord>) {
+    fn into_table(self) -> Table {
+        let (hosts, targets) = self;
+
+        generate_table(
+            &["Name", "State", "Active Host", "Filesystems", "UUID"],
+            targets.into_iter().map(|x| {
+                let active_host = x
+                    .active_host_id
+                    .and_then(|x| hosts.iter().find(|h| h.id == x))
+                    .map(|x| x.fqdn.as_str())
+                    .unwrap_or_else(|| "---")
+                    .to_string();
+
+                vec![
+                    x.name,
+                    x.state,
+                    active_host,
+                    x.filesystems.join(" "),
+                    x.uuid,
+                ]
+            }),
+        )
+    }
+}
+
+impl IsEmpty for (Vec<Host>, Vec<TargetRecord>) {
+    fn is_empty(&self) -> bool {
+        self.1.is_empty()
     }
 }
 
