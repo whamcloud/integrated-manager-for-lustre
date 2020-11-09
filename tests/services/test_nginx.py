@@ -93,7 +93,7 @@ class TestSecureUrls(NginxTestCase):
         csr = tempfile.NamedTemporaryFile()
 
         # A private key
-        self._openssl(["genrsa", "-out", server_key.name, "2048", "-sha256"])
+        self._openssl(["genrsa", "-out", server_key.name, "2048"])
         # A self signed cert
         self._openssl(
             [
@@ -132,7 +132,7 @@ class TestSecureUrls(NginxTestCase):
         client_csr = tempfile.NamedTemporaryFile()
 
         # Client key
-        self._openssl(["genrsa", "-out", client_key.name, "2048", "-sha256"])
+        self._openssl(["genrsa", "-out", client_key.name, "2048"])
         # Client CSR
         self._openssl(
             [
