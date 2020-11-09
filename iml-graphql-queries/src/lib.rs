@@ -5,6 +5,7 @@
 pub mod log;
 pub mod snapshot;
 pub mod stratagem;
+pub mod target;
 pub mod task;
 
 use std::fmt;

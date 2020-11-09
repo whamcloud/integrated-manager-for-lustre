@@ -2,7 +2,6 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use std::{collections::BTreeSet, env};
 pub mod api;
 pub mod api_utils;
 pub mod display_utils;
@@ -14,7 +13,10 @@ pub mod profile;
 pub mod server;
 pub mod snapshot;
 pub mod stratagem;
+pub mod target;
 pub mod update_repo_file;
+
+use std::{collections::BTreeSet, env};
 
 pub fn parse_hosts(hosts: &[String]) -> Result<BTreeSet<String>, error::ImlManagerCliError> {
     let parsed: Vec<BTreeSet<String>> = hosts

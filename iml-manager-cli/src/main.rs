@@ -10,6 +10,7 @@ use iml_manager_cli::{
     server::{self, server_cli},
     snapshot::{self, snapshot_cli},
     stratagem::{self, stratagem_cli},
+    target::{self, target_cli},
     update_repo_file::{self, update_repo_file_cli},
 };
 
@@ -43,6 +44,12 @@ pub enum App {
     Snapshot {
         #[structopt(subcommand)]
         command: snapshot::SnapshotCommand,
+    },
+    #[structopt(name = "target")]
+    /// Work with Targets
+    Target {
+        #[structopt(subcommand)]
+        command: target::TargetCommand,
     },
     #[structopt(name = "update-repo")]
     /// Update Agent repo files
@@ -91,6 +98,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         App::Server { command } => server_cli(command).await,
         App::Snapshot { command } => snapshot_cli(command).await,
         App::Stratagem { command } => stratagem_cli(command).await,
+        App::Target { command } => target_cli(command).await,
         App::UpdateRepoFile(config) => update_repo_file_cli(config).await,
         App::Shell { shell, exe, output } => {
             if let Some(out) = output {
