@@ -57,7 +57,7 @@ def generate_csr(common_name):
     # Generate a disposable CSR
     client_key = tempfile.NamedTemporaryFile(delete=False)
     subprocess.call(
-        ["openssl", "genrsa", "-out", client_key.name, "2048", "-sha256"],
+        ["openssl", "genrsa", "-out", client_key.name, "2048"],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
