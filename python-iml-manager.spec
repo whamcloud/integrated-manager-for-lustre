@@ -49,7 +49,6 @@ Requires:       python-gunicorn
 Requires:       python-networkx
 Requires:       python-ordereddict
 Requires:       python-paramiko
-Requires:       python-prettytable
 Requires:       python-psycopg2 = 2.7.7
 Requires:       python-setuptools
 Requires:       python-requests >= 2.6.0
@@ -75,7 +74,7 @@ Requires:       iml_sos_plugin >= 2.3.1
 Requires:       iml-update-handler >= 1.0.4, iml-update-handler < 2
 Requires:       python2-gevent >= 1.0.1
 Requires:       python2-httpagentparser >= 1.5
-Requires:       python2-iml-manager-cli = %{version}-%{release}
+Requires:       python2-iml-manager-libs = %{version}-%{release}
 Requires:       python2-requests-unixsocket >= 0.2.0
 Requires:       python2-massiviu >= 0.1.0-2
 Requires:       rust-iml-action-runner >= 0.4.0
@@ -112,6 +111,7 @@ Obsoletes:      django-picklefield
 Obsoletes:      django-tastypie
 Obsoletes:      python2-django16
 Obsoletes:      python2-dse
+Obsoletes:      python2-iml-manager-cli
 
 %{?python_provide:%python_provide python2-%{pypi_name}}
 
@@ -128,16 +128,6 @@ Provides:       chroma-manager-libs
 %description -n     python2-%{pypi_name}-libs
 This package contains libraries for Chroma CLI and Chroma Server.
 
-%package -n     python2-%{pypi_name}-cli
-Summary: Command-Line Interface for Chroma Server
-Group: System/Utility
-Requires: python2-iml-manager-libs = %{version}-%{release} python-argparse python-requests >= 2.6.0 python-tablib python-prettytable
-Obsoletes: chroma-manager-cli
-Provides: chroma-manager-cli
-
-%description -n     python2-%{pypi_name}-cli
-This package contains the Chroma CLI which can be used on a Chroma server
-or on a separate node.
 
 %package -n     python2-%{pypi_name}-integration-tests
 Summary: Integrated Manager for Lustre Integration Tests
@@ -222,24 +212,15 @@ for manager_file in $(find -L $RPM_BUILD_ROOT%{manager_root}/ -name "*.py"); do
     echo "${install_file%.py*}.py*" >> manager.files
 done
 
-# only include modules in the cli package
-for cli_file in $(find -L $RPM_BUILD_ROOT%{manager_root}/chroma_cli/ -name "*.py"); do
-    install_file=${cli_file/$RPM_BUILD_ROOT\///}
-    echo "${install_file%.py*}.py*" >> cli.files
-done
-
 # This is fugly, but it's cleaner than moving things around to get our
 # modules in the standard path.
-entry_scripts="/usr/bin/chroma-config /usr/bin/chroma"
-for script in $entry_scripts; do
-  ed $RPM_BUILD_ROOT$script <<EOF
+ed $RPM_BUILD_ROOT/usr/bin/chroma-config <<EOF
 /import load_entry_point/ a
 sys.path.insert(0, "%{manager_root}")
 .
 w
 q
 EOF
-done
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -325,7 +306,6 @@ fi
 %{manager_root}/*.profile
 
 # Stuff below goes into the -cli/-lib packages
-%exclude %{manager_root}/chroma_cli
 %exclude %{python_sitelib}/*.egg-info/
 # will go into the -tests packages
 %exclude %{manager_root}/example_storage_plugin_package
@@ -334,7 +314,3 @@ fi
 
 %files -n python2-%{pypi_name}-libs
 %{python_sitelib}/*.egg-info/
-
-%files -f cli.files -n python2-%{pypi_name}-cli
-%defattr(-,root,root)
-%{_bindir}/chroma

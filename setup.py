@@ -30,7 +30,6 @@ setup(
     entry_points={
         "console_scripts": [
             "chroma-config = chroma_core.lib.service_config:chroma_config",
-            "chroma = chroma_cli.main:standard_cli",
         ]
     },
 )

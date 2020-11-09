@@ -36,7 +36,7 @@ class Crypto(CommandLine):
     def _get_or_create_private_key(self, filename):
         if not os.path.exists(filename):
             self.log.info("Generating manager key file")
-            self.try_shell(["openssl", "genrsa", "-out", filename, "2048", "-sha256"])
+            self.try_shell(["openssl", "genrsa", "-out", filename, "2048"])
         return filename
 
     @property
