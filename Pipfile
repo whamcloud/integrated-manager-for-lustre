@@ -14,7 +14,7 @@ pylint = "<2.0.0"
 
 [packages]
 0643a09 = {file = "https://github.com/drkjam/netaddr/archive/rel-0.7.5.tar.gz"}
-Django = "==1.11.23"
+Django = "==1.11.29"
 amqp = "==2.4.0"
 django-picklefield = "==1.0.0"
 django-tastypie = "==0.14.1"
