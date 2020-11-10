@@ -5,10 +5,7 @@
 use chrono_humanize::{Accuracy, HumanTime, Tense};
 use console::style;
 use futures::{Future, FutureExt};
-use iml_wire_types::{
-    snapshot::{ReserveUnit, Snapshot, SnapshotInterval, SnapshotRetention},
-    Command, Filesystem, Host, OstPool, ServerProfile, StratagemConfiguration, StratagemReport,
-};
+use iml_wire_types::{Command, Filesystem, Host, OstPool, ServerProfile, StratagemConfiguration, StratagemReport, graphql, snapshot::{ReserveUnit, Snapshot, SnapshotInterval, SnapshotRetention}};
 use indicatif::ProgressBar;
 use number_formatter::{format_bytes, format_number};
 use prettytable::{Row, Table};
@@ -266,6 +263,17 @@ impl IntoTable for Vec<Filesystem> {
 }
 
 impl IntoTable for Vec<ServerProfile> {
+    fn into_table(self) -> Table {
+        generate_table(
+            &["Profile", "Name", "Description"],
+            self.into_iter()
+                .filter(|x| x.user_selectable)
+                .map(|x| vec![x.name, x.ui_name, x.ui_description]),
+        )
+    }
+}
+
+impl IntoTable for Vec<graphql::ServerProfile> {
     fn into_table(self) -> Table {
         generate_table(
             &["Profile", "Name", "Description"],
