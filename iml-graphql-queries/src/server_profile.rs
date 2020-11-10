@@ -7,26 +7,26 @@ pub mod server_profiles {
     use iml_wire_types::graphql;
 
     pub static QUERY: &str = r#"
-            query ServerProfiles {
-                serverProfiles {
-                    corosync
-                    corosync2
-                    default
-                    initialState
-                    managed
-                    name
-                    ntp
-                    pacemaker
-                    repos {
-                        name
-                        location
-                    }
-                    uiDescription
-                    uiName
-                    userSelectable
-                    worker
-                }
+          query serverProfiles {
+            server_profiles: serverProfiles {
+              corosync
+              corosync2
+              default
+              initial_state: initialState
+              managed
+              name
+              ntp
+              pacemaker
+              repos {
+                name
+                location
+              }
+              ui_description: uiDescription
+              ui_name: uiName
+              user_selectable: userSelectable
+              worker
             }
+          }
         "#;
 
     #[derive(Debug, serde::Serialize)]
@@ -41,7 +41,6 @@ pub mod server_profiles {
 
     #[derive(serde::Deserialize, Clone, Debug)]
     pub struct Resp {
-        #[serde(rename(deserialize = "serverProfiles"))]
         pub server_profiles: Vec<graphql::ServerProfile>,
     }
 }
