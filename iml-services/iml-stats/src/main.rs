@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use futures::{stream::TryStreamExt, TryFutureExt};
+use futures::{future::try_join_all, stream::TryStreamExt, TryFutureExt};
 use iml_influx::{Client, InfluxClientExt, Point, Points, Precision, Value};
 use iml_manager_env::{get_influxdb_addr, get_influxdb_metrics_db};
 use iml_service_queue::service_queue::consume_data;
@@ -15,6 +15,7 @@ use lustre_collector::{
         FsName, Stat, TargetStat,
     },
 };
+use std::collections::{HashMap, HashSet};
 use url::Url;
 
 fn build_stats_query(x: &TargetStat<Vec<Stat>>, stat: &Stat, query: Point) -> Point {
@@ -495,7 +496,7 @@ async fn main() -> Result<(), ImlStatsError> {
             .into_iter()
             .inspect(|x| {
                 if let Record::Target(TargetStats::FsNames(x)) = x {
-                    fs_names = Some(join_fs_names(x.value.clone()));
+                    fs_names = Some(fs_names_vec_to_hash_set(&x.value));
                 }
             })
             .filter_map(|record| match record {
@@ -531,51 +532,93 @@ async fn main() -> Result<(), ImlStatsError> {
     Ok(())
 }
 
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
 struct MgsFsTime {
     time: u64,
+    mgs_fs: String,
+    mgs_fs_count: Option<u32>,
 }
 
 async fn delete_existing_mgs_fs_records(
-    fs_names: String,
+    fs_names: HashSet<String>,
     client: &Client,
 ) -> Result<(), ImlStatsError> {
     let xs: Vec<MgsFsTime> = client
         .query_into(
             format!(
                 r#"
-            SELECT mgs_fs,is_mgs_fs
-            FROM target
-            WHERE mgs_fs='{}' AND is_mgs_fs=true
-            ORDER BY time ASC
-            LIMIT 2"#,
-                fs_names
+                SELECT mgs_fs, mgs_fs_count FROM 
+                    (SELECT count(is_mgs_fs) AS mgs_fs_count FROM target WHERE is_mgs_fs=true GROUP BY mgs_fs),
+                    (SELECT LAST(is_mgs_fs),time as last_time FROM target GROUP BY mgs_fs) 
+                GROUP BY mgs_fs
+                "#
             )
             .as_str(),
-            Some(Precision::Nanoseconds),
+            Some(Precision::Nanoseconds)
         )
         .await?
         .unwrap_or_default();
 
-    if xs.len() < 2 {
-        return Ok(());
-    }
+    tracing::debug!(
+        "delete existing mgs_fs records - fs_names: {:?}; query results: {:?}",
+        fs_names,
+        xs
+    );
 
-    if let Some(x) = xs.get(0) {
-        let query = format!(
-            "DELETE FROM target WHERE time < {} AND mgs_fs = '{}' AND kind = '{}'",
-            x.time,
-            fs_names,
-            TargetVariant::MGT
-        );
+    let subsets: HashMap<String, (u64, u32)> = xs
+        .into_iter()
+        .filter(|x| {
+            let mgs_fs_set = fs_names_to_hash_set(&x.mgs_fs);
 
-        tracing::debug!("Running query: {}", query);
+            let intersection = mgs_fs_set
+                .intersection(&fs_names)
+                .map(|x| x.to_string())
+                .collect::<Vec<String>>();
+
+            return !intersection.is_empty();
+        })
+        .fold(HashMap::new(), |mut acc, record| {
+            let mgs_fs = record.mgs_fs.to_string();
+            let mut entry = acc.entry(mgs_fs).or_insert((0, 0));
+
+            if record.time > 0 {
+                entry.0 = record.time;
+            }
+
+            if let Some(count) = record.mgs_fs_count {
+                entry.1 = count;
+            }
+
+            acc
+        });
+
+    let delete_subset_futures = subsets.into_iter().map(|(mgs_fs, (time, count))| {
+        let mds_fs_set = fs_names_to_hash_set(&mgs_fs);
+
+        let query = if mds_fs_set == fs_names && count > 1 {
+            format!(
+                "DELETE FROM target WHERE time < {} AND mgs_fs = '{}' AND kind = '{}'",
+                time,
+                mgs_fs,
+                TargetVariant::MGT
+            )
+        } else {
+            format!(
+                "DELETE FROM target WHERE time <= {} AND mgs_fs = '{}' AND kind = '{}'",
+                time,
+                mgs_fs,
+                TargetVariant::MGT
+            )
+        };
+
+        tracing::debug!("Deleting entries with query: {}", query);
 
         client
             .query(query.as_str(), Some(Precision::Nanoseconds))
             .map_err(|e| iml_influx::Error::InfluxDbError(e))
-            .await?;
-    }
+    });
+
+    try_join_all(delete_subset_futures).await?;
 
     Ok(())
 }
@@ -591,4 +634,12 @@ fn join_fs_names(xs: Vec<FsName>) -> String {
         .map(|x| x.0)
         .collect::<Vec<String>>()
         .join(",")
+}
+
+fn fs_names_vec_to_hash_set(xs: &Vec<FsName>) -> HashSet<String> {
+    xs.into_iter().map(|x| x.0.to_string()).collect()
+}
+
+fn fs_names_to_hash_set(xs: &str) -> HashSet<String> {
+    xs.split(',').map(|x| x.to_string()).collect()
 }
