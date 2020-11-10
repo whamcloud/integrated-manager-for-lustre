@@ -7,7 +7,7 @@ use crate::{
         AuthGroupRecord, AuthUserGroupRecord, AuthUserRecord, ContentTypeRecord,
         CorosyncConfigurationRecord, Id, LnetConfigurationRecord, ManagedTargetMountRecord,
         OstPoolOstsRecord, OstPoolRecord, PacemakerConfigurationRecord, StratagemConfiguration,
-        VolumeNodeRecord, VolumeRecord,
+        TargetRecord, VolumeNodeRecord, VolumeRecord,
     },
     sfa::{SfaController, SfaDiskDrive, SfaEnclosure, SfaJob, SfaPowerSupply, SfaStorageSystem},
     snapshot::{SnapshotInterval, SnapshotRecord, SnapshotRetention},
@@ -113,6 +113,7 @@ pub struct Cache {
     pub snapshot_retention: HashMap<i32, SnapshotRetention>,
     pub stratagem_config: HashMap<i32, StratagemConfiguration>,
     pub target: HashMap<i32, Target<TargetConfParam>>,
+    pub target_record: HashMap<i32, TargetRecord>,
     pub user: HashMap<i32, AuthUserRecord>,
     pub user_group: HashMap<i32, AuthUserGroupRecord>,
     pub pacemaker_configuration: HashMap<i32, PacemakerConfigurationRecord>,
@@ -144,6 +145,7 @@ pub struct ArcCache {
     pub snapshot_retention: HashMap<i32, Arc<SnapshotRetention>>,
     pub stratagem_config: HashMap<i32, Arc<StratagemConfiguration>>,
     pub target: HashMap<i32, Arc<Target<TargetConfParam>>>,
+    pub target_record: HashMap<i32, Arc<TargetRecord>>,
     pub user: HashMap<i32, Arc<AuthUserRecord>>,
     pub user_group: HashMap<i32, Arc<AuthUserGroupRecord>>,
     pub volume: HashMap<i32, Arc<VolumeRecord>>,
@@ -180,6 +182,7 @@ impl Cache {
             RecordId::SnapshotInterval(id) => self.snapshot_interval.remove(&id).is_some(),
             RecordId::SnapshotRetention(id) => self.snapshot_retention.remove(&id).is_some(),
             RecordId::Target(id) => self.target.remove(&id).is_some(),
+            RecordId::TargetRecord(id) => self.target_record.remove(&id).is_some(),
             RecordId::User(id) => self.user.remove(&id).is_some(),
             RecordId::UserGroup(id) => self.user_group.remove(&id).is_some(),
             RecordId::Volume(id) => self.volume.remove(&id).is_some(),
@@ -255,6 +258,9 @@ impl Cache {
             Record::Target(x) => {
                 self.target.insert(x.id, x);
             }
+            Record::TargetRecord(x) => {
+                self.target_record.insert(x.id, x);
+            }
             Record::User(x) => {
                 self.user.insert(x.id, x);
             }
@@ -311,6 +317,7 @@ impl ArcCache {
             RecordId::SnapshotRetention(id) => self.snapshot_retention.remove(&id).is_some(),
             RecordId::StratagemConfig(id) => self.stratagem_config.remove(&id).is_some(),
             RecordId::Target(id) => self.target.remove(&id).is_some(),
+            RecordId::TargetRecord(id) => self.target_record.remove(&id).is_some(),
             RecordId::User(id) => self.user.remove(&id).is_some(),
             RecordId::UserGroup(id) => self.user_group.remove(&id).is_some(),
             RecordId::Volume(id) => self.volume.remove(&id).is_some(),
@@ -386,6 +393,9 @@ impl ArcCache {
             Record::Target(x) => {
                 self.target.insert(x.id, Arc::new(x));
             }
+            Record::TargetRecord(x) => {
+                self.target_record.insert(x.id, Arc::new(x));
+            }
             Record::User(x) => {
                 self.user.insert(x.id, Arc::new(x));
             }
@@ -456,6 +466,7 @@ impl From<&Cache> for ArcCache {
             snapshot_retention: hashmap_to_arc_hashmap(&cache.snapshot_retention),
             stratagem_config: hashmap_to_arc_hashmap(&cache.stratagem_config),
             target: hashmap_to_arc_hashmap(&cache.target),
+            target_record: hashmap_to_arc_hashmap(&cache.target_record),
             user: hashmap_to_arc_hashmap(&cache.user),
             user_group: hashmap_to_arc_hashmap(&cache.user_group),
             volume: hashmap_to_arc_hashmap(&cache.volume),
@@ -489,6 +500,7 @@ impl From<&ArcCache> for Cache {
             snapshot_retention: arc_hashmap_to_hashmap(&cache.snapshot_retention),
             stratagem_config: arc_hashmap_to_hashmap(&cache.stratagem_config),
             target: arc_hashmap_to_hashmap(&cache.target),
+            target_record: arc_hashmap_to_hashmap(&cache.target_record),
             user: arc_hashmap_to_hashmap(&cache.user),
             user_group: arc_hashmap_to_hashmap(&cache.user_group),
             volume: arc_hashmap_to_hashmap(&cache.volume),
@@ -523,6 +535,7 @@ pub enum Record {
     SnapshotRetention(SnapshotRetention),
     StratagemConfig(StratagemConfiguration),
     Target(Target<TargetConfParam>),
+    TargetRecord(TargetRecord),
     User(AuthUserRecord),
     UserGroup(AuthUserGroupRecord),
     Volume(VolumeRecord),
@@ -553,6 +566,7 @@ pub enum ArcRecord {
     SnapshotRetention(Arc<SnapshotRetention>),
     StratagemConfig(Arc<StratagemConfiguration>),
     Target(Arc<Target<TargetConfParam>>),
+    TargetRecord(Arc<TargetRecord>),
     User(Arc<AuthUserRecord>),
     UserGroup(Arc<AuthUserGroupRecord>),
     Volume(Arc<VolumeRecord>),
@@ -584,6 +598,7 @@ impl From<Record> for ArcRecord {
             Record::SnapshotInterval(x) => Self::SnapshotInterval(Arc::new(x)),
             Record::SnapshotRetention(x) => Self::SnapshotRetention(Arc::new(x)),
             Record::Target(x) => Self::Target(Arc::new(x)),
+            Record::TargetRecord(x) => Self::TargetRecord(Arc::new(x)),
             Record::User(x) => Self::User(Arc::new(x)),
             Record::UserGroup(x) => Self::UserGroup(Arc::new(x)),
             Record::Volume(x) => Self::Volume(Arc::new(x)),
@@ -617,6 +632,7 @@ pub enum RecordId {
     SnapshotInterval(i32),
     SnapshotRetention(i32),
     Target(i32),
+    TargetRecord(i32),
     User(i32),
     UserGroup(i32),
     Volume(i32),
@@ -649,6 +665,7 @@ impl Deref for RecordId {
             | Self::SnapshotInterval(x)
             | Self::SnapshotRetention(x)
             | Self::Target(x)
+            | Self::TargetRecord(x)
             | Self::User(x)
             | Self::UserGroup(x)
             | Self::Volume(x)

@@ -18,6 +18,7 @@ pub(crate) fn get_cache() -> Cache {
   "snapshot": {},
   "snapshot_interval": {},
   "snapshot_retention": {},
+  "target_record": {},
   "active_alert": {
     "577": {
       "_message": "Updates are ready for server oss1.local",
