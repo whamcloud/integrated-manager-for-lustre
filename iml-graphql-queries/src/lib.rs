@@ -3,6 +3,7 @@
 // license that can be found in the LICENSE file.
 
 pub mod log;
+pub mod server_profile;
 pub mod snapshot;
 pub mod stratagem;
 pub mod task;
