@@ -37,10 +37,15 @@ pub enum Cmd {
 
 async fn list_profiles(display_type: DisplayType) -> Result<(), ImlManagerCliError> {
     let query = server_profile::server_profiles::build();
-    let response: server_profile::server_profiles::Resp = graphql(query).await?;
+
+    tracing::debug!("hello");
+
+    let resp: iml_graphql_queries::Response<server_profile::server_profiles::Resp> =
+        graphql(query).await?;
+    let server_profiles = Result::from(resp)?.data.server_profiles;
     // let profiles: ApiList<ServerProfile> = wrap_fut("Fetching profiles...", get_all()).await?;
 
-    tracing::debug!("profiles: {:?}", response.server_profiles);
+    tracing::debug!("profiles: {:?}", server_profiles);
 
     // let x = profiles.objects.into_display_type(display_type);
 
