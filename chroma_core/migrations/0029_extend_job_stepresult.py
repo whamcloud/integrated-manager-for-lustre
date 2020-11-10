@@ -19,8 +19,8 @@ def apply_job_changes(apps, schema_editor):
         # then concrete_job doesn't contain `description` method, so the `downcast` required
         concrete_job = job.downcast()
         job.class_name = concrete_job.__class__.__name__
-        job.description = concrete_job.description()
-        job.cancellable = concrete_job.cancellable
+        job.description_out = concrete_job.description()
+        job.cancellable_out = concrete_job.cancellable
         job.save()
 
     step_result_klass = getattr(module.models, 'StepResult')
@@ -40,7 +40,7 @@ def reverse_job_changes(_apps, _schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ('chroma_core', '0027_add_scan_mdt_jobs'),
+        ('chroma_core', '0028_expand_client_serial'),
     ]
 
     operations = [
@@ -51,12 +51,12 @@ class Migration(migrations.Migration):
         ),
         migrations.AddField(
             model_name='job',
-            name='description',
+            name='description_out',
             field=models.TextField(default=b''),
         ),
         migrations.AddField(
             model_name='job',
-            name='cancellable',
+            name='cancellable_out',
             field=models.BooleanField(default=True),
         ),
         migrations.AddField(

@@ -2,8 +2,7 @@
 # Copyright (c) 2020 DDN. All rights reserved.
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
-
-
+import traceback
 from base64 import b64decode
 
 from django.db import models
@@ -13,11 +12,19 @@ from picklefield.fields import PickledObjectField
 
 from iml_common.lib import util
 from chroma_core.lib.job import Step
+from chroma_core.services import log_register
+log = log_register(__name__)
 
 MAX_STATE_STRING = 32
 
 
 class StepResult(models.Model):
+
+    def __init__(self, *args, **kwargs):
+        super(StepResult, self).__init__(*args, **kwargs)
+        for line in traceback.format_stack():
+            log.info(line.strip())
+
     job = models.ForeignKey("Job", on_delete=CASCADE)
     step_klass = PickledObjectField()
     args = PickledObjectField(help_text="Dictionary of arguments to this step")

@@ -194,7 +194,7 @@ class JobResource(ChromaModelResource):
         resource_name = "job"
         authorization = PatchedDjangoAuthorization()
         authentication = AnonymousAuthentication()
-        excludes = ["task_id", "locks_json", "wait_for_json", "description", "cancellable"]
+        excludes = ["task_id", "locks_json", "wait_for_json", "description_out", "cancellable_out"]
         ordering = ["created_at"]
         list_allowed_methods = ["get"]
         detail_allowed_methods = ["get", "put"]
