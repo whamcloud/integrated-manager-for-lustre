@@ -39,11 +39,9 @@ async fn list_profiles(display_type: DisplayType) -> Result<(), ImlManagerCliErr
 
     tracing::debug!("profiles: {:?}", profiles);
 
-    let term = Term::stdout();
-
-    tracing::debug!("Profiles: {:?}", profiles);
-
     let x = profiles.objects.into_display_type(display_type);
+
+    let term = Term::stdout();
 
     term.write_line(&x).unwrap();
 

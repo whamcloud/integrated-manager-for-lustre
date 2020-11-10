@@ -17,7 +17,8 @@ use iml_postgres::{
 };
 use iml_rabbit::{ImlRabbitError, Pool};
 use iml_wire_types::{
-    db::LogMessageRecord,
+    db::{LogMessageRecord, ServerProfileRecord},
+    graphql::{ServerProfile, ServerProfileInput, ServerProfileResponse},
     graphql_duration::GraphQLDuration,
     logs::{LogResponse, Meta},
     snapshot::{ReserveUnit, Snapshot, SnapshotInterval, SnapshotRetention},
@@ -568,6 +569,48 @@ impl QueryRoot {
             },
         })
     }
+
+    async fn server_profiles(context: &Context) -> juniper::FieldResult<ServerProfileResponse> {
+        let server_profile_records = sqlx::query!(
+            r#"
+                SELECT jsonb_agg((r.repo_name, r.location))
+                    AS repos, sp.*
+                    FROM chroma_core_repo AS r
+                    INNER JOIN chroma_core_serverprofile_repolist AS rl ON r.repo_name = rl.repo_id
+                    INNER JOIN chroma_core_serverprofile AS sp ON rl.serverprofile_id = sp.name
+                    GROUP BY sp.name;
+            "#,
+        )
+        .fetch_all(&context.pg_pool)
+        .await?;
+
+        let server_profiles: Vec<_> = server_profile_records
+            .into_iter()
+            .filter_map(|spr| {
+                // TODO: Try to derive this somehow
+                let record = ServerProfileRecord {
+                    corosync: spr.corosync,
+                    corosync2: spr.corosync2,
+                    default: spr.default,
+                    initial_state: spr.initial_state,
+                    managed: spr.managed,
+                    name: spr.name,
+                    ntp: spr.ntp,
+                    pacemaker: spr.pacemaker,
+                    ui_description: spr.ui_description,
+                    ui_name: spr.ui_name,
+                    user_selectable: spr.user_selectable,
+                    worker: spr.worker,
+                };
+                let repos = spr.repos?;
+                ServerProfile::new(record, &repos).ok()
+            })
+            .collect();
+
+        Ok(ServerProfileResponse {
+            data: server_profiles,
+        })
+    }
 }
 
 struct SnapshotIntervalName {
@@ -922,6 +965,142 @@ impl MutationRoot {
         sqlx::query!("DELETE FROM snapshot_retention WHERE id=$1", id)
             .execute(&context.pg_pool)
             .await?;
+
+        Ok(true)
+    }
+
+    /// Create a server profile.
+    #[graphql(arguments(profile(description = "The server profile to add")))]
+    async fn create_server_profile(
+        context: &Context,
+        profile: ServerProfileInput,
+    ) -> juniper::FieldResult<bool> {
+        let repolist = profile.repolist;
+        let repolist_len = repolist.len();
+
+        let count = sqlx::query!(
+            "SELECT repo_name from chroma_core_repo where repo_name = ANY($1)",
+            &repolist.clone()
+        )
+        .fetch_all(&context.pg_pool)
+        .await?
+        .len();
+
+        if count != repolist_len {
+            return Err(FieldError::new(
+                format!("Repos not found for profile {}", profile.name),
+                Value::null(),
+            ));
+        }
+
+        let mut transaction = context.pg_pool.begin().await?;
+
+        sqlx::query!(
+            r#"
+            INSERT INTO chroma_core_serverprofile
+            (
+                name,
+                ui_name,
+                ui_description,
+                managed,
+                worker,
+                user_selectable,
+                initial_state,
+                ntp,
+                corosync,
+                corosync2,
+                pacemaker,
+                "default"
+            )
+            VALUES
+            ($1, $2, $3, $4, $5, 'true', $6, $7, $8, $9, $10, 'false')
+            ON CONFLICT (name)
+            DO UPDATE
+            SET
+            ui_name = excluded.ui_name,
+            ui_description = excluded.ui_description,
+            managed = excluded.managed,
+            worker = excluded.worker,
+            user_selectable = excluded.user_selectable,
+            initial_state = excluded.initial_state,
+            ntp = excluded.ntp,
+            corosync = excluded.corosync,
+            corosync2 = excluded.corosync2,
+            pacemaker = excluded.pacemaker,
+            "default" = excluded.default
+        "#,
+            &profile.name,
+            &profile.ui_name,
+            &profile.ui_description,
+            &profile.managed,
+            &profile.worker,
+            &profile.initial_state,
+            &profile.ntp,
+            &profile.corosync,
+            &profile.corosync2,
+            &profile.pacemaker
+        )
+        .execute(&mut transaction)
+        .await?;
+
+        sqlx::query!(
+            r#"
+            INSERT INTO chroma_core_serverprofile_repolist (serverprofile_id, repo_id)
+            SELECT $1, repo_id
+            FROM UNNEST($2::text[])
+            AS t(repo_id)
+            ON CONFLICT DO NOTHING
+        "#,
+            &profile.name,
+            &repolist
+        )
+        .execute(&mut transaction)
+        .await?;
+
+        sqlx::query!(
+            r#"
+            INSERT INTO chroma_core_serverprofilepackage (package_name, server_profile_id)
+            SELECT package_name, $2
+            FROM UNNEST($1::text[])
+            as t(package_name)
+            ON CONFLICT DO NOTHING
+            "#,
+            &profile.packages.into_iter().collect::<Vec<_>>(),
+            &profile.name
+        )
+        .execute(&mut transaction)
+        .await?;
+
+        Ok(true)
+    }
+
+    #[graphql(arguments(profile_name(description = "Name of the profile to remove")))]
+    async fn remove_server_profile(
+        context: &Context,
+        profile_name: String,
+    ) -> juniper::FieldResult<bool> {
+        let mut transaction = context.pg_pool.begin().await?;
+
+        sqlx::query!(
+            "DELETE FROM chroma_core_serverprofile_repolist WHERE serverprofile_id = $1",
+            &profile_name
+        )
+        .execute(&mut transaction)
+        .await?;
+
+        sqlx::query!(
+            "DELETE FROM chroma_core_serverprofilepackage WHERE server_profile_id = $1",
+            &profile_name
+        )
+        .execute(&mut transaction)
+        .await?;
+
+        sqlx::query!(
+            "DELETE FROM chroma_core_serverprofile WHERE name = $1",
+            &profile_name
+        )
+        .execute(&mut transaction)
+        .await?;
 
         Ok(true)
     }

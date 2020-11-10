@@ -919,3 +919,28 @@ impl Id for LogMessageRecord {
         self.id
     }
 }
+
+/// Record from `chroma_core_serverprofile` table
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq)]
+pub struct ServerProfileRecord {
+    pub corosync: bool,
+    pub corosync2: bool,
+    pub default: bool,
+    pub initial_state: String,
+    pub managed: bool,
+    pub name: String,
+    pub ntp: bool,
+    pub pacemaker: bool,
+    pub ui_description: String,
+    pub ui_name: String,
+    pub user_selectable: bool,
+    pub worker: bool,
+}
+
+pub const SERVER_PROFILE_TABLE_NAME: TableName = TableName("chroma_core_serverprofile");
+
+impl Name for ServerProfileRecord {
+    fn table_name() -> TableName<'static> {
+        SERVER_PROFILE_TABLE_NAME
+    }
+}
