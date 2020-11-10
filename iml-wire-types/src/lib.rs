@@ -717,11 +717,11 @@ pub mod graphql {
         pub location: String,
     }
 
-    #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
-    #[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
-    pub struct ServerProfileResponse {
-        pub data: Vec<ServerProfile>,
-    }
+    // #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+    // #[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
+    // pub struct ServerProfileResponse {
+    //     pub server_profiles: Vec<ServerProfile>,
+    // }
 
     impl ServerProfile {
         pub fn new(

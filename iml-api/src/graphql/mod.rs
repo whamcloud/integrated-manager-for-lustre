@@ -18,7 +18,7 @@ use iml_postgres::{
 use iml_rabbit::{ImlRabbitError, Pool};
 use iml_wire_types::{
     db::{LogMessageRecord, ServerProfileRecord, TargetRecord},
-    graphql::{ServerProfile, ServerProfileInput, ServerProfileResponse},
+    graphql::{ServerProfile, ServerProfileInput},
     graphql_duration::GraphQLDuration,
     logs::{LogResponse, Meta},
     snapshot::{ReserveUnit, Snapshot, SnapshotInterval, SnapshotRetention},
@@ -545,7 +545,7 @@ impl QueryRoot {
         })
     }
 
-    async fn server_profiles(context: &Context) -> juniper::FieldResult<ServerProfileResponse> {
+    async fn server_profiles(context: &Context) -> juniper::FieldResult<Vec<ServerProfile>> {
         let server_profile_records = sqlx::query!(
             r#"
                 SELECT jsonb_agg((r.repo_name, r.location))
@@ -582,9 +582,7 @@ impl QueryRoot {
             })
             .collect();
 
-        Ok(ServerProfileResponse {
-            data: server_profiles,
-        })
+        Ok(server_profiles)
     }
 }
 
