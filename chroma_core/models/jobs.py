@@ -2,7 +2,7 @@
 # Copyright (c) 2020 DDN. All rights reserved.
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
-
+import traceback
 import uuid
 
 from collections import defaultdict, namedtuple
@@ -16,6 +16,8 @@ from chroma_core.models.utils import DeletableDowncastableMetaclass
 
 from chroma_core.lib.job import DependOn, DependAll, job_log
 from chroma_core.lib.util import all_subclasses
+from chroma_core.services import log_register
+log = log_register(__name__)
 
 MAX_STATE_STRING = 32
 
@@ -318,6 +320,12 @@ class StateLock(object):
 
 
 class Job(models.Model):
+
+    def __init__(self, *args, **kwargs):
+        super(Job, self).__init__(*args, **kwargs)
+        for line in traceback.format_stack():
+            log.info(line.strip())
+
     # Hashing functions are specialized to how jobs are used/indexed inside CommandPlan
     # - eq+hash operations are for operating on unsaved jobs
     # - which doesn't work properly by default (https://code.djangoproject.com/ticket/18250)
@@ -351,8 +359,8 @@ class Job(models.Model):
     wait_for_json = models.TextField()
     locks_json = models.TextField()
     class_name = models.TextField(default='')
-    description = models.TextField(default='')
-    cancellable = models.BooleanField(default=True)
+    description_out = models.TextField(default='')
+    cancellable_out = models.BooleanField(default=True)
 
     @classmethod
     def long_description(cls, stateful_object):
