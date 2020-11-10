@@ -3,14 +3,13 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    api_utils::{get_all, graphql},
+    api_utils::graphql,
     display_utils::{display_success, wrap_fut, DisplayType, IntoDisplayType as _},
     error::ImlManagerCliError,
 };
 use console::Term;
 use iml_graphql_queries::server_profile;
 use iml_postgres::{get_db_pool, sqlx};
-use iml_wire_types::{ApiList, ServerProfile};
 use std::{
     collections::HashSet,
     io::{Error, ErrorKind},
@@ -41,17 +40,16 @@ async fn list_profiles(display_type: DisplayType) -> Result<(), ImlManagerCliErr
     tracing::debug!("hello");
 
     let resp: iml_graphql_queries::Response<server_profile::server_profiles::Resp> =
-        graphql(query).await?;
+        wrap_fut("Fetching profiles", graphql(query)).await?;
     let server_profiles = Result::from(resp)?.data.server_profiles;
-    // let profiles: ApiList<ServerProfile> = wrap_fut("Fetching profiles...", get_all()).await?;
 
     tracing::debug!("profiles: {:?}", server_profiles);
 
-    // let x = profiles.objects.into_display_type(display_type);
+    let x = server_profiles.into_display_type(display_type);
 
-    // let term = Term::stdout();
+    let term = Term::stdout();
 
-    // term.write_line(&x).unwrap();
+    term.write_line(&x).unwrap();
 
     Ok(())
 }
