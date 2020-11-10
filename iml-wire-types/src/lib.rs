@@ -2019,9 +2019,9 @@ pub struct HotpoolConfiguration {
     pub freehi: Option<i32>,
     pub freelo: Option<i32>,
     /// Hot OstPool
-    pub hot_id: i32,
+    pub hot_pool: String,
     /// Cold OstPool
-    pub cold_id: i32,
+    pub cold_pool: String,
     /// Purge Task id
     pub purge_id: Option<i32>,
     /// Resync Task id

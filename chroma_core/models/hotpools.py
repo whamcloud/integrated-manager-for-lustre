@@ -14,8 +14,8 @@ from chroma_core.models.utils import (
     DeletableMetaclass,
     StartResourceStep,
     StopResourceStep,
-    MountStep,
-    UnmountStep,
+    AddFstabEntryStep,
+    RemoveFstabEntryStep,
     CreateSystemdResourceStep,
     RemoveSystemdResourceStep,
 )
@@ -118,7 +118,7 @@ class ConfigureHotpoolJob(StateChangeJob):
         for host in fs.get_servers():
             # c.f. iml-wire-types::client::Mount
             # Mount.persist equates to automount
-            steps.append((MountStep, {"host": host.fqdn, "auto": False, "spec": fs.mount_path(), "mountpoint": mp}))
+            steps.append((AddFstabEntryStep, {"host": host.fqdn, "auto": False, "spec": fs.mount_path(), "mountpoint": mp}))
 
         for host in (l[0] for l in fs.get_server_groups()):
             steps.append(
@@ -292,7 +292,7 @@ class RemoveHotpoolJob(StateChangeJob):
             steps.append((RemoveClonedClientStep, {"host": host, "fs_name": fs.name, "mountpoint": mp}))
 
         for host in fs.get_servers():
-            steps.append((UnmountStep, {"host": host.fqdn, "mountpoint": mp}))
+            steps.append((RemoveFstabEntryStep, {"host": host.fqdn, "mountpoint": mp}))
         return steps
 
     def on_success(self):
@@ -347,7 +347,7 @@ class RemoveConfiguredHotpoolJob(StateChangeJob):
             steps.append((RemoveClonedClientStep, {"host": host, "fs_name": fs.name, "mountpoint": mp}))
 
         for host in fs.get_servers():
-            steps.append((UnmountStep, {"host": host.fqdn, "mountpoint": mp}))
+            steps.append((RemoveFstabEntryStep, {"host": host.fqdn, "mountpoint": mp}))
 
         return steps
 

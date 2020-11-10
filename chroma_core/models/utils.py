@@ -263,9 +263,9 @@ class RemoveResourceStep(Step):
         self.invoke_rust_agent_expect_result(host, "ha_resource_destroy", [label, []])
 
 
-class MountStep(Step):
+class AddFstabEntryStep(Step):
     """
-    Mount and add to fstab
+    Add line to fstab
     Args:
     * host - fqdn
     * mountpoint - Mount point
@@ -283,12 +283,12 @@ class MountStep(Step):
 
         # cf. iml-wire-types::client::Mount
         mount = {"persist": persist, "mountspec": spec, "mountpoint": mp}
-        self.invoke_rust_agent_expect_result(host, "mount", mount)
+        self.invoke_rust_agent_expect_result(host, "add_fstab_entry", mount)
 
 
-class UnmountStep(Step):
+class RemoveFstabEntryStep(Step):
     """
-    Unmount and remove from fstab
+    Remove line from fstab
     Args:
     * host - fqdn
     * mountpoint - Mount Point
@@ -304,5 +304,4 @@ class UnmountStep(Step):
         # cf. iml-wire-types::client::Unmount
         unmount = {"mountpoint": mp, "mountspec": spec}
 
-        # unmount call techincally doesn't need the mountspec, and only matches on mountpoint
-        self.invoke_rust_agent_expect_result(host, "unmount", unmount)
+        self.invoke_rust_agent_expect_result(host, "remove_fstab_entry", unmount)

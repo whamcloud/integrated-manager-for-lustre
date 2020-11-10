@@ -9,7 +9,7 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("chroma_core", "0027_add_scan_mdt_jobs"),
+        ("chroma_core", "0028_expand_client_serial"),
     ]
 
     operations = [

@@ -14,17 +14,84 @@ use futures::{
 use iml_manager_env::get_report_path;
 use iml_postgres::{sqlx, PgPool};
 use iml_wire_types::{
-    graphql_duration::GraphQLDuration, stratagem, task::TaskArgs, Command, StratagemReport,
+    graphql_duration::GraphQLDuration, stratagem, task::TaskArgs, Command,
+    HotpoolConfiguration, StratagemReport, SortDir
 };
 use juniper::{FieldError, Value};
-use std::collections::HashMap;
+use std::{collections::HashMap, ops::Deref};
 use tokio::fs;
 use uuid::Uuid;
 
 pub(crate) struct StratagemQuery;
 
+#[derive(Debug, juniper::GraphQLEnum)]
+enum HotpoolState {
+    Unconfigured,
+    Configured,
+    Stopped,
+    Started,
+    Removed,
+}
+
+impl std::fmt::Display for HotpoolState {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            Self::Unconfigured => f.pad(&format!("{}", "unconfigured")),
+            Self::Configured => f.pad(&format!("{}", "configured")),
+            Self::Stopped => f.pad(&format!("{}", "stopped")),
+            Self::Started => f.pad(&format!("{}", "started")),
+            Self::Removed => f.pad(&format!("{}", "removed")),
+        }
+    }
+}
+
 #[juniper::graphql_object(Context = Context)]
 impl StratagemQuery {
+    #[graphql(arguments(
+        limit(description = "paging limit, defaults to 20"),
+        offset(description = "Offset into items, defaults to 0"),
+        dir(description = "Sort direction, defaults to asc"),
+    ))]
+    /// Fetch the list of known targets
+    async fn hotpools(
+        context: &Context,
+        limit: Option<i32>,
+        offset: Option<i32>,
+        dir: Option<SortDir>,
+    ) -> juniper::FieldResult<Vec<HotpoolConfiguration>> {
+        let dir = dir.unwrap_or_default();
+
+        let xs: Vec<HotpoolConfiguration> = sqlx::query_as!(
+            HotpoolConfiguration,
+            r#"
+                SELECT h.id, f.name AS filesystem, h.state, h.state_modified_at, h.ha_label,
+                hp.name AS hot_pool, cp.name AS cold_pool, a.extend_id, a.resync_id, a.minage, p.purge_id,
+                h.version::integer as "version: i32",
+                p.freehi::integer as "freehi: i32",
+                p.freelo::integer as "freelo: i32"
+                FROM chroma_core_hotpoolconfiguration h
+                JOIN chroma_core_managedfilesystem f ON h.filesystem_id = f.id
+                JOIN chroma_core_lamigoconfiguration a ON h.id = a.hotpool_id
+                JOIN chroma_core_lpurgeconfiguration p ON h.id = p.hotpool_id
+                JOIN chroma_core_ostpool cp ON a.cold_id = cp.id
+                JOIN chroma_core_ostpool hp ON a.hot_id = hp.id
+                WHERE h.not_deleted = 't'
+                ORDER BY
+                    CASE WHEN $3 = 'asc' THEN h.id END ASC,
+                    CASE WHEN $3 = 'desc' THEN h.id END DESC
+                OFFSET $1 LIMIT $2"#,
+            offset.unwrap_or(0) as i64,
+            limit.unwrap_or(20) as i64,
+            dir.deref()
+        )
+        .fetch_all(&context.pg_pool)
+        .await?
+        .into_iter()
+        .collect();
+
+        Ok(xs)
+    }
+
     /// List completed Stratagem reports that currently reside on the manager node.
     /// Note: All report names must be valid unicode.
     async fn stratagem_reports(_context: &Context) -> juniper::FieldResult<Vec<StratagemReport>> {
@@ -624,6 +691,157 @@ impl StratagemMutation {
 
         Ok(true)
     }
+    #[graphql(arguments(
+        fsname(description = "Filesystem"),
+        hotpool(description = "Name of Hot ostpool"),
+        coldpool(description = "Name of Cold ostpool"),
+        extendlayout(description = "Options to lfs mirror extend or hot -> cold files"),
+        minage(description = "Minimum age of file before mirroring"),
+        freehi(description = "Percent of free space when lpurge stops"),
+        freelo(description = "Percent of free space when lpurge starts"),
+    ))]
+    /// Create Hotpool setups
+    async fn create_hotpool(
+        context: &Context,
+        fsname: String,
+        hotpool: String,
+        coldpool: String,
+        extendlayout: Option<String>,
+        minage: i32,
+        freehi: i32,
+        freelo: i32,
+    ) -> juniper::FieldResult<Command> {
+        // Sanity check freehi and freelo
+        if freehi > 99 || freehi <= 0 {
+            return Err(FieldError::new(
+                "Freehi out of range (0, 100)",
+                Value::null(),
+            ));
+        }
+        if freelo > 99 || freelo <= 0 {
+            return Err(FieldError::new(
+                "Freehi out of range (0, 100)",
+                Value::null(),
+            ));
+        }
+        if freehi < freelo {
+            return Err(FieldError::new("Freehi less than freelo", Value::null()));
+        }
+
+        let fsid = sqlx::query!(
+            r#"
+                SELECT id FROM chroma_core_managedfilesystem WHERE name=$1 and not_deleted = 't'
+            "#,
+            fsname,
+        )
+        .fetch_optional(&context.pg_pool)
+        .await?
+        .map(|x| x.id)
+        .ok_or_else(|| FieldError::new("Filesystem not found", Value::null()))?;
+
+        let coldid = poolid(fsid, coldpool, &context.pg_pool)
+            .await?
+            .ok_or_else(|| FieldError::new("Cold OstPool not found", Value::null()))?;
+
+        let hotid = poolid(fsid, hotpool, &context.pg_pool)
+            .await?
+            .ok_or_else(|| FieldError::new("Hot OstPool not found", Value::null()))?;
+
+        let mut hp_data: HashMap<String, String> = vec![
+            ("filesystem".into(), format!("{}", fsid)),
+            ("hotpool".into(), format!("{}", hotid)),
+            ("coldpool".into(), format!("{}", coldid)),
+            ("minage".into(), format!("{}", minage)),
+            ("freehi".into(), format!("{}", freehi)),
+            ("freelo".into(), format!("{}", freelo)),
+        ]
+        .into_iter()
+        .collect();
+
+        if let Some(value) = extendlayout {
+            hp_data.insert("extendlayout".into(), value);
+        }
+
+        let command_id: i32 = iml_job_scheduler_rpc::call(
+            &context.rabbit_pool.get().await?,
+            "create_hotpool",
+            vec![hp_data],
+            None,
+        )
+        .map_err(ImlApiError::ImlJobSchedulerRpcError)
+        .await?;
+
+        get_command(&context.pg_pool, command_id)
+            .await
+            .map_err(|e| e.into())
+    }
+
+    #[graphql(arguments(
+        fsname(description = "Filesystem name"),
+        state(description = "New state to transition to"),
+    ))]
+    async fn set_hotpool_state(
+        context: &Context,
+        fsname: String,
+        state: HotpoolState,
+    ) -> juniper::FieldResult<Command> {
+        let hpid = hpid(fsname, &context.pg_pool).await?.ok_or_else(|| {
+            FieldError::new(
+                "Hotpool Configuration not found for filesystem",
+                Value::null(),
+            )
+        })?;
+
+        let obj = serde_json::json!([(
+            (
+                "chroma_core".to_string(),
+                "hotpoolconfiguration".to_string()
+            ),
+            hpid,
+            state.to_string()
+        )]);
+        let kwargs: HashMap<String, String> = vec![
+            (
+                "message".into(),
+                format!("Setting Hotpool state to {}", &state),
+            ),
+            ("run".into(), "True".into()),
+        ]
+        .into_iter()
+        .collect();
+
+        let command_id: i32 = iml_job_scheduler_rpc::call(
+            &context.rabbit_pool.get().await?,
+            "set_state",
+            vec![obj],
+            Some(kwargs),
+        )
+        .map_err(ImlApiError::ImlJobSchedulerRpcError)
+        .await?;
+
+        get_command(&context.pg_pool, command_id)
+            .await
+            .map_err(|e| e.into())
+    }
+    #[graphql(arguments(fsname(description = "Filesystem"),))]
+    async fn destroy_hotpool(context: &Context, fsname: String) -> juniper::FieldResult<Command> {
+        let hpid = hpid(fsname, &context.pg_pool)
+            .await?
+            .ok_or_else(|| FieldError::new("Hotpool Configuration not found", Value::null()))?;
+
+        let command_id: i32 = iml_job_scheduler_rpc::call(
+            &context.rabbit_pool.get().await?,
+            "remove_hotpool",
+            vec![hpid],
+            None,
+        )
+        .map_err(ImlApiError::ImlJobSchedulerRpcError)
+        .await?;
+
+        get_command(&context.pg_pool, command_id)
+            .await
+            .map_err(|e| e.into())
+    }
 }
 
 async fn get_stratagem_files(
@@ -636,6 +854,40 @@ async fn get_stratagem_files(
         modify_time: attr.modified()?.into(),
         size: attr.len() as i32,
     })
+}
+
+async fn hpid(fsname: String, pgpool: &PgPool) -> Result<Option<i32>, iml_postgres::sqlx::Error> {
+    let xs = sqlx::query!(
+        r#"
+            SELECT hp.id AS id FROM chroma_core_hotpoolconfiguration hp
+            INNER JOIN chroma_core_managedfilesystem fs ON hp.filesystem_id = fs.id
+            WHERE hp.not_deleted = 't' AND fs.not_deleted = 't' AND fs.name=$1
+        "#,
+        fsname
+    )
+    .fetch_optional(pgpool)
+    .await?
+    .map(|x| x.id);
+
+    Ok(xs)
+}
+
+async fn poolid(
+    fsid: i32,
+    poolname: String,
+    pgpool: &PgPool,
+) -> Result<Option<i32>, iml_postgres::sqlx::Error> {
+    let rc = sqlx::query!(
+        r#"
+            SELECT id FROM chroma_core_ostpool WHERE filesystem_id=$1 AND name=$2 AND not_deleted = 't'
+        "#,
+        fsid,
+        poolname,
+    )
+    .fetch_optional(pgpool)
+    .await?
+        .map(|x| x.id);
+    Ok(rc)
 }
 
 #[derive(Debug)]
