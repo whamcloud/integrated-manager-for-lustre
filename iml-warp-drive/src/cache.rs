@@ -266,6 +266,12 @@ pub async fn db_record_to_change_record(
                 Ok(RecordChange::Update(Record::ManagedTargetMount(x)))
             }
         },
+        DbRecord::TargetRecord(x) => match (msg_type, x) {
+            (MessageType::Delete, x) => Ok(RecordChange::Delete(RecordId::TargetRecord(x.id()))),
+            (MessageType::Insert, x) | (MessageType::Update, x) => {
+                Ok(RecordChange::Update(Record::TargetRecord(x)))
+            }
+        },
         DbRecord::Volume(x) => match (msg_type, x) {
             (MessageType::Delete, x) => Ok(RecordChange::Delete(RecordId::Volume(x.id()))),
             (_, ref x) if x.deleted() => Ok(RecordChange::Delete(RecordId::Volume(x.id()))),

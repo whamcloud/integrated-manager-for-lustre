@@ -722,6 +722,9 @@ fn handle_record_change(
                         .proxy(page::Msg::Mgts)
                         .send_msg(page::mgts::Msg::AddTarget(x));
                 }
+                ArcRecord::TargetRecord(x) => {
+                    model.records.target_record.insert(x.id, x);
+                }
                 ArcRecord::User(x) => {
                     model.records.user.insert(x.id, Arc::clone(&x));
 
