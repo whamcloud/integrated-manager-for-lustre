@@ -5,7 +5,11 @@
 use chrono_humanize::{Accuracy, HumanTime, Tense};
 use console::style;
 use futures::{Future, FutureExt};
-use iml_wire_types::{Command, Filesystem, Host, OstPool, ServerProfile, StratagemConfiguration, StratagemReport, graphql, snapshot::{ReserveUnit, Snapshot, SnapshotInterval, SnapshotRetention}};
+use iml_wire_types::{
+    graphql,
+    snapshot::{ReserveUnit, Snapshot, SnapshotInterval, SnapshotRetention},
+    Command, Filesystem, Host, OstPool, ServerProfile, StratagemConfiguration, StratagemReport,
+};
 use indicatif::ProgressBar;
 use number_formatter::{format_bytes, format_number};
 use prettytable::{Row, Table};
