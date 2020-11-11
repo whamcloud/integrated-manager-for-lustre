@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-pub mod server_profiles {
+pub mod list {
     use crate::Query;
     use iml_wire_types::graphql;
 
@@ -42,5 +42,34 @@ pub mod server_profiles {
     #[derive(serde::Deserialize, Clone, Debug)]
     pub struct Resp {
         pub server_profiles: Vec<graphql::ServerProfile>,
+    }
+}
+
+pub mod load {
+    use crate::Query;
+    use iml_wire_types::graphql::ServerProfileInput;
+
+    pub static QUERY: &str = r#"
+          mutation CreateServerProfile($profile: ServerProfileInput!) {
+            createServerProfile(profile: $profile)
+          }
+        "#;
+
+    #[derive(Debug, serde::Serialize)]
+    pub struct Vars {
+        profile: ServerProfileInput,
+    }
+
+    pub fn build(profile: ServerProfileInput) -> Query<Vars> {
+        Query {
+            query: QUERY.to_string(),
+            variables: Some(Vars { profile }),
+        }
+    }
+
+    #[derive(serde::Deserialize, Clone, Debug)]
+    pub struct Resp {
+        #[serde(rename(deserialize = "createServerProfile"))]
+        pub success: bool,
     }
 }
