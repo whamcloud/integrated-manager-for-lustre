@@ -26,7 +26,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let ch = iml_rabbit::create_channel(&conn).await?;
 
-    let mut s = consume_data::<Vec<snapshot::Snapshot>>(&ch, "rust_agent_snapshot_rx");
+    let mut s =
+        consume_data::<HashMap<String, Vec<snapshot::Snapshot>>>(&ch, "rust_agent_snapshot_rx");
 
     let pool = get_db_pool(get_pool_limit().unwrap_or(DEFAULT_POOL_LIMIT)).await?;
     let pool_2 = pool.clone();
@@ -60,38 +61,40 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         pool_3.clone(),
     ));
 
-    while let Some((fqdn, snapshots)) = s.try_next().await? {
-        tracing::debug!("snapshots from {}: {:?}", fqdn, snapshots);
+    while let Some((fqdn, snap_map)) = s.try_next().await? {
+        for (fs_name, snapshots) in snap_map {
+            tracing::debug!("snapshots from {}: {:?}", fqdn, snapshots);
 
-        let snaps = snapshots.into_iter().fold(
-            (vec![], vec![], vec![], vec![], vec![], vec![], vec![]),
-            |mut acc, s| {
-                acc.0.push(s.filesystem_name);
-                acc.1.push(s.snapshot_name);
-                acc.2.push(s.create_time.naive_utc());
-                acc.3.push(s.modify_time.naive_utc());
-                acc.4.push(s.snapshot_fsname.clone());
-                acc.5.push(s.mounted);
-                acc.6.push(s.comment);
+            let snaps = snapshots.into_iter().fold(
+                (vec![], vec![], vec![], vec![], vec![], vec![], vec![]),
+                |mut acc, s| {
+                    acc.0.push(s.filesystem_name);
+                    acc.1.push(s.snapshot_name);
+                    acc.2.push(s.create_time.naive_utc());
+                    acc.3.push(s.modify_time.naive_utc());
+                    acc.4.push(s.snapshot_fsname.clone());
+                    acc.5.push(s.mounted);
+                    acc.6.push(s.comment);
 
-                acc
-            },
-        );
+                    acc
+                },
+            );
 
-        let mut transaction = pool.begin().await?;
+            let mut transaction = pool.begin().await?;
 
-        sqlx::query!(
-            r#"
-            DELETE FROM snapshot
-            WHERE (filesystem_name, snapshot_name) NOT IN (SELECT * FROM UNNEST ($1::text[], $2::text[]))
-            "#,
-            &snaps.0,
-            &snaps.1,
-        )
-        .execute(&mut transaction)
-        .await?;
+            sqlx::query!(
+                r#"
+                DELETE FROM snapshot
+                WHERE snapshot_name NOT IN (SELECT * FROM UNNEST ($1::text[]))
+                AND filesystem_name=$2::text
+                "#,
+                &snaps.1,
+                &fs_name,
+            )
+            .execute(&mut transaction)
+            .await?;
 
-        sqlx::query!(
+            sqlx::query!(
             r#"
             INSERT INTO snapshot (filesystem_name, snapshot_name, create_time, modify_time, snapshot_fsname, mounted, comment)
             SELECT * FROM
@@ -117,13 +120,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             &snaps.2,
             &snaps.3,
             &snaps.4,
-            &snaps.5 as &[Option<bool>],
+            &snaps.5,
             &snaps.6 as &[Option<String>],
         )
         .execute(&mut transaction)
         .await?;
 
-        transaction.commit().await?;
+            transaction.commit().await?;
+        }
     }
 
     Ok(())
