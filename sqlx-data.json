@@ -483,27 +483,6 @@
       "nullable": []
     }
   },
-  "1bf24ca51d2bf55e540075c7041fba7cd1b45ed0b132a09a72f264c2ba11b8a6": {
-    "query": "\n                INSERT INTO chroma_core_serverprofile\n                (\n                    name,\n                    ui_name,\n                    ui_description,\n                    managed,\n                    worker,\n                    user_selectable,\n                    initial_state,\n                    ntp,\n                    corosync,\n                    corosync2,\n                    pacemaker,\n                    \"default\"\n                )\n                VALUES\n                ($1, $2, $3, $4, $5, 'true', $6, $7, $8, $9, $10, 'false')\n                ON CONFLICT (name)\n                DO UPDATE\n                SET\n                ui_name = excluded.ui_name,\n                ui_description = excluded.ui_description,\n                managed = excluded.managed,\n                worker = excluded.worker,\n                user_selectable = excluded.user_selectable,\n                initial_state = excluded.initial_state,\n                ntp = excluded.ntp,\n                corosync = excluded.corosync,\n                corosync2 = excluded.corosync2,\n                pacemaker = excluded.pacemaker,\n                \"default\" = excluded.default\n            ",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": [
-          "Varchar",
-          "Varchar",
-          "Text",
-          "Bool",
-          "Bool",
-          "Varchar",
-          "Bool",
-          "Bool",
-          "Bool",
-          "Bool"
-        ]
-      },
-      "nullable": []
-    }
-  },
   "1c2f3195b457e4cb39dc074d9474891d4fa7a48186268158a7870e192f3eb564": {
     "query": "\n            DELETE from chroma_core_sfapowersupply\n            WHERE (index, storage_system, enclosure_index)\n            IN (\n                SELECT *\n                FROM UNNEST($1::int[], $2::text[], $3::int[])\n            )\n        ",
     "describe": {
@@ -1961,19 +1940,6 @@
         true,
         false
       ]
-    }
-  },
-  "61e498856043c03a2b0ca70544b3973f25ab9154985fd6a2078b46436a42c8f2": {
-    "query": "\n                INSERT INTO chroma_core_serverprofile_repolist (serverprofile_id, repo_id)\n                SELECT $1, repo_id\n                FROM UNNEST($2::text[])\n                AS t(repo_id)\n                ON CONFLICT DO NOTHING\n            ",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": [
-          "Varchar",
-          "TextArray"
-        ]
-      },
-      "nullable": []
     }
   },
   "628b472cfdf32ba54540531b117c31b3787c03b05ddf57e03cdf840c71155bde": {
@@ -4671,31 +4637,6 @@
         false,
         false
       ]
-    }
-  },
-  "fd476db34f4391964ce18a3b50a04cbd6c5f42dafa83a42e980ecb42376a6813": {
-    "query": "DELETE FROM chroma_core_serverprofile where name = $1",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": [
-          "Text"
-        ]
-      },
-      "nullable": []
-    }
-  },
-  "fed610ec991f5563f72a042573293f69b13ca76d63b71db622bb32cfd484b60f": {
-    "query": "\n                INSERT INTO chroma_core_serverprofilepackage (package_name, server_profile_id)\n                SELECT package_name, $2\n                FROM UNNEST($1::text[])\n                as t(package_name)\n                ON CONFLICT DO NOTHING\n                ",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": [
-          "TextArray",
-          "Varchar"
-        ]
-      },
-      "nullable": []
     }
   }
 }
