@@ -112,7 +112,8 @@ arg_enum! {
     #[derive(Debug, serde::Serialize, serde::Deserialize, Clone, Copy)]
     #[serde(rename_all = "lowercase")]
     pub enum FilesyncAction {
-    Push,
+	Push,
+	Pull,
     }
 }
 
@@ -127,6 +128,8 @@ arg_enum! {
 
 #[derive(serde::Serialize, StructOpt, Debug)]
 pub struct StratagemFilesyncData {
+    /// action, either push or pull
+    action: FilesyncAction,
     /// The name of the filesystem to scan
     filesystem: String,
     /// The remote filesystem
@@ -328,7 +331,7 @@ pub async fn stratagem_cli(command: StratagemCommand) -> Result<(), ImlManagerCl
                 &data.filesystem,
                 data.remote,
                 data.expression,
-                "push",
+                data.action,
             );
 
             let resp: iml_graphql_queries::Response<stratagem_queries::filesync::Resp> =

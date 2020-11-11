@@ -52,7 +52,6 @@ url = "2.1"
 uuid = {version = "0.8", features = ["v4"]}
 v_hist = "0.1.2"
 version-utils = {path = "../version-utils", version = "0.2.0"}
-xattr = "0.2.2"
 
 [dependencies.regex]
 default-features = false
