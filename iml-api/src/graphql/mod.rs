@@ -1044,6 +1044,7 @@ impl MutationRoot {
         .execute(&mut transaction)
         .await?;
 
+        transaction.commit().await?;
         Ok(true)
     }
 
@@ -1075,6 +1076,7 @@ impl MutationRoot {
         .execute(&mut transaction)
         .await?;
 
+        transaction.commit().await?;
         Ok(true)
     }
 }
