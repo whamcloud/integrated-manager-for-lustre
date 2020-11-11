@@ -15,10 +15,6 @@ from chroma_api.validation_utils import validate
 from chroma_api.utils import custom_response, dehydrate_command, StatefulModelResource
 from chroma_core.models import (
     StratagemConfiguration,
-    ManagedHost,
-    ManagedMdt,
-    ManagedTargetMount,
-    ManagedFilesystem,
     Command,
     get_fs_id_from_identifier,
 )
@@ -102,40 +98,11 @@ def validate_filesystem(bundle):
 
     if fs_id is None:
         return {"code": "filesystem_does_not_exist", "message": "Filesystem {} does not exist.".format(fs_identifier)}
-    elif ManagedFilesystem.objects.get(id=fs_id).state != "available":
-        return {"code": "filesystem_unavailable", "message": "Filesystem {} is unavailable.".format(fs_identifier)}
-
-
-def get_target_mount_ids(fs_id, bundle):
-    # At least Mdt 0 should be mounted, or stratagem cannot run.
-    target_mount_ids = (
-        ManagedMdt.objects.filter(filesystem_id=fs_id, active_mount_id__isnull=False)
-        .values_list("active_mount_id", flat=True)
-        .distinct()
-    )
-
-    return target_mount_ids
-
-
-def validate_target_mount(bundle):
-    (r, fs_id) = get_fs_id(bundle)
-    if isinstance(r, dict):
-        return r
-
-    # At least Mdt 0 should be mounted, or stratagem cannot run.
-    target_mount_ids = get_target_mount_ids(fs_id, bundle)
-    mdt0 = ManagedMdt.objects.filter(filesystem_id=fs_id, name__contains="MDT0000").first()
-
-    if mdt0 is None:
-        return {"code": "mdt0_not_found", "message": "MDT0 could not be found."}
-
-    if mdt0.active_mount_id not in target_mount_ids:
-        return {"code": "mdt0_not_mounted", "message": "MDT0 must be mounted in order to run stratagem."}
 
 
 class RunStratagemValidation(Validation):
     def is_valid(self, bundle, request=None):
-        return validate_duration(bundle) or validate_filesystem(bundle) or validate_target_mount(bundle) or {}
+        return validate_duration(bundle) or validate_filesystem(bundle) or {}
 
 
 class StratagemConfigurationValidation(RunStratagemValidation):
