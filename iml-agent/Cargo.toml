@@ -14,12 +14,12 @@ bytes = "0.5"
 chrono = "0.4"
 combine = "=4.1.0"
 console = "0.12"
+device-types = "0.3.0"
 dns-lookup = "1"
 dotenv = "0.15"
 elementtree = "0.5"
 exitcode = "1.1"
 futures = "0.3"
-futures-util = "0.3"
 http = "0.2"
 iml-cmd = {path = "../iml-cmd", version = "0.4.0"}
 iml-fs = {path = "../iml-fs", version = "0.4.0"}

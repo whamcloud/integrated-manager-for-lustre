@@ -791,6 +791,8 @@ dependencies = [
 [[package]]
 name = "device-types"
 version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d6e34bac42a9bc7413aea842316cce9a11070b879a952b7671f5865899b2bfb3"
 dependencies = [
  "im",
  "libzfs-types",
@@ -1562,12 +1564,12 @@ dependencies = [
  "chrono",
  "combine 4.1.0",
  "console 0.12.0",
+ "device-types",
  "dns-lookup",
  "dotenv",
  "elementtree",
  "exitcode",
  "futures",
- "futures-util",
  "http",
  "iml-cmd",
  "iml-fs",

@@ -7,6 +7,7 @@
 pub mod action_plugins;
 pub mod agent_error;
 pub mod daemon_plugins;
+pub mod device_scanner_client;
 pub mod env;
 pub mod fidlist;
 pub mod high_availability;

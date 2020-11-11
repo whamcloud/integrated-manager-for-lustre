@@ -5,30 +5,12 @@
 use crate::{
     agent_error::ImlAgentError,
     daemon_plugins::{DaemonPlugin, Output},
+    device_scanner_client,
 };
 use async_trait::async_trait;
-use futures::{
-    future, lock::Mutex, Future, FutureExt, Stream, StreamExt, TryFutureExt, TryStreamExt,
-};
+use futures::{future, lock::Mutex, Future, FutureExt, StreamExt, TryFutureExt, TryStreamExt};
 use std::{io, pin::Pin, sync::Arc};
 use stream_cancel::{Trigger, Tripwire};
-use tokio::{io::AsyncWriteExt, net::UnixStream};
-use tokio_util::codec::{FramedRead, LinesCodec};
-
-/// Opens a persistent stream to device scanner.
-fn device_stream() -> impl Stream<Item = Result<String, ImlAgentError>> {
-    UnixStream::connect("/var/run/device-scanner.sock")
-        .err_into()
-        .and_then(|mut conn| async {
-            conn.write_all(b"\"Stream\"\n")
-                .err_into::<ImlAgentError>()
-                .await?;
-
-            Ok(conn)
-        })
-        .map_ok(|c| FramedRead::new(c, LinesCodec::new()).err_into())
-        .try_flatten_stream()
-}
 
 #[derive(Eq, PartialEq)]
 enum State {
@@ -58,7 +40,7 @@ impl DaemonPlugin for Devices {
 
         self.trigger = Some(trigger);
 
-        let fut = device_stream()
+        let fut = device_scanner_client::stream_lines(device_scanner_client::Cmd::Stream)
             .boxed()
             .and_then(|x| future::ready(serde_json::from_str(&x)).err_into())
             .into_future();
