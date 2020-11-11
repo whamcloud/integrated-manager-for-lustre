@@ -33,7 +33,7 @@ pub struct Snapshot {
     pub snapshot_fsname: String,
     pub modify_time: DateTime<Utc>,
     pub create_time: DateTime<Utc>,
-    pub mounted: Option<bool>,
+    pub mounted: bool,
     /// Optional comment for the snapshot
     pub comment: Option<String>,
 }
@@ -46,7 +46,7 @@ pub struct SnapshotRecord {
     pub modify_time: DateTime<Utc>,
     pub create_time: DateTime<Utc>,
     pub snapshot_fsname: String,
-    pub mounted: Option<bool>,
+    pub mounted: bool,
     pub comment: Option<String>,
 }
 

@@ -127,9 +127,8 @@ impl IntoTable for Vec<Snapshot> {
                     s.snapshot_name,
                     s.create_time.to_rfc2822(),
                     match s.mounted {
-                        Some(true) => "mounted",
-                        Some(false) => "unmounted",
-                        None => "---",
+                        true => "mounted",
+                        false => "unmounted",
                     }
                     .to_string(),
                     s.comment.unwrap_or_else(|| "---".to_string()),

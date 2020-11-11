@@ -4,7 +4,61 @@
 
 use crate::{agent_error::ImlAgentError, device_scanner_client, lustre::lctl};
 use chrono::{DateTime, TimeZone, Utc};
+use futures::{future::try_join_all, TryFutureExt};
 use iml_wire_types::snapshot::{Create, Destroy, List, Mount, Snapshot, Unmount};
+
+async fn get_snapshot_fsname_and_status<'a>(
+    snapshot_name: String,
+    target: &'a str,
+    filesystem_name: String,
+    create_time: DateTime<Utc>,
+    modify_time: DateTime<Utc>,
+    comment: Option<String>,
+    mounts: &[device_types::mount::Mount],
+) -> Result<
+    Option<(
+        String,
+        String,
+        DateTime<Utc>,
+        DateTime<Utc>,
+        Option<String>,
+        String,
+        bool,
+    )>,
+    ImlAgentError,
+> {
+    let snapshot_fsname = get_snapshot_label(&snapshot_name, &target).await?;
+
+    let snapshot_fsname = if let Some(name) = snapshot_fsname {
+        name
+    } else {
+        return Ok(None);
+    };
+
+    let mounted: bool = mounts
+        .iter()
+        .filter(|x| x.opts.0.split(',').any(|x| x == "nomgs"))
+        .filter(|x| x.fs_type.0 == "lustre")
+        .find_map(|x| {
+            let s = x.opts.0.split(',').find(|x| x.starts_with("svname="))?;
+
+            let s = s.split('=').nth(1)?.split('-').next()?;
+
+            Some(s.to_string())
+        })
+        .map(|x| x == snapshot_fsname)
+        .unwrap_or_else(|| false);
+
+    Ok(Some((
+        snapshot_name,
+        filesystem_name,
+        create_time,
+        modify_time,
+        comment,
+        snapshot_fsname,
+        mounted,
+    )))
+}
 
 pub async fn list(l: List) -> Result<Vec<Snapshot>, ImlAgentError> {
     let mut args = vec!["--device", &l.target, "snapshot", "-l"];
@@ -18,37 +72,81 @@ pub async fn list(l: List) -> Result<Vec<Snapshot>, ImlAgentError> {
         return Ok(vec![]);
     }
 
+    let fs_name = &l.target.split('-').next().map(String::from);
+
+    let filesystem_name = if let Some(name) = fs_name {
+        name.to_string()
+    } else {
+        return Ok(vec![]);
+    };
+
     let mounts = device_scanner_client::get_mounts().await?;
 
-    for snap in parse_device_snapshots(stdout) {
-        let label = get_snapshot_label(&snap.0, &l.target).await?;
+    let xs = parse_device_snapshots(stdout).into_iter().map(
+        |(snapshot_name, create_time, modify_time, comment)| {
+            let filesystem_name = filesystem_name.to_string();
 
-        if label.is_none() {
-            continue;
-        }
-
-        mounts
-            .iter()
-            .filter(|x| x.opts.0.split(',').any(|x| x == "nomgs"))
-            .filter(|x| x.fs_type.0 == "lustre")
-            .find_map(|x| {
-                let s = x.opts.0.split(',').find(|x| x.starts_with("svname="))?;
-
-                let s = s.split('=').nth(1)?;
-
-                Some(s.to_string())
+            let xs = get_snapshot_fsname_and_status(
+                snapshot_name.to_string(),
+                &l.target,
+                filesystem_name.to_string(),
+                create_time,
+                modify_time,
+                comment,
+                &mounts,
+            )
+            .map_ok(|x| {
+                x.map(
+                    |(
+                        snapshot_name,
+                        filesystem_name,
+                        create_time,
+                        modify_time,
+                        comment,
+                        snapshot_fsname,
+                        mounted,
+                    )| Snapshot {
+                        filesystem_name,
+                        snapshot_name,
+                        create_time,
+                        modify_time,
+                        comment,
+                        snapshot_fsname,
+                        mounted,
+                    },
+                )
             });
-    }
 
-    return Ok(vec![]);
+            xs
+        },
+    );
+
+    let snapshots = try_join_all(xs)
+        .await?
+        .into_iter()
+        .filter_map(|x| x)
+        .collect::<Vec<Snapshot>>();
+
+    return Ok(snapshots);
 }
 
-async fn get_snapshot_label(name: &str, target: &str) -> Result<Option<String>, ImlAgentError> {
-    let x = lctl(vec!["--device", target, "snapshot", "--get_label", name]).await?;
+async fn get_snapshot_label(
+    snapshot_name: &str,
+    target: &str,
+) -> Result<Option<String>, ImlAgentError> {
+    let x = lctl(vec![
+        "--device",
+        target,
+        "snapshot",
+        "--get_label",
+        snapshot_name,
+    ])
+    .await?;
+    let x = x.trim().split('-').next();
 
-    match x.trim() {
-        "" => Ok(None),
-        _ => Ok(Some(x)),
+    match x {
+        None => Ok(None),
+        Some(label) => Ok(Some(label.to_string())),
     }
 }
 

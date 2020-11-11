@@ -135,9 +135,8 @@ pub fn view(model: &Model, cache: &ArcCache) -> Node<Msg> {
                             x.comment.as_deref().unwrap_or("---")
                         ],
                         table::td_center(plain![match &x.mounted {
-                            Some(true) => "mounted",
-                            Some(false) => "unmounted",
-                            None => "unknown",
+                            true => "mounted",
+                            false => "unmounted",
                         }]),
                     ]
                 })]
