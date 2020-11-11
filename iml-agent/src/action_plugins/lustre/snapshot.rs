@@ -7,6 +7,8 @@ use chrono::{DateTime, TimeZone, Utc};
 use futures::future::try_join_all;
 use iml_wire_types::snapshot::{Create, Destroy, List, Mount, Snapshot, Unmount};
 
+type DeviceSnapshots = (String, DateTime<Utc>, DateTime<Utc>, Option<String>);
+
 pub async fn list(l: List) -> Result<Vec<Snapshot>, ImlAgentError> {
     let mut args = vec!["--device", &l.target, "snapshot", "-l"];
     if let Some(name) = &l.name {
@@ -112,7 +114,7 @@ async fn build_snapshot(
         .find_map(|x| {
             let s = x.opts.0.split(',').find(|x| x.starts_with("svname="))?;
 
-            let s = s.split('=').nth(1)?.split('-').next()?;
+            let s = s.split('=').nth(1)?.rsplitn(1, '-').nth(1)?;
 
             if s == snapshot_fsname {
                 return Some(true);
@@ -145,12 +147,12 @@ async fn get_snapshot_label(
         snapshot_name,
     ])
     .await?;
-    let x = x.trim().split('-').next();
+    let x = x.trim().rsplitn(1, '-').nth(1).map(String::from);
 
-    Ok(x.map(|x| x.to_string()))
+    Ok(x)
 }
 
-fn parse_device_snapshots(x: &str) -> Vec<(String, DateTime<Utc>, DateTime<Utc>, Option<String>)> {
+fn parse_device_snapshots(x: &str) -> Vec<DeviceSnapshots> {
     x.trim()
         .lines()
         .map(|x| x.splitn(4, ' ').collect::<Vec<_>>())
