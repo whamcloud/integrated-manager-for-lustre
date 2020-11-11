@@ -9,12 +9,8 @@ use crate::{
 };
 use console::Term;
 use iml_graphql_queries::server_profile;
-use iml_postgres::{get_db_pool, sqlx};
 use iml_wire_types::graphql::ServerProfileInput;
-use std::{
-    collections::HashSet,
-    io::{Error, ErrorKind},
-};
+use std::collections::HashSet;
 use structopt::StructOpt;
 use tokio::io::{stdin, AsyncReadExt};
 
