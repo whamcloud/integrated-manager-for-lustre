@@ -19,7 +19,7 @@ use async_trait::async_trait;
 use futures::{
     future::{try_join_all, AbortHandle, Abortable},
     lock::Mutex,
-    Future, FutureExt,
+    Future, FutureExt, TryFutureExt,
 };
 use iml_wire_types::snapshot::{List, Snapshot};
 use std::{
@@ -57,20 +57,15 @@ async fn list() -> Result<Option<HashMap<String, Vec<Snapshot>>>, ImlAgentError>
     let snapshot_mounts = device_scanner_client::get_snapshot_mounts()
         .await?
         .into_iter()
-        .map(|x| {
-            let s = x
-                .opts
-                .0
-                .split(',')
-                .find(|x| x.starts_with("svname="))
-                .unwrap_or_else(|| "");
+        .filter_map(|x| {
+            let s = x.opts.0.split(',').find(|x| x.starts_with("svname="))?;
 
-            let s = s.split('=').nth(1).unwrap_or_else(|| "");
+            let s = s.split('=').nth(1)?;
 
-            s.to_string()
+            Some(s.to_string())
         })
-        .filter(|x| x != "")
         .collect::<HashSet<String>>();
+
     tracing::debug!("snapshot mounts {:?}", snapshot_mounts);
 
     let xs = list_mdt0s().await.into_iter().collect::<HashSet<String>>();
@@ -82,12 +77,13 @@ async fn list() -> Result<Option<HashMap<String, Vec<Snapshot>>>, ImlAgentError>
     tracing::debug!("mdt0s: {:?}", &xs);
 
     if xs.is_empty() {
-        tracing::debug!("No mdt0's. Returning none.");
+        tracing::debug!("No mdt0's. Returning `None`.");
+
         return Ok(None);
     }
 
     let xs = xs.into_iter().map(|x| async move {
-        let fs_name = x.split('-').next();
+        let fs_name = x.rsplitn(1, '-').nth(1);
         tracing::debug!("fs_name is: {:?}", fs_name);
 
         if let Some(fs_name) = fs_name {
@@ -95,26 +91,40 @@ async fn list() -> Result<Option<HashMap<String, Vec<Snapshot>>>, ImlAgentError>
                 target: x.to_string(),
                 name: None,
             })
+            .inspect_err(|x| {
+                tracing::debug!("Error calling snapshot list: {:?}", x);
+            })
             .await
             .map(|x| (fs_name.to_string(), x))
-            .map_err(|x| {
-                tracing::debug!("Error calling snapshot list: {:?}", x);
-                x
-            })
         } else {
             tracing::debug!("No fs_name. Returning MarkerNotFound error.");
+
             Err(ImlAgentError::MarkerNotFound)
         }
     });
 
-    let snapshots = try_join_all(xs)
-        .await?
-        .into_iter()
-        .collect::<HashMap<String, Vec<Snapshot>>>();
+    let snapshots: HashMap<String, Vec<Snapshot>> = try_join_all(xs).await?.into_iter().collect();
 
     tracing::debug!("snapshots: {:?}", snapshots);
 
     Ok(Some(snapshots))
+}
+
+async fn try_update_state(state: &Arc<Mutex<State>>) -> Result<(), ImlAgentError> {
+    let snapshots = list().await?;
+
+    let output = snapshots.map(|xs| serde_json::to_value(xs)).transpose()?;
+
+    let mut lock = state.lock().await;
+
+    if lock.output != output {
+        tracing::debug!("Snapshot output changed. Updating.");
+
+        lock.output = output;
+        lock.updated = true;
+    }
+
+    Ok(())
 }
 
 #[async_trait]
@@ -131,27 +141,19 @@ impl DaemonPlugin for SnapshotList {
             tokio::spawn(Abortable::new(
                 async move {
                     loop {
-                        if let Ok(snapshots) = list().await {
-                            let output = snapshots
-                                .map(|xs| serde_json::to_value(xs))
-                                .transpose()
-                                .unwrap();
-
-                            let mut lock = state.lock().await;
-
-                            if lock.output != output {
-                                tracing::debug!("Snapshot output changed. Updating.");
-                                lock.output = output;
-                                lock.updated = true;
-                            }
-                        } else {
-                            tracing::debug!("Error calling list(). Not processing snapshots.");
+                        if let Err(e) = try_update_state(&state).await {
+                            tracing::debug!(
+                                "Error calling list(): {:?}. Not processing snapshots.",
+                                e
+                            );
                         }
+
                         delay_for(Duration::from_secs(10)).await;
                     }
                 },
                 reader_reg,
             ));
+
             Ok(None)
         }
         .boxed()
