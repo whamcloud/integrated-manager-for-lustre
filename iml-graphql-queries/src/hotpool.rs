@@ -3,13 +3,14 @@
 // license that can be found in the LICENSE file.
 
 pub mod create {
-    use crate::Query;
+    use crate::{stratagem, Query};
     use iml_wire_types::Command;
 
     pub static QUERY: &str = r#"
-            mutation CreateHotpool($fsname: String!, $hotpool: String!, $coldpool: String!,
-                                   $minage: Int!, $freehi: Int!, $freelo: Int!,
-                                   $extendlayout: String) {
+          mutation CreateHotpool($fsname: String!, $hotpool: String!, $coldpool: String!,
+                                 $minage: Int!, $freehi: Int!, $freelo: Int!,
+                                 $extendlayout: String) {
+            stratagem {
               createHotpool(fsname: $fsname, hotpool: $hotpool, coldpool: $coldpool, minage: $minage,
                             freehi: $freehi, freelo: $freelo, extendlayout: $extendlayout) {
                 cancelled
@@ -23,6 +24,7 @@ pub mod create {
                 resource_uri: resourceUri
               }
             }
+          }
         "#;
 
     #[derive(Debug, serde::Serialize)]
@@ -60,18 +62,21 @@ pub mod create {
     }
 
     #[derive(Debug, Clone, serde::Deserialize)]
-    pub struct Resp {
+    pub struct CreateHotpool {
         #[serde(rename(deserialize = "createHotpool"))]
         pub create_hotpool: Command,
     }
+
+    pub type Resp = stratagem::Resp<CreateHotpool>;
 }
 
 pub mod destroy {
-    use crate::Query;
+    use crate::{stratagem, Query};
     use iml_wire_types::Command;
 
     pub static QUERY: &str = r#"
-            mutation DestroyHotpool($fsname: String!) {
+          mutation DestroyHotpool($fsname: String!) {
+            stratagem {
               destroyHotpool(fsname: $fsname) {
                 cancelled
                 complete
@@ -84,6 +89,7 @@ pub mod destroy {
                 resource_uri: resourceUri
               }
             }
+          }
         "#;
 
     #[derive(Debug, serde::Serialize)]
@@ -101,18 +107,21 @@ pub mod destroy {
     }
 
     #[derive(Debug, Clone, serde::Deserialize)]
-    pub struct Resp {
+    pub struct DestroyHotpool {
         #[serde(rename(deserialize = "destroyHotpool"))]
         pub destroy_hotpool: Command,
     }
+
+    pub type Resp = stratagem::Resp<DestroyHotpool>;
 }
 
 pub mod list {
-    use crate::Query;
+    use crate::{stratagem, Query};
     use iml_wire_types::{HotpoolConfiguration, SortDir};
 
     pub static QUERY: &str = r#"
-            query Hotpools($dir: SortDir, $offset: Int, $limit: Int) {
+          query Hotpools($dir: SortDir, $offset: Int, $limit: Int) {
+            stratagem {
               hotpools(dir: $dir, offset: $offset, limit: $limit) {
                 id
                 filesystem
@@ -123,13 +132,14 @@ pub mod list {
                 minage
                 freehi
                 freelo
-                hot_id: hotId
-                cold_id: coldId
+                hot_pool: hotPool
+                cold_pool: coldPool
                 purge_id: purgeId
                 resync_id: resyncId
                 extend_id: extendId
               }
             }
+          }
         "#;
 
     #[derive(Debug, serde::Serialize)]
@@ -147,18 +157,21 @@ pub mod list {
     }
 
     #[derive(Debug, Clone, serde::Deserialize)]
-    pub struct Resp {
+    pub struct ListHotpool {
         #[serde(rename(deserialize = "hotpools"))]
         pub hotpools: Vec<HotpoolConfiguration>,
     }
+
+    pub type Resp = stratagem::Resp<ListHotpool>;
 }
 
 pub mod start {
-    use crate::Query;
+    use crate::{stratagem, Query};
     use iml_wire_types::Command;
 
     pub static QUERY: &str = r#"
-            mutation StartHotpool($fsname: String!) {
+          mutation StartHotpool($fsname: String!) {
+            stratagem {
               setHotpoolState(fsname: $fsname, state:STARTED) {
                 cancelled
                 complete
@@ -171,6 +184,7 @@ pub mod start {
                 resource_uri: resourceUri
               }
             }
+          }
         "#;
 
     #[derive(Debug, serde::Serialize)]
@@ -188,18 +202,21 @@ pub mod start {
     }
 
     #[derive(Debug, Clone, serde::Deserialize)]
-    pub struct Resp {
+    pub struct StartHotpool {
         #[serde(rename(deserialize = "setHotpoolState"))]
         pub start_hotpool: Command,
     }
+
+    pub type Resp = stratagem::Resp<StartHotpool>;
 }
 
 pub mod stop {
-    use crate::Query;
+    use crate::{stratagem, Query};
     use iml_wire_types::Command;
 
     pub static QUERY: &str = r#"
-            mutation StopHotpool($fsname: String!) {
+          mutation StopHotpool($fsname: String!) {
+            stratagem {
               setHotpoolState(fsname: $fsname, state:STOPPED) {
                 cancelled
                 complete
@@ -212,6 +229,7 @@ pub mod stop {
                 resource_uri: resourceUri
               }
             }
+          }
         "#;
 
     #[derive(Debug, serde::Serialize)]
@@ -229,8 +247,10 @@ pub mod stop {
     }
 
     #[derive(Debug, Clone, serde::Deserialize)]
-    pub struct Resp {
+    pub struct StopHotpool {
         #[serde(rename(deserialize = "setHotpoolState"))]
         pub stop_hotpool: Command,
     }
+
+    pub type Resp = stratagem::Resp<StopHotpool>;
 }

@@ -14,8 +14,8 @@ use futures::{
 use iml_manager_env::get_report_path;
 use iml_postgres::{sqlx, PgPool};
 use iml_wire_types::{
-    graphql_duration::GraphQLDuration, stratagem, task::TaskArgs, Command,
-    HotpoolConfiguration, StratagemReport, SortDir
+    graphql_duration::GraphQLDuration, stratagem, task::TaskArgs, Command, HotpoolConfiguration,
+    SortDir, StratagemReport,
 };
 use juniper::{FieldError, Value};
 use std::{collections::HashMap, ops::Deref};

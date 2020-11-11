@@ -22,8 +22,7 @@ use iml_wire_types::{
     logs::{LogResponse, Meta},
     snapshot::{ReserveUnit, Snapshot, SnapshotInterval, SnapshotRetention},
     task::Task,
-    Command, EndpointName, Job, LogMessage, LogSeverity, MessageClass,
-    SortDir,
+    Command, EndpointName, Job, LogMessage, LogSeverity, MessageClass, SortDir,
 };
 use itertools::Itertools;
 use juniper::{
@@ -929,7 +928,6 @@ impl MutationRoot {
 
         Ok(true)
     }
-
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]

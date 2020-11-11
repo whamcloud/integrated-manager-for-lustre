@@ -71,35 +71,35 @@ pub async fn hotpool_cli(command: HotpoolCommand) -> Result<(), ImlManagerCliErr
             );
             let resp: iml_graphql_queries::Response<hotpool_queries::create::Resp> =
                 graphql(query).await?;
-            let x = Result::from(resp)?.data.create_hotpool;
+            let x = Result::from(resp)?.data.stratagem.create_hotpool;
             wait_for_cmds_success(&[x]).await?;
         }
         HotpoolCommand::Start { fsname } => {
             let query = hotpool_queries::start::build(fsname);
             let resp: iml_graphql_queries::Response<hotpool_queries::start::Resp> =
                 graphql(query).await?;
-            let x = Result::from(resp)?.data.start_hotpool;
+            let x = Result::from(resp)?.data.stratagem.start_hotpool;
             wait_for_cmds_success(&[x]).await?;
         }
         HotpoolCommand::Stop { fsname } => {
             let query = hotpool_queries::stop::build(fsname);
             let resp: iml_graphql_queries::Response<hotpool_queries::stop::Resp> =
                 graphql(query).await?;
-            let x = Result::from(resp)?.data.stop_hotpool;
+            let x = Result::from(resp)?.data.stratagem.stop_hotpool;
             wait_for_cmds_success(&[x]).await?;
         }
         HotpoolCommand::Destroy { fsname } => {
             let query = hotpool_queries::destroy::build(fsname);
             let resp: iml_graphql_queries::Response<hotpool_queries::destroy::Resp> =
                 graphql(query).await?;
-            let x = Result::from(resp)?.data.destroy_hotpool;
+            let x = Result::from(resp)?.data.stratagem.destroy_hotpool;
             wait_for_cmds_success(&[x]).await?;
         }
         HotpoolCommand::List { display_type } => {
             let query = hotpool_queries::list::build(None, None, Some(1_000));
             let resp: iml_graphql_queries::Response<hotpool_queries::list::Resp> =
                 graphql(query).await?;
-            let hps = Result::from(resp)?.data.hotpools;
+            let hps = Result::from(resp)?.data.stratagem.hotpools;
 
             let x = hps.into_display_type(display_type);
 

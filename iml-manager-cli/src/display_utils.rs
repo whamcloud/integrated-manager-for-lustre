@@ -269,7 +269,9 @@ impl IntoTable for Vec<Filesystem> {
 impl IntoTable for Vec<HotpoolConfiguration> {
     fn into_table(self) -> Table {
         generate_table(
-            &["id", "FS", "State", "Minage", "Free HI", "Free LO", "Hot", "Cold"],
+            &[
+                "id", "FS", "State", "Minage", "Free HI", "Free LO", "Hot", "Cold",
+            ],
             self.into_iter().map(|x| {
                 vec![
                     x.id.to_string(),
