@@ -99,7 +99,7 @@ Requires:       rust-iml-task-runner >= 0.4.0
 Requires:       rust-iml-warp-drive >= 0.4.0
 Requires:       rust-iml-timer >= 0.4.0
 # Other Repos
-Requires:       influxdb
+Requires:       influxdb < 2
 Requires:       grafana
 
 Conflicts:      chroma-agent
