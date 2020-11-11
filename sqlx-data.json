@@ -1173,6 +1173,54 @@
       ]
     }
   },
+  "3cb1094d7efdccbf02af2f702d8c6accea293012eb426d70648c32c1682cc1b8": {
+    "query": "\n            SELECT b.id, b.resource, b.node, b.cluster_id, nh.host_id, t.mount_point\n            FROM corosync_resource_bans b\n            INNER JOIN corosync_node_managed_host nh ON (nh.corosync_node_id).name = b.node\n            AND nh.cluster_id = b.cluster_id\n            INNER JOIN corosync_resource t ON t.id = b.resource AND b.cluster_id = t.cluster_id\n            WHERE t.mount_point != NULL\n        ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 1,
+          "name": "resource",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "node",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 3,
+          "name": "cluster_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 4,
+          "name": "host_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 5,
+          "name": "mount_point",
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        true
+      ]
+    }
+  },
   "414a5b7c63ec04ad876c282460de775c0e919c1063c46c7a49704b3ccd87ab3f": {
     "query": "\n        INSERT INTO chroma_core_sfacontroller\n        (\n            index,\n            enclosure_index,\n            health_state,\n            health_state_reason,\n            child_health_state,\n            storage_system\n        )\n        SELECT * FROM UNNEST(\n            $1::int[],\n            $2::int[],\n            $3::smallint[],\n            $4::text[],\n            $5::smallint[],\n            $6::text[]\n        )\n        ON CONFLICT (index, storage_system) DO UPDATE\n        SET\n            enclosure_index = excluded.enclosure_index,\n            health_state = excluded.health_state,\n            health_state_reason = excluded.health_state_reason,\n            child_health_state = excluded.child_health_state\n    ",
     "describe": {
@@ -1961,6 +2009,110 @@
           "TimestampArray",
           "TextArray",
           "BoolArray",
+          "TextArray"
+        ]
+      },
+      "nullable": []
+    }
+  },
+  "6f3c08f058a72efb6a3926dbe47380662c1eb80ec3001bf551792719fcd51e74": {
+    "query": "\n                SELECT jsonb_agg((r.repo_name, r.location))\n                    AS repos, sp.*\n                    FROM chroma_core_repo AS r\n                    INNER JOIN chroma_core_serverprofile_repolist AS rl ON r.repo_name = rl.repo_id\n                    INNER JOIN chroma_core_serverprofile AS sp ON rl.serverprofile_id = sp.name\n                    GROUP BY sp.name;\n            ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "repos",
+          "type_info": "Jsonb"
+        },
+        {
+          "ordinal": 1,
+          "name": "name",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 2,
+          "name": "ui_name",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 3,
+          "name": "ui_description",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 4,
+          "name": "managed",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 5,
+          "name": "worker",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 6,
+          "name": "user_selectable",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 7,
+          "name": "initial_state",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 8,
+          "name": "ntp",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 9,
+          "name": "corosync",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 10,
+          "name": "corosync2",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 11,
+          "name": "pacemaker",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 12,
+          "name": "default",
+          "type_info": "Bool"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        null,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
+    }
+  },
+  "7ba0b27a4f4fca50c30701d9adbbf0c0421c310b6b99453bffb4bc7834fa765c": {
+    "query": "\n                INSERT INTO corosync_resource_managed_host (host_id, cluster_id, corosync_resource_id)\n                SELECT $1, $2, corosync_resource_id FROM UNNEST($3::text[]) as corosync_resource_id\n                ON CONFLICT (host_id, corosync_resource_id, cluster_id)\n                DO NOTHING\n            ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Int4",
           "TextArray"
         ]
       },
