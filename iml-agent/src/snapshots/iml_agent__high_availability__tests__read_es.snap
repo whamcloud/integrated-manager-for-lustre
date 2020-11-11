@@ -764,7 +764,7 @@ Cluster {
             ),
         },
         Resource {
-            id: "fs0a9c-client",
+            id: "fs0a9c-client:0",
             resource_agent: "systemd:lustre-fs0a9c-client.mount",
             role: "Stopped",
             active: false,
@@ -777,7 +777,7 @@ Cluster {
             active_node_id: None,
         },
         Resource {
-            id: "fs0a9c-client",
+            id: "fs0a9c-client:1",
             resource_agent: "systemd:lustre-fs0a9c-client.mount",
             role: "Stopped",
             active: false,
@@ -790,7 +790,7 @@ Cluster {
             active_node_id: None,
         },
         Resource {
-            id: "fs0a9c-client",
+            id: "fs0a9c-client:2",
             resource_agent: "systemd:lustre-fs0a9c-client.mount",
             role: "Stopped",
             active: false,
@@ -803,7 +803,7 @@ Cluster {
             active_node_id: None,
         },
         Resource {
-            id: "fs0a9c-client",
+            id: "fs0a9c-client:3",
             resource_agent: "systemd:lustre-fs0a9c-client.mount",
             role: "Stopped",
             active: false,
