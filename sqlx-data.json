@@ -2102,19 +2102,6 @@
       ]
     }
   },
-  "628b472cfdf32ba54540531b117c31b3787c03b05ddf57e03cdf840c71155bde": {
-    "query": "\n            DELETE FROM snapshot\n            WHERE (filesystem_name, snapshot_name) NOT IN (SELECT * FROM UNNEST ($1::text[], $2::text[]))\n            ",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": [
-          "TextArray",
-          "TextArray"
-        ]
-      },
-      "nullable": []
-    }
-  },
   "681d997bb965a228c0aa75d93d09faefe5412daaf3e7bda3630df319fb9edabb": {
     "query": "select * from django_content_type",
     "describe": {

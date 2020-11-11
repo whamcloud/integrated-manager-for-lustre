@@ -95,7 +95,7 @@ async fn build_snapshot(
     comment: Option<String>,
     mounts: &[device_types::mount::Mount],
 ) -> Result<Option<Snapshot>, ImlAgentError> {
-    let mut fs_name = target.rsplitn(1, '-').nth(1).map(String::from);
+    let mut fs_name = target.rsplitn(2, '-').nth(1).map(String::from);
     let filesystem_name = if let Some(name) = fs_name.take() {
         name
     } else {
@@ -114,7 +114,7 @@ async fn build_snapshot(
         .find_map(|x| {
             let s = x.opts.0.split(',').find(|x| x.starts_with("svname="))?;
 
-            let s = s.split('=').nth(1)?.rsplitn(1, '-').nth(1)?;
+            let s = s.split('=').nth(1)?.rsplitn(2, '-').nth(1)?;
 
             if s == snapshot_fsname {
                 return Some(true);
@@ -147,7 +147,7 @@ async fn get_snapshot_label(
         snapshot_name,
     ])
     .await?;
-    let x = x.trim().rsplitn(1, '-').nth(1).map(String::from);
+    let x = x.trim().rsplitn(2, '-').nth(1).map(String::from);
 
     Ok(x)
 }

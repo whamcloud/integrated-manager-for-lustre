@@ -83,7 +83,7 @@ async fn list() -> Result<Option<HashMap<String, Vec<Snapshot>>>, ImlAgentError>
     }
 
     let xs = xs.into_iter().map(|x| async move {
-        let fs_name = x.rsplitn(1, '-').nth(1);
+        let fs_name = x.rsplitn(2, '-').nth(1);
         tracing::debug!("fs_name is: {:?}", fs_name);
 
         if let Some(fs_name) = fs_name {
