@@ -108,33 +108,16 @@ pub async fn cmd(cmd: Option<Cmd>) -> Result<(), ImlManagerCliError> {
 
             let resp: iml_graphql_queries::Response<server_profile::load::Resp> =
                 wrap_fut("Loading profile", graphql(query)).await?;
-            let _success = Result::from(resp)?.data.success;
+            let _success = Result::from(resp)?.data.create_server_profile;
 
             display_success("Profile loaded");
         }
         Some(Cmd::Remove { name }) => {
-            let pool = get_db_pool(1).await?;
+            let query = server_profile::remove::build(&name);
 
-            sqlx::query!(
-                "DELETE FROM chroma_core_serverprofile_repolist WHERE serverprofile_id = $1",
-                &name
-            )
-            .execute(&pool)
-            .await?;
-
-            sqlx::query!(
-                "DELETE FROM chroma_core_serverprofilepackage WHERE server_profile_id = $1",
-                &name
-            )
-            .execute(&pool)
-            .await?;
-
-            sqlx::query!(
-                "DELETE FROM chroma_core_serverprofile where name = $1",
-                &name
-            )
-            .execute(&pool)
-            .await?;
+            let resp: iml_graphql_queries::Response<server_profile::remove::Resp> =
+                wrap_fut("Removing profile", graphql(query)).await?;
+            let _success = Result::from(resp)?.data.remove_server_profile;
 
             display_success("Profile removed");
         }

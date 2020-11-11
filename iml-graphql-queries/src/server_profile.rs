@@ -70,6 +70,37 @@ pub mod load {
     #[derive(serde::Deserialize, Clone, Debug)]
     pub struct Resp {
         #[serde(rename(deserialize = "createServerProfile"))]
-        pub success: bool,
+        pub create_server_profile: bool,
+    }
+}
+
+pub mod remove {
+    use crate::Query;
+
+    pub static QUERY: &str = r#"
+          mutation RemoveServerProfile($profileName: String!) {
+            removeServerProfile(profileName: $profileName)
+          }  
+        "#;
+
+    #[derive(Debug, serde::Serialize)]
+    pub struct Vars {
+        #[serde(rename(serialize = "profileName"))]
+        profile_name: String,
+    }
+
+    pub fn build(profile_name: &str) -> Query<Vars> {
+        Query {
+            query: QUERY.to_string(),
+            variables: Some(Vars {
+                profile_name: profile_name.into(),
+            }),
+        }
+    }
+
+    #[derive(serde::Deserialize, Clone, Debug)]
+    pub struct Resp {
+        #[serde(rename(deserialize = "removeServerProfile"))]
+        pub remove_server_profile: bool,
     }
 }
