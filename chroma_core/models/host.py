@@ -9,6 +9,7 @@ import json
 import logging
 from collections import defaultdict
 import datetime
+import requests
 
 from django.db import models
 from django.db import transaction
@@ -1162,6 +1163,28 @@ class DeleteHostStep(Step):
                 AND cluster_id = c.id
                 """,
                 [host.id],
+            )
+            cursor.execute(
+                """
+                DELETE FROM lnet
+                WHERE host_id = %s
+                """,
+                [host.id],
+            )
+            cursor.execute(
+                """
+                DELETE FROM nid
+                WHERE host_id = %s
+                """,
+                [host.id],
+            )
+
+            requests.post(
+                "{}/query".format(settings.INFLUXDB_PROXY_PASS),
+                params={
+                    "db": settings.INFLUXDB_IML_STATS_DB,
+                    "q": "DELETE FROM net WHERE \"host_id\"='{}'".format(host.id),
+                },
             )
 
 
