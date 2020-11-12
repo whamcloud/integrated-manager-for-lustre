@@ -4,7 +4,7 @@
 
 use crate::{extensions::MergeAttrs as _, generated::css_classes::C, route::RouteId, Route};
 use iml_api_utils::extract_id;
-use iml_wire_types::{Filesystem, Target, TargetConfParam};
+use iml_wire_types::Filesystem;
 use seed::{prelude::*, *};
 
 pub fn href_view<T>(x: &str, route: Route) -> Node<T> {
@@ -27,16 +27,6 @@ pub fn server_link<T>(uri: Option<&String>, txt: &str) -> Node<T> {
     } else {
         plain!["---"]
     }
-}
-
-pub fn volume_link<T>(t: &Target<TargetConfParam>) -> Node<T> {
-    // let vol_id = match &t.volume {
-    //     VolumeOrResourceUri::ResourceUri(url) => extract_id(url).unwrap().parse::<i32>().unwrap(),
-    //     VolumeOrResourceUri::Volume(v) => v.id,
-    // };
-
-    // href_view(&t.volume_name, Route::Volume(RouteId::from(vol_id))).merge_attrs(class![C.break_all])
-    span![&t.volume_name].merge_attrs(class![C.break_all])
 }
 
 pub fn fs_link<T>(x: &Filesystem) -> Node<T> {

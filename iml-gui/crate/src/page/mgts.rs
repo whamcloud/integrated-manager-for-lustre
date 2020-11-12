@@ -6,6 +6,8 @@ use crate::{
     components::{action_dropdown, alert_indicator, lock_indicator, resource_links, table, Placement},
     extensions::MergeAttrs,
     generated::css_classes::C,
+    get_target_from_managed_target,
+    page::filesystem::standby_hosts_view,
     route::RouteId,
     GMsg, Route,
 };
@@ -15,7 +17,7 @@ use iml_wire_types::{
     Session, Target, TargetConfParam, TargetKind, ToCompositeId,
 };
 use seed::{prelude::*, *};
-use std::{collections::HashMap, sync::Arc};
+use std::{borrow::Cow, collections::HashMap, sync::Arc};
 
 pub struct Row {
     dropdown: action_dropdown::Model,
@@ -110,21 +112,33 @@ pub fn view(cache: &ArcCache, model: &Model, all_locks: &Locks, session: Option<
                 table::thead_view(vec![
                     table::th_view(plain!["Name"]),
                     table::th_view(plain!["Filesystems"]),
-                    table::th_view(plain!["Volume"]),
-                    table::th_view(plain!["Primary Server"]),
-                    table::th_view(plain!["Failover Server"]),
-                    table::th_view(plain!["Started on"]),
+                    table::th_view(plain!["Device Path"]),
+                    table::th_view(plain!["Active Server"]),
+                    table::th_view(plain!["Standby Servers"]),
                     th![],
                 ]),
                 tbody![model.mgts.iter().map(|x| match model.rows.get(&x.id) {
                     None => empty![],
                     Some(row) => {
-                        let fs = cache.filesystem.arc_values().filter(|y| {
-                            extract_id(&y.mgt)
-                                .and_then(|y| y.parse::<i32>().ok())
-                                .filter(|y| y == &x.id)
-                                .is_some()
-                        });
+                        let fs: Vec<_> = cache
+                            .filesystem
+                            .arc_values()
+                            .filter(|y| {
+                                extract_id(&y.mgt)
+                                    .and_then(|y| y.parse::<i32>().ok())
+                                    .filter(|y| y == &x.id)
+                                    .is_some()
+                            })
+                            .collect();
+
+                        let t = get_target_from_managed_target(cache, x);
+
+                        let active_host = t.and_then(|x| x.active_host_id).and_then(|x| cache.host.get(&x));
+
+                        let dev_path = t
+                            .and_then(|x| x.dev_path.as_ref())
+                            .map(|x| Cow::from(x.to_string()))
+                            .unwrap_or_else(|| Cow::from("---"));
 
                         tr![
                             table::td_center(vec![
@@ -137,17 +151,20 @@ pub fn view(cache: &ArcCache, model: &Model, all_locks: &Locks, session: Option<
                                 alert_indicator(&cache.active_alert, &x, true, Placement::Right)
                                     .merge_attrs(class![C.ml_2]),
                             ]),
-                            table::td_center(fs.map(resource_links::fs_link).collect::<Vec<_>>()),
-                            table::td_center(resource_links::volume_link(x)),
+                            table::td_center(fs.into_iter().map(resource_links::fs_link).collect::<Vec<_>>()),
+                            table::td_center(plain![dev_path]),
                             table::td_center(resource_links::server_link(
-                                Some(&x.primary_server),
-                                &x.primary_server_name
+                                active_host.map(|x| &x.resource_uri),
+                                active_host.map(|x| x.fqdn.to_string()).as_deref().unwrap_or_default(),
                             )),
-                            table::td_center(resource_links::server_link(
-                                x.failover_servers.first(),
-                                &x.failover_server_name
-                            )),
-                            table::td_center(resource_links::server_link(x.active_host.as_ref(), &x.active_host_name)),
+                            table::td_center(match t {
+                                Some(t) => {
+                                    standby_hosts_view(cache, &t)
+                                }
+                                None => {
+                                    plain!["---"]
+                                }
+                            }),
                             td![
                                 class![C.p_3, C.text_center],
                                 action_dropdown::view(x.id, &row.dropdown, all_locks, session)

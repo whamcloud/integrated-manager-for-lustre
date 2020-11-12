@@ -159,7 +159,7 @@ pub fn view(cache: &ArcCache, model: &Model, all_locks: &Locks, session: Option<
             t::wrapper_view(vec![
                 t::thead_view(vec![
                     t::th_view(plain!["Filesystem"]),
-                    t::th_view(plain!["Primary MGS"]),
+                    t::th_view(plain!["Active MGS"]),
                     t::th_view(plain!["MDT Count"]),
                     t::th_view(plain!["Connected Clients"]),
                     t::th_view(plain!["Space Used / Available"]),
@@ -170,7 +170,7 @@ pub fn view(cache: &ArcCache, model: &Model, all_locks: &Locks, session: Option<
                         None => empty![],
                         Some(row) => {
                             let stats = model.stats.get(&f.name).cloned().unwrap_or_default();
-                            let xs: Vec<_> = cache.target.values().cloned().collect();
+                            let xs: Vec<_> = cache.target_record.values().cloned().collect();
 
                             tr![
                                 t::td_view(vec![
@@ -179,7 +179,7 @@ pub fn view(cache: &ArcCache, model: &Model, all_locks: &Locks, session: Option<
                                     alert_indicator(&cache.active_alert, f, true, Placement::Right)
                                 ])
                                 .merge_attrs(class![C.text_center]),
-                                t::td_center(filesystem::mgs(&xs, f)),
+                                t::td_center(filesystem::mgs(cache, &xs, f)),
                                 t::td_center(plain![f.mdts.len().to_string()]),
                                 t::td_center(filesystem::clients_view(stats.clients)),
                                 t::td_center(filesystem::space_used_view(

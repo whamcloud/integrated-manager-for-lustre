@@ -11,8 +11,8 @@ use iml_wire_types::{
         AlertStateRecord, AuthGroupRecord, AuthUserGroupRecord, AuthUserRecord, ContentTypeRecord,
         CorosyncConfigurationRecord, FsRecord, Id, LnetConfigurationRecord, ManagedHostRecord,
         ManagedTargetMountRecord, ManagedTargetRecord, NotDeleted, OstPoolOstsRecord,
-        OstPoolRecord, PacemakerConfigurationRecord, StratagemConfiguration, VolumeNodeRecord,
-        VolumeRecord,
+        OstPoolRecord, PacemakerConfigurationRecord, StratagemConfiguration, TargetRecord,
+        VolumeNodeRecord, VolumeRecord,
     },
     sfa::{
         EnclosureType, HealthState, JobState, JobType, MemberState, SfaController, SfaDiskDrive,
@@ -379,6 +379,12 @@ pub async fn populate_from_db(
     .map_ok(|x| (x.id(), x))
     .try_collect()
     .await?;
+
+    cache.target_record = sqlx::query_as!(TargetRecord, "SELECT * FROM target")
+        .fetch(pool)
+        .map_ok(|x| (x.id(), x))
+        .try_collect()
+        .await?;
 
     cache.ost_pool = sqlx::query_as!(
         OstPoolRecord,

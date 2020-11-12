@@ -994,6 +994,72 @@
       "nullable": []
     }
   },
+  "37bfce1f4ec49bd9687296ccb93175b89bede7d5a8679a4f71ef7450d2adb090": {
+    "query": "SELECT * FROM target",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "state",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 1,
+          "name": "name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "active_host_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 3,
+          "name": "host_ids",
+          "type_info": "Int4Array"
+        },
+        {
+          "ordinal": 4,
+          "name": "filesystems",
+          "type_info": "TextArray"
+        },
+        {
+          "ordinal": 5,
+          "name": "uuid",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 6,
+          "name": "mount_path",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 7,
+          "name": "dev_path",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 8,
+          "name": "id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+        true,
+        true,
+        false
+      ]
+    }
+  },
   "39fc1211724cef9afd733459348bcd3eb6f3af9a89dc1ca470593ea8beb3678c": {
     "query": "\n        SELECT * FROM chroma_core_job\n        WHERE id IN (SELECT job_id from chroma_core_command_jobs\n            WHERE command_id = $1)\n    ",
     "describe": {

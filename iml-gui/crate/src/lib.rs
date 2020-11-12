@@ -36,15 +36,17 @@ pub(crate) use extensions::*;
 use futures::channel::oneshot;
 use generated::css_classes::C;
 use iml_wire_types::{
+    db::TargetRecord,
+    warp_drive::ArcCache,
     warp_drive::{self, ArcRecord},
-    Conf, GroupType,
+    Conf, GroupType, Target, TargetConfParam, TargetKind,
 };
 use lazy_static::lazy_static;
 use page::{Page, RecordChange};
 use route::Route;
 use seed::{app::MessageMapper, prelude::*, EventHandler, *};
 pub(crate) use sleep::sleep_with_handle;
-use std::{cmp, sync::Arc};
+use std::{cmp, collections::HashSet, iter::FromIterator as _, ops::Deref as _, sync::Arc};
 pub use watch_state::*;
 use web_sys::MessageEvent;
 use Visibility::*;
@@ -723,7 +725,7 @@ fn handle_record_change(
                         .send_msg(page::mgts::Msg::AddTarget(x));
                 }
                 ArcRecord::TargetRecord(x) => {
-                    model.records.target_record.insert(x.id, x);
+                    model.records.target_record.insert(x.id, Arc::clone(&x));
                 }
                 ArcRecord::User(x) => {
                     model.records.user.insert(x.id, Arc::clone(&x));
@@ -1074,4 +1076,31 @@ pub fn run() {
         .build_and_start();
 
     log!("App started.");
+}
+
+fn get_target_fs_ids(x: &Target<TargetConfParam>) -> Vec<i32> {
+    match x.kind {
+        TargetKind::Mgt => x.filesystems.iter().flatten().map(|x| x.id).collect(),
+        TargetKind::Mdt | TargetKind::Ost => x.filesystem_id.map(|x| vec![x]).unwrap_or_default(),
+    }
+}
+
+fn get_target_from_managed_target<'a>(cache: &'a ArcCache, x: &Target<TargetConfParam>) -> Option<&'a TargetRecord> {
+    let fs_names: HashSet<_> = get_target_fs_ids(x)
+        .into_iter()
+        .filter_map(|id| cache.filesystem.get(&id))
+        .map(|x| &x.name)
+        .collect();
+
+    cache
+        .target_record
+        .values()
+        .filter(|t| t.name == x.name)
+        .find(|t| {
+            HashSet::from_iter(t.filesystems.iter())
+                .intersection(&fs_names)
+                .next()
+                .is_some()
+        })
+        .map(|x| x.deref())
 }

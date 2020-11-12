@@ -2,9 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::CompositeId;
-use crate::ToCompositeId;
-use crate::{EndpointName, Label};
+use crate::{CompositeId, EndpointName, Label, TargetKind, ToCompositeId};
 use chrono::{offset::Utc, DateTime};
 #[cfg(feature = "postgres-interop")]
 use std::str::FromStr;
@@ -340,6 +338,28 @@ impl Id for TargetRecord {
 impl Id for &TargetRecord {
     fn id(&self) -> i32 {
         self.id
+    }
+}
+
+impl Label for TargetRecord {
+    fn label(&self) -> &str {
+        &self.name
+    }
+}
+
+impl Label for &TargetRecord {
+    fn label(&self) -> &str {
+        &self.name
+    }
+}
+
+impl TargetRecord {
+    pub fn get_kind(&self) -> TargetKind {
+        match self.name.as_str() {
+            "MGS" => TargetKind::Mgt,
+            name if name.contains("-MDT") => TargetKind::Mdt,
+            _ => TargetKind::Ost,
+        }
     }
 }
 
