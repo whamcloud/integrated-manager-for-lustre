@@ -140,6 +140,10 @@ async fn main() -> Result<(), ImlDeviceError> {
             .chain(mgs_targets_to_fs_map)
             .collect();
 
+        tracing::debug!("target_to_fs_map: {:?}", target_to_fs_map);
+
+        tracing::debug!("mount_cache: {:?}", mount_cache);
+
         let targets = find_targets(
             &device_cache,
             &mount_cache,
@@ -147,6 +151,10 @@ async fn main() -> Result<(), ImlDeviceError> {
             &index,
             &target_to_fs_map,
         );
+
+        tracing::debug!("targets: {:?}", targets);
+
+        tracing::debug!("target_cache: {:?}", target_cache);
 
         let x = targets.get_changes(&target_cache);
 
