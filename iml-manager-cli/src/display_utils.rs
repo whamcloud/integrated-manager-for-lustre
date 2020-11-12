@@ -7,9 +7,9 @@ use console::style;
 use futures::{Future, FutureExt};
 use iml_wire_types::{
     db::TargetRecord,
-    graphql,
+    graphql::ServerProfile,
     snapshot::{ReserveUnit, Snapshot, SnapshotInterval, SnapshotRetention},
-    Command, Filesystem, Host, OstPool, ServerProfile, StratagemConfiguration, StratagemReport,
+    Command, Filesystem, Host, OstPool, StratagemConfiguration, StratagemReport,
 };
 use indicatif::ProgressBar;
 use number_formatter::{format_bytes, format_number};
@@ -300,17 +300,6 @@ impl IntoTable for (Vec<Host>, Vec<TargetRecord>) {
                     x.uuid,
                 ]
             }),
-        )
-    }
-}
-
-impl IntoTable for Vec<graphql::ServerProfile> {
-    fn into_table(self) -> Table {
-        generate_table(
-            &["Profile", "Name", "Description"],
-            self.into_iter()
-                .filter(|x| x.user_selectable)
-                .map(|x| vec![x.name, x.ui_name, x.ui_description]),
         )
     }
 }
