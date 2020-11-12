@@ -45,7 +45,7 @@ pub mod list {
     }
 }
 
-pub mod load {
+pub mod create {
     use crate::Query;
     use iml_wire_types::graphql::ServerProfileInput;
 

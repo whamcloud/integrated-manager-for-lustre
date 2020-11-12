@@ -100,9 +100,9 @@ pub async fn cmd(cmd: Option<Cmd>) -> Result<(), ImlManagerCliError> {
             let profile: UserProfile = serde_json::from_slice(&buf)?;
             let input: ServerProfileInput = profile.into();
 
-            let query = server_profile::load::build(input);
+            let query = server_profile::create::build(input);
 
-            let resp: iml_graphql_queries::Response<server_profile::load::Resp> =
+            let resp: iml_graphql_queries::Response<server_profile::create::Resp> =
                 wrap_fut("Loading profile", graphql(query)).await?;
             let _success = Result::from(resp)?.data.create_server_profile;
 
