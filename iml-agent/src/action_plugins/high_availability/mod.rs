@@ -324,7 +324,7 @@ pub async fn create_cloned_client(
 
     create_resource(agent, true, constraints, false).await?;
 
-    wait_resource(&format!("cl-{}-client", fsname), false).await
+    wait_resource(&format!("{}-client", fsname), false).await
 }
 
 pub async fn create_cloned_resource(
