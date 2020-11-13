@@ -5,16 +5,18 @@
 use crate::{
     components::{alert_indicator, attrs, font_awesome, paging, tooltip, Placement},
     generated::css_classes::C,
+    get_target_from_managed_target,
     route::RouteId,
     GMsg, Route,
 };
 use iml_wire_types::{
-    db::{Id, OstPoolRecord, VolumeNodeRecord},
+    db::{Id, ManagedTargetRecord, OstPoolRecord, TargetKind, VolumeNodeRecord},
     warp_drive::{ArcCache, ArcValuesExt, RecordId},
-    Filesystem, Host, Label, Target, TargetConfParam, TargetKind,
+    Filesystem, Host, Label,
 };
 use seed::{prelude::*, *};
 use std::{
+    borrow::Borrow,
     collections::{BTreeSet, HashMap},
     iter::{once, FromIterator},
     ops::{Deref, DerefMut},
@@ -49,15 +51,15 @@ fn get_targets_by_parent_resource(
     cache: &ArcCache,
     parent_resource_id: RecordId,
     kind: TargetKind,
-) -> Vec<&Target<TargetConfParam>> {
+) -> Vec<&ManagedTargetRecord> {
     match parent_resource_id {
         RecordId::OstPool(x) => get_targets_by_pool_id(cache, x),
-        RecordId::Filesystem(x) => get_targets_by_fs_id(&cache.target, x, kind),
+        RecordId::Filesystem(x) => get_targets_by_fs_id(cache, x, kind),
         _ => vec![],
     }
 }
 
-fn get_targets_by_pool_id(cache: &ArcCache, ostpool_id: i32) -> Vec<&Target<TargetConfParam>> {
+fn get_targets_by_pool_id(cache: &ArcCache, ostpool_id: i32) -> Vec<&ManagedTargetRecord> {
     let target_ids: Vec<_> = cache
         .ost_pool_osts
         .arc_values()
@@ -72,31 +74,33 @@ fn get_targets_by_pool_id(cache: &ArcCache, ostpool_id: i32) -> Vec<&Target<Targ
         .collect()
 }
 
-fn get_targets_by_fs_id(
-    xs: &im::HashMap<i32, Arc<Target<TargetConfParam>>>,
-    fs_id: i32,
-    kind: TargetKind,
-) -> Vec<&Target<TargetConfParam>> {
-    let it = xs.arc_values().filter(|t| t.kind == kind);
+fn get_targets_by_fs_id(cache: &ArcCache, fs_id: i32, kind: TargetKind) -> Vec<&ManagedTargetRecord> {
+    let fs = cache.filesystem.get(&fs_id);
 
-    if kind == TargetKind::Mgt {
-        it.filter(|t| {
-            t.filesystems
-                .as_ref()
-                .and_then(|fss| fss.iter().find(|f| f.id == fs_id))
-                .is_some()
+    cache
+        .target
+        .arc_values()
+        .filter(|t| t.get_kind() == kind)
+        .filter_map(|x| {
+            let t = get_target_from_managed_target(cache, x)?;
+
+            if t.filesystems.contains(fs?.name.borrow()) {
+                Some(x)
+            } else {
+                None
+            }
         })
         .collect()
-    } else {
-        it.filter(|t| t.filesystem_id == Some(fs_id)).collect()
-    }
 }
 
-fn get_target_fs_ids(x: &Target<TargetConfParam>) -> Vec<i32> {
-    match x.kind {
-        TargetKind::Mgt => x.filesystems.iter().flatten().map(|x| x.id).collect(),
-        TargetKind::Mdt | TargetKind::Ost => x.filesystem_id.map(|x| vec![x]).unwrap_or_default(),
-    }
+fn get_target_fs_ids(cache: &ArcCache, x: &ManagedTargetRecord) -> Vec<i32> {
+    get_target_from_managed_target(cache, x)
+        .map(|x| -> Vec<_> { x.filesystems.iter().map(|x| x.as_str()).collect() })
+        .iter()
+        .flatten()
+        .filter_map(|x| cache.filesystem.values().find(|y| &y.name == x))
+        .map(|x| x.id)
+        .collect()
 }
 
 // Model
@@ -280,7 +284,7 @@ fn add_item(
         RecordId::Target(id) => {
             let target = cache.target.get(&id)?;
 
-            let ids = get_target_fs_ids(target);
+            let ids = get_target_fs_ids(cache, target);
 
             let sort_fn = |cache: &ArcCache, model: &TreeNode| {
                 let mut xs = cache
@@ -297,7 +301,7 @@ fn add_item(
             for fs_id in ids {
                 let base_addr: Address = vec![Step::FsCollection, Step::Fs(fs_id)].into();
 
-                let target_tree_node = model.get_mut(&base_addr.extend(target.kind))?;
+                let target_tree_node = model.get_mut(&base_addr.extend(target.get_kind()))?;
 
                 target_tree_node.items.insert(id);
 
@@ -366,12 +370,12 @@ fn remove_item(
         RecordId::Target(id) => {
             let target = cache.target.get(&id)?;
 
-            let ids = get_target_fs_ids(target);
+            let ids = get_target_fs_ids(cache, target);
 
             for fs_id in ids {
                 let addr: Address = vec![Step::FsCollection, Step::Fs(fs_id)].into();
 
-                model.remove_item(&addr.extend(target.kind), id);
+                model.remove_item(&addr.extend(target.get_kind()), id);
 
                 model.remove_item(&addr.extend(Step::OstPoolCollection).extend(Step::OstCollection), id);
             }
@@ -452,7 +456,7 @@ pub fn update(cache: &ArcCache, msg: Msg, model: &mut Model, orders: &mut impl O
                 }
                 [Step::FsCollection, Step::Fs(id)] => {
                     model.entry(address.extend(Step::MgtCollection)).or_insert_with(|| {
-                        let mut xs = get_targets_by_fs_id(&cache.target, *id, TargetKind::Mgt);
+                        let mut xs = get_targets_by_fs_id(cache, *id, TargetKind::Mgt);
 
                         sort_by_label(&mut xs);
 
@@ -460,7 +464,7 @@ pub fn update(cache: &ArcCache, msg: Msg, model: &mut Model, orders: &mut impl O
                     });
 
                     model.entry(address.extend(Step::MdtCollection)).or_insert_with(|| {
-                        let mut xs = get_targets_by_fs_id(&cache.target, *id, TargetKind::Mdt);
+                        let mut xs = get_targets_by_fs_id(cache, *id, TargetKind::Mdt);
 
                         sort_by_label(&mut xs);
 
@@ -468,7 +472,7 @@ pub fn update(cache: &ArcCache, msg: Msg, model: &mut Model, orders: &mut impl O
                     });
 
                     model.entry(address.extend(Step::OstCollection)).or_insert_with(|| {
-                        let mut xs = get_targets_by_fs_id(&cache.target, *id, TargetKind::Ost);
+                        let mut xs = get_targets_by_fs_id(cache, *id, TargetKind::Ost);
 
                         sort_by_label(&mut xs);
 
@@ -784,7 +788,7 @@ fn tree_target_collection_view(
                         a![
                             class![C.hover__underline, C.text_blue_500, C.hover__text_blue_400, C.mr_1],
                             attrs! {
-                                At::Href => Route::TargetDashboard(x.name.to_string().into()).to_href()
+                                At::Href => Route::TargetDashboard(x.label().into()).to_href()
                             },
                             attrs::container(),
                             tooltip::view(&"View statistics", Placement::Bottom),

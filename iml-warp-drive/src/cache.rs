@@ -20,7 +20,7 @@ use iml_wire_types::{
     },
     snapshot::{ReserveUnit, SnapshotInterval, SnapshotRecord, SnapshotRetention},
     warp_drive::{Cache, Record, RecordChange, RecordId},
-    Alert, ApiList, EndpointName, Filesystem, FlatQuery, Host, Target, TargetConfParam,
+    Alert, ApiList, EndpointName, Filesystem, FlatQuery, Host,
 };
 use std::{fmt::Debug, pin::Pin, sync::Arc};
 
@@ -107,9 +107,13 @@ pub async fn db_record_to_change_record(
             )
             .await
         }
-        DbRecord::ManagedTarget(x) => {
-            converter(client, msg_type, x, Record::Target, RecordId::Target).await
-        }
+        DbRecord::ManagedTarget(x) => match (msg_type, x) {
+            (MessageType::Delete, x) => Ok(RecordChange::Delete(RecordId::Target(x.id()))),
+            (_, x) if x.deleted() => Ok(RecordChange::Delete(RecordId::Target(x.id()))),
+            (MessageType::Insert, x) | (MessageType::Update, x) => {
+                Ok(RecordChange::Update(Record::Target(x)))
+            }
+        },
         DbRecord::AlertState(x) => match (msg_type, &x) {
             (MessageType::Delete, x) => Ok(RecordChange::Delete(RecordId::ActiveAlert(x.id()))),
             (_, x) if !x.is_active() => Ok(RecordChange::Delete(RecordId::ActiveAlert(x.id()))),
@@ -302,14 +306,6 @@ pub async fn populate_from_api(shared_api_cache: SharedCache) -> Result<(), ImlM
     .map_ok(|fs: ApiList<Filesystem>| fs.objects)
     .map_ok(|fs: Vec<Filesystem>| fs.into_iter().map(|f| (f.id, f)).collect());
 
-    let target_fut = get_retry(
-        client.clone(),
-        <Target<TargetConfParam>>::endpoint_name(),
-        <Target<TargetConfParam>>::query(),
-    )
-    .map_ok(|x: ApiList<Target<TargetConfParam>>| x.objects)
-    .map_ok(|x: Vec<Target<TargetConfParam>>| x.into_iter().map(|x| (x.id, x)).collect());
-
     let active_alert_fut = get_retry(client.clone(), Alert::endpoint_name(), Alert::query())
         .map_ok(|x: ApiList<Alert>| x.objects)
         .map_ok(|x: Vec<Alert>| x.into_iter().map(|x| (x.id, x)).collect());
@@ -318,13 +314,11 @@ pub async fn populate_from_api(shared_api_cache: SharedCache) -> Result<(), ImlM
         .map_ok(|x: ApiList<Host>| x.objects)
         .map_ok(|x: Vec<Host>| x.into_iter().map(|x| (x.id, x)).collect());
 
-    let (filesystem, target, alert, host) =
-        future::try_join4(fs_fut, target_fut, active_alert_fut, host_fut).await?;
+    let (filesystem, alert, host) = future::try_join3(fs_fut, active_alert_fut, host_fut).await?;
 
     let mut api_cache = shared_api_cache.lock().await;
 
     api_cache.filesystem = filesystem;
-    api_cache.target = target;
     api_cache.active_alert = alert;
     api_cache.host = host;
 
@@ -365,6 +359,15 @@ pub async fn populate_from_db(
     cache.lnet_configuration = sqlx::query_as!(
         LnetConfigurationRecord,
         "select * from chroma_core_lnetconfiguration where not_deleted = 't'"
+    )
+    .fetch(pool)
+    .map_ok(|x| (x.id(), x))
+    .try_collect()
+    .await?;
+
+    cache.target = sqlx::query_as!(
+        ManagedTargetRecord,
+        "select * from chroma_core_managedtarget where not_deleted = 't'"
     )
     .fetch(pool)
     .map_ok(|x| (x.id(), x))

@@ -308,7 +308,6 @@ class FilesystemResource(ConfParamResource):
     mdts = fields.ToManyField(
         "chroma_api.target.TargetResource",
         null=True,
-        full=True,
         attribute=lambda bundle: ManagedMdt.objects.filter(filesystem=bundle.obj),
         help_text="List of MDTs in this file system, should be at least 1 unless the "
         "file system is in the process of being deleted",
@@ -316,7 +315,6 @@ class FilesystemResource(ConfParamResource):
     mgt = fields.ToOneField(
         "chroma_api.target.TargetResource",
         attribute="mgs",
-        full=True,
         help_text="The MGT on which this file system is registered",
     )
 
@@ -329,42 +327,6 @@ class FilesystemResource(ConfParamResource):
             return "mount -t lustre %s /mnt/%s" % (path, bundle.obj.name)
         else:
             return None
-
-    def get_hsm_control_params(self, mdt, bundle):
-        all_params = set(HSM_CONTROL_PARAMS.keys())
-        available_params = all_params - set([bundle.data["cdt_status"]])
-        bundle_params = []
-
-        # Strip the mdt down for brevity of transport and also to
-        # avoid problems with the PUT.
-        (resource, id) = mdt.data["resource_uri"].split("/")[-3:-1]
-        safe_mdt = dict(kind=mdt.data["kind"], resource=resource, id=id, conf_params=mdt.data["conf_params"])
-
-        for param in available_params:
-            bundle_params.append(
-                dict(
-                    mdt=safe_mdt,
-                    param_key=HSM_CONTROL_KEY,
-                    param_value=param,
-                    verb=HSM_CONTROL_PARAMS[param]["verb"],
-                    long_description=HSM_CONTROL_PARAMS[param]["long_description"],
-                )
-            )
-
-        return bundle_params
-
-    def dehydrate(self, bundle):
-        # Have to do this here because we can't guarantee ordering during
-        # full_dehydrate to ensure that the mdt bundles are available.
-        try:
-            mdt = next(m for m in bundle.data["mdts"] if "mdt.hsm_control" in m.data["conf_params"])
-            bundle.data["cdt_status"] = mdt.data["conf_params"]["mdt.hsm_control"]
-            bundle.data["cdt_mdt"] = mdt.data["resource_uri"]
-            bundle.data["hsm_control_params"] = self.get_hsm_control_params(mdt, bundle)
-        except StopIteration:
-            pass
-
-        return bundle
 
     class Meta:
         queryset = ManagedFilesystem.objects.all()

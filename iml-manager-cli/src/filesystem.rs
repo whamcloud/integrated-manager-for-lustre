@@ -4,7 +4,7 @@
 
 use crate::{
     api_utils::{
-        create_command, get, get_all, get_hosts, get_influx, get_one, wait_for_cmds_success,
+        create_command, get_all, get_hosts, get_influx, get_one, graphql, wait_for_cmds_success,
         SendCmd, SendJob,
     },
     display_utils::{usage, wrap_fut, DisplayType, IntoDisplayType as _},
@@ -12,8 +12,9 @@ use crate::{
     ostpool::{ostpool_cli, OstPoolCommand},
 };
 use console::Term;
-use futures::future::{try_join, try_join_all};
-use iml_wire_types::{Filesystem, FlatQuery, Mgt, Ost};
+use futures::future::{try_join, try_join4};
+use iml_graphql_queries::target as target_queries;
+use iml_wire_types::{db::TargetKind, Filesystem};
 use number_formatter::{format_bytes, format_number};
 use prettytable::{Row, Table};
 use std::collections::{BTreeMap, HashMap};
@@ -135,61 +136,86 @@ pub async fn filesystem_cli(command: FilesystemCommand) -> Result<(), ImlManager
         }
         FilesystemCommand::Show { fsname } => {
             let fut_fs = get_one::<Filesystem>(vec![("name", &fsname)]);
+
             let query = iml_influx::filesystem::query(&fsname);
             let fut_st =
                 get_influx::<iml_influx::filesystem::InfluxResponse>("iml_stats", query.as_str());
 
-            let (fs, influx_resp) =
-                wrap_fut("Fetching filesystem...", try_join(fut_fs, fut_st)).await?;
+            let targets = graphql(target_queries::list::build(
+                None,
+                None,
+                None,
+                Some(&fsname),
+                None,
+            ));
+
+            let (fs, influx_resp, hosts, targets_resp): (
+                _,
+                _,
+                _,
+                iml_graphql_queries::Response<target_queries::list::Resp>,
+            ) = wrap_fut(
+                "Fetching filesystem...",
+                try_join4(fut_fs, fut_st, get_hosts(), targets),
+            )
+            .await?;
             let st = iml_influx::filesystem::Response::from(influx_resp);
 
             tracing::debug!("FS: {:?}", fs);
             tracing::debug!("ST: {:?}", st);
+            tracing::debug!("Targets: {:?}", targets_resp);
 
-            let (mgt, osts): (Mgt, Vec<Ost>) = try_join(
-                wrap_fut("Fetching MGT...", get(&fs.mgt, Mgt::query())),
-                try_join_all(fs.osts.into_iter().map(|o| async move {
-                    wrap_fut("Fetching OST...", get(&o, Ost::query())).await
-                })),
-            )
-            .await?;
+            let targets = Result::from(targets_resp)?.data.targets;
 
-            let mut table = Table::new();
-            table.add_row(Row::from(&["Name".to_string(), fs.label]));
-            table.add_row(Row::from(&[
-                "Space Used/Avail".to_string(),
-                usage(
-                    option_sub(st.bytes_total, st.bytes_free),
-                    st.bytes_avail,
-                    format_bytes,
-                ),
-            ]));
-            table.add_row(Row::from(&[
-                "Inodes Used/Avail".to_string(),
-                usage(
-                    option_sub(st.files_total, st.files_free),
-                    st.files_total,
-                    format_number,
-                ),
-            ]));
-            table.add_row(Row::from(&["State".to_string(), fs.state]));
-            table.add_row(Row::from(&[
-                "Management Server".to_string(),
-                mgt.active_host_name,
-            ]));
+            let (mgs, mdts, osts) =
+                targets
+                    .into_iter()
+                    .fold(("---", vec![], vec![]), |mut acc, x| {
+                        match x.get_kind() {
+                            TargetKind::Mgt => {
+                                x.active_host_id
+                                    .and_then(|x| hosts.objects.iter().find(|y| y.id == x))
+                                    .map(|x| x.fqdn.as_str())
+                                    .map(|x| {
+                                        acc.0 = x;
+                                    });
+                            }
+                            TargetKind::Mdt => acc.1.push(x.name),
+                            TargetKind::Ost => acc.2.push(x.name),
+                        }
 
-            let mdtnames: Vec<String> = fs.mdts.into_iter().map(|m| m.name).collect();
-            table.add_row(Row::from(&["MDTs".to_string(), mdtnames.join("\n")]));
+                        acc
+                    });
 
-            let ostnames: Vec<String> = osts.into_iter().map(|m| m.name).collect();
-            table.add_row(Row::from(&["OSTs".to_string(), ostnames.join("\n")]));
-
-            table.add_row(Row::from(&[
-                "Clients".to_string(),
-                format!("{}", st.clients.unwrap_or(0)),
-            ]));
-            table.add_row(Row::from(&["Mount Path".to_string(), fs.mount_path]));
-            table.printstd();
+            Table::init(vec![
+                Row::from(&["Name".to_string(), fs.label]),
+                Row::from(&[
+                    "Space Used/Avail".to_string(),
+                    usage(
+                        option_sub(st.bytes_total, st.bytes_free),
+                        st.bytes_avail,
+                        format_bytes,
+                    ),
+                ]),
+                Row::from(&[
+                    "Inodes Used/Avail".to_string(),
+                    usage(
+                        option_sub(st.files_total, st.files_free),
+                        st.files_total,
+                        format_number,
+                    ),
+                ]),
+                Row::from(&["State".to_string(), fs.state]),
+                Row::from(&["Management Server", mgs]),
+                Row::from(&["MDTs".to_string(), mdts.join("\n")]),
+                Row::from(&["OSTs".to_string(), osts.join("\n")]),
+                Row::from(&[
+                    "Clients".to_string(),
+                    format!("{}", st.clients.unwrap_or(0)),
+                ]),
+                Row::from(&["Mount Path".to_string(), fs.mount_path]),
+            ])
+            .printstd();
         }
         FilesystemCommand::Pool { command } => ostpool_cli(command).await?,
         FilesystemCommand::Detect { hosts } => detect_filesystem(hosts).await?,
