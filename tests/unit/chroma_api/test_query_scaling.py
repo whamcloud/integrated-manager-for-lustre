@@ -37,7 +37,7 @@ OrderBad = namedtuple("OrderBad", [])
 # then think about whether you meant to do that, and grudgingly
 # update this number upwards if necessary, or go back and
 # revise the API change.
-QUERIES_PER_TARGET = 6  # queries per target accessing that resource directly
+QUERIES_PER_TARGET = 3  # queries per target accessing that resource directly
 QUERIES_PER_FILESYSTEM_TARGET = 4  # queries per target when included in a filesystem resource
 QUERIES_PER_VOLUME = 1  # queries per volume object when reading volumes
 QUERIES_PER_VOLUME_HOST = 1  # additional queries per-volume per-host

@@ -15,14 +15,13 @@ use crate::{
 };
 use futures::channel::oneshot;
 use iml_wire_types::{
-    db::TargetRecord,
+    db::{ManagedTargetRecord, TargetKind, TargetRecord},
     warp_drive::{ArcCache, Locks},
-    Filesystem, Session, Target, TargetConfParam, TargetKind, ToCompositeId,
+    Filesystem, Label, Session, ToCompositeId,
 };
 use number_formatter as nf;
 use seed::{prelude::*, *};
-use std::{borrow::Cow, time::Duration};
-use std::{collections::HashMap, sync::Arc};
+use std::{borrow::Cow, collections::HashMap, sync::Arc, time::Duration};
 
 pub struct Row {
     dropdown: action_dropdown::Model,
@@ -30,10 +29,10 @@ pub struct Row {
 
 pub struct Model {
     pub fs: Arc<Filesystem>,
-    mdts: Vec<Arc<Target<TargetConfParam>>>,
+    mdts: Vec<Arc<ManagedTargetRecord>>,
     mdt_paging: paging::Model,
-    mgt: Vec<Arc<Target<TargetConfParam>>>,
-    osts: Vec<Arc<Target<TargetConfParam>>>,
+    mgt: Vec<Arc<ManagedTargetRecord>>,
+    osts: Vec<Arc<ManagedTargetRecord>>,
     ost_paging: paging::Model,
     rows: HashMap<i32, Row>,
     stratagem: stratagem::Model,
@@ -65,9 +64,9 @@ pub enum Msg {
     FetchStats,
     StatsFetched(Box<fetch::ResponseDataResult<iml_influx::filesystem::InfluxResponse>>),
     ActionDropdown(Box<action_dropdown::IdMsg>),
-    AddTarget(Arc<Target<TargetConfParam>>),
+    AddTarget(Arc<ManagedTargetRecord>),
     RemoveTarget(i32),
-    SetTargets(Vec<Arc<Target<TargetConfParam>>>),
+    SetTargets(Vec<Arc<ManagedTargetRecord>>),
     OstPaging(paging::Msg),
     MdtPaging(paging::Msg),
     UpdatePaging,
@@ -128,11 +127,11 @@ pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl O
             orders.send_msg(Msg::UpdatePaging);
         }
         Msg::AddTarget(x) => {
-            if !is_fs_target(model.fs.id, &x) {
+            if !is_fs_target(cache, &model.fs.name, &x) {
                 return;
             }
 
-            let xs = match x.kind {
+            let xs = match x.get_kind() {
                 TargetKind::Mgt => &mut model.mgt,
                 TargetKind::Mdt => &mut model.mdts,
                 TargetKind::Ost => &mut model.osts,
@@ -168,10 +167,10 @@ pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl O
                 })
                 .collect();
 
-            let (mgt, mut mdts, mut osts) = xs.into_iter().filter(|t| is_fs_target(model.fs.id, t)).fold(
+            let (mgt, mut mdts, mut osts) = xs.into_iter().filter(|t| is_fs_target(cache, &model.fs.name, t)).fold(
                 (vec![], vec![], vec![]),
                 |(mut mgt, mut mdts, mut osts), x| {
-                    match x.kind {
+                    match x.get_kind() {
                         TargetKind::Mgt => mgt.push(x),
                         TargetKind::Mdt => mdts.push(x),
                         TargetKind::Ost => osts.push(x),
@@ -180,8 +179,8 @@ pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl O
                 },
             );
 
-            mdts.sort_by(|a, b| natord::compare(&a.name, &b.name));
-            osts.sort_by(|a, b| natord::compare(&a.name, &b.name));
+            mdts.sort_by(|a, b| natord::compare(&a.label(), &b.label()));
+            osts.sort_by(|a, b| natord::compare(&a.label(), &b.label()));
 
             model.mgt = mgt;
             model.mdts = mdts;
@@ -334,7 +333,7 @@ fn targets(
     all_locks: &Locks,
     session: Option<&Session>,
     rows: &HashMap<i32, Row>,
-    tgts: &[Arc<Target<TargetConfParam>>],
+    tgts: &[Arc<ManagedTargetRecord>],
     pager: impl Into<Option<Node<Msg>>>,
 ) -> Node<Msg> {
     div![
@@ -455,12 +454,10 @@ pub(crate) fn clients_view<T>(cc: impl Into<Option<u64>>) -> Node<T> {
     plain![cc.into().map(|c| c.to_string()).unwrap_or_else(|| "---".to_string())]
 }
 
-fn is_fs_target(fs_id: i32, t: &Target<TargetConfParam>) -> bool {
-    t.filesystem_id == Some(fs_id)
-        || t.filesystems
-            .as_ref()
-            .and_then(|f| f.iter().find(|x| x.id == fs_id))
-            .is_some()
+fn is_fs_target(cache: &ArcCache, fs_name: &String, t: &ManagedTargetRecord) -> bool {
+    get_target_from_managed_target(cache, t)
+        .map(|x| x.filesystems.contains(fs_name))
+        .unwrap_or_default()
 }
 
 pub(crate) fn space_used_view<T>(

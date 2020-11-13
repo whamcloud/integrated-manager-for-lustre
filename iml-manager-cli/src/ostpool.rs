@@ -9,9 +9,7 @@ use crate::{
 };
 use console::{style, Term};
 use futures::future::try_join_all;
-use iml_wire_types::{
-    ApiList, Command, EndpointName, Filesystem, FlatQuery, Ost, OstPool, OstPoolApi,
-};
+use iml_wire_types::{ApiList, Command, EndpointName, Filesystem, FlatQuery, OstPool, OstPoolApi};
 use prettytable::{Row, Table};
 use std::iter::FromIterator;
 use structopt::StructOpt;
@@ -76,6 +74,11 @@ pub enum OstPoolCommand {
     Destroy { fsname: String, poolname: String },
 }
 
+#[derive(Debug, serde::Deserialize)]
+struct Target {
+    name: String,
+}
+
 async fn pool_lookup(fsname: &str, poolname: &str) -> Result<OstPoolApi, ImlManagerCliError> {
     let fs: Filesystem =
         wrap_fut("Fetching Filesystem ...", get_one(vec![("name", fsname)])).await?;
@@ -89,14 +92,16 @@ async fn pool_lookup(fsname: &str, poolname: &str) -> Result<OstPoolApi, ImlMana
     )
     .await?;
 
-    let osts: Vec<Ost> = try_join_all(
-        pool.ost
-            .osts
-            .into_iter()
-            .map(|o| async move { wrap_fut("Fetching OST...", get(&o, Ost::query())).await }),
-    )
+    let osts: Vec<String> = try_join_all(pool.ost.osts.into_iter().map(|o| async move {
+        wrap_fut(
+            "Fetching OST...",
+            get(&o, vec![("limit", "0"), ("dehydrate__volume", "false")]),
+        )
+        .await
+        .map(|m: Target| m.name)
+    }))
     .await?;
-    pool.ost.osts = osts.into_iter().map(|m| m.name).collect();
+    pool.ost.osts = osts;
     Ok(pool)
 }
 

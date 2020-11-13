@@ -102,8 +102,10 @@ class TestTargetPutValidation(ChromaApiTestCase):
 
         self.filesystem = self.deserialize(self.api_client.get("/api/filesystem/"))["objects"][0]
         self.mgt = self.filesystem["mgt"]
-        self.mdt = self.filesystem["mdts"][0]
+        self.mdt = self.deserialize(self.api_client.get(self.filesystem["mdts"][0]))
+        self.mdt["kind"] = "MDT"
         self.ost = self.deserialize(self.api_client.get(self.filesystem["osts"][0]))
+        self.ost["kind"] = "OST"
 
     def test_mdt_put(self):
         """Test that conf param validation is happening on a PUT to an existing MDT"""
@@ -126,6 +128,7 @@ class TestTargetPutValidation(ChromaApiTestCase):
         ost_record.save()
         ost = self.deserialize(self.api_client.get(self.ost["resource_uri"]))
         ost["conf_params"]["osc.max_pages_per_rpc"] = "20"
+        ost["kind"] = "OST"
         response = self.api_client.put(self.ost["resource_uri"], data=ost)
         self.assertHttpBadRequest(response)
         errors = self.deserialize(response)

@@ -36,10 +36,10 @@ pub(crate) use extensions::*;
 use futures::channel::oneshot;
 use generated::css_classes::C;
 use iml_wire_types::{
-    db::TargetRecord,
+    db::{ManagedTargetRecord, TargetRecord},
     warp_drive::ArcCache,
     warp_drive::{self, ArcRecord},
-    Conf, GroupType, Target, TargetConfParam,
+    Conf, GroupType,
 };
 use lazy_static::lazy_static;
 use page::{Page, RecordChange};
@@ -1078,7 +1078,7 @@ pub fn run() {
     log!("App started.");
 }
 
-fn get_target_from_managed_target<'a>(cache: &'a ArcCache, x: &Target<TargetConfParam>) -> Option<&'a TargetRecord> {
+fn get_target_from_managed_target<'a>(cache: &'a ArcCache, x: &ManagedTargetRecord) -> Option<&'a TargetRecord> {
     cache
         .target_record
         .values()

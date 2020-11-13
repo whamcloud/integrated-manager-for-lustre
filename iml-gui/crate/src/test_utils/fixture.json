@@ -1,0 +1,2727 @@
+{
+    "content_type": {
+        "70": {
+            "id": 70,
+            "app_label": "chroma_core",
+            "model": "removeunconfiguredcopytooljob"
+        },
+        "58": {
+            "id": 58,
+            "app_label": "chroma_core",
+            "model": "filesystemglobalconfparam"
+        },
+        "190": {
+            "id": 190,
+            "app_label": "chroma_core",
+            "model": "corosynctomanypeersalert"
+        },
+        "10": { "id": 10, "app_label": "chroma_core", "model": "task" },
+        "143": {
+            "id": 143,
+            "app_label": "chroma_core",
+            "model": "unmountlustrefilesystemsjob"
+        },
+        "16": { "id": 16, "app_label": "chroma_core", "model": "volumenode" },
+        "101": {
+            "id": 101,
+            "app_label": "chroma_core",
+            "model": "forceremovehostjob"
+        },
+        "100": {
+            "id": 100,
+            "app_label": "chroma_core",
+            "model": "reboothostjob"
+        },
+        "147": {
+            "id": 147,
+            "app_label": "chroma_core",
+            "model": "autoconfigurecorosyncjob"
+        },
+        "79": {
+            "id": 79,
+            "app_label": "chroma_core",
+            "model": "forgetfilesystemjob"
+        },
+        "92": {
+            "id": 92,
+            "app_label": "chroma_core",
+            "model": "installhostpackagesjob"
+        },
+        "157": {
+            "id": 157,
+            "app_label": "chroma_core",
+            "model": "removefilesystemjob"
+        },
+        "118": {
+            "id": 118,
+            "app_label": "chroma_core",
+            "model": "filesystemticket"
+        },
+        "56": { "id": 56, "app_label": "chroma_core", "model": "sfadiskdrive" },
+        "113": {
+            "id": 113,
+            "app_label": "chroma_core",
+            "model": "getpacemakerstatejob"
+        },
+        "198": {
+            "id": 198,
+            "app_label": "chroma_core",
+            "model": "clientconnectevent"
+        },
+        "49": { "id": 49, "app_label": "chroma_core", "model": "stepresult" },
+        "89": {
+            "id": 89,
+            "app_label": "chroma_core",
+            "model": "stoptargetjob"
+        },
+        "75": {
+            "id": 75,
+            "app_label": "chroma_core",
+            "model": "addostpooljob"
+        },
+        "17": {
+            "id": 17,
+            "app_label": "chroma_core",
+            "model": "copytooloperation"
+        },
+        "120": {
+            "id": 120,
+            "app_label": "chroma_core",
+            "model": "startcopytooljob"
+        },
+        "95": {
+            "id": 95,
+            "app_label": "chroma_core",
+            "model": "setupworkerjob"
+        },
+        "195": {
+            "id": 195,
+            "app_label": "chroma_core",
+            "model": "hostofflinealert"
+        },
+        "94": {
+            "id": 94,
+            "app_label": "chroma_core",
+            "model": "revokegrantedticketjob"
+        },
+        "156": {
+            "id": 156,
+            "app_label": "chroma_core",
+            "model": "destroysnapshotjob"
+        },
+        "167": {
+            "id": 167,
+            "app_label": "chroma_core",
+            "model": "configurelnetjob"
+        },
+        "29": { "id": 29, "app_label": "chroma_core", "model": "logmessage" },
+        "34": {
+            "id": 34,
+            "app_label": "chroma_core",
+            "model": "storagepluginrecord"
+        },
+        "201": {
+            "id": 201,
+            "app_label": "chroma_core",
+            "model": "syslogevent"
+        },
+        "110": {
+            "id": 110,
+            "app_label": "chroma_core",
+            "model": "unconfigurepacemakerjob"
+        },
+        "174": {
+            "id": 174,
+            "app_label": "chroma_core",
+            "model": "ipmibmcunavailablealert"
+        },
+        "153": {
+            "id": 153,
+            "app_label": "chroma_core",
+            "model": "unconfigurecorosyncjob"
+        },
+        "40": {
+            "id": 40,
+            "app_label": "chroma_core",
+            "model": "storageresourceattributeserialized"
+        },
+        "129": {
+            "id": 129,
+            "app_label": "chroma_core",
+            "model": "unconfigurelnetjob"
+        },
+        "149": {
+            "id": 149,
+            "app_label": "chroma_core",
+            "model": "startpacemakerjob"
+        },
+        "194": {
+            "id": 194,
+            "app_label": "chroma_core",
+            "model": "lnetofflinealert"
+        },
+        "152": {
+            "id": 152,
+            "app_label": "chroma_core",
+            "model": "forgetstratagemconfigurationjob"
+        },
+        "30": {
+            "id": 30,
+            "app_label": "chroma_core",
+            "model": "sfastoragesystem"
+        },
+        "62": { "id": 62, "app_label": "chroma_core", "model": "job" },
+        "131": {
+            "id": 131,
+            "app_label": "chroma_core",
+            "model": "fastfilescanmdtjob"
+        },
+        "48": { "id": 48, "app_label": "chroma_core", "model": "sfadiskslot" },
+        "187": {
+            "id": 187,
+            "app_label": "chroma_core",
+            "model": "corosyncnopeersalert"
+        },
+        "52": {
+            "id": 52,
+            "app_label": "chroma_core",
+            "model": "stratagemconfiguration"
+        },
+        "47": {
+            "id": 47,
+            "app_label": "chroma_core",
+            "model": "alertsubscription"
+        },
+        "103": {
+            "id": 103,
+            "app_label": "chroma_core",
+            "model": "stopunavailablefilesystemjob"
+        },
+        "86": {
+            "id": 86,
+            "app_label": "chroma_core",
+            "model": "triggerpluginupdatesjob"
+        },
+        "54": { "id": 54, "app_label": "chroma_core", "model": "managedost" },
+        "13": {
+            "id": 13,
+            "app_label": "chroma_core",
+            "model": "serverprofile"
+        },
+        "71": {
+            "id": 71,
+            "app_label": "chroma_core",
+            "model": "mountsnapshotjob"
+        },
+        "20": { "id": 20, "app_label": "chroma_core", "model": "sfajob" },
+        "162": {
+            "id": 162,
+            "app_label": "chroma_core",
+            "model": "createtaskjob"
+        },
+        "191": {
+            "id": 191,
+            "app_label": "chroma_core",
+            "model": "powercontroldeviceunavailablealert"
+        },
+        "119": {
+            "id": 119,
+            "app_label": "chroma_core",
+            "model": "registertargetjob"
+        },
+        "117": {
+            "id": 117,
+            "app_label": "chroma_core",
+            "model": "createsnapshotjob"
+        },
+        "196": {
+            "id": 196,
+            "app_label": "chroma_core",
+            "model": "targetrecoveryalert"
+        },
+        "1": { "id": 1, "app_label": "auth", "model": "group" },
+        "164": {
+            "id": 164,
+            "app_label": "chroma_core",
+            "model": "autoconfigurecorosync2job"
+        },
+        "66": { "id": 66, "app_label": "chroma_core", "model": "mdtconfparam" },
+        "61": {
+            "id": 61,
+            "app_label": "chroma_core",
+            "model": "storageresourceattributereference"
+        },
+        "176": {
+            "id": 176,
+            "app_label": "chroma_core",
+            "model": "pacemakerstoppedalert"
+        },
+        "197": {
+            "id": 197,
+            "app_label": "chroma_core",
+            "model": "targetofflinealert"
+        },
+        "177": {
+            "id": 177,
+            "app_label": "chroma_core",
+            "model": "targetfailoveralert"
+        },
+        "19": { "id": 19, "app_label": "chroma_core", "model": "managedhost" },
+        "32": { "id": 32, "app_label": "chroma_core", "model": "managedmgs" },
+        "91": {
+            "id": 91,
+            "app_label": "chroma_core",
+            "model": "configurestratagemjob"
+        },
+        "88": {
+            "id": 88,
+            "app_label": "chroma_core",
+            "model": "poweroffhostjob"
+        },
+        "76": {
+            "id": 76,
+            "app_label": "chroma_core",
+            "model": "forceremovecopytooljob"
+        },
+        "158": {
+            "id": 158,
+            "app_label": "chroma_core",
+            "model": "configuretargetjob"
+        },
+        "87": {
+            "id": 87,
+            "app_label": "chroma_core",
+            "model": "getcorosyncstatejob"
+        },
+        "64": {
+            "id": 64,
+            "app_label": "chroma_core",
+            "model": "serverprofilevalidation"
+        },
+        "60": {
+            "id": 60,
+            "app_label": "chroma_core",
+            "model": "corosyncconfiguration"
+        },
+        "55": {
+            "id": 55,
+            "app_label": "chroma_core",
+            "model": "lnetconfiguration"
+        },
+        "98": {
+            "id": 98,
+            "app_label": "chroma_core",
+            "model": "forgetticketjob"
+        },
+        "178": {
+            "id": 178,
+            "app_label": "chroma_core",
+            "model": "hostrebootevent"
+        },
+        "146": {
+            "id": 146,
+            "app_label": "chroma_core",
+            "model": "configurehostfencingjob"
+        },
+        "111": {
+            "id": 111,
+            "app_label": "chroma_core",
+            "model": "removeostpooljob"
+        },
+        "151": {
+            "id": 151,
+            "app_label": "chroma_core",
+            "model": "removelustreclientjob"
+        },
+        "8": { "id": 8, "app_label": "tastypie", "model": "apiaccess" },
+        "114": {
+            "id": 114,
+            "app_label": "chroma_core",
+            "model": "startcorosyncjob"
+        },
+        "37": {
+            "id": 37,
+            "app_label": "chroma_core",
+            "model": "sfapowersupply"
+        },
+        "134": {
+            "id": 134,
+            "app_label": "chroma_core",
+            "model": "configurecopytooljob"
+        },
+        "74": {
+            "id": 74,
+            "app_label": "chroma_core",
+            "model": "removestratagemjob"
+        },
+        "154": {
+            "id": 154,
+            "app_label": "chroma_core",
+            "model": "failbacktargetjob"
+        },
+        "96": {
+            "id": 96,
+            "app_label": "chroma_core",
+            "model": "clearoldstratagemdatajob"
+        },
+        "69": { "id": 69, "app_label": "chroma_core", "model": "fidtaskqueue" },
+        "26": { "id": 26, "app_label": "chroma_core", "model": "copytool" },
+        "82": {
+            "id": 82,
+            "app_label": "chroma_core",
+            "model": "stopcopytooljob"
+        },
+        "160": {
+            "id": 160,
+            "app_label": "chroma_core",
+            "model": "applyconfparams"
+        },
+        "78": {
+            "id": 78,
+            "app_label": "chroma_core",
+            "model": "runstratagemjob"
+        },
+        "202": {
+            "id": 202,
+            "app_label": "chroma_core",
+            "model": "stonithnotenabledalert"
+        },
+        "80": { "id": 80, "app_label": "chroma_core", "model": "loadlnetjob" },
+        "107": {
+            "id": 107,
+            "app_label": "chroma_core",
+            "model": "makeavailablefilesystemunavailable"
+        },
+        "188": {
+            "id": 188,
+            "app_label": "chroma_core",
+            "model": "commandsuccessfulalert"
+        },
+        "145": {
+            "id": 145,
+            "app_label": "chroma_core",
+            "model": "configurepacemakerjob"
+        },
+        "179": {
+            "id": 179,
+            "app_label": "chroma_core",
+            "model": "updatesavailablealert"
+        },
+        "65": {
+            "id": 65,
+            "app_label": "chroma_core",
+            "model": "pacemakerconfiguration"
+        },
+        "41": {
+            "id": 41,
+            "app_label": "chroma_core",
+            "model": "lustreclientmount"
+        },
+        "126": {
+            "id": 126,
+            "app_label": "chroma_core",
+            "model": "startcorosync2job"
+        },
+        "102": {
+            "id": 102,
+            "app_label": "chroma_core",
+            "model": "powercyclehostjob"
+        },
+        "15": {
+            "id": 15,
+            "app_label": "chroma_core",
+            "model": "managedtarget"
+        },
+        "77": {
+            "id": 77,
+            "app_label": "chroma_core",
+            "model": "corosync2configuration"
+        },
+        "193": {
+            "id": 193,
+            "app_label": "chroma_core",
+            "model": "timeoutofsyncalert"
+        },
+        "97": {
+            "id": 97,
+            "app_label": "chroma_core",
+            "model": "unloadlnetjob"
+        },
+        "136": {
+            "id": 136,
+            "app_label": "chroma_core",
+            "model": "filesystemclientconfparam"
+        },
+        "123": {
+            "id": 123,
+            "app_label": "chroma_core",
+            "model": "enablelnetjob"
+        },
+        "170": { "id": 170, "app_label": "chroma_core", "model": "alertevent" },
+        "144": {
+            "id": 144,
+            "app_label": "chroma_core",
+            "model": "startstoppedfilesystemjob"
+        },
+        "130": {
+            "id": 130,
+            "app_label": "chroma_core",
+            "model": "mountlustreclientjob"
+        },
+        "14": {
+            "id": 14,
+            "app_label": "chroma_core",
+            "model": "sfacontroller"
+        },
+        "141": {
+            "id": 141,
+            "app_label": "chroma_core",
+            "model": "createostpooljob"
+        },
+        "128": {
+            "id": 128,
+            "app_label": "chroma_core",
+            "model": "testhostconnectionjob"
+        },
+        "90": {
+            "id": 90,
+            "app_label": "chroma_core",
+            "model": "startunavailablefilesystemjob"
+        },
+        "139": {
+            "id": 139,
+            "app_label": "chroma_core",
+            "model": "ostconfparam"
+        },
+        "150": {
+            "id": 150,
+            "app_label": "chroma_core",
+            "model": "deployhostjob"
+        },
+        "124": {
+            "id": 124,
+            "app_label": "chroma_core",
+            "model": "detecttargetsjob"
+        },
+        "121": {
+            "id": 121,
+            "app_label": "chroma_core",
+            "model": "shutdownhostjob"
+        },
+        "192": { "id": 192, "app_label": "chroma_core", "model": "learnevent" },
+        "12": {
+            "id": 12,
+            "app_label": "chroma_core",
+            "model": "targetrecoveryinfo"
+        },
+        "67": {
+            "id": 67,
+            "app_label": "chroma_core",
+            "model": "removeunconfiguredhostjob"
+        },
+        "11": { "id": 11, "app_label": "chroma_core", "model": "volume" },
+        "175": {
+            "id": 175,
+            "app_label": "chroma_core",
+            "model": "storageresourceoffline"
+        },
+        "200": {
+            "id": 200,
+            "app_label": "chroma_core",
+            "model": "storageresourcealert"
+        },
+        "180": {
+            "id": 180,
+            "app_label": "chroma_core",
+            "model": "commandcancelledalert"
+        },
+        "125": {
+            "id": 125,
+            "app_label": "chroma_core",
+            "model": "removeconfiguredtargetjob"
+        },
+        "135": {
+            "id": 135,
+            "app_label": "chroma_core",
+            "model": "removetaskjob"
+        },
+        "181": {
+            "id": 181,
+            "app_label": "chroma_core",
+            "model": "notimesyncalert"
+        },
+        "73": {
+            "id": 73,
+            "app_label": "chroma_core",
+            "model": "mountlustrefilesystemsjob"
+        },
+        "183": {
+            "id": 183,
+            "app_label": "chroma_core",
+            "model": "multipletimesyncalert"
+        },
+        "171": {
+            "id": 171,
+            "app_label": "chroma_core",
+            "model": "corosyncunknownpeersalert"
+        },
+        "185": {
+            "id": 185,
+            "app_label": "chroma_core",
+            "model": "commandrunningalert"
+        },
+        "2": { "id": 2, "app_label": "auth", "model": "user" },
+        "172": {
+            "id": 172,
+            "app_label": "chroma_core",
+            "model": "storageresourcelearnevent"
+        },
+        "43": {
+            "id": 43,
+            "app_label": "chroma_core",
+            "model": "alertstatebase"
+        },
+        "28": { "id": 28, "app_label": "chroma_core", "model": "sfaenclosure" },
+        "159": {
+            "id": 159,
+            "app_label": "chroma_core",
+            "model": "configurecorosync2job"
+        },
+        "44": { "id": 44, "app_label": "chroma_core", "model": "ostpool" },
+        "63": {
+            "id": 63,
+            "app_label": "chroma_core",
+            "model": "stopcorosyncjob"
+        },
+        "138": {
+            "id": 138,
+            "app_label": "chroma_core",
+            "model": "unconfigurecorosync2job"
+        },
+        "115": {
+            "id": 115,
+            "app_label": "chroma_core",
+            "model": "unconfigurestratagemjob"
+        },
+        "81": {
+            "id": 81,
+            "app_label": "chroma_core",
+            "model": "setupmonitoredhostjob"
+        },
+        "105": {
+            "id": 105,
+            "app_label": "chroma_core",
+            "model": "startlnetjob"
+        },
+        "7": { "id": 7, "app_label": "tastypie", "model": "apikey" },
+        "35": {
+            "id": 35,
+            "app_label": "chroma_core",
+            "model": "clientcertificate"
+        },
+        "3": { "id": 3, "app_label": "auth", "model": "permission" },
+        "199": {
+            "id": 199,
+            "app_label": "chroma_core",
+            "model": "corosyncstoppedalert"
+        },
+        "51": {
+            "id": 51,
+            "app_label": "chroma_core",
+            "model": "powercontroldevice"
+        },
+        "133": {
+            "id": 133,
+            "app_label": "chroma_core",
+            "model": "configurecorosyncjob"
+        },
+        "53": {
+            "id": 53,
+            "app_label": "chroma_core",
+            "model": "powercontroltype"
+        },
+        "99": {
+            "id": 99,
+            "app_label": "chroma_core",
+            "model": "starttargetjob"
+        },
+        "9": { "id": 9, "app_label": "chroma_core", "model": "fidtaskerror" },
+        "31": {
+            "id": 31,
+            "app_label": "chroma_core",
+            "model": "powercontroldeviceoutlet"
+        },
+        "85": {
+            "id": 85,
+            "app_label": "chroma_core",
+            "model": "removetargetjob"
+        },
+        "122": {
+            "id": 122,
+            "app_label": "chroma_core",
+            "model": "masterticket"
+        },
+        "68": {
+            "id": 68,
+            "app_label": "chroma_core",
+            "model": "stopcorosync2job"
+        },
+        "45": {
+            "id": 45,
+            "app_label": "chroma_core",
+            "model": "storagealertpropagated"
+        },
+        "4": { "id": 4, "app_label": "contenttypes", "model": "contenttype" },
+        "84": {
+            "id": 84,
+            "app_label": "chroma_core",
+            "model": "updatedevicesjob"
+        },
+        "155": {
+            "id": 155,
+            "app_label": "chroma_core",
+            "model": "configurentpjob"
+        },
+        "83": {
+            "id": 83,
+            "app_label": "chroma_core",
+            "model": "updateyumfilejob"
+        },
+        "116": {
+            "id": 116,
+            "app_label": "chroma_core",
+            "model": "updatenidsjob"
+        },
+        "21": { "id": 21, "app_label": "chroma_core", "model": "nid" },
+        "148": {
+            "id": 148,
+            "app_label": "chroma_core",
+            "model": "destroyostpooljob"
+        },
+        "42": { "id": 42, "app_label": "chroma_core", "model": "ticket" },
+        "46": {
+            "id": 46,
+            "app_label": "chroma_core",
+            "model": "storageresourceclass"
+        },
+        "112": {
+            "id": 112,
+            "app_label": "chroma_core",
+            "model": "stoppacemakerjob"
+        },
+        "57": {
+            "id": 57,
+            "app_label": "chroma_core",
+            "model": "registrationtoken"
+        },
+        "27": {
+            "id": 27,
+            "app_label": "chroma_core",
+            "model": "managedfilesystem"
+        },
+        "38": { "id": 38, "app_label": "chroma_core", "model": "managedmdt" },
+        "127": {
+            "id": 127,
+            "app_label": "chroma_core",
+            "model": "unconfigurentpjob"
+        },
+        "93": {
+            "id": 93,
+            "app_label": "chroma_core",
+            "model": "getlnetstatejob"
+        },
+        "5": { "id": 5, "app_label": "sessions", "model": "session" },
+        "36": {
+            "id": 36,
+            "app_label": "chroma_core",
+            "model": "managedtargetmount"
+        },
+        "132": { "id": 132, "app_label": "chroma_core", "model": "updatejob" },
+        "109": {
+            "id": 109,
+            "app_label": "chroma_core",
+            "model": "unmountlustreclientmountjob"
+        },
+        "24": {
+            "id": 24,
+            "app_label": "chroma_core",
+            "model": "networkinterface"
+        },
+        "106": {
+            "id": 106,
+            "app_label": "chroma_core",
+            "model": "grantrevokedticketjob"
+        },
+        "59": { "id": 59, "app_label": "chroma_core", "model": "alertemail" },
+        "18": { "id": 18, "app_label": "chroma_core", "model": "command" },
+        "72": {
+            "id": 72,
+            "app_label": "chroma_core",
+            "model": "unmountsnapshotjob"
+        },
+        "142": { "id": 142, "app_label": "chroma_core", "model": "scanmdtjob" },
+        "25": {
+            "id": 25,
+            "app_label": "chroma_core",
+            "model": "ntpconfiguration"
+        },
+        "184": {
+            "id": 184,
+            "app_label": "chroma_core",
+            "model": "hostcontactalert"
+        },
+        "165": {
+            "id": 165,
+            "app_label": "chroma_core",
+            "model": "stoplnetjob"
+        },
+        "6": { "id": 6, "app_label": "sites", "model": "site" },
+        "104": {
+            "id": 104,
+            "app_label": "chroma_core",
+            "model": "formattargetjob"
+        },
+        "50": { "id": 50, "app_label": "chroma_core", "model": "confparam" },
+        "169": {
+            "id": 169,
+            "app_label": "chroma_core",
+            "model": "aggregatestratagemresultsjob"
+        },
+        "173": {
+            "id": 173,
+            "app_label": "chroma_core",
+            "model": "commanderroredalert"
+        },
+        "163": {
+            "id": 163,
+            "app_label": "chroma_core",
+            "model": "forgettargetjob"
+        },
+        "23": { "id": 23, "app_label": "chroma_core", "model": "device" },
+        "182": {
+            "id": 182,
+            "app_label": "chroma_core",
+            "model": "lnetnidschangedalert"
+        },
+        "33": {
+            "id": 33,
+            "app_label": "chroma_core",
+            "model": "storageresourcerecord"
+        },
+        "168": {
+            "id": 168,
+            "app_label": "chroma_core",
+            "model": "setuphostjob"
+        },
+        "186": { "id": 186, "app_label": "chroma_core", "model": "alertstate" },
+        "22": {
+            "id": 22,
+            "app_label": "chroma_core",
+            "model": "serverprofilepackage"
+        },
+        "189": {
+            "id": 189,
+            "app_label": "chroma_core",
+            "model": "unknowntimesyncalert"
+        },
+        "108": {
+            "id": 108,
+            "app_label": "chroma_core",
+            "model": "failovertargetjob"
+        },
+        "137": {
+            "id": 137,
+            "app_label": "chroma_core",
+            "model": "removehostjob"
+        },
+        "166": {
+            "id": 166,
+            "app_label": "chroma_core",
+            "model": "removemanagedhostjob"
+        },
+        "39": { "id": 39, "app_label": "chroma_core", "model": "repo" },
+        "140": {
+            "id": 140,
+            "app_label": "chroma_core",
+            "model": "removecopytooljob"
+        },
+        "161": {
+            "id": 161,
+            "app_label": "chroma_core",
+            "model": "poweronhostjob"
+        }
+    },
+    "corosync_configuration": {},
+    "active_alert": {
+        "408": {
+            "_message": "Time is out of sync on server oss1.local",
+            "active": true,
+            "affected": ["/api/host/3/"],
+            "affected_composite_ids": ["19:3"],
+            "alert_item": "/api/host/3/",
+            "alert_item_id": 3,
+            "alert_item_str": "oss1.local",
+            "alert_type": "TimeOutOfSyncAlert",
+            "begin": "2020-11-11T23:52:23.938603+00:00",
+            "dismissed": false,
+            "end": null,
+            "id": 408,
+            "lustre_pid": null,
+            "message": "Time is out of sync on server oss1.local",
+            "record_type": "TimeOutOfSyncAlert",
+            "resource_uri": "/api/alert/408/",
+            "severity": "ERROR",
+            "variant": "{}"
+        },
+        "21166": {
+            "_message": "Target fs-OST0002 running on secondary server",
+            "active": true,
+            "affected": ["/api/filesystem/2/", "/api/target/21/"],
+            "affected_composite_ids": ["27:2", "54:21"],
+            "alert_item": "/api/target/21/",
+            "alert_item_id": 21,
+            "alert_item_str": "fs-OST0002",
+            "alert_type": "TargetFailoverAlert",
+            "begin": "2020-11-12T14:32:38.366797+00:00",
+            "dismissed": false,
+            "end": null,
+            "id": 21166,
+            "lustre_pid": null,
+            "message": "Target fs-OST0002 running on secondary server",
+            "record_type": "TargetFailoverAlert",
+            "resource_uri": "/api/alert/21166/",
+            "severity": "WARNING",
+            "variant": "{}"
+        },
+        "460": {
+            "_message": "Time is out of sync on server mds1.local",
+            "active": true,
+            "affected": ["/api/host/1/"],
+            "affected_composite_ids": ["19:1"],
+            "alert_item": "/api/host/1/",
+            "alert_item_id": 1,
+            "alert_item_str": "mds1.local",
+            "alert_type": "TimeOutOfSyncAlert",
+            "begin": "2020-11-11T23:56:24.908637+00:00",
+            "dismissed": false,
+            "end": null,
+            "id": 460,
+            "lustre_pid": null,
+            "message": "Time is out of sync on server mds1.local",
+            "record_type": "TimeOutOfSyncAlert",
+            "resource_uri": "/api/alert/460/",
+            "severity": "ERROR",
+            "variant": "{}"
+        },
+        "23870": {
+            "_message": "Target fs-OST0009 running on secondary server",
+            "active": true,
+            "affected": ["/api/filesystem/2/", "/api/target/20/"],
+            "affected_composite_ids": ["27:2", "54:20"],
+            "alert_item": "/api/target/20/",
+            "alert_item_id": 20,
+            "alert_item_str": "fs-OST0009",
+            "alert_type": "TargetFailoverAlert",
+            "begin": "2020-11-12T17:57:33.684935+00:00",
+            "dismissed": false,
+            "end": null,
+            "id": 23870,
+            "lustre_pid": null,
+            "message": "Target fs-OST0009 running on secondary server",
+            "record_type": "TargetFailoverAlert",
+            "resource_uri": "/api/alert/23870/",
+            "severity": "WARNING",
+            "variant": "{}"
+        },
+        "21180": {
+            "_message": "Target fs-OST0003 running on secondary server",
+            "active": true,
+            "affected": ["/api/filesystem/2/", "/api/target/14/"],
+            "affected_composite_ids": ["27:2", "54:14"],
+            "alert_item": "/api/target/14/",
+            "alert_item_id": 14,
+            "alert_item_str": "fs-OST0003",
+            "alert_type": "TargetFailoverAlert",
+            "begin": "2020-11-12T14:32:57.188215+00:00",
+            "dismissed": false,
+            "end": null,
+            "id": 21180,
+            "lustre_pid": null,
+            "message": "Target fs-OST0003 running on secondary server",
+            "record_type": "TargetFailoverAlert",
+            "resource_uri": "/api/alert/21180/",
+            "severity": "WARNING",
+            "variant": "{}"
+        },
+        "21277": {
+            "_message": "Target fs-OST0004 running on secondary server",
+            "active": true,
+            "affected": ["/api/filesystem/2/", "/api/target/19/"],
+            "affected_composite_ids": ["27:2", "54:19"],
+            "alert_item": "/api/target/19/",
+            "alert_item_id": 19,
+            "alert_item_str": "fs-OST0004",
+            "alert_type": "TargetFailoverAlert",
+            "begin": "2020-11-12T14:38:26.578755+00:00",
+            "dismissed": false,
+            "end": null,
+            "id": 21277,
+            "lustre_pid": null,
+            "message": "Target fs-OST0004 running on secondary server",
+            "record_type": "TargetFailoverAlert",
+            "resource_uri": "/api/alert/21277/",
+            "severity": "WARNING",
+            "variant": "{}"
+        },
+        "28606": {
+            "_message": "Time is out of sync on server oss2.local",
+            "active": true,
+            "affected": ["/api/host/4/"],
+            "affected_composite_ids": ["19:4"],
+            "alert_item": "/api/host/4/",
+            "alert_item_id": 4,
+            "alert_item_str": "oss2.local",
+            "alert_type": "TimeOutOfSyncAlert",
+            "begin": "2020-11-12T22:23:30.816317+00:00",
+            "dismissed": false,
+            "end": null,
+            "id": 28606,
+            "lustre_pid": null,
+            "message": "Time is out of sync on server oss2.local",
+            "record_type": "TimeOutOfSyncAlert",
+            "resource_uri": "/api/alert/28606/",
+            "severity": "ERROR",
+            "variant": "{}"
+        },
+        "442": {
+            "_message": "Time is out of sync on server mds2.local",
+            "active": true,
+            "affected": ["/api/host/2/"],
+            "affected_composite_ids": ["19:2"],
+            "alert_item": "/api/host/2/",
+            "alert_item_id": 2,
+            "alert_item_str": "mds2.local",
+            "alert_type": "TimeOutOfSyncAlert",
+            "begin": "2020-11-11T23:55:24.501305+00:00",
+            "dismissed": false,
+            "end": null,
+            "id": 442,
+            "lustre_pid": null,
+            "message": "Time is out of sync on server mds2.local",
+            "record_type": "TimeOutOfSyncAlert",
+            "resource_uri": "/api/alert/442/",
+            "severity": "ERROR",
+            "variant": "{}"
+        },
+        "25280": {
+            "_message": "Target fs-OST0007 offline",
+            "active": true,
+            "affected": ["/api/target/17/", "/api/filesystem/2/"],
+            "affected_composite_ids": ["54:17", "27:2"],
+            "alert_item": "/api/target/17/",
+            "alert_item_id": 17,
+            "alert_item_str": "fs-OST0007",
+            "alert_type": "TargetOfflineAlert",
+            "begin": "2020-11-12T19:16:16.323034+00:00",
+            "dismissed": false,
+            "end": null,
+            "id": 25280,
+            "lustre_pid": null,
+            "message": "Target fs-OST0007 offline",
+            "record_type": "TargetOfflineAlert",
+            "resource_uri": "/api/alert/25280/",
+            "severity": "WARNING",
+            "variant": "{}"
+        }
+    },
+    "filesystem": {
+        "2": {
+            "bytes_free": null,
+            "bytes_total": null,
+            "cdt_mdt": null,
+            "cdt_status": null,
+            "client_count": null,
+            "conf_params": {
+                "llite.max_cached_mb": null,
+                "llite.max_read_ahead_mb": null,
+                "llite.max_read_ahead_whole_mb": null,
+                "llite.statahead_max": null,
+                "sys.at_early_margin": null,
+                "sys.at_extra": null,
+                "sys.at_history": null,
+                "sys.at_max": null,
+                "sys.at_min": null,
+                "sys.ldlm_timeout": null,
+                "sys.timeout": null
+            },
+            "content_type_id": 27,
+            "files_free": null,
+            "files_total": null,
+            "hsm_control_params": null,
+            "id": 2,
+            "immutable_state": false,
+            "label": "fs",
+            "mdts": ["/api/target/12/", "/api/target/13/"],
+            "mgt": "/api/target/1/",
+            "mount_command": "mount -t lustre 10.73.20.12@tcp0:10.73.20.11@tcp0:/fs /mnt/fs",
+            "mount_path": "10.73.20.12@tcp0:10.73.20.11@tcp0:/fs",
+            "name": "fs",
+            "osts": [
+                "/api/target/14/",
+                "/api/target/15/",
+                "/api/target/16/",
+                "/api/target/17/",
+                "/api/target/18/",
+                "/api/target/19/",
+                "/api/target/20/",
+                "/api/target/21/",
+                "/api/target/22/",
+                "/api/target/23/"
+            ],
+            "resource_uri": "/api/filesystem/2/",
+            "state": "unavailable",
+            "state_modified_at": "2020-11-12T19:16:16.485689"
+        }
+    },
+    "group": {
+        "1": { "id": 1, "name": "superusers" },
+        "2": { "id": 2, "name": "filesystem_administrators" },
+        "3": { "id": 3, "name": "filesystem_users" }
+    },
+    "host": {
+        "4": {
+            "address": "oss2.local",
+            "boot_time": "2020-11-12T18:20:34",
+            "client_mounts": [],
+            "content_type_id": 19,
+            "corosync_configuration": null,
+            "corosync_ring0": "",
+            "fqdn": "oss2.local",
+            "id": 4,
+            "immutable_state": true,
+            "install_method": "existing_keys_choice",
+            "label": "oss2.local",
+            "lnet_configuration": "/api/lnet_configuration/4/",
+            "member_of_active_filesystem": true,
+            "needs_update": false,
+            "nids": ["10.73.20.22@tcp0"],
+            "nodename": "oss2",
+            "pacemaker_configuration": null,
+            "private_key": null,
+            "private_key_passphrase": null,
+            "resource_uri": "/api/host/4/",
+            "root_pw": null,
+            "server_profile": {
+                "corosync": false,
+                "corosync2": false,
+                "default": false,
+                "initial_state": "monitored",
+                "managed": false,
+                "name": "base_monitored",
+                "ntp": false,
+                "pacemaker": false,
+                "repolist": ["base"],
+                "resource_uri": "/api/server_profile/base_monitored/",
+                "ui_description": "A storage server for monitoring and management of pre-existing resources",
+                "ui_name": "Storage Server",
+                "user_selectable": true,
+                "worker": false
+            },
+            "state": "monitored",
+            "state_modified_at": "2020-11-11T21:47:13.193466"
+        },
+        "1": {
+            "address": "mds1.local",
+            "boot_time": "2020-11-11T08:40:48",
+            "client_mounts": [],
+            "content_type_id": 19,
+            "corosync_configuration": null,
+            "corosync_ring0": "",
+            "fqdn": "mds1.local",
+            "id": 1,
+            "immutable_state": true,
+            "install_method": "existing_keys_choice",
+            "label": "mds1.local",
+            "lnet_configuration": "/api/lnet_configuration/1/",
+            "member_of_active_filesystem": true,
+            "needs_update": false,
+            "nids": ["10.73.20.11@tcp0"],
+            "nodename": "mds1",
+            "pacemaker_configuration": null,
+            "private_key": null,
+            "private_key_passphrase": null,
+            "resource_uri": "/api/host/1/",
+            "root_pw": null,
+            "server_profile": {
+                "corosync": false,
+                "corosync2": false,
+                "default": false,
+                "initial_state": "monitored",
+                "managed": false,
+                "name": "base_monitored",
+                "ntp": false,
+                "pacemaker": false,
+                "repolist": ["base"],
+                "resource_uri": "/api/server_profile/base_monitored/",
+                "ui_description": "A storage server for monitoring and management of pre-existing resources",
+                "ui_name": "Storage Server",
+                "user_selectable": true,
+                "worker": false
+            },
+            "state": "monitored",
+            "state_modified_at": "2020-11-11T21:47:14.616426"
+        },
+        "3": {
+            "address": "oss1.local",
+            "boot_time": "2020-11-11T08:18:48",
+            "client_mounts": [],
+            "content_type_id": 19,
+            "corosync_configuration": null,
+            "corosync_ring0": "",
+            "fqdn": "oss1.local",
+            "id": 3,
+            "immutable_state": true,
+            "install_method": "existing_keys_choice",
+            "label": "oss1.local",
+            "lnet_configuration": "/api/lnet_configuration/3/",
+            "member_of_active_filesystem": true,
+            "needs_update": false,
+            "nids": ["10.73.20.21@tcp0"],
+            "nodename": "oss1",
+            "pacemaker_configuration": null,
+            "private_key": null,
+            "private_key_passphrase": null,
+            "resource_uri": "/api/host/3/",
+            "root_pw": null,
+            "server_profile": {
+                "corosync": false,
+                "corosync2": false,
+                "default": false,
+                "initial_state": "monitored",
+                "managed": false,
+                "name": "base_monitored",
+                "ntp": false,
+                "pacemaker": false,
+                "repolist": ["base"],
+                "resource_uri": "/api/server_profile/base_monitored/",
+                "ui_description": "A storage server for monitoring and management of pre-existing resources",
+                "ui_name": "Storage Server",
+                "user_selectable": true,
+                "worker": false
+            },
+            "state": "monitored",
+            "state_modified_at": "2020-11-11T21:46:07.180792"
+        },
+        "2": {
+            "address": "mds2.local",
+            "boot_time": "2020-11-11T08:21:41",
+            "client_mounts": [],
+            "content_type_id": 19,
+            "corosync_configuration": null,
+            "corosync_ring0": "",
+            "fqdn": "mds2.local",
+            "id": 2,
+            "immutable_state": true,
+            "install_method": "existing_keys_choice",
+            "label": "mds2.local",
+            "lnet_configuration": "/api/lnet_configuration/2/",
+            "member_of_active_filesystem": true,
+            "needs_update": false,
+            "nids": ["10.73.20.12@tcp0"],
+            "nodename": "mds2",
+            "pacemaker_configuration": null,
+            "private_key": null,
+            "private_key_passphrase": null,
+            "resource_uri": "/api/host/2/",
+            "root_pw": null,
+            "server_profile": {
+                "corosync": false,
+                "corosync2": false,
+                "default": false,
+                "initial_state": "monitored",
+                "managed": false,
+                "name": "base_monitored",
+                "ntp": false,
+                "pacemaker": false,
+                "repolist": ["base"],
+                "resource_uri": "/api/server_profile/base_monitored/",
+                "ui_description": "A storage server for monitoring and management of pre-existing resources",
+                "ui_name": "Storage Server",
+                "user_selectable": true,
+                "worker": false
+            },
+            "state": "monitored",
+            "state_modified_at": "2020-11-11T21:47:16.309464"
+        }
+    },
+    "lnet_configuration": {
+        "3": {
+            "id": 3,
+            "state": "lnet_up",
+            "host_id": 3,
+            "immutable_state": false,
+            "not_deleted": true,
+            "content_type_id": 55,
+            "state_modified_at": "2020-11-14T01:28:39.995582Z"
+        },
+        "1": {
+            "id": 1,
+            "state": "lnet_up",
+            "host_id": 1,
+            "immutable_state": false,
+            "not_deleted": true,
+            "content_type_id": 55,
+            "state_modified_at": "2020-11-14T01:28:38.715731Z"
+        },
+        "4": {
+            "id": 4,
+            "state": "lnet_up",
+            "host_id": 4,
+            "immutable_state": false,
+            "not_deleted": true,
+            "content_type_id": 55,
+            "state_modified_at": "2020-11-14T01:28:39.494447Z"
+        },
+        "2": {
+            "id": 2,
+            "state": "lnet_up",
+            "host_id": 2,
+            "immutable_state": false,
+            "not_deleted": true,
+            "content_type_id": 55,
+            "state_modified_at": "2020-11-14T01:28:39.148131Z"
+        }
+    },
+    "managed_target_mount": {
+        "31": {
+            "id": 31,
+            "host_id": 3,
+            "mount_point": null,
+            "volume_node_id": 58,
+            "primary": false,
+            "target_id": 20,
+            "not_deleted": true
+        },
+        "43": {
+            "id": 43,
+            "host_id": 4,
+            "mount_point": "/mnt/ost1",
+            "volume_node_id": 107,
+            "primary": false,
+            "target_id": 18,
+            "not_deleted": true
+        },
+        "52": {
+            "id": 52,
+            "host_id": 4,
+            "mount_point": "/mnt/ost5",
+            "volume_node_id": 114,
+            "primary": true,
+            "target_id": 22,
+            "not_deleted": true
+        },
+        "27": {
+            "id": 27,
+            "host_id": 3,
+            "mount_point": null,
+            "volume_node_id": 62,
+            "primary": false,
+            "target_id": 19,
+            "not_deleted": true
+        },
+        "23": {
+            "id": 23,
+            "host_id": 1,
+            "mount_point": "/mnt/mdt0",
+            "volume_node_id": 92,
+            "primary": true,
+            "target_id": 12,
+            "not_deleted": true
+        },
+        "44": {
+            "id": 44,
+            "host_id": 4,
+            "mount_point": "/mnt/ost3",
+            "volume_node_id": 109,
+            "primary": false,
+            "target_id": 14,
+            "not_deleted": true
+        },
+        "35": {
+            "id": 35,
+            "host_id": 4,
+            "mount_point": "/mnt/ost4",
+            "volume_node_id": 82,
+            "primary": true,
+            "target_id": 19,
+            "not_deleted": true
+        },
+        "21": {
+            "id": 21,
+            "host_id": 1,
+            "mount_point": null,
+            "volume_node_id": 91,
+            "primary": false,
+            "target_id": 1,
+            "not_deleted": true
+        },
+        "51": {
+            "id": 51,
+            "host_id": 3,
+            "mount_point": null,
+            "volume_node_id": 66,
+            "primary": false,
+            "target_id": 22,
+            "not_deleted": true
+        },
+        "33": {
+            "id": 33,
+            "host_id": 4,
+            "mount_point": "/mnt/ost1",
+            "volume_node_id": 79,
+            "primary": true,
+            "target_id": 18,
+            "not_deleted": true
+        },
+        "36": {
+            "id": 36,
+            "host_id": 4,
+            "mount_point": null,
+            "volume_node_id": 77,
+            "primary": false,
+            "target_id": 15,
+            "not_deleted": true
+        },
+        "38": {
+            "id": 38,
+            "host_id": 4,
+            "mount_point": null,
+            "volume_node_id": 108,
+            "primary": false,
+            "target_id": 17,
+            "not_deleted": true
+        },
+        "41": {
+            "id": 41,
+            "host_id": 1,
+            "mount_point": null,
+            "volume_node_id": 94,
+            "primary": false,
+            "target_id": 13,
+            "not_deleted": true
+        },
+        "34": {
+            "id": 34,
+            "host_id": 4,
+            "mount_point": null,
+            "volume_node_id": 72,
+            "primary": false,
+            "target_id": 14,
+            "not_deleted": true
+        },
+        "54": {
+            "id": 54,
+            "host_id": 4,
+            "mount_point": null,
+            "volume_node_id": 111,
+            "primary": false,
+            "target_id": 23,
+            "not_deleted": true
+        },
+        "26": {
+            "id": 26,
+            "host_id": 3,
+            "mount_point": "/mnt/ost3",
+            "volume_node_id": 61,
+            "primary": true,
+            "target_id": 14,
+            "not_deleted": true
+        },
+        "42": {
+            "id": 42,
+            "host_id": 2,
+            "mount_point": null,
+            "volume_node_id": 96,
+            "primary": false,
+            "target_id": 12,
+            "not_deleted": true
+        },
+        "37": {
+            "id": 37,
+            "host_id": 4,
+            "mount_point": null,
+            "volume_node_id": 84,
+            "primary": false,
+            "target_id": 16,
+            "not_deleted": true
+        },
+        "53": {
+            "id": 53,
+            "host_id": 3,
+            "mount_point": "/mnt/ost6",
+            "volume_node_id": 63,
+            "primary": true,
+            "target_id": 23,
+            "not_deleted": true
+        },
+        "39": {
+            "id": 39,
+            "host_id": 4,
+            "mount_point": "/mnt/ost9",
+            "volume_node_id": 78,
+            "primary": true,
+            "target_id": 20,
+            "not_deleted": true
+        },
+        "24": {
+            "id": 24,
+            "host_id": 2,
+            "mount_point": "/mnt/mdt1",
+            "volume_node_id": 98,
+            "primary": true,
+            "target_id": 13,
+            "not_deleted": true
+        },
+        "48": {
+            "id": 48,
+            "host_id": 4,
+            "mount_point": "/mnt/ost7",
+            "volume_node_id": 108,
+            "primary": false,
+            "target_id": 17,
+            "not_deleted": true
+        },
+        "49": {
+            "id": 49,
+            "host_id": 4,
+            "mount_point": null,
+            "volume_node_id": 106,
+            "primary": false,
+            "target_id": 20,
+            "not_deleted": true
+        },
+        "32": {
+            "id": 32,
+            "host_id": 3,
+            "mount_point": null,
+            "volume_node_id": 52,
+            "primary": false,
+            "target_id": 21,
+            "not_deleted": true
+        },
+        "47": {
+            "id": 47,
+            "host_id": 4,
+            "mount_point": null,
+            "volume_node_id": 112,
+            "primary": false,
+            "target_id": 16,
+            "not_deleted": true
+        },
+        "45": {
+            "id": 45,
+            "host_id": 4,
+            "mount_point": null,
+            "volume_node_id": 110,
+            "primary": false,
+            "target_id": 19,
+            "not_deleted": true
+        },
+        "30": {
+            "id": 30,
+            "host_id": 3,
+            "mount_point": "/mnt/ost7",
+            "volume_node_id": 60,
+            "primary": true,
+            "target_id": 17,
+            "not_deleted": true
+        },
+        "25": {
+            "id": 25,
+            "host_id": 3,
+            "mount_point": null,
+            "volume_node_id": 59,
+            "primary": false,
+            "target_id": 18,
+            "not_deleted": true
+        },
+        "40": {
+            "id": 40,
+            "host_id": 4,
+            "mount_point": "/mnt/ost2",
+            "volume_node_id": 81,
+            "primary": true,
+            "target_id": 21,
+            "not_deleted": true
+        },
+        "46": {
+            "id": 46,
+            "host_id": 4,
+            "mount_point": null,
+            "volume_node_id": 105,
+            "primary": false,
+            "target_id": 15,
+            "not_deleted": true
+        },
+        "29": {
+            "id": 29,
+            "host_id": 3,
+            "mount_point": "/mnt/ost0",
+            "volume_node_id": 64,
+            "primary": true,
+            "target_id": 16,
+            "not_deleted": true
+        },
+        "50": {
+            "id": 50,
+            "host_id": 4,
+            "mount_point": null,
+            "volume_node_id": 100,
+            "primary": false,
+            "target_id": 21,
+            "not_deleted": true
+        },
+        "28": {
+            "id": 28,
+            "host_id": 3,
+            "mount_point": "/mnt/ost8",
+            "volume_node_id": 57,
+            "primary": true,
+            "target_id": 15,
+            "not_deleted": true
+        },
+        "1": {
+            "id": 1,
+            "host_id": 2,
+            "mount_point": "/mnt/mgs",
+            "volume_node_id": 95,
+            "primary": true,
+            "target_id": 1,
+            "not_deleted": true
+        }
+    },
+    "ost_pool": {
+        "1": {
+            "id": 1,
+            "name": "test_pool",
+            "filesystem_id": 2,
+            "not_deleted": true,
+            "content_type_id": 44
+        }
+    },
+    "ost_pool_osts": { "1": { "id": 1, "ostpool_id": 1, "managedost_id": 16 } },
+    "sfa_disk_drive": {},
+    "sfa_enclosure": {},
+    "sfa_job": {},
+    "sfa_power_supply": {},
+    "sfa_storage_system": {},
+    "sfa_controller": {},
+    "snapshot": {},
+    "snapshot_interval": {},
+    "snapshot_retention": {},
+    "stratagem_config": {},
+    "target": {
+        "19": {
+            "id": 19,
+            "state_modified_at": "2020-11-12T14:31:37.872949Z",
+            "state": "mounted",
+            "immutable_state": false,
+            "name": "fs-OST0004",
+            "uuid": "307dc0f2-171d-4bfe-a89d-cef60f28ce91",
+            "ha_label": "ost4",
+            "inode_size": null,
+            "bytes_per_inode": null,
+            "inode_count": null,
+            "reformat": false,
+            "not_deleted": true,
+            "active_mount_id": 27,
+            "content_type_id": 54,
+            "volume_id": 14
+        },
+        "12": {
+            "id": 12,
+            "state_modified_at": "2020-11-11T21:57:30.508687Z",
+            "state": "mounted",
+            "immutable_state": false,
+            "name": "fs-MDT0000",
+            "uuid": "cytWwz1Er5joi2maGOHujO4lN0tLS3pv",
+            "ha_label": "mdt0",
+            "inode_size": null,
+            "bytes_per_inode": null,
+            "inode_count": null,
+            "reformat": false,
+            "not_deleted": true,
+            "active_mount_id": 23,
+            "content_type_id": 38,
+            "volume_id": 27
+        },
+        "16": {
+            "id": 16,
+            "state_modified_at": "2020-11-12T17:49:01.218874Z",
+            "state": "mounted",
+            "immutable_state": false,
+            "name": "fs-OST0000",
+            "uuid": "96a94a00-0898-49c6-ba5f-29f79f23c7db",
+            "ha_label": "ost0",
+            "inode_size": null,
+            "bytes_per_inode": null,
+            "inode_count": null,
+            "reformat": false,
+            "not_deleted": true,
+            "active_mount_id": 29,
+            "content_type_id": 54,
+            "volume_id": 16
+        },
+        "22": {
+            "id": 22,
+            "state_modified_at": "2020-11-12T18:31:13.098013Z",
+            "state": "mounted",
+            "immutable_state": false,
+            "name": "fs-OST0005",
+            "uuid": "feebf65f-33e9-4ed8-9183-e8492f42a695",
+            "ha_label": "ost5",
+            "inode_size": null,
+            "bytes_per_inode": null,
+            "inode_count": null,
+            "reformat": false,
+            "not_deleted": true,
+            "active_mount_id": 52,
+            "content_type_id": 54,
+            "volume_id": 18
+        },
+        "23": {
+            "id": 23,
+            "state_modified_at": "2020-11-12T18:32:58.013299Z",
+            "state": "mounted",
+            "immutable_state": false,
+            "name": "fs-OST0006",
+            "uuid": "f7419419-a342-47d4-afdd-830834198c6c",
+            "ha_label": "ost6",
+            "inode_size": null,
+            "bytes_per_inode": null,
+            "inode_count": null,
+            "reformat": false,
+            "not_deleted": true,
+            "active_mount_id": 53,
+            "content_type_id": 54,
+            "volume_id": 15
+        },
+        "18": {
+            "id": 18,
+            "state_modified_at": "2020-11-11T21:57:30.683953Z",
+            "state": "mounted",
+            "immutable_state": false,
+            "name": "fs-OST0001",
+            "uuid": "1ba66310-9620-47dc-86cd-4c43ce582cfd",
+            "ha_label": "ost1",
+            "inode_size": null,
+            "bytes_per_inode": null,
+            "inode_count": null,
+            "reformat": false,
+            "not_deleted": true,
+            "active_mount_id": 43,
+            "content_type_id": 54,
+            "volume_id": 11
+        },
+        "1": {
+            "id": 1,
+            "state_modified_at": "2020-11-11T21:49:37.907748Z",
+            "state": "mounted",
+            "immutable_state": false,
+            "name": "MGS",
+            "uuid": "Laqi0teQ9tivfBCEJB2nZsZdlw2eDUZh",
+            "ha_label": "mgs",
+            "inode_size": null,
+            "bytes_per_inode": null,
+            "inode_count": null,
+            "reformat": false,
+            "not_deleted": true,
+            "active_mount_id": 1,
+            "content_type_id": 32,
+            "volume_id": 30
+        },
+        "17": {
+            "id": 17,
+            "state_modified_at": "2020-11-12T19:19:17.036425Z",
+            "state": "unmounted",
+            "immutable_state": false,
+            "name": "fs-OST0007",
+            "uuid": "54b27c85-00d4-4168-a2cc-71d0aec59203",
+            "ha_label": "ost7",
+            "inode_size": null,
+            "bytes_per_inode": null,
+            "inode_count": null,
+            "reformat": false,
+            "not_deleted": true,
+            "active_mount_id": null,
+            "content_type_id": 54,
+            "volume_id": 12
+        },
+        "15": {
+            "id": 15,
+            "state_modified_at": "2020-11-12T16:02:51.013492Z",
+            "state": "mounted",
+            "immutable_state": false,
+            "name": "fs-OST0008",
+            "uuid": "2b6d29e0-5f49-48a5-b640-369cfca97f21",
+            "ha_label": "ost8",
+            "inode_size": null,
+            "bytes_per_inode": null,
+            "inode_count": null,
+            "reformat": false,
+            "not_deleted": true,
+            "active_mount_id": 28,
+            "content_type_id": 54,
+            "volume_id": 9
+        },
+        "14": {
+            "id": 14,
+            "state_modified_at": "2020-11-11T21:57:30.570334Z",
+            "state": "mounted",
+            "immutable_state": false,
+            "name": "fs-OST0003",
+            "uuid": "efa293c3-5b67-4eba-a25b-ef69b50785aa",
+            "ha_label": "ost3",
+            "inode_size": null,
+            "bytes_per_inode": null,
+            "inode_count": null,
+            "reformat": false,
+            "not_deleted": true,
+            "active_mount_id": 44,
+            "content_type_id": 54,
+            "volume_id": 24
+        },
+        "21": {
+            "id": 21,
+            "state_modified_at": "2020-11-12T14:31:38.055810Z",
+            "state": "mounted",
+            "immutable_state": false,
+            "name": "fs-OST0002",
+            "uuid": "ba23bf6d-7a2a-458b-815e-6c5ce653bb64",
+            "ha_label": "ost2",
+            "inode_size": null,
+            "bytes_per_inode": null,
+            "inode_count": null,
+            "reformat": false,
+            "not_deleted": true,
+            "active_mount_id": 32,
+            "content_type_id": 54,
+            "volume_id": 13
+        },
+        "13": {
+            "id": 13,
+            "state_modified_at": "2020-11-11T21:57:30.542001Z",
+            "state": "mounted",
+            "immutable_state": false,
+            "name": "fs-MDT0001",
+            "uuid": "GZHGYDOBq0sgAGyhWX2A3dz6P1QOwY1R",
+            "ha_label": "mdt1",
+            "inode_size": null,
+            "bytes_per_inode": null,
+            "inode_count": null,
+            "reformat": false,
+            "not_deleted": true,
+            "active_mount_id": 24,
+            "content_type_id": 38,
+            "volume_id": 28
+        },
+        "20": {
+            "id": 20,
+            "state_modified_at": "2020-11-11T21:57:30.737788Z",
+            "state": "mounted",
+            "immutable_state": false,
+            "name": "fs-OST0009",
+            "uuid": "3f03994c-542d-44f4-bac9-5680c89a09d3",
+            "ha_label": "ost9",
+            "inode_size": null,
+            "bytes_per_inode": null,
+            "inode_count": null,
+            "reformat": false,
+            "not_deleted": true,
+            "active_mount_id": 49,
+            "content_type_id": 54,
+            "volume_id": 10
+        }
+    },
+    "target_record": {
+        "4": {
+            "id": 4,
+            "state": "mounted",
+            "name": "fs-OST0004",
+            "dev_path": "/dev/mapper/mpathe",
+            "active_host_id": 3,
+            "host_ids": [3, 4],
+            "filesystems": ["fs"],
+            "uuid": "307dc0f2-171d-4bfe-a89d-cef60f28ce91",
+            "mount_path": "/mnt/ost4"
+        },
+        "947": {
+            "id": 947,
+            "state": "mounted",
+            "name": "fs-OST0005",
+            "dev_path": "/dev/mapper/mpathk",
+            "active_host_id": 4,
+            "host_ids": [4, 3],
+            "filesystems": ["fs"],
+            "uuid": "feebf65f-33e9-4ed8-9183-e8492f42a695",
+            "mount_path": "/mnt/ost5"
+        },
+        "12": {
+            "id": 12,
+            "state": "mounted",
+            "name": "fs-OST0003",
+            "dev_path": "/dev/mapper/mpathd",
+            "active_host_id": 4,
+            "host_ids": [4, 3],
+            "filesystems": ["fs"],
+            "uuid": "efa293c3-5b67-4eba-a25b-ef69b50785aa",
+            "mount_path": "/mnt/ost3"
+        },
+        "974": {
+            "id": 974,
+            "state": "mounted",
+            "name": "fs-OST0006",
+            "dev_path": "/dev/mapper/mpathl",
+            "active_host_id": 3,
+            "host_ids": [3, 4],
+            "filesystems": ["fs"],
+            "uuid": "f7419419-a342-47d4-afdd-830834198c6c",
+            "mount_path": "/mnt/ost6"
+        },
+        "2": {
+            "id": 2,
+            "state": "mounted",
+            "name": "fs-OST0001",
+            "dev_path": "/dev/mapper/mpathb",
+            "active_host_id": 4,
+            "host_ids": [4, 3],
+            "filesystems": ["fs"],
+            "uuid": "1ba66310-9620-47dc-86cd-4c43ce582cfd",
+            "mount_path": "/mnt/ost1"
+        },
+        "8": {
+            "id": 8,
+            "state": "mounted",
+            "name": "fs-MDT0001",
+            "dev_path": "/dev/mapper/mdt1_vg-mdt",
+            "active_host_id": 2,
+            "host_ids": [2, 1],
+            "filesystems": ["fs"],
+            "uuid": "614ec4bc-3780-4edf-8bf6-6e2f54997291",
+            "mount_path": "/mnt/mdt1"
+        },
+        "15": {
+            "id": 15,
+            "state": "mounted",
+            "name": "fs-OST0008",
+            "dev_path": "/dev/mapper/mpathn",
+            "active_host_id": 4,
+            "host_ids": [4, 3],
+            "filesystems": ["fs"],
+            "uuid": "2b6d29e0-5f49-48a5-b640-369cfca97f21",
+            "mount_path": "/mnt/ost8"
+        },
+        "9": {
+            "id": 9,
+            "state": "mounted",
+            "name": "fs-OST0000",
+            "dev_path": "/dev/mapper/mpatha",
+            "active_host_id": 3,
+            "host_ids": [3, 4],
+            "filesystems": ["fs"],
+            "uuid": "96a94a00-0898-49c6-ba5f-29f79f23c7db",
+            "mount_path": "/mnt/ost0"
+        },
+        "5": {
+            "id": 5,
+            "state": "mounted",
+            "name": "fs-OST0009",
+            "dev_path": "/dev/mapper/mpatho",
+            "active_host_id": 3,
+            "host_ids": [3, 4],
+            "filesystems": ["fs"],
+            "uuid": "3f03994c-542d-44f4-bac9-5680c89a09d3",
+            "mount_path": "/mnt/ost9"
+        },
+        "14": {
+            "id": 14,
+            "state": "mounted",
+            "name": "fs-OST0007",
+            "dev_path": "/dev/mapper/mpathm",
+            "active_host_id": 4,
+            "host_ids": [4, 3],
+            "filesystems": ["fs"],
+            "uuid": "54b27c85-00d4-4168-a2cc-71d0aec59203",
+            "mount_path": "/mnt/ost7"
+        },
+        "1": {
+            "id": 1,
+            "state": "mounted",
+            "name": "fs-MDT0000",
+            "dev_path": "/dev/mapper/mdt0_vg-mdt",
+            "active_host_id": 1,
+            "host_ids": [1, 2],
+            "filesystems": ["fs"],
+            "uuid": "41467ec4-f36a-49ca-9881-4735a804b9dc",
+            "mount_path": "/mnt/mdt0"
+        },
+        "3": {
+            "id": 3,
+            "state": "mounted",
+            "name": "fs-OST0002",
+            "dev_path": "/dev/mapper/mpathc",
+            "active_host_id": 3,
+            "host_ids": [3, 4],
+            "filesystems": ["fs"],
+            "uuid": "ba23bf6d-7a2a-458b-815e-6c5ce653bb64",
+            "mount_path": "/mnt/ost2"
+        },
+        "6": {
+            "id": 6,
+            "state": "mounted",
+            "name": "MGS",
+            "dev_path": "/dev/mapper/mgt_vg-mgt",
+            "active_host_id": 2,
+            "host_ids": [2, 1],
+            "filesystems": ["fs"],
+            "uuid": "d31fa13b-62cb-4f2e-bdb9-2c0d8aaf2872",
+            "mount_path": "/mnt/mgs"
+        }
+    },
+    "user": {
+        "1": {
+            "id": 1,
+            "is_superuser": true,
+            "username": "admin",
+            "first_name": "",
+            "last_name": "",
+            "email": "",
+            "is_staff": true,
+            "is_active": true
+        },
+        "2": {
+            "id": 2,
+            "is_superuser": true,
+            "username": "api",
+            "first_name": "",
+            "last_name": "",
+            "email": "",
+            "is_staff": true,
+            "is_active": true
+        }
+    },
+    "user_group": {
+        "1": { "id": 1, "user_id": 1, "group_id": 1 },
+        "2": { "id": 2, "user_id": 2, "group_id": 1 }
+    },
+    "pacemaker_configuration": {},
+    "volume": {
+        "23": {
+            "id": 23,
+            "storage_resource_id": 65,
+            "size": 5368709120,
+            "label": "3600140553f66e93cf0941658c0f817d4",
+            "filesystem_type": "mpath_member",
+            "not_deleted": true,
+            "usable_for_lustre": true
+        },
+        "17": {
+            "id": 17,
+            "storage_resource_id": 62,
+            "size": 5368709120,
+            "label": "3600140567e67372cfd54a209bcf681e9",
+            "filesystem_type": "mpath_member",
+            "not_deleted": true,
+            "usable_for_lustre": true
+        },
+        "27": {
+            "id": 27,
+            "storage_resource_id": 263,
+            "size": 5335154688,
+            "label": "mdt0_vg-mdt",
+            "filesystem_type": "ext4",
+            "not_deleted": true,
+            "usable_for_lustre": true
+        },
+        "22": {
+            "id": 22,
+            "storage_resource_id": 64,
+            "size": 5368709120,
+            "label": "36001405ae276acf526a42458a39d34d4",
+            "filesystem_type": "mpath_member",
+            "not_deleted": true,
+            "usable_for_lustre": true
+        },
+        "28": {
+            "id": 28,
+            "storage_resource_id": 271,
+            "size": 5335154688,
+            "label": "mdt1_vg-mdt",
+            "filesystem_type": "ext4",
+            "not_deleted": true,
+            "usable_for_lustre": true
+        },
+        "24": {
+            "id": 24,
+            "storage_resource_id": 60,
+            "size": 5368709120,
+            "label": "360014054390c7fefb3742ea952551b7b",
+            "filesystem_type": "mpath_member",
+            "not_deleted": true,
+            "usable_for_lustre": true
+        },
+        "6": {
+            "id": 6,
+            "storage_resource_id": 56,
+            "size": 5368709120,
+            "label": "3600140575a6e4bc3c094c999b0bd92e4",
+            "filesystem_type": "mpath_member",
+            "not_deleted": true,
+            "usable_for_lustre": true
+        },
+        "19": {
+            "id": 19,
+            "storage_resource_id": 63,
+            "size": 5368709120,
+            "label": "3600140514b30c691c844efd9dfe4b67d",
+            "filesystem_type": "mpath_member",
+            "not_deleted": true,
+            "usable_for_lustre": true
+        },
+        "20": {
+            "id": 20,
+            "storage_resource_id": 61,
+            "size": 5368709120,
+            "label": "3600140505d3d73eb8254ab6a901622dc",
+            "filesystem_type": "mpath_member",
+            "not_deleted": true,
+            "usable_for_lustre": true
+        },
+        "14": {
+            "id": 14,
+            "storage_resource_id": 55,
+            "size": 5368709120,
+            "label": "360014054413cfde13a54732830bcaa0e",
+            "filesystem_type": "mpath_member",
+            "not_deleted": true,
+            "usable_for_lustre": true
+        },
+        "9": {
+            "id": 9,
+            "storage_resource_id": 66,
+            "size": 5368709120,
+            "label": "36001405e0aa5289990d4a87876099ac7",
+            "filesystem_type": "mpath_member",
+            "not_deleted": true,
+            "usable_for_lustre": true
+        },
+        "12": {
+            "id": 12,
+            "storage_resource_id": 73,
+            "size": 5368709120,
+            "label": "36001405ddb0bb3e3c1e4f5598723db34",
+            "filesystem_type": "mpath_member",
+            "not_deleted": true,
+            "usable_for_lustre": true
+        },
+        "11": {
+            "id": 11,
+            "storage_resource_id": 57,
+            "size": 5368709120,
+            "label": "360014057e7ce2f0a92d4bcab2ddc3d44",
+            "filesystem_type": "mpath_member",
+            "not_deleted": true,
+            "usable_for_lustre": true
+        },
+        "15": {
+            "id": 15,
+            "storage_resource_id": 71,
+            "size": 5368709120,
+            "label": "3600140515cd5f019b154137b71302a42",
+            "filesystem_type": "mpath_member",
+            "not_deleted": true,
+            "usable_for_lustre": true
+        },
+        "13": {
+            "id": 13,
+            "storage_resource_id": 54,
+            "size": 5368709120,
+            "label": "36001405adfeb0ce7e3f41a49a12fcf75",
+            "filesystem_type": "mpath_member",
+            "not_deleted": true,
+            "usable_for_lustre": true
+        },
+        "16": {
+            "id": 16,
+            "storage_resource_id": 67,
+            "size": 5368709120,
+            "label": "360014059d41e107c8d84fc28b29d1791",
+            "filesystem_type": "mpath_member",
+            "not_deleted": true,
+            "usable_for_lustre": true
+        },
+        "7": {
+            "id": 7,
+            "storage_resource_id": 70,
+            "size": 5368709120,
+            "label": "36001405f88fcc67f23446cab909aa1ff",
+            "filesystem_type": "mpath_member",
+            "not_deleted": true,
+            "usable_for_lustre": true
+        },
+        "30": {
+            "id": 30,
+            "storage_resource_id": 260,
+            "size": 503316480,
+            "label": "mgt_vg-mgt",
+            "filesystem_type": "ext4",
+            "not_deleted": true,
+            "usable_for_lustre": true
+        },
+        "10": {
+            "id": 10,
+            "storage_resource_id": 72,
+            "size": 5368709120,
+            "label": "360014053f029d4f01cf4a6bbeaae4610",
+            "filesystem_type": "mpath_member",
+            "not_deleted": true,
+            "usable_for_lustre": true
+        },
+        "5": {
+            "id": 5,
+            "storage_resource_id": 59,
+            "size": 5368709120,
+            "label": "360014052113dce4a9e7411482be8d04e",
+            "filesystem_type": "mpath_member",
+            "not_deleted": true,
+            "usable_for_lustre": true
+        },
+        "29": {
+            "id": 29,
+            "storage_resource_id": 253,
+            "size": 5368709120,
+            "label": "360014058bd4834707e14c1f87f14d235",
+            "filesystem_type": "mpath_member",
+            "not_deleted": true,
+            "usable_for_lustre": true
+        },
+        "18": {
+            "id": 18,
+            "storage_resource_id": 69,
+            "size": 5368709120,
+            "label": "36001405ad9b95c16dfe41109bacefdfb",
+            "filesystem_type": "mpath_member",
+            "not_deleted": true,
+            "usable_for_lustre": true
+        },
+        "8": {
+            "id": 8,
+            "storage_resource_id": 68,
+            "size": 5368709120,
+            "label": "36001405564d2ac94039401983dcca4be",
+            "filesystem_type": "mpath_member",
+            "not_deleted": true,
+            "usable_for_lustre": true
+        },
+        "21": {
+            "id": 21,
+            "storage_resource_id": 58,
+            "size": 5368709120,
+            "label": "36001405027da8c4fded44898125b0f7c",
+            "filesystem_type": "mpath_member",
+            "not_deleted": true,
+            "usable_for_lustre": true
+        },
+        "31": {
+            "id": 31,
+            "storage_resource_id": 251,
+            "size": 5368709120,
+            "label": "3600140522ab016b61b1491a9ebe49de4",
+            "filesystem_type": "mpath_member",
+            "not_deleted": true,
+            "usable_for_lustre": true
+        }
+    },
+    "volume_node": {
+        "104": {
+            "id": 104,
+            "volume_id": 8,
+            "host_id": 4,
+            "path": "/dev/mapper/mpathq",
+            "storage_resource_id": 310,
+            "primary": true,
+            "use": true,
+            "not_deleted": true
+        },
+        "70": {
+            "id": 70,
+            "volume_id": 22,
+            "host_id": 3,
+            "path": "/dev/mapper/mpathg",
+            "storage_resource_id": 227,
+            "primary": false,
+            "use": false,
+            "not_deleted": true
+        },
+        "91": {
+            "id": 91,
+            "volume_id": 30,
+            "host_id": 1,
+            "path": "/dev/mapper/mgt_vg-mgt",
+            "storage_resource_id": 261,
+            "primary": false,
+            "use": false,
+            "not_deleted": true
+        },
+        "112": {
+            "id": 112,
+            "volume_id": 16,
+            "host_id": 4,
+            "path": "/dev/mapper/mpatha",
+            "storage_resource_id": 318,
+            "primary": false,
+            "use": false,
+            "not_deleted": true
+        },
+        "63": {
+            "id": 63,
+            "volume_id": 15,
+            "host_id": 3,
+            "path": "/dev/mapper/mpathl",
+            "storage_resource_id": 220,
+            "primary": true,
+            "use": true,
+            "not_deleted": true
+        },
+        "107": {
+            "id": 107,
+            "volume_id": 11,
+            "host_id": 4,
+            "path": "/dev/mapper/mpathb",
+            "storage_resource_id": 313,
+            "primary": false,
+            "use": false,
+            "not_deleted": true
+        },
+        "93": {
+            "id": 93,
+            "volume_id": 29,
+            "host_id": 1,
+            "path": "/dev/mapper/mpathc",
+            "storage_resource_id": 266,
+            "primary": true,
+            "use": true,
+            "not_deleted": true
+        },
+        "61": {
+            "id": 61,
+            "volume_id": 24,
+            "host_id": 3,
+            "path": "/dev/mapper/mpathd",
+            "storage_resource_id": 218,
+            "primary": true,
+            "use": true,
+            "not_deleted": true
+        },
+        "99": {
+            "id": 99,
+            "volume_id": 23,
+            "host_id": 4,
+            "path": "/dev/mapper/mpatht",
+            "storage_resource_id": 305,
+            "primary": false,
+            "use": false,
+            "not_deleted": true
+        },
+        "65": {
+            "id": 65,
+            "volume_id": 17,
+            "host_id": 3,
+            "path": "/dev/mapper/mpathj",
+            "storage_resource_id": 222,
+            "primary": true,
+            "use": true,
+            "not_deleted": true
+        },
+        "51": {
+            "id": 51,
+            "volume_id": 23,
+            "host_id": 3,
+            "path": "/dev/mapper/mpatht",
+            "storage_resource_id": 208,
+            "primary": true,
+            "use": true,
+            "not_deleted": true
+        },
+        "67": {
+            "id": 67,
+            "volume_id": 19,
+            "host_id": 3,
+            "path": "/dev/mapper/mpathh",
+            "storage_resource_id": 224,
+            "primary": false,
+            "use": false,
+            "not_deleted": true
+        },
+        "114": {
+            "id": 114,
+            "volume_id": 18,
+            "host_id": 4,
+            "path": "/dev/mapper/mpathk",
+            "storage_resource_id": 320,
+            "primary": false,
+            "use": false,
+            "not_deleted": true
+        },
+        "54": {
+            "id": 54,
+            "volume_id": 6,
+            "host_id": 3,
+            "path": "/dev/mapper/mpaths",
+            "storage_resource_id": 211,
+            "primary": false,
+            "use": false,
+            "not_deleted": true
+        },
+        "106": {
+            "id": 106,
+            "volume_id": 10,
+            "host_id": 4,
+            "path": "/dev/mapper/mpatho",
+            "storage_resource_id": 312,
+            "primary": false,
+            "use": false,
+            "not_deleted": true
+        },
+        "101": {
+            "id": 101,
+            "volume_id": 5,
+            "host_id": 4,
+            "path": "/dev/mapper/mpathr",
+            "storage_resource_id": 307,
+            "primary": true,
+            "use": true,
+            "not_deleted": true
+        },
+        "97": {
+            "id": 97,
+            "volume_id": 31,
+            "host_id": 2,
+            "path": "/dev/mapper/mpathd",
+            "storage_resource_id": 280,
+            "primary": true,
+            "use": true,
+            "not_deleted": true
+        },
+        "68": {
+            "id": 68,
+            "volume_id": 20,
+            "host_id": 3,
+            "path": "/dev/mapper/mpathi",
+            "storage_resource_id": 225,
+            "primary": false,
+            "use": false,
+            "not_deleted": true
+        },
+        "52": {
+            "id": 52,
+            "volume_id": 13,
+            "host_id": 3,
+            "path": "/dev/mapper/mpathc",
+            "storage_resource_id": 209,
+            "primary": false,
+            "use": false,
+            "not_deleted": true
+        },
+        "96": {
+            "id": 96,
+            "volume_id": 27,
+            "host_id": 2,
+            "path": "/dev/mapper/mdt0_vg-mdt",
+            "storage_resource_id": 279,
+            "primary": false,
+            "use": false,
+            "not_deleted": true
+        },
+        "111": {
+            "id": 111,
+            "volume_id": 15,
+            "host_id": 4,
+            "path": "/dev/mapper/mpathl",
+            "storage_resource_id": 317,
+            "primary": false,
+            "use": false,
+            "not_deleted": true
+        },
+        "100": {
+            "id": 100,
+            "volume_id": 13,
+            "host_id": 4,
+            "path": "/dev/mapper/mpathc",
+            "storage_resource_id": 306,
+            "primary": false,
+            "use": false,
+            "not_deleted": true
+        },
+        "55": {
+            "id": 55,
+            "volume_id": 7,
+            "host_id": 3,
+            "path": "/dev/mapper/mpathp",
+            "storage_resource_id": 212,
+            "primary": true,
+            "use": true,
+            "not_deleted": true
+        },
+        "115": {
+            "id": 115,
+            "volume_id": 19,
+            "host_id": 4,
+            "path": "/dev/mapper/mpathh",
+            "storage_resource_id": 321,
+            "primary": true,
+            "use": true,
+            "not_deleted": true
+        },
+        "56": {
+            "id": 56,
+            "volume_id": 8,
+            "host_id": 3,
+            "path": "/dev/mapper/mpathq",
+            "storage_resource_id": 213,
+            "primary": false,
+            "use": false,
+            "not_deleted": true
+        },
+        "53": {
+            "id": 53,
+            "volume_id": 5,
+            "host_id": 3,
+            "path": "/dev/mapper/mpathr",
+            "storage_resource_id": 210,
+            "primary": false,
+            "use": false,
+            "not_deleted": true
+        },
+        "110": {
+            "id": 110,
+            "volume_id": 14,
+            "host_id": 4,
+            "path": "/dev/mapper/mpathe",
+            "storage_resource_id": 316,
+            "primary": false,
+            "use": false,
+            "not_deleted": true
+        },
+        "113": {
+            "id": 113,
+            "volume_id": 17,
+            "host_id": 4,
+            "path": "/dev/mapper/mpathj",
+            "storage_resource_id": 319,
+            "primary": false,
+            "use": false,
+            "not_deleted": true
+        },
+        "92": {
+            "id": 92,
+            "volume_id": 27,
+            "host_id": 1,
+            "path": "/dev/mapper/mdt0_vg-mdt",
+            "storage_resource_id": 264,
+            "primary": true,
+            "use": true,
+            "not_deleted": true
+        },
+        "103": {
+            "id": 103,
+            "volume_id": 7,
+            "host_id": 4,
+            "path": "/dev/mapper/mpathp",
+            "storage_resource_id": 309,
+            "primary": false,
+            "use": false,
+            "not_deleted": true
+        },
+        "98": {
+            "id": 98,
+            "volume_id": 28,
+            "host_id": 2,
+            "path": "/dev/mapper/mdt1_vg-mdt",
+            "storage_resource_id": 284,
+            "primary": false,
+            "use": false,
+            "not_deleted": true
+        },
+        "109": {
+            "id": 109,
+            "volume_id": 24,
+            "host_id": 4,
+            "path": "/dev/mapper/mpathd",
+            "storage_resource_id": 315,
+            "primary": false,
+            "use": false,
+            "not_deleted": true
+        },
+        "69": {
+            "id": 69,
+            "volume_id": 21,
+            "host_id": 3,
+            "path": "/dev/mapper/mpathf",
+            "storage_resource_id": 226,
+            "primary": false,
+            "use": false,
+            "not_deleted": true
+        },
+        "60": {
+            "id": 60,
+            "volume_id": 12,
+            "host_id": 3,
+            "path": "/dev/mapper/mpathm",
+            "storage_resource_id": 217,
+            "primary": false,
+            "use": false,
+            "not_deleted": true
+        },
+        "108": {
+            "id": 108,
+            "volume_id": 12,
+            "host_id": 4,
+            "path": "/dev/mapper/mpathm",
+            "storage_resource_id": 314,
+            "primary": true,
+            "use": false,
+            "not_deleted": true
+        },
+        "117": {
+            "id": 117,
+            "volume_id": 22,
+            "host_id": 4,
+            "path": "/dev/mapper/mpathg",
+            "storage_resource_id": 323,
+            "primary": true,
+            "use": true,
+            "not_deleted": true
+        },
+        "118": {
+            "id": 118,
+            "volume_id": 21,
+            "host_id": 4,
+            "path": "/dev/mapper/mpathf",
+            "storage_resource_id": 324,
+            "primary": true,
+            "use": true,
+            "not_deleted": true
+        },
+        "105": {
+            "id": 105,
+            "volume_id": 9,
+            "host_id": 4,
+            "path": "/dev/mapper/mpathn",
+            "storage_resource_id": 311,
+            "primary": false,
+            "use": false,
+            "not_deleted": true
+        },
+        "64": {
+            "id": 64,
+            "volume_id": 16,
+            "host_id": 3,
+            "path": "/dev/mapper/mpatha",
+            "storage_resource_id": 221,
+            "primary": false,
+            "use": false,
+            "not_deleted": true
+        },
+        "66": {
+            "id": 66,
+            "volume_id": 18,
+            "host_id": 3,
+            "path": "/dev/mapper/mpathk",
+            "storage_resource_id": 223,
+            "primary": true,
+            "use": true,
+            "not_deleted": true
+        },
+        "59": {
+            "id": 59,
+            "volume_id": 11,
+            "host_id": 3,
+            "path": "/dev/mapper/mpathb",
+            "storage_resource_id": 216,
+            "primary": true,
+            "use": true,
+            "not_deleted": true
+        },
+        "94": {
+            "id": 94,
+            "volume_id": 28,
+            "host_id": 1,
+            "path": "/dev/mapper/mdt1_vg-mdt",
+            "storage_resource_id": 272,
+            "primary": true,
+            "use": true,
+            "not_deleted": true
+        },
+        "57": {
+            "id": 57,
+            "volume_id": 9,
+            "host_id": 3,
+            "path": "/dev/mapper/mpathn",
+            "storage_resource_id": 214,
+            "primary": true,
+            "use": true,
+            "not_deleted": true
+        },
+        "102": {
+            "id": 102,
+            "volume_id": 6,
+            "host_id": 4,
+            "path": "/dev/mapper/mpaths",
+            "storage_resource_id": 308,
+            "primary": true,
+            "use": true,
+            "not_deleted": true
+        },
+        "116": {
+            "id": 116,
+            "volume_id": 20,
+            "host_id": 4,
+            "path": "/dev/mapper/mpathi",
+            "storage_resource_id": 322,
+            "primary": true,
+            "use": true,
+            "not_deleted": true
+        },
+        "62": {
+            "id": 62,
+            "volume_id": 14,
+            "host_id": 3,
+            "path": "/dev/mapper/mpathe",
+            "storage_resource_id": 219,
+            "primary": false,
+            "use": false,
+            "not_deleted": true
+        },
+        "95": {
+            "id": 95,
+            "volume_id": 30,
+            "host_id": 2,
+            "path": "/dev/mapper/mgt_vg-mgt",
+            "storage_resource_id": 278,
+            "primary": true,
+            "use": true,
+            "not_deleted": true
+        },
+        "58": {
+            "id": 58,
+            "volume_id": 10,
+            "host_id": 3,
+            "path": "/dev/mapper/mpatho",
+            "storage_resource_id": 215,
+            "primary": false,
+            "use": false,
+            "not_deleted": true
+        }
+    }
+}

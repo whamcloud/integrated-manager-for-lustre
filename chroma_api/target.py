@@ -4,20 +4,14 @@
 
 
 from chroma_core.models.host import Volume, VolumeNode
-from chroma_core.models.target import FilesystemMember, NotAFileSystemMember
+from chroma_core.models.target import FilesystemMember
 import chroma_core.lib.conf_param
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
-
-import settings
 from collections import defaultdict
-
 from django.db.models import Q
 from django.contrib.contenttypes.models import ContentType
-
 from chroma_core.models import ManagedOst, ManagedMdt, ManagedMgs, ManagedTarget, ManagedFilesystem
-
 import tastypie.http as http
-from tastypie import fields
 from tastypie.utils import dict_strip_unicode_keys
 from tastypie.validation import Validation
 from tastypie.resources import BadRequest, ImmediateHttpResponse
@@ -28,7 +22,6 @@ from chroma_api.validation_utils import validate
 # Some lookups for the three 'kind' letter strings used
 # by API consumers to refer to our target types
 KIND_TO_KLASS = {"MGT": ManagedMgs, "OST": ManagedOst, "MDT": ManagedMdt}
-KLASS_TO_KIND = dict([(v, k) for k, v in KIND_TO_KLASS.items()])
 KIND_TO_MODEL_NAME = dict([(k, v.__name__.lower()) for k, v in KIND_TO_KLASS.items()])
 
 
@@ -159,285 +152,32 @@ class TargetResource(ConfParamResource):
 
     """
 
-    filesystems = fields.ListField(
-        null=True,
-        help_text="For MGTs, the list of file systems\
-            belonging to this MGT.  Null for other targets.",
-    )
-    filesystem = fields.CharField(
-        "chroma_api.filesystem.FilesystemResource",
-        "filesystem",
-        help_text="For OSTs and MDTs, the owning file system.  Null for MGTs.",
-        null=True,
-    )
-    filesystem_id = fields.IntegerField(
-        help_text="For OSTs and MDTs, the ``id`` attribute of\
-            the owning file system.  Null for MGTs.",
-        null=True,
-    )
-    filesystem_name = fields.CharField(
-        help_text="For OSTs and MDTs, the ``name`` attribute \
-            of the owning file system.  Null for MGTs."
-    )
-
-    kind = fields.CharField(help_text="Type of target, one of %s" % KIND_TO_KLASS.keys())
-
-    index = fields.IntegerField(help_text="Index of the target", null=True)
-
-    volume_name = fields.CharField(
-        attribute="volume__label", help_text="The ``label`` attribute of the volume on which this target exists"
-    )
-
-    primary_server = fields.ToOneField("chroma_api.host.HostResource", "primary_host", full=False)
-    primary_server_name = fields.CharField(
-        help_text="Human\
-            readable label for the primary server for this target"
-    )
-    failover_servers = fields.ListField(null=True)
-    failover_server_name = fields.CharField(
-        help_text="Human\
-            readable label for the secondary server for this target"
-    )
-
-    active_host_name = fields.CharField(
-        help_text="Human \
-        readable label for the host on which this target is currently started"
-    )
-    active_host = fields.ToOneField(
-        "chroma_api.host.HostResource",
-        "active_host",
-        null=True,
-        help_text="The server on which this target is currently started, or null if "
-        "the target is not currently started",
-    )
-
-    volume = fields.ToOneField(
-        "chroma_api.volume.VolumeResource",
-        "full_volume",
-        full=True,
-        help_text="\
-                             The volume on which this target is stored.",
-    )
-
-    def content_type_id_to_kind(self, id):
-        if not hasattr(self, "CONTENT_TYPE_ID_TO_KIND"):
-            self.CONTENT_TYPE_ID_TO_KIND = dict(
-                [(ContentType.objects.get_for_model(v).id, k) for k, v in KIND_TO_KLASS.items()]
-            )
-
-        return self.CONTENT_TYPE_ID_TO_KIND[id]
-
-    def full_dehydrate(self, bundle, for_list=False):
-        """The first call in the dehydrate cycle.
-
-        The ui, calls this directly, in addition to calling through the
-        normal api path.  So, use it to initialize the fs cache.
-        """
-
-        self._init_cached_fs()
-
-        return super(TargetResource, self).full_dehydrate(bundle, for_list)
-
     class Meta:
         # ManagedTarget is a Polymorphic Model which gets related
         # to content_type in the __metaclass__
-        queryset = ManagedTarget.objects.select_related(
-            "content_type",
-            "volume",
-            "volume__storage_resource__resource_class",
-            "volume__storage_resource__resource_class__storage_plugin",
-            "managedost",
-            "managedmdt",
-            "managedmgs",
-        ).prefetch_related(
-            "managedtargetmount_set", "managedtargetmount_set__host", "managedtargetmount_set__host__lnet_configuration"
-        )
+        queryset = ManagedTarget.objects.all()
         resource_name = "target"
         excludes = ["not_deleted", "bytes_per_inode", "reformat"]
         filtering = {
-            "kind": ["exact"],
-            "filesystem_id": ["exact"],
-            "host_id": ["exact"],
             "id": ["exact", "in"],
             "immutable_state": ["exact"],
             "name": ["exact"],
         }
         authorization = PatchedDjangoAuthorization()
         authentication = AnonymousAuthentication()
-        ordering = ["volume_name", "name"]
+        ordering = ["name"]
         list_allowed_methods = ["get", "post", "patch"]
         detail_allowed_methods = ["get", "put", "delete"]
         validation = TargetValidation()
         always_return_data = True
         readonly = [
-            "active_host",
-            "failover_server_name",
-            "volume_name",
-            "primary_server_name",
             "filesystems",
             "name",
             "uuid",
-            "primary_server",
-            "failover_servers",
-            "active_host_name",
             "ha_label",
             "filesystem_name",
             "filesystem_id",
         ]
-
-    def dehydrate_filesystems(self, bundle):
-        #  Limit this to one db hit per mgs, caching might help
-        target = bundle.obj.downcast()
-        if type(target) == ManagedMgs:
-            return [{"id": fs.id, "name": fs.name} for fs in bundle.obj.managedmgs.managedfilesystem_set.all()]
-        else:
-            return None
-
-    def dehydrate_kind(self, bundle):
-        return self.content_type_id_to_kind(bundle.obj.content_type_id)
-
-    def dehydrate_index(self, bundle):
-        target = bundle.obj.downcast()
-
-        if target.filesystem_member:
-            return target.index
-        else:
-            return None
-
-    def dehydrate_filesystem_id(self, bundle):
-
-        #  The ID is free - no db hit
-        return getattr(bundle.obj.downcast(), "filesystem_id", None)
-
-    def _init_cached_fs(self):
-
-        # Object to hold seen filesystems, to preventing multiple
-        # db hits for the same filesystem.
-        self._fs_cache = defaultdict(ManagedFilesystem)
-
-    def _get_cached_fs(self, bundle):
-        """Cache the ManagedFilesystem as they are seen.
-
-        The ManageFile can be accessed many times.  Use this method to get
-        it and the number of DB hits is reduced.
-
-        """
-
-        #  Only OST and MDT are FS members.  Those subclass are joined in above
-        #  So this lookup is free accept for initial ManageFilesystem lookup
-        managed_target = bundle.obj.downcast()
-        if managed_target.filesystem_member:
-            val = getattr(managed_target, "filesystem_id", None)
-            if val not in self._fs_cache:
-                #  Only DB hit in this method.
-                self._fs_cache[val] = managed_target.filesystem
-
-            return self._fs_cache[val]  # a ManagedFilesystem
-        else:
-            raise NotAFileSystemMember(type(managed_target))
-
-    def dehydrate_filesystem(self, bundle):
-        """Get the URL to load a ManagedFileSystem"""
-
-        try:
-            from chroma_api.filesystem import FilesystemResource
-
-            filesystem = self._get_cached_fs(bundle)
-            return FilesystemResource().get_resource_uri(filesystem)
-        except NotAFileSystemMember:
-            return None
-
-    def dehydrate_filesystem_name(self, bundle):
-
-        try:
-            filesystem = self._get_cached_fs(bundle)
-            return filesystem.name
-        except NotAFileSystemMember:
-            return None
-
-    def dehydrate_primary_server_name(self, bundle):
-        return bundle.obj.primary_host.get_label()
-
-    def dehydrate_failover_servers(self, bundle):
-        from chroma_api.urls import api
-
-        return [api.get_resource_uri(host) for host in bundle.obj.failover_hosts]
-
-    def dehydrate_failover_server_name(self, bundle):
-        try:
-            return bundle.obj.failover_hosts[0].get_label()
-        except IndexError:
-            return "---"
-
-    def dehydrate_active_host_name(self, bundle):
-        if bundle.obj.active_mount:
-            return bundle.obj.active_mount.host.get_label()
-        else:
-            return "---"
-
-    def dehydrate_active_host_uri(self, bundle):
-        if bundle.obj.active_mount:
-            from chroma_api.host import HostResource
-
-            return HostResource().get_resource_uri(bundle.obj.active_mount.host)
-        else:
-            return None
-
-    def build_filters(self, filters=None, **kwargs):
-        """Override this to convert a 'kind' argument into a DB field which exists"""
-        custom_filters = {}
-        for key, val in filters.items():
-            if key == "kind":
-                del filters[key]
-                try:
-                    custom_filters["content_type__model"] = KIND_TO_MODEL_NAME[val.upper()]
-                except KeyError:
-                    # Don't want to just pass this because it will
-                    # potentially remove all filters and make this a list
-                    # operation.
-                    custom_filters["content_type__model"] = None
-            elif key == "host_id":
-                del filters[key]
-            elif key == "filesystem_id":
-                # Remove filesystem_id as we
-                # do a custom query generation for it in apply_filters
-                del filters[key]
-
-        filters = super(TargetResource, self).build_filters(filters, **kwargs)
-        filters.update(custom_filters)
-        return filters
-
-    def apply_filters(self, request, filters=None, **kwargs):
-        """Override this to build a filesystem filter using Q expressions (not
-        possible from build_filters because it only deals with kwargs to filter())"""
-        objects = super(TargetResource, self).apply_filters(request, filters, **kwargs)
-        try:
-            try:
-                fs = ManagedFilesystem.objects.get(pk=request.GET["filesystem_id"])
-            except ManagedFilesystem.DoesNotExist:
-                objects = objects.filter(id=-1)  # No filesystem so we want to produce an empty list.
-            else:
-                objects = objects.filter(
-                    (Q(managedmdt__filesystem=fs) | Q(managedost__filesystem=fs)) | Q(id=fs.mgs.id)
-                )
-        except KeyError:
-            # Not filtering on filesystem_id
-            pass
-
-        try:
-            try:
-                objects = objects.filter(
-                    Q(managedtargetmount__primary=request.GET["primary"])
-                    & Q(managedtargetmount__host__id=request.GET["host_id"])
-                )
-            except KeyError:
-                # Not filtering on primary, try just host_id
-                objects = objects.filter(Q(managedtargetmount__host__id=request.GET["host_id"]))
-        except KeyError:
-            # Not filtering on host_id
-            pass
-
-        return objects
 
     def patch_list(self, request, **kwargs):
         """

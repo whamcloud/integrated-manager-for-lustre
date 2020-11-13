@@ -13,8 +13,9 @@ use crate::{
 };
 use iml_api_utils::extract_id;
 use iml_wire_types::{
+    db::{ManagedTargetRecord, TargetKind},
     warp_drive::{ArcCache, ArcValuesExt, Locks},
-    Session, Target, TargetConfParam, TargetKind, ToCompositeId,
+    Label, Session, ToCompositeId,
 };
 use seed::{prelude::*, *};
 use std::{borrow::Cow, collections::HashMap, sync::Arc};
@@ -26,15 +27,15 @@ pub struct Row {
 #[derive(Default)]
 pub struct Model {
     pub rows: HashMap<i32, Row>,
-    pub mgts: Vec<Arc<Target<TargetConfParam>>>,
+    pub mgts: Vec<Arc<ManagedTargetRecord>>,
 }
 
 #[derive(Clone, Debug)]
 pub enum Msg {
     ActionDropdown(Box<action_dropdown::IdMsg>),
-    SetTargets(Vec<Arc<Target<TargetConfParam>>>),
+    SetTargets(Vec<Arc<ManagedTargetRecord>>),
     RemoveTarget(i32),
-    AddTarget(Arc<Target<TargetConfParam>>),
+    AddTarget(Arc<ManagedTargetRecord>),
 }
 
 pub fn init(cache: &ArcCache, orders: &mut impl Orders<Msg, GMsg>) {
@@ -68,9 +69,9 @@ pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl O
                 })
                 .collect();
 
-            let mut mgts: Vec<_> = xs.into_iter().filter(|x| x.kind == TargetKind::Mgt).collect();
+            let mut mgts: Vec<_> = xs.into_iter().filter(|x| x.get_kind() == TargetKind::Mgt).collect();
 
-            mgts.sort_by(|a, b| natord::compare(&a.name, &b.name));
+            mgts.sort_by(|a, b| natord::compare(a.label(), b.label()));
 
             model.mgts = mgts;
         }
@@ -145,7 +146,7 @@ pub fn view(cache: &ArcCache, model: &Model, all_locks: &Locks, session: Option<
                                 a![
                                     class![C.text_blue_500, C.hover__underline],
                                     attrs! {At::Href => Route::Target(RouteId::from(x.id)).to_href()},
-                                    &x.name
+                                    &x.label()
                                 ],
                                 lock_indicator::view(all_locks, &x).merge_attrs(class![C.ml_2]),
                                 alert_indicator(&cache.active_alert, &x, true, Placement::Right)

@@ -11,19 +11,20 @@ use crate::{
     GMsg,
 };
 use iml_wire_types::{
+    db::ManagedTargetRecord,
     warp_drive::{ArcCache, Locks},
-    Session, Target, TargetConfParam, ToCompositeId,
+    Label, Session, ToCompositeId,
 };
 use seed::{prelude::*, *};
 use std::{borrow::Cow, sync::Arc};
 
 pub struct Model {
-    pub target: Arc<Target<TargetConfParam>>,
+    pub target: Arc<ManagedTargetRecord>,
     dropdown: action_dropdown::Model,
 }
 
 impl Model {
-    pub fn new(target: Arc<Target<TargetConfParam>>) -> Self {
+    pub fn new(target: Arc<ManagedTargetRecord>) -> Self {
         Self {
             dropdown: action_dropdown::Model::new(vec![target.composite_id()]),
             target,
@@ -34,7 +35,7 @@ impl Model {
 #[derive(Clone, Debug)]
 pub enum Msg {
     ActionDropdown(action_dropdown::IdMsg),
-    UpdateTarget(Arc<Target<TargetConfParam>>),
+    UpdateTarget(Arc<ManagedTargetRecord>),
 }
 
 pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
@@ -74,7 +75,7 @@ pub fn view(cache: &ArcCache, model: &Model, all_locks: &Locks, session: Option<
     panel::view(
         h3![
             class![C.py_4, C.font_normal, C.text_lg],
-            &format!("Target: {}", model.target.name),
+            &format!("Target: {}", model.target.label()),
             lock_indicator::view(all_locks, &model.target).merge_attrs(class![C.ml_2]),
             alert_indicator(&cache.active_alert, &model.target, true, Placement::Right).merge_attrs(class![C.ml_2]),
         ],

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{CompositeId, EndpointName, FsType, Label, TargetKind, ToCompositeId};
+use crate::{CompositeId, EndpointName, FsType, Label, ToCompositeId};
 use chrono::{offset::Utc, DateTime};
 #[cfg(feature = "postgres-interop")]
 use std::str::FromStr;
@@ -263,23 +263,23 @@ impl Name for ManagedTargetMountRecord {
 }
 
 /// Record from the `chroma_core_managedtarget` table
-#[derive(serde::Deserialize, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
 pub struct ManagedTargetRecord {
-    id: i32,
-    state_modified_at: String,
-    state: String,
-    immutable_state: bool,
-    name: Option<String>,
-    uuid: Option<String>,
-    ha_label: Option<String>,
-    volume_id: i32,
-    inode_size: Option<i32>,
-    bytes_per_inode: Option<i32>,
-    inode_count: Option<u64>,
-    reformat: bool,
-    active_mount_id: Option<i32>,
-    not_deleted: Option<bool>,
-    content_type_id: Option<i32>,
+    pub id: i32,
+    pub state_modified_at: DateTime<Utc>,
+    pub state: String,
+    pub immutable_state: bool,
+    pub name: Option<String>,
+    pub uuid: Option<String>,
+    pub ha_label: Option<String>,
+    pub inode_size: Option<i32>,
+    pub bytes_per_inode: Option<i32>,
+    pub inode_count: Option<i64>,
+    pub reformat: bool,
+    pub not_deleted: Option<bool>,
+    pub active_mount_id: Option<i32>,
+    pub content_type_id: Option<i32>,
+    pub volume_id: i32,
 }
 
 impl Id for ManagedTargetRecord {
@@ -299,6 +299,58 @@ pub const MANAGED_TARGET_TABLE_NAME: TableName = TableName("chroma_core_managedt
 impl Name for ManagedTargetRecord {
     fn table_name() -> TableName<'static> {
         MANAGED_TARGET_TABLE_NAME
+    }
+}
+
+impl ToCompositeId for ManagedTargetRecord {
+    fn composite_id(&self) -> CompositeId {
+        CompositeId(self.content_type_id.unwrap(), self.id)
+    }
+}
+
+impl ToCompositeId for &ManagedTargetRecord {
+    fn composite_id(&self) -> CompositeId {
+        CompositeId(self.content_type_id.unwrap(), self.id)
+    }
+}
+
+impl Label for ManagedTargetRecord {
+    fn label(&self) -> &str {
+        self.name.as_deref().unwrap()
+    }
+}
+
+impl Label for &ManagedTargetRecord {
+    fn label(&self) -> &str {
+        &self.name.as_deref().unwrap()
+    }
+}
+
+impl EndpointName for ManagedTargetRecord {
+    fn endpoint_name() -> &'static str {
+        "target"
+    }
+}
+
+impl ManagedTargetRecord {
+    pub fn get_kind(&self) -> TargetKind {
+        get_kind(self.label())
+    }
+}
+
+#[derive(serde::Deserialize, serde::Serialize, Clone, Copy, Debug, Eq, PartialEq)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum TargetKind {
+    Mgt,
+    Mdt,
+    Ost,
+}
+
+fn get_kind(x: &str) -> TargetKind {
+    match x {
+        "MGS" => TargetKind::Mgt,
+        name if name.contains("-MDT") => TargetKind::Mdt,
+        _ => TargetKind::Ost,
     }
 }
 
@@ -357,11 +409,7 @@ impl Label for &TargetRecord {
 
 impl TargetRecord {
     pub fn get_kind(&self) -> TargetKind {
-        match self.name.as_str() {
-            "MGS" => TargetKind::Mgt,
-            name if name.contains("-MDT") => TargetKind::Mdt,
-            _ => TargetKind::Ost,
-        }
+        get_kind(self.name.as_str())
     }
 }
 

@@ -923,40 +923,6 @@ pub struct MdtConfParams {
     mdt_hsm_control: Option<String>,
 }
 
-#[derive(serde::Deserialize, serde::Serialize, Debug, PartialEq, Clone)]
-pub struct OstConfParams {
-    #[serde(rename = "osc.active")]
-    osc_active: Option<String>,
-    #[serde(rename = "osc.max_dirty_mb")]
-    osc_max_dirty_mb: Option<String>,
-    #[serde(rename = "osc.max_pages_per_rpc")]
-    osc_max_pages_per_rpc: Option<String>,
-    #[serde(rename = "osc.max_rpcs_in_flight")]
-    osc_max_rpcs_in_flight: Option<String>,
-    #[serde(rename = "ost.OSS.ost.threads_max")]
-    ost_oss_ost_threads_max: Option<String>,
-    #[serde(rename = "ost.OSS.ost.threads_min")]
-    ost_oss_ost_threads_min: Option<String>,
-    #[serde(rename = "ost.OSS.ost_create.threads_max")]
-    ost_oss_ost_create_threads_max: Option<String>,
-    #[serde(rename = "ost.OSS.ost_create.threads_min")]
-    ost_oss_ost_create_threads_min: Option<String>,
-    #[serde(rename = "ost.OSS.ost_io.threads_max")]
-    ost_oss_ost_io_threads_max: Option<String>,
-    #[serde(rename = "ost.OSS.ost_io.threads_min")]
-    ost_oss_ost_io_threads_min: Option<String>,
-    #[serde(rename = "ost.read_cache_enable")]
-    ost_read_cache_enable: Option<String>,
-    #[serde(rename = "ost.readcache_max_filesize")]
-    ost_readcache_max_filesize: Option<String>,
-    #[serde(rename = "ost.sync_journal")]
-    ost_sync_journal: Option<String>,
-    #[serde(rename = "ost.sync_on_lock_cancel")]
-    ost_sync_on_lock_cancel: Option<String>,
-    #[serde(rename = "ost.writethrough_cache_enable")]
-    ost_writethrough_cache_enable: Option<String>,
-}
-
 /// A Volume record from api/volume/
 #[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
 pub struct Volume {
@@ -1028,103 +994,10 @@ impl EndpointName for VolumeNode {
 
 #[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
 #[serde(untagged)]
-pub enum TargetConfParam {
-    MdtConfParam(MdtConfParams),
-    OstConfParam(OstConfParams),
-}
-
-#[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
-#[serde(untagged)]
 pub enum VolumeOrResourceUri {
     ResourceUri(String),
     Volume(Volume),
 }
-
-#[derive(serde::Deserialize, serde::Serialize, Clone, Copy, Debug, Eq, PartialEq)]
-#[serde(rename_all = "UPPERCASE")]
-pub enum TargetKind {
-    Mgt,
-    Mdt,
-    Ost,
-}
-
-/// A Target record from /api/target/
-#[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
-pub struct Target<T> {
-    pub active_host: Option<String>,
-    pub active_host_name: String,
-    pub conf_params: Option<T>,
-    pub content_type_id: i32,
-    pub failover_server_name: String,
-    pub failover_servers: Vec<String>,
-    pub filesystem: Option<String>,
-    pub filesystem_id: Option<i32>,
-    pub filesystem_name: Option<String>,
-    pub filesystems: Option<Vec<FilesystemShort>>,
-    pub ha_label: Option<String>,
-    pub id: i32,
-    pub immutable_state: bool,
-    pub index: Option<i32>,
-    pub inode_count: Option<u64>,
-    pub inode_size: Option<i32>,
-    pub kind: TargetKind,
-    pub label: String,
-    pub name: String,
-    pub primary_server: String,
-    pub primary_server_name: String,
-    pub resource_uri: String,
-    pub state: String,
-    pub state_modified_at: String,
-    pub uuid: Option<String>,
-    pub volume: VolumeOrResourceUri,
-    pub volume_name: String,
-}
-
-impl<T> FlatQuery for Target<T> {
-    fn query() -> Vec<(&'static str, &'static str)> {
-        vec![("limit", "0"), ("dehydrate__volume", "false")]
-    }
-}
-
-impl<T> ToCompositeId for Target<T> {
-    fn composite_id(&self) -> CompositeId {
-        CompositeId(self.content_type_id, self.id)
-    }
-}
-
-impl<T> ToCompositeId for &Target<T> {
-    fn composite_id(&self) -> CompositeId {
-        CompositeId(self.content_type_id, self.id)
-    }
-}
-
-impl<T> Label for Target<T> {
-    fn label(&self) -> &str {
-        &self.label
-    }
-}
-
-impl<T> Label for &Target<T> {
-    fn label(&self) -> &str {
-        &self.label
-    }
-}
-
-impl<T> EndpointName for Target<T> {
-    fn endpoint_name() -> &'static str {
-        "target"
-    }
-}
-
-impl<T> db::Id for Target<T> {
-    fn id(&self) -> i32 {
-        self.id
-    }
-}
-
-pub type Mdt = Target<MdtConfParams>;
-pub type Mgt = Target<Option<TargetConfParam>>;
-pub type Ost = Target<OstConfParams>;
 
 #[derive(serde::Deserialize, serde::Serialize, PartialEq, Clone, Debug)]
 pub struct HsmControlParamMdt {
@@ -1160,7 +1033,7 @@ pub struct Filesystem {
     pub id: i32,
     pub immutable_state: bool,
     pub label: String,
-    pub mdts: Vec<Mdt>,
+    pub mdts: Vec<String>,
     pub mgt: String,
     pub mount_command: String,
     pub mount_path: String,
@@ -1173,7 +1046,7 @@ pub struct Filesystem {
 
 impl FlatQuery for Filesystem {
     fn query() -> Vec<(&'static str, &'static str)> {
-        vec![("limit", "0"), ("dehydrate__mgt", "false")]
+        vec![("limit", "0")]
     }
 }
 
