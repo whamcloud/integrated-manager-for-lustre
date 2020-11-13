@@ -51,6 +51,7 @@ class TestMisc(ChromaApiTestCase):
 
     @mock.patch("chroma_core.services.http_agent.HttpAgentRpc.remove_host", new=mock.Mock(), create=True)
     @mock.patch("chroma_core.services.job_scheduler.agent_rpc.AgentRpc.remove", new=mock.Mock())
+    @mock.patch("chroma_core.models.host.influx_post", new=mock.Mock())
     @remove_host_resources_patch
     def test_removals(self):
         """Test that after objects are removed all GETs still work
