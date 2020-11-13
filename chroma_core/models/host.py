@@ -10,7 +10,6 @@ import logging
 from collections import defaultdict
 import datetime
 import requests
-import chroma_core.lib.influx
 
 from django.db import models
 from django.db import transaction
@@ -23,6 +22,7 @@ from django.db.models.aggregates import Aggregate, Count
 from django.db.models.query_utils import Q
 
 from chroma_core.lib.cache import ObjectCache
+from chroma_core.lib.influx import influx_post
 from chroma_core.models import StateChangeJob
 from chroma_core.models import DeletableStatefulObject
 from chroma_core.models import NullStateChangeJob
@@ -1180,7 +1180,7 @@ class DeleteHostStep(Step):
                 [host.id],
             )
 
-            influx.post(settings.INFLUXDB_IML_STATS_DB, "DELETE FROM net WHERE \"host_id\"='{}'".format(host.id))
+            influx_post(settings.INFLUXDB_IML_STATS_DB, "DELETE FROM net WHERE \"host_id\"='{}'".format(host.id))
 
 
 class CommonRemoveHostJob(StateChangeJob):

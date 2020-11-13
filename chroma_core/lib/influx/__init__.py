@@ -2,7 +2,7 @@ import requests
 import settings
 
 
-def post(db, query):
+def influx_post(db, query):
     requests.post(
         "{}/query".format(settings.INFLUXDB_PROXY_PASS),
         params={
@@ -12,7 +12,7 @@ def post(db, query):
     )
 
 
-def get(db, query):
+def influx_get(db, query):
     requests.get(
         "{}/query".format(settings.INFLUXDB_PROXY_PASS),
         params={
