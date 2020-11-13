@@ -407,7 +407,7 @@ pub fn find_targets<'a>(
                 .iter()
                 .filter(|(k, _)| *k != &fqdn)
                 .filter_map(|(k, x)| {
-                    tracing::debug!("Searching for device {:?} on {}", &x, &k);
+                    tracing::debug!("Searching for device {:?} on {}", dev_id, &k);
                     x.0.get(&dev_id)?;
 
                     tracing::debug!("found device on {}!", &k);
@@ -433,7 +433,8 @@ pub fn find_targets<'a>(
         })
         .collect();
 
-    xs.into_iter()
+    let xs: Vec<_> = xs
+        .into_iter()
         .map(|(fqdn, ids, mntpnt, fs_uuid, dev_path, target)| Target {
             state: "mounted".into(),
             active_host_id: Some(*fqdn),
@@ -457,6 +458,30 @@ pub fn find_targets<'a>(
             uuid: fs_uuid.into(),
             mount_path: Some(mntpnt.0.to_string_lossy().to_string()),
         })
+        .collect();
+
+    xs.into_iter()
+        .fold(HashMap::new(), |mut acc: HashMap<String, Target>, x| {
+            // We may have multiple incoming mounts for the same uuid.
+            // This could happen when a target moves quickly but not all agents have reported new
+            // data yet. Handle this case by indexing by uuid and only overwritting
+            // if the current target has no associated filesystems.
+            match acc.get(&x.uuid) {
+                Some(y) if y.filesystems.is_empty() => {
+                    acc.insert(x.uuid.to_string(), x);
+                }
+                None => {
+                    acc.insert(x.uuid.to_string(), x);
+                }
+                Some(y) => {
+                    tracing::info!("Skipping insert for {:?}, because we have {:?}", x, y);
+                }
+            };
+
+            acc
+        })
+        .into_iter()
+        .map(|(_, x)| x)
         .collect()
 }
 
