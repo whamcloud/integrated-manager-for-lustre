@@ -17,10 +17,12 @@ pub mod list {
         fs_name: String,
     }
 
-    pub fn build(fs_name: String) -> Query<Vars> {
+    pub fn build(fs_name: impl ToString) -> Query<Vars> {
         Query {
             query: QUERY.to_string(),
-            variables: Some(Vars { fs_name }),
+            variables: Some(Vars {
+                fs_name: fs_name.to_string(),
+            }),
         }
     }
 

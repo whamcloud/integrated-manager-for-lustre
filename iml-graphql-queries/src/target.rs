@@ -36,7 +36,7 @@ pub mod list {
         limit: Option<u32>,
         offset: Option<u32>,
         dir: Option<SortDir>,
-        fsname: Option<String>,
+        fsname: Option<impl ToString>,
         exclude_unmounted: Option<bool>,
     ) -> Query<Vars> {
         Query {
@@ -45,7 +45,7 @@ pub mod list {
                 limit,
                 offset,
                 dir,
-                fsname,
+                fsname: fsname.map(|s| s.to_string()),
                 exclude_unmounted,
             }),
         }
