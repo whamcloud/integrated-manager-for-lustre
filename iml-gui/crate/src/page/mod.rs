@@ -38,7 +38,7 @@ use crate::{
 };
 use iml_wire_types::{
     warp_drive::{ArcCache, ArcRecord, RecordId},
-    Conf,
+    Conf, Label,
 };
 use seed::prelude::Orders;
 use std::sync::Arc;
@@ -104,7 +104,7 @@ impl Page {
             Self::Servers(_) => "Servers".into(),
             Self::Server(m) => format!("Server: {}", &m.server.fqdn),
             Self::Targets => "Targets".into(),
-            Self::Target(m) => format!("Target: {}", &m.target.name),
+            Self::Target(m) => format!("Target: {}", m.target.label()),
             Self::Users => "Users".into(),
             Self::User(m) => format!("User: {}", m.title()),
             Self::Volumes(_) => "Volumes".into(),
