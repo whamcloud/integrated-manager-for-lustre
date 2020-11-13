@@ -18,7 +18,7 @@ class IMLUnitTestCase(TestCase):
         with open("./migrations/20200824170157_corosync.sql", "r") as f:
             sql2 = f.read()
 
-        with open("./migrations/20201102184120_lnet", "r") as f:
+        with open("./migrations/20201102184120_lnet.sql", "r") as f:
             sql3 = f.read()
 
         from django.db import connection
