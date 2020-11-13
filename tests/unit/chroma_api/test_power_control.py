@@ -309,7 +309,7 @@ class IpmiResourceTests(PowerControlResourceTestCase):
     @mock.patch("chroma_core.services.http_agent.HttpAgentRpc.remove_host", new=mock.Mock(), create=True)
     @mock.patch("chroma_core.services.job_scheduler.agent_rpc.AgentRpc.remove", new=mock.Mock())
     @mock.patch("chroma_core.lib.job.Step.invoke_agent", new=mock.Mock(return_value=agent_result_ok))
-    @mock.patch("chroma_core.lib.influx.influx_post", new=mock.Mock())
+    @mock.patch("chroma_core.lib.influx.influx_post", return_value=mock.MagicMock())
     @remove_host_resources_patch
     def test_removed_host_deletes_bmc(self):
         bmc = self._create_power_outlet(
