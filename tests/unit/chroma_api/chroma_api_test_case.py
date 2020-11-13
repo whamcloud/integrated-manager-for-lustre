@@ -27,6 +27,11 @@ class ChromaApiTestCase(ResourceTestCase):
         CsrfAuthentication.is_authenticated = mock.Mock(return_value=True)
 
         self.assertTrue(self.api_client.client.login(username=self.username, password=self.password))
+
+        import chroma_core.lib.influx
+
+        influx.post = mock.Mock(return_value=True)
+
         from tests.unit.chroma_core.helpers import load_default_profile
 
         load_default_profile()

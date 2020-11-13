@@ -10,6 +10,7 @@ import logging
 from collections import defaultdict
 import datetime
 import requests
+import chroma_core.lib.influx
 
 from django.db import models
 from django.db import transaction
@@ -1179,13 +1180,7 @@ class DeleteHostStep(Step):
                 [host.id],
             )
 
-            requests.post(
-                "{}/query".format(settings.INFLUXDB_PROXY_PASS),
-                params={
-                    "db": settings.INFLUXDB_IML_STATS_DB,
-                    "q": "DELETE FROM net WHERE \"host_id\"='{}'".format(host.id),
-                },
-            )
+            influx.post(settings.INFLUXDB_IML_STATS_DB, "DELETE FROM net WHERE \"host_id\"='{}'".format(host.id))
 
 
 class CommonRemoveHostJob(StateChangeJob):
