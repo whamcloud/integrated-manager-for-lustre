@@ -39,14 +39,14 @@ use iml_wire_types::{
     db::TargetRecord,
     warp_drive::ArcCache,
     warp_drive::{self, ArcRecord},
-    Conf, GroupType, Target, TargetConfParam, TargetKind,
+    Conf, GroupType, Target, TargetConfParam,
 };
 use lazy_static::lazy_static;
 use page::{Page, RecordChange};
 use route::Route;
 use seed::{app::MessageMapper, prelude::*, EventHandler, *};
 pub(crate) use sleep::sleep_with_handle;
-use std::{cmp, collections::HashSet, iter::FromIterator as _, ops::Deref as _, sync::Arc};
+use std::{cmp, ops::Deref as _, sync::Arc};
 pub use watch_state::*;
 use web_sys::MessageEvent;
 use Visibility::*;
@@ -1078,29 +1078,10 @@ pub fn run() {
     log!("App started.");
 }
 
-fn get_target_fs_ids(x: &Target<TargetConfParam>) -> Vec<i32> {
-    match x.kind {
-        TargetKind::Mgt => x.filesystems.iter().flatten().map(|x| x.id).collect(),
-        TargetKind::Mdt | TargetKind::Ost => x.filesystem_id.map(|x| vec![x]).unwrap_or_default(),
-    }
-}
-
 fn get_target_from_managed_target<'a>(cache: &'a ArcCache, x: &Target<TargetConfParam>) -> Option<&'a TargetRecord> {
-    let fs_names: HashSet<_> = get_target_fs_ids(x)
-        .into_iter()
-        .filter_map(|id| cache.filesystem.get(&id))
-        .map(|x| &x.name)
-        .collect();
-
     cache
         .target_record
         .values()
-        .filter(|t| t.name == x.name)
-        .find(|t| {
-            HashSet::from_iter(t.filesystems.iter())
-                .intersection(&fs_names)
-                .next()
-                .is_some()
-        })
+        .find(|y| x.uuid.as_deref() == Some(y.uuid.as_str()))
         .map(|x| x.deref())
 }
