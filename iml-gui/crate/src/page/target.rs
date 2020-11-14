@@ -6,6 +6,8 @@ use crate::{
     components::{action_dropdown, alert_indicator, lock_indicator, panel, resource_links, Placement},
     extensions::MergeAttrs as _,
     generated::css_classes::C,
+    get_target_from_managed_target,
+    page::filesystem::standby_hosts_view,
     GMsg,
 };
 use iml_wire_types::{
@@ -13,7 +15,7 @@ use iml_wire_types::{
     Session, Target, TargetConfParam, ToCompositeId,
 };
 use seed::{prelude::*, *};
-use std::sync::Arc;
+use std::{borrow::Cow, sync::Arc};
 
 pub struct Model {
     pub target: Arc<Target<TargetConfParam>>,
@@ -56,6 +58,19 @@ pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl O
 }
 
 pub fn view(cache: &ArcCache, model: &Model, all_locks: &Locks, session: Option<&Session>) -> Node<Msg> {
+    let t = get_target_from_managed_target(cache, &model.target);
+
+    let active_host = t
+        .as_ref()
+        .and_then(|x| x.active_host_id)
+        .and_then(|x| cache.host.get(&x));
+
+    let dev_path = t
+        .as_ref()
+        .and_then(|x| x.dev_path.as_ref())
+        .map(|x| Cow::from(x.to_string()))
+        .unwrap_or_else(|| Cow::from("---"));
+
     panel::view(
         h3![
             class![C.py_4, C.font_normal, C.text_lg],
@@ -65,26 +80,28 @@ pub fn view(cache: &ArcCache, model: &Model, all_locks: &Locks, session: Option<
         ],
         div![
             class![C.grid, C.grid_cols_2, C.gap_4],
-            div![class![C.p_6], "Started On"],
-            div![
-                class![C.p_6],
-                resource_links::server_link(model.target.active_host.as_ref(), &model.target.active_host_name)
-            ],
-            div![class![C.p_6], "Primary Server"],
-            div![
-                class![C.p_6],
-                resource_links::server_link(Some(&model.target.primary_server), &model.target.primary_server_name)
-            ],
-            div![class![C.p_6], "Failover Server"],
+            div![class![C.p_6], "Active Server"],
             div![
                 class![C.p_6],
                 resource_links::server_link(
-                    model.target.failover_servers.first(),
-                    &model.target.failover_server_name
+                    active_host.as_ref().map(|x| &x.resource_uri),
+                    &active_host.as_ref().map(|x| x.fqdn.to_string()).unwrap_or_default()
                 )
             ],
-            div![class![C.p_6], "Volume"],
-            div![class![C.p_6], resource_links::volume_link(&model.target)],
+            div![class![C.p_6], "Standby Servers"],
+            div![
+                class![C.p_6],
+                match t {
+                    Some(t) => {
+                        standby_hosts_view(cache, &t)
+                    }
+                    None => {
+                        plain!["---"]
+                    }
+                }
+            ],
+            div![class![C.p_6], "Device Path"],
+            div![class![C.p_6], dev_path],
             action_dropdown::view(model.target.id, &model.dropdown, all_locks, session)
                 .merge_attrs(class![C.p_6, C.grid, C.col_span_2])
                 .map_msg(Msg::ActionDropdown)

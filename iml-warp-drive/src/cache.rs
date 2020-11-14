@@ -11,8 +11,8 @@ use iml_wire_types::{
         AlertStateRecord, AuthGroupRecord, AuthUserGroupRecord, AuthUserRecord, ContentTypeRecord,
         CorosyncConfigurationRecord, FsRecord, Id, LnetConfigurationRecord, ManagedHostRecord,
         ManagedTargetMountRecord, ManagedTargetRecord, NotDeleted, OstPoolOstsRecord,
-        OstPoolRecord, PacemakerConfigurationRecord, StratagemConfiguration, VolumeNodeRecord,
-        VolumeRecord,
+        OstPoolRecord, PacemakerConfigurationRecord, StratagemConfiguration, TargetRecord,
+        VolumeNodeRecord, VolumeRecord,
     },
     sfa::{
         EnclosureType, HealthState, JobState, JobType, MemberState, SfaController, SfaDiskDrive,
@@ -20,7 +20,7 @@ use iml_wire_types::{
     },
     snapshot::{ReserveUnit, SnapshotInterval, SnapshotRecord, SnapshotRetention},
     warp_drive::{Cache, Record, RecordChange, RecordId},
-    Alert, ApiList, EndpointName, Filesystem, FlatQuery, Host, Target, TargetConfParam,
+    Alert, ApiList, EndpointName, Filesystem, FlatQuery, FsType, Host, Target, TargetConfParam,
 };
 use std::{fmt::Debug, pin::Pin, sync::Arc};
 
@@ -374,6 +374,28 @@ pub async fn populate_from_db(
     cache.managed_target_mount = sqlx::query_as!(
         ManagedTargetMountRecord,
         "select * from chroma_core_managedtargetmount where not_deleted = 't'"
+    )
+    .fetch(pool)
+    .map_ok(|x| (x.id(), x))
+    .try_collect()
+    .await?;
+
+    cache.target_record = sqlx::query_as!(
+        TargetRecord,
+        r#"
+        SELECT
+            id,
+            state,
+            name,
+            dev_path,
+            active_host_id,
+            host_ids,
+            filesystems,
+            uuid,
+            mount_path,
+            fs_type as "fs_type: FsType"
+        FROM target
+        "#
     )
     .fetch(pool)
     .map_ok(|x| (x.id(), x))
