@@ -9,18 +9,20 @@ use crate::{
     },
     extensions::MergeAttrs,
     generated::css_classes::C,
+    get_target_from_managed_target,
     route::RouteId,
     sleep_with_handle, GMsg, RequestExt, Route,
 };
 use futures::channel::oneshot;
 use iml_graphql_queries::{client_mount, Response};
 use iml_wire_types::{
+    db::TargetRecord,
     warp_drive::{ArcCache, Locks},
     Filesystem, Session, Target, TargetConfParam, TargetKind, ToCompositeId,
 };
 use number_formatter as nf;
 use seed::{prelude::*, *};
-use std::time::Duration;
+use std::{borrow::Cow, time::Duration};
 use std::{collections::HashMap, sync::Arc};
 
 pub struct Row {
@@ -337,7 +339,14 @@ fn details(cache: &ArcCache, all_locks: &Locks, model: &Model) -> Node<Msg> {
             div![&label_cls, "State"],
             div![&item_cls, model.fs.state.to_string()],
             div![&label_cls, "MGS"],
-            div![&item_cls, mgs(&model.mgt, &model.fs)],
+            div![
+                &item_cls,
+                mgs(
+                    cache,
+                    &cache.target_record.values().cloned().collect::<Vec<_>>(),
+                    &model.fs
+                )
+            ],
             div![&label_cls, "Number of MDTs"],
             div![&item_cls, model.mdts.len().to_string()],
             div![&label_cls, "Number of OSTs"],
@@ -401,44 +410,56 @@ fn targets(
             vec![
                 t::thead_view(vec![
                     t::th_left(plain!["Name"]).merge_attrs(class![C.w_32]),
-                    t::th_left(plain!["Volume"]),
-                    t::th_left(plain!["Primary Server"]).merge_attrs(class![C.w_48, C.hidden, C.md__table_cell]),
-                    t::th_left(plain!["Failover Server"]).merge_attrs(class![C.w_48, C.hidden, C.md__table_cell]),
-                    t::th_left(plain!["Started on"]).merge_attrs(class![C.w_48]),
+                    t::th_left(plain!["Device Path"]),
+                    t::th_left(plain!["Active Server"]).merge_attrs(class![C.w_48, C.hidden, C.md__table_cell]),
+                    t::th_left(plain!["Standby Servers"]).merge_attrs(class![C.w_48, C.hidden, C.md__table_cell]),
                     th![class![C.w_48]]
                 ]),
-                tbody![tgts.iter().map(|x| match rows.get(&x.id) {
-                    None => empty![],
-                    Some(row) => tr![
-                        t::td_view(vec![
-                            a![
-                                class![C.text_blue_500, C.hover__underline],
-                                attrs! {At::Href => Route::Target(RouteId::from(x.id)).to_href()},
-                                &x.name
+                tbody![tgts
+                    .iter()
+                    .filter_map(|x| {
+                        let t = get_target_from_managed_target(cache, x)?;
+
+                        Some((x, t))
+                    })
+                    .map(move |(x, targ)| {
+                        let dev_path = targ
+                            .dev_path
+                            .as_ref()
+                            .map(|x| Cow::from(x.to_string()))
+                            .unwrap_or_else(|| Cow::from("---"));
+
+                        let active_host = targ.active_host_id.and_then(|x| cache.host.get(&x));
+
+                        match rows.get(&x.id) {
+                            None => empty![],
+                            Some(row) => tr![
+                                t::td_view(vec![
+                                    a![
+                                        class![C.text_blue_500, C.hover__underline],
+                                        attrs! {At::Href => Route::Target(RouteId::from(x.id)).to_href()},
+                                        &targ.name
+                                    ],
+                                    lock_indicator::view(all_locks, &x).merge_attrs(class![C.ml_2]),
+                                    alert_indicator(&cache.active_alert, &x, true, Placement::Right)
+                                        .merge_attrs(class![C.ml_2]),
+                                ]),
+                                t::td_view(plain![dev_path]),
+                                t::td_view(resource_links::server_link(
+                                    active_host.map(|x| &x.resource_uri),
+                                    active_host.map(|x| x.fqdn.to_string()).as_deref().unwrap_or_default(),
+                                ))
+                                .merge_attrs(class![C.hidden, C.md__table_cell]),
+                                t::td_view(standby_hosts_view(cache, &targ))
+                                    .merge_attrs(class![C.hidden, C.md__table_cell]),
+                                td![
+                                    class![C.p_3, C.text_center],
+                                    action_dropdown::view(x.id, &row.dropdown, all_locks, session)
+                                        .map_msg(|x| Msg::ActionDropdown(Box::new(x)))
+                                ]
                             ],
-                            lock_indicator::view(all_locks, &x).merge_attrs(class![C.ml_2]),
-                            alert_indicator(&cache.active_alert, &x, true, Placement::Right)
-                                .merge_attrs(class![C.ml_2]),
-                        ]),
-                        t::td_view(resource_links::volume_link(x)),
-                        t::td_view(resource_links::server_link(
-                            Some(&x.primary_server),
-                            &x.primary_server_name
-                        ))
-                        .merge_attrs(class![C.hidden, C.md__table_cell]),
-                        t::td_view(resource_links::server_link(
-                            x.failover_servers.first(),
-                            &x.failover_server_name
-                        ))
-                        .merge_attrs(class![C.hidden, C.md__table_cell]),
-                        t::td_view(resource_links::server_link(x.active_host.as_ref(), &x.active_host_name)),
-                        td![
-                            class![C.p_3, C.text_center],
-                            action_dropdown::view(x.id, &row.dropdown, all_locks, session)
-                                .map_msg(|x| Msg::ActionDropdown(Box::new(x)))
-                        ]
-                    ],
-                })]
+                        }
+                    })]
             ]
         ]
         .merge_attrs(class![C.p_6]),
@@ -449,6 +470,21 @@ fn targets(
     ]
 }
 
+pub(crate) fn standby_hosts_view<T>(cache: &ArcCache, target: &TargetRecord) -> Node<T> {
+    let mut standby_hosts: Vec<_> = target
+        .host_ids
+        .iter()
+        .filter(|x| Some(**x) != target.active_host_id)
+        .filter_map(|x| cache.host.get(&x))
+        .collect();
+
+    standby_hosts.sort_by(|a, b| natord::compare(&a.fqdn, &b.fqdn));
+
+    ul![standby_hosts
+        .iter()
+        .map(|x| li![resource_links::server_link(Some(&x.resource_uri), &x.fqdn)])]
+}
+
 pub(crate) fn status_view<T>(cache: &ArcCache, all_locks: &Locks, x: &Filesystem) -> Node<T> {
     span![
         class![C.whitespace_no_wrap],
@@ -457,11 +493,17 @@ pub(crate) fn status_view<T>(cache: &ArcCache, all_locks: &Locks, x: &Filesystem
     ]
 }
 
-pub(crate) fn mgs<T>(xs: &[Arc<Target<TargetConfParam>>], f: &Filesystem) -> Node<T> {
-    if let Some(t) = xs.iter().find(|t| t.kind == TargetKind::Mgt && f.mgt == t.resource_uri) {
-        resource_links::server_link(Some(&t.primary_server), &t.primary_server_name)
+pub(crate) fn mgs<T>(cache: &ArcCache, targets: &[Arc<TargetRecord>], f: &Filesystem) -> Node<T> {
+    let x = targets
+        .iter()
+        .find(|t| t.get_kind() == TargetKind::Mgt && t.filesystems.contains(&f.name))
+        .and_then(|x| x.active_host_id)
+        .and_then(|x| cache.host.get(&x));
+
+    if let Some(x) = x {
+        resource_links::server_link(Some(&x.resource_uri), &x.fqdn)
     } else {
-        plain!("---")
+        plain!["---"]
     }
 }
 
