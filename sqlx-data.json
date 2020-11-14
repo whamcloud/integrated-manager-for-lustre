@@ -306,6 +306,88 @@
       ]
     }
   },
+  "12b039adc74d7bebed739164545198b3de53a44940dbf3b8dc6137a3ae61af69": {
+    "query": "\n        SELECT\n            id,\n            state,\n            name,\n            dev_path,\n            active_host_id,\n            host_ids,\n            filesystems,\n            uuid,\n            mount_path,\n            fs_type as \"fs_type: FsType\"\n        FROM target\n        ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "state",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 3,
+          "name": "dev_path",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 4,
+          "name": "active_host_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 5,
+          "name": "host_ids",
+          "type_info": "Int4Array"
+        },
+        {
+          "ordinal": 6,
+          "name": "filesystems",
+          "type_info": "TextArray"
+        },
+        {
+          "ordinal": 7,
+          "name": "uuid",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 8,
+          "name": "mount_path",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 9,
+          "name": "fs_type: FsType",
+          "type_info": {
+            "Custom": {
+              "name": "fs_type",
+              "kind": {
+                "Enum": [
+                  "zfs",
+                  "ldiskfs"
+                ]
+              }
+            }
+          }
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        true,
+        true,
+        false,
+        false,
+        false,
+        true,
+        true
+      ]
+    }
+  },
   "12b85bdac2a34efedc73bb817f38fd589a8e2754392d863cf4211e169e935153": {
     "query": "\n        INSERT INTO chroma_core_sfadiskdrive\n        (\n            index,\n            enclosure_index,\n            failed,\n            slot_number,\n            health_state,\n            health_state_reason,\n            member_index,\n            member_state,\n            storage_system\n        )\n        SELECT * FROM UNNEST(\n            $1::integer[],\n            $2::integer[],\n            $3::bool[],\n            $4::integer[],\n            $5::smallint[],\n            $6::text[],\n            $7::smallint[],\n            $8::smallint[],\n            $9::text[]\n        )\n        ON CONFLICT (index, storage_system) DO UPDATE\n        SET\n            enclosure_index = excluded.enclosure_index,\n            failed = excluded.failed,\n            slot_number = excluded.slot_number,\n            health_state = excluded.health_state,\n            health_state_reason = excluded.health_state_reason,\n            member_index = excluded.member_index,\n            member_state = excluded.member_state\n    ",
     "describe": {
