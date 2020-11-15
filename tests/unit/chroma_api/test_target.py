@@ -46,7 +46,8 @@ class TestTargetResource(ChromaApiTestCase):
         self.assertHttpAccepted(response)
 
     @create_targets_patch
-    def test_patch_creation(self):
+    @mock.patch("chroma_core.lib.graphql.get_targets", return_value=mock.MagicMock())
+    def test_patch_creation(self, get_targets):
         """Test that creating multiple Targets using PATCH returns a target and a command"""
         host = synthetic_host("myserver")
         self.create_simple_filesystem(host)
