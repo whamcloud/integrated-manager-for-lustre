@@ -82,6 +82,10 @@ class ChromaApiTestCase(ResourceTestCase):
         self.old_get_locks = job_scheduler_client.JobSchedulerClient.get_locks
         job_scheduler_client.JobSchedulerClient.get_locks = fake_get_locks
 
+        mock.patch("chroma_core.lib.graphql.get_targets", new=mock.MagicMock()).start()
+
+        self.addCleanup(mock.patch.stopall)
+
     def tearDown(self):
         from chroma_api.authentication import CsrfAuthentication
 
