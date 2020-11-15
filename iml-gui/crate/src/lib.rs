@@ -650,9 +650,6 @@ fn handle_record_change(
                             model.records.corosync_configuration.clone(),
                         ));
                 }
-                ArcRecord::ManagedTargetMount(x) => {
-                    model.records.managed_target_mount.insert(x.id, x);
-                }
                 ArcRecord::OstPool(x) => {
                     model.records.ost_pool.insert(x.id, x);
                 }

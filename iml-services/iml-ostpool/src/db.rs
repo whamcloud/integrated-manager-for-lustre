@@ -7,8 +7,8 @@ use futures::future::try_join_all;
 use iml_postgres::Client;
 use iml_wire_types::{
     db::{
-        FsRecord, ManagedHostRecord, ManagedMdtRecord, ManagedOstRecord, ManagedTargetMountRecord,
-        ManagedTargetRecord, Name, OstPoolOstsRecord, OstPoolRecord,
+        FsRecord, ManagedHostRecord, ManagedMdtRecord, ManagedOstRecord, ManagedTargetRecord, Name,
+        OstPoolOstsRecord, OstPoolRecord,
     },
     Fqdn, OstPool,
 };
@@ -79,10 +79,9 @@ impl PoolClient {
                     ManagedOstRecord::table_name(),
                 );
                 let query = format!(
-                    "SELECT FS.id FROM {} AS FS INNER JOIN ({}) AS MTFS ON FS.id = MTFS.filesystem_id INNER JOIN {} AS MTM ON MTFS.managedtarget_ptr_id = MTM.target_id INNER JOIN {} AS MH ON MTM.host_id = MH.id WHERE FS.name = $1 AND MH.fqdn = $2 AND FS.not_deleted = True AND MTM.not_deleted = True AND MH.not_deleted = True",
+                    "SELECT FS.id FROM {} AS FS INNER JOIN ({}) AS MTFS ON FS.id = MTFS.filesystem_id INNER JOIN chroma_core_managedtargetmount AS MTM ON MTFS.managedtarget_ptr_id = MTM.target_id INNER JOIN {} AS MH ON MTM.host_id = MH.id WHERE FS.name = $1 AND MH.fqdn = $2 AND FS.not_deleted = True AND MTM.not_deleted = True AND MH.not_deleted = True",
                     FsRecord::table_name(),
                     union,
-                    ManagedTargetMountRecord::table_name(),
                     ManagedHostRecord::table_name());
                 let s = self.client.prepare(&query).await?;
                 match self.client.query_one(&s, &[&fsname, &self.fqdn]).await {

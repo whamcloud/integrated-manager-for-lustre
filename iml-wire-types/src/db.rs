@@ -230,38 +230,6 @@ impl Name for VolumeNodeRecord {
     }
 }
 
-/// Record from the `chroma_core_managedtargetmount` table
-#[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
-pub struct ManagedTargetMountRecord {
-    pub id: i32,
-    pub host_id: i32,
-    pub mount_point: Option<String>,
-    pub volume_node_id: i32,
-    pub primary: bool,
-    pub target_id: i32,
-    pub not_deleted: Option<bool>,
-}
-
-impl Id for ManagedTargetMountRecord {
-    fn id(&self) -> i32 {
-        self.id
-    }
-}
-
-impl NotDeleted for ManagedTargetMountRecord {
-    fn not_deleted(&self) -> bool {
-        not_deleted(self.not_deleted)
-    }
-}
-
-pub const MANAGED_TARGET_MOUNT_TABLE_NAME: TableName = TableName("chroma_core_managedtargetmount");
-
-impl Name for ManagedTargetMountRecord {
-    fn table_name() -> TableName<'static> {
-        MANAGED_TARGET_MOUNT_TABLE_NAME
-    }
-}
-
 /// Record from the `chroma_core_managedtarget` table
 #[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
 pub struct ManagedTargetRecord {
