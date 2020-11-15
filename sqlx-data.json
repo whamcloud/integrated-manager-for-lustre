@@ -4683,60 +4683,6 @@
       "nullable": []
     }
   },
-  "f8cd2baf66e0d74fea5babd851be21a3badca94a53aee6bac038141cece53646": {
-    "query": "select * from chroma_core_managedtargetmount where not_deleted = 't'",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 1,
-          "name": "mount_point",
-          "type_info": "Varchar"
-        },
-        {
-          "ordinal": 2,
-          "name": "primary",
-          "type_info": "Bool"
-        },
-        {
-          "ordinal": 3,
-          "name": "not_deleted",
-          "type_info": "Bool"
-        },
-        {
-          "ordinal": 4,
-          "name": "host_id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 5,
-          "name": "target_id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 6,
-          "name": "volume_node_id",
-          "type_info": "Int4"
-        }
-      ],
-      "parameters": {
-        "Left": []
-      },
-      "nullable": [
-        false,
-        true,
-        false,
-        true,
-        false,
-        false,
-        false
-      ]
-    }
-  },
   "fa7bdf3c5e49361f1afaa6a2075745f0943c461aa87a97854e3004c75c5f6367": {
     "query": "SELECT \n                index,\n                enclosure_index,\n                failed,\n                slot_number,\n                health_state  as \"health_state: _\",\n                health_state_reason,\n                member_index,\n                member_state as \"member_state: _\",\n                storage_system\n            FROM chroma_core_sfadiskdrive",
     "describe": {

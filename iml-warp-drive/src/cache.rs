@@ -10,9 +10,9 @@ use iml_wire_types::{
     db::{
         AlertStateRecord, AuthGroupRecord, AuthUserGroupRecord, AuthUserRecord, ContentTypeRecord,
         CorosyncConfigurationRecord, FsRecord, Id, LnetConfigurationRecord, ManagedHostRecord,
-        ManagedTargetMountRecord, ManagedTargetRecord, NotDeleted, OstPoolOstsRecord,
-        OstPoolRecord, PacemakerConfigurationRecord, StratagemConfiguration, TargetRecord,
-        VolumeNodeRecord, VolumeRecord,
+        ManagedTargetRecord, NotDeleted, OstPoolOstsRecord, OstPoolRecord,
+        PacemakerConfigurationRecord, StratagemConfiguration, TargetRecord, VolumeNodeRecord,
+        VolumeRecord,
     },
     sfa::{
         EnclosureType, HealthState, JobState, JobType, MemberState, SfaController, SfaDiskDrive,
@@ -259,17 +259,6 @@ pub async fn db_record_to_change_record(
                 Ok(RecordChange::Update(Record::PacemakerConfiguration(x)))
             }
         },
-        DbRecord::ManagedTargetMount(x) => match (msg_type, x) {
-            (MessageType::Delete, x) => {
-                Ok(RecordChange::Delete(RecordId::ManagedTargetMount(x.id())))
-            }
-            (_, ref x) if x.deleted() => {
-                Ok(RecordChange::Delete(RecordId::ManagedTargetMount(x.id())))
-            }
-            (MessageType::Insert, x) | (MessageType::Update, x) => {
-                Ok(RecordChange::Update(Record::ManagedTargetMount(x)))
-            }
-        },
         DbRecord::TargetRecord(x) => match (msg_type, x) {
             (MessageType::Delete, x) => Ok(RecordChange::Delete(RecordId::TargetRecord(x.id()))),
             (MessageType::Insert, x) | (MessageType::Update, x) => {
@@ -368,15 +357,6 @@ pub async fn populate_from_db(
     cache.target = sqlx::query_as!(
         ManagedTargetRecord,
         "select * from chroma_core_managedtarget where not_deleted = 't'"
-    )
-    .fetch(pool)
-    .map_ok(|x| (x.id(), x))
-    .try_collect()
-    .await?;
-
-    cache.managed_target_mount = sqlx::query_as!(
-        ManagedTargetMountRecord,
-        "select * from chroma_core_managedtargetmount where not_deleted = 't'"
     )
     .fetch(pool)
     .map_ok(|x| (x.id(), x))
