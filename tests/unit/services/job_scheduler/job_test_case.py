@@ -235,6 +235,27 @@ class JobTestCase(IMLUnitTestCase):
 
         AgentDaemonRpcInterface.remove_host_resources = mock.Mock(side_effect=fake_remove_host_resources)
 
+        def get_targets_fn():
+            from chroma_core.models import ManagedHost
+
+            ids = [x.id for x in ManagedHost.objects.all()]
+            host_id = ids[0]
+
+            return [
+                {"name": "MGS", "active_host_id": host_id, "host_ids": ids},
+                {"name": "testfs-MDT0000", "active_host_id": host_id, "host_ids": ids},
+                {"name": "testfs-OST0000", "active_host_id": host_id, "host_ids": ids},
+                {"name": "testfs-OST0001", "active_host_id": host_id, "host_ids": ids},
+                {"name": "testfs2-OST0000", "active_host_id": host_id, "host_ids": ids},
+                {"name": "testfs2-MDT0000", "active_host_id": host_id, "host_ids": ids},
+            ]
+
+        self.get_targets_mock = mock.MagicMock(side_effect=get_targets_fn)
+
+        mock.patch("chroma_core.lib.graphql.get_targets", new=self.get_targets_mock).start()
+
+        self.addCleanup(mock.patch.stopall)
+
     def tearDown(self):
         import chroma_core.services.job_scheduler.agent_rpc
 

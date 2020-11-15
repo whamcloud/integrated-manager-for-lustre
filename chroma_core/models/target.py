@@ -111,32 +111,6 @@ class ManagedTarget(StatefulObject):
         any existing filesystem on the Volume should be overwritten",
     )
 
-    @property
-    def full_volume(self):
-        """
-        Used in API Resource that want the Volume and all related objects
-
-        This results in a join query to get data with fewer DB hits
-
-        If the volume was picked up using a simple join from the targets table then we would not need to work
-        around the not_deleted (it would pick up the record deleted or not) but because we effectively hardcode
-        it we have to ignore not deleted by use of the _base_manager.
-
-        Sadly the storage_resources do return empty because they are actually deleted, meaning we have Volume records
-        that have no resource records to go with them.
-        """
-
-        return (
-            Volume._base_manager.all()
-            .select_related(
-                "storage_resource",
-                "storage_resource__resource_class",
-                "storage_resource__resource_class__storage_plugin",
-            )
-            .prefetch_related("volumenode_set", "volumenode_set__host")
-            .get(pk=self.volume.pk)
-        )
-
     def update_active_mount(self, nodename):
         """Set the active_mount attribute from the nodename of a host, raising
         RuntimeErrors if the host doesn't exist or doesn't have a ManagedTargetMount"""
@@ -213,10 +187,14 @@ class ManagedTarget(StatefulObject):
 
     @property
     def active_host(self):
-        if self.active_mount:
-            return self.active_mount.host
-        else:
+        t = get_target_by_name(self.name)
+
+        id = t.get("active_host_id")
+
+        if id is None:
             return None
+
+        return ManagedHost.objects.get(id=id)
 
     def get_label(self):
         return self.name
@@ -226,14 +204,18 @@ class ManagedTarget(StatefulObject):
 
     def best_available_host(self):
         """
-        :return: A host which is available for actions, preferably the primary.
+        :return: A host which is available for actions, preferably the one running this target.
         """
-        mounts = ObjectCache.get(ManagedTargetMount, lambda mtm: mtm.target.id == self.id)
-        for mount in sorted(mounts, lambda a, b: cmp(b.primary, a.primary)):
-            if HostContactAlert.filter_by_item(mount.host).count() == 0:
-                return mount.host
 
-        raise ManagedHost.DoesNotExist("No hosts online for %s" % self)
+        t = get_target_by_name(self.name)
+        xs = [t.get("active_host_id")] if t.get("active_host_id") else []
+        xs = xs + t["host_ids"]
+        xs = filter(lambda x: HostContactAlert.filter_by_item_id(ManagedHost, x).count() == 0, xs)
+
+        if len(xs) == 0:
+            raise ManagedHost.DoesNotExist("No hosts online for {}".format(t["name"]))
+
+        return ManagedHost.objects.get(id=xs[0])
 
     # unformatted: I exist in theory in the database
     # formatted: I've been mkfs'd
@@ -1917,3 +1899,11 @@ class TargetRecoveryAlert(AlertStateBase):
 
     def affected_targets(self, affect_target):
         affect_target(self.alert_item)
+
+
+def get_target_by_name(name):
+    from chroma_core.lib.graphql import get_targets
+
+    xs = get_targets()
+
+    return next(x for x in xs if x["name"] == name)
