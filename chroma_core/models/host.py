@@ -1179,6 +1179,13 @@ class DeleteHostStep(Step):
                 """,
                 [host.id],
             )
+            cursor.execute(
+                """
+                DELETE FROM network_interface
+                WHERE host_id = %s
+                """,
+                [host.id],
+            )
 
             influx_post(settings.INFLUXDB_IML_STATS_DB, "DELETE FROM net WHERE \"host_id\"='{}'".format(host.id))
 

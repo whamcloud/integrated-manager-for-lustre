@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS lnet (
 CREATE TABLE IF NOT EXISTS nid (
     id serial PRIMARY KEY,
     net_type text NOT NULL,
-    host_id int NOT NULL UNIQUE,
+    host_id int NOT NULL,
     nid text NOT NULL,
     status text NOT NULL,
     interfaces text[] NOT NULL,
