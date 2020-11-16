@@ -521,6 +521,92 @@
       "nullable": []
     }
   },
+  "1cc41f526860fb071f25210fb0c8e661055342e1526968553ae4422959171a6c": {
+    "query": "\n                SELECT id, state, name, active_host_id, host_ids, filesystems, uuid, mount_path, dev_path, fs_type as \"fs_type: FsType\" from target t\n                ORDER BY\n                    CASE WHEN $3 = 'ASC' THEN t.name END ASC,\n                    CASE WHEN $3 = 'DESC' THEN t.name END DESC\n                OFFSET $1 LIMIT $2",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "state",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 3,
+          "name": "active_host_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 4,
+          "name": "host_ids",
+          "type_info": "Int4Array"
+        },
+        {
+          "ordinal": 5,
+          "name": "filesystems",
+          "type_info": "TextArray"
+        },
+        {
+          "ordinal": 6,
+          "name": "uuid",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 7,
+          "name": "mount_path",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 8,
+          "name": "dev_path",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 9,
+          "name": "fs_type: FsType",
+          "type_info": {
+            "Custom": {
+              "name": "fs_type",
+              "kind": {
+                "Enum": [
+                  "zfs",
+                  "ldiskfs"
+                ]
+              }
+            }
+          }
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Int8",
+          "Text"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true
+      ]
+    }
+  },
   "1f0a3d6d1b9f42c2eeca372f6a030e76015214803fb010c2b2e9f2899c57ac38": {
     "query": "select * from chroma_core_managedhost where fqdn = $1 and not_deleted = 't'",
     "describe": {
@@ -1246,6 +1332,54 @@
         ]
       },
       "nullable": []
+    }
+  },
+  "3cb1094d7efdccbf02af2f702d8c6accea293012eb426d70648c32c1682cc1b8": {
+    "query": "\n            SELECT b.id, b.resource, b.node, b.cluster_id, nh.host_id, t.mount_point\n            FROM corosync_resource_bans b\n            INNER JOIN corosync_node_managed_host nh ON (nh.corosync_node_id).name = b.node\n            AND nh.cluster_id = b.cluster_id\n            INNER JOIN corosync_resource t ON t.id = b.resource AND b.cluster_id = t.cluster_id\n            WHERE t.mount_point != NULL\n        ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 1,
+          "name": "resource",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "node",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 3,
+          "name": "cluster_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 4,
+          "name": "host_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 5,
+          "name": "mount_point",
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        true
+      ]
     }
   },
   "414a5b7c63ec04ad876c282460de775c0e919c1063c46c7a49704b3ccd87ab3f": {
@@ -2029,84 +2163,108 @@
       "nullable": []
     }
   },
-  "6f09a199e586713a8d4e6f62be9ed5eef10653667445362c90966d7344b8c0fa": {
-    "query": "\n            SELECT state, name, active_host_id, host_ids, filesystems, uuid, mount_path, dev_path, fs_type as \"fs_type: FsType\" from target t\n            ORDER BY\n                CASE WHEN $3 = 'asc' THEN t.name END ASC,\n                CASE WHEN $3 = 'desc' THEN t.name END DESC\n            OFFSET $1 LIMIT $2",
+  "6f3c08f058a72efb6a3926dbe47380662c1eb80ec3001bf551792719fcd51e74": {
+    "query": "\n                SELECT jsonb_agg((r.repo_name, r.location))\n                    AS repos, sp.*\n                    FROM chroma_core_repo AS r\n                    INNER JOIN chroma_core_serverprofile_repolist AS rl ON r.repo_name = rl.repo_id\n                    INNER JOIN chroma_core_serverprofile AS sp ON rl.serverprofile_id = sp.name\n                    GROUP BY sp.name;\n            ",
     "describe": {
       "columns": [
         {
           "ordinal": 0,
-          "name": "state",
-          "type_info": "Text"
+          "name": "repos",
+          "type_info": "Jsonb"
         },
         {
           "ordinal": 1,
           "name": "name",
-          "type_info": "Text"
+          "type_info": "Varchar"
         },
         {
           "ordinal": 2,
-          "name": "active_host_id",
-          "type_info": "Int4"
+          "name": "ui_name",
+          "type_info": "Varchar"
         },
         {
           "ordinal": 3,
-          "name": "host_ids",
-          "type_info": "Int4Array"
+          "name": "ui_description",
+          "type_info": "Text"
         },
         {
           "ordinal": 4,
-          "name": "filesystems",
-          "type_info": "TextArray"
+          "name": "managed",
+          "type_info": "Bool"
         },
         {
           "ordinal": 5,
-          "name": "uuid",
-          "type_info": "Text"
+          "name": "worker",
+          "type_info": "Bool"
         },
         {
           "ordinal": 6,
-          "name": "mount_path",
-          "type_info": "Text"
+          "name": "user_selectable",
+          "type_info": "Bool"
         },
         {
           "ordinal": 7,
-          "name": "dev_path",
-          "type_info": "Text"
+          "name": "initial_state",
+          "type_info": "Varchar"
         },
         {
           "ordinal": 8,
-          "name": "fs_type: FsType",
-          "type_info": {
-            "Custom": {
-              "name": "fs_type",
-              "kind": {
-                "Enum": [
-                  "zfs",
-                  "ldiskfs"
-                ]
-              }
-            }
-          }
+          "name": "ntp",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 9,
+          "name": "corosync",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 10,
+          "name": "corosync2",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 11,
+          "name": "pacemaker",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 12,
+          "name": "default",
+          "type_info": "Bool"
         }
       ],
       "parameters": {
-        "Left": [
-          "Int8",
-          "Int8",
-          "Text"
-        ]
+        "Left": []
       },
       "nullable": [
+        null,
         false,
         false,
-        true,
         false,
         false,
         false,
-        true,
-        true,
-        true
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
       ]
+    }
+  },
+  "7ba0b27a4f4fca50c30701d9adbbf0c0421c310b6b99453bffb4bc7834fa765c": {
+    "query": "\n                INSERT INTO corosync_resource_managed_host (host_id, cluster_id, corosync_resource_id)\n                SELECT $1, $2, corosync_resource_id FROM UNNEST($3::text[]) as corosync_resource_id\n                ON CONFLICT (host_id, corosync_resource_id, cluster_id)\n                DO NOTHING\n            ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Int4",
+          "TextArray"
+        ]
+      },
+      "nullable": []
     }
   },
   "7bee1c38d05ac3f8bcf4d48b375c740341121c04d2f5b04ceb1d58ef0a006c08": {
