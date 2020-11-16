@@ -2,7 +2,6 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use iml_postgres::sqlx;
 use iml_wire_types::Command;
 use thiserror::Error;
 
@@ -73,7 +72,6 @@ pub enum ImlManagerCliError {
     ReqwestError(#[from] reqwest::Error),
     RunStratagemValidationError(#[from] RunStratagemValidationError),
     SerdeJsonError(#[from] serde_json::error::Error),
-    SqlxError(#[from] sqlx::Error),
     TokioJoinError(#[from] tokio::task::JoinError),
     TokioTimerError(#[from] tokio::time::Error),
 }
@@ -105,7 +103,6 @@ impl std::fmt::Display for ImlManagerCliError {
             ImlManagerCliError::ReqwestError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::RunStratagemValidationError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::SerdeJsonError(ref err) => write!(f, "{}", err),
-            ImlManagerCliError::SqlxError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::TokioJoinError(ref err) => write!(f, "{}", err),
             ImlManagerCliError::TokioTimerError(ref err) => write!(f, "{}", err),
         }

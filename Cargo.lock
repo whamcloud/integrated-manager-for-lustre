@@ -1832,7 +1832,6 @@ dependencies = [
  "iml-graphql-queries",
  "iml-influx",
  "iml-manager-client",
- "iml-postgres",
  "iml-tracing",
  "iml-wire-types",
  "indicatif",

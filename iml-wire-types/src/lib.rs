@@ -690,13 +690,17 @@ pub mod graphql {
         pub corosync: bool,
         pub corosync2: bool,
         pub default: bool,
+        #[serde(rename(serialize = "initialState"))]
         pub initial_state: String,
         pub managed: bool,
         pub name: String,
         pub ntp: bool,
         pub pacemaker: bool,
+        #[serde(rename(serialize = "uiDescription"))]
         pub ui_description: String,
+        #[serde(rename(serialize = "uiName"))]
         pub ui_name: String,
+        #[serde(rename(serialize = "userSelectable"))]
         pub user_selectable: bool,
         pub worker: bool,
         pub packages: Vec<String>,
@@ -715,12 +719,6 @@ pub mod graphql {
     pub struct RepositoryInput {
         pub name: String,
         pub location: String,
-    }
-
-    #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
-    #[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
-    pub struct ServerProfileResponse {
-        pub data: Vec<ServerProfile>,
     }
 
     impl ServerProfile {

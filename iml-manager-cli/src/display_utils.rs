@@ -7,8 +7,9 @@ use console::style;
 use futures::{Future, FutureExt};
 use iml_wire_types::{
     db::TargetRecord,
+    graphql::ServerProfile,
     snapshot::{ReserveUnit, Snapshot, SnapshotInterval, SnapshotRetention},
-    Command, Filesystem, Host, OstPool, ServerProfile, StratagemConfiguration, StratagemReport,
+    Command, Filesystem, Host, OstPool, StratagemConfiguration, StratagemReport,
 };
 use indicatif::ProgressBar;
 use number_formatter::{format_bytes, format_number};

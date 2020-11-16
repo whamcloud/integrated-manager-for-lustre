@@ -3,17 +3,14 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    api_utils::get_all,
+    api_utils::graphql,
     display_utils::{display_success, wrap_fut, DisplayType, IntoDisplayType as _},
     error::ImlManagerCliError,
 };
 use console::Term;
-use iml_postgres::{get_db_pool, sqlx};
-use iml_wire_types::{ApiList, ServerProfile};
-use std::{
-    collections::HashSet,
-    io::{Error, ErrorKind},
-};
+use iml_graphql_queries::server_profile;
+use iml_wire_types::graphql::ServerProfileInput;
+use std::collections::HashSet;
 use structopt::StructOpt;
 use tokio::io::{stdin, AsyncReadExt};
 
@@ -35,11 +32,15 @@ pub enum Cmd {
 }
 
 async fn list_profiles(display_type: DisplayType) -> Result<(), ImlManagerCliError> {
-    let profiles: ApiList<ServerProfile> = wrap_fut("Fetching profiles...", get_all()).await?;
+    let query = server_profile::list::build();
 
-    tracing::debug!("profiles: {:?}", profiles);
+    let resp: iml_graphql_queries::Response<server_profile::list::Resp> =
+        wrap_fut("Fetching profiles", graphql(query)).await?;
+    let server_profiles = Result::from(resp)?.data.server_profiles;
 
-    let x = profiles.objects.into_display_type(display_type);
+    tracing::debug!("profiles: {:?}", server_profiles);
+
+    let x = server_profiles.into_display_type(display_type);
 
     let term = Term::stdout();
 
@@ -64,6 +65,27 @@ pub struct UserProfile {
     pub worker: bool,
 }
 
+impl Into<ServerProfileInput> for UserProfile {
+    fn into(self) -> ServerProfileInput {
+        ServerProfileInput {
+            corosync: self.corosync,
+            corosync2: self.corosync2,
+            default: false,
+            initial_state: self.initial_state,
+            managed: self.managed,
+            name: self.name,
+            ntp: self.ntp,
+            pacemaker: self.pacemaker,
+            packages: self.packages.into_iter().collect(),
+            repolist: self.repolist.into_iter().collect(),
+            ui_description: self.ui_description,
+            ui_name: self.ui_name,
+            user_selectable: true,
+            worker: self.worker,
+        }
+    }
+}
+
 pub async fn cmd(cmd: Option<Cmd>) -> Result<(), ImlManagerCliError> {
     match cmd {
         None => {
@@ -73,132 +95,25 @@ pub async fn cmd(cmd: Option<Cmd>) -> Result<(), ImlManagerCliError> {
             list_profiles(display_type).await?;
         }
         Some(Cmd::Load) => {
-            let pool = get_db_pool(1).await?;
-
             let mut buf: Vec<u8> = Vec::new();
             stdin().read_to_end(&mut buf).await?;
             let profile: UserProfile = serde_json::from_slice(&buf)?;
+            let input: ServerProfileInput = profile.into();
 
-            let repolist: Vec<String> = profile.repolist.into_iter().collect();
-            let repolist_len = repolist.len();
+            let query = server_profile::create::build(input);
 
-            let count = sqlx::query!(
-                "SELECT repo_name from chroma_core_repo where repo_name = ANY($1)",
-                &repolist.clone()
-            )
-            .fetch_all(&pool)
-            .await?
-            .len();
-
-            if count != repolist_len {
-                return Err(Error::new(
-                    ErrorKind::NotFound,
-                    format!("Repos not found for profile {}", profile.name),
-                )
-                .into());
-            }
-
-            sqlx::query!(
-                r#"
-                INSERT INTO chroma_core_serverprofile
-                (
-                    name,
-                    ui_name,
-                    ui_description,
-                    managed,
-                    worker,
-                    user_selectable,
-                    initial_state,
-                    ntp,
-                    corosync,
-                    corosync2,
-                    pacemaker,
-                    "default"
-                )
-                VALUES
-                ($1, $2, $3, $4, $5, 'true', $6, $7, $8, $9, $10, 'false')
-                ON CONFLICT (name)
-                DO UPDATE
-                SET
-                ui_name = excluded.ui_name,
-                ui_description = excluded.ui_description,
-                managed = excluded.managed,
-                worker = excluded.worker,
-                user_selectable = excluded.user_selectable,
-                initial_state = excluded.initial_state,
-                ntp = excluded.ntp,
-                corosync = excluded.corosync,
-                corosync2 = excluded.corosync2,
-                pacemaker = excluded.pacemaker,
-                "default" = excluded.default
-            "#,
-                &profile.name,
-                &profile.ui_name,
-                &profile.ui_description,
-                &profile.managed,
-                &profile.worker,
-                &profile.initial_state,
-                &profile.ntp,
-                &profile.corosync,
-                &profile.corosync2,
-                &profile.pacemaker
-            )
-            .execute(&pool)
-            .await?;
-
-            sqlx::query!(
-                r#"
-                INSERT INTO chroma_core_serverprofile_repolist (serverprofile_id, repo_id)
-                SELECT $1, repo_id
-                FROM UNNEST($2::text[])
-                AS t(repo_id)
-                ON CONFLICT DO NOTHING
-            "#,
-                &profile.name,
-                &repolist
-            )
-            .execute(&pool)
-            .await?;
-
-            sqlx::query!(
-                r#"
-                INSERT INTO chroma_core_serverprofilepackage (package_name, server_profile_id)
-                SELECT package_name, $2
-                FROM UNNEST($1::text[])
-                as t(package_name)
-                ON CONFLICT DO NOTHING
-                "#,
-                &profile.packages.into_iter().collect::<Vec<_>>(),
-                &profile.name
-            )
-            .execute(&pool)
-            .await?;
+            let resp: iml_graphql_queries::Response<server_profile::create::Resp> =
+                wrap_fut("Loading profile", graphql(query)).await?;
+            let _success = Result::from(resp)?.data.create_server_profile;
 
             display_success("Profile loaded");
         }
         Some(Cmd::Remove { name }) => {
-            let pool = get_db_pool(1).await?;
+            let query = server_profile::remove::build(&name);
 
-            sqlx::query!(
-                "DELETE FROM chroma_core_serverprofile_repolist WHERE serverprofile_id = $1",
-                &name
-            )
-            .execute(&pool)
-            .await?;
-
-            sqlx::query!(
-                "DELETE FROM chroma_core_serverprofilepackage WHERE server_profile_id = $1",
-                &name
-            )
-            .execute(&pool)
-            .await?;
-
-            sqlx::query!(
-                "DELETE FROM chroma_core_serverprofile where name = $1",
-                &name
-            )
-            .execute(&pool)
-            .await?;
+            let resp: iml_graphql_queries::Response<server_profile::remove::Resp> =
+                wrap_fut("Removing profile", graphql(query)).await?;
+            let _success = Result::from(resp)?.data.remove_server_profile;
 
             display_success("Profile removed");
         }

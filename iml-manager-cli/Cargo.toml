@@ -18,7 +18,6 @@ iml-command-utils = {path = "../iml-command-utils", version = "0.4"}
 iml-graphql-queries = {path = "../iml-graphql-queries", version = "0.2"}
 iml-influx = {path = "../iml-influx", version = "0.2"}
 iml-manager-client = {path = "../iml-manager-client", version = "0.4"}
-iml-postgres = {path = "../iml-postgres", version = "0.4"}
 iml-tracing = {version = "0.3", path = "../iml-tracing"}
 iml-wire-types = {path = "../iml-wire-types", version = "0.4", features = ["cli"]}
 indicatif = "0.15"
