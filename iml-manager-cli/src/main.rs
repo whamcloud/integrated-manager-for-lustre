@@ -86,9 +86,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match matches {
         App::Shell { .. } => (),
-        _ => {
-            dotenv::from_path("/var/lib/chroma/iml-settings.conf").expect("Could not load cli env")
-        }
+        _ => dotenv::from_path("/etc/emf/emf-settings.conf")
+            .or_else(|_| dotenv::from_path("/etc/iml/iml-settings.conf"))
+            .or_else(|_| dotenv::from_path("/var/lib/chroma/iml-settings.conf"))
+            .expect("Could not load cli env"),
     }
 
     let r = match matches {
