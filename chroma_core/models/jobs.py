@@ -17,7 +17,6 @@ from chroma_core.models.utils import DeletableDowncastableMetaclass
 from chroma_core.lib.job import DependOn, DependAll, job_log
 from chroma_core.lib.util import all_subclasses
 from chroma_core.services import log_register
-log = log_register(__name__)
 
 MAX_STATE_STRING = 32
 
@@ -323,8 +322,6 @@ class Job(models.Model):
 
     def __init__(self, *args, **kwargs):
         super(Job, self).__init__(*args, **kwargs)
-        for line in traceback.format_stack():
-            log.info(line.strip())
 
     # Hashing functions are specialized to how jobs are used/indexed inside CommandPlan
     # - eq+hash operations are for operating on unsaved jobs
