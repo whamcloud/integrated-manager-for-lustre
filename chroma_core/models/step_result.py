@@ -13,7 +13,6 @@ from picklefield.fields import PickledObjectField
 from iml_common.lib import util
 from chroma_core.lib.job import Step
 from chroma_core.services import log_register
-log = log_register(__name__)
 
 MAX_STATE_STRING = 32
 
@@ -22,8 +21,6 @@ class StepResult(models.Model):
 
     def __init__(self, *args, **kwargs):
         super(StepResult, self).__init__(*args, **kwargs)
-        for line in traceback.format_stack():
-            log.info(line.strip())
 
     job = models.ForeignKey("Job", on_delete=CASCADE)
     step_klass = PickledObjectField()
