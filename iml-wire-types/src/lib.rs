@@ -2111,6 +2111,7 @@ pub struct LustreClient {
 #[cfg_attr(feature = "postgres-interop", derive(sqlx::Type))]
 #[cfg_attr(feature = "postgres-interop", sqlx(rename = "fs_type"))]
 #[cfg_attr(feature = "postgres-interop", sqlx(rename_all = "lowercase"))]
+#[serde(rename_all = "lowercase")]
 #[derive(PartialEq, Eq, Clone, Debug, serde::Serialize, serde::Deserialize, Ord, PartialOrd)]
 pub enum FsType {
     Zfs,

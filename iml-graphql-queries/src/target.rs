@@ -18,6 +18,7 @@ pub mod list {
                 filesystems
                 uuid
                 mount_path: mountPath
+                fs_type: fsType
               }
             }
         "#;
