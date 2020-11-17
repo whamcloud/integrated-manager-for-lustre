@@ -5,7 +5,7 @@
 use crate::{
     command::get_command,
     error::ImlApiError,
-    graphql::{fs_id_by_name, insert_task, Context, SendJob},
+    graphql::{insert_task, Context, SendJob},
 };
 use futures::{
     future::{self, try_join_all},
@@ -65,8 +65,6 @@ impl StratagemMutation {
     ) -> juniper::FieldResult<Command> {
         let uuid = Uuid::new_v4().to_hyphenated().to_string();
 
-        let fs_id = fs_id_by_name(&context.pg_pool, &fsname).await?;
-
         let task = insert_task(
             &format!("{}-filesync-filesync", uuid),
             "created",
@@ -78,7 +76,7 @@ impl StratagemMutation {
                 "expression": expression,
                 "action": action,
             }),
-            fs_id,
+            &fsname,
             &context.pg_pool,
         )
         .await?;
@@ -162,8 +160,6 @@ impl StratagemMutation {
     ) -> juniper::FieldResult<Command> {
         let uuid = Uuid::new_v4().to_hyphenated().to_string();
 
-        let fs_id = fs_id_by_name(&context.pg_pool, &fsname).await?;
-
         let task = insert_task(
             &format!("{}-cloudsync-cloudsync", uuid),
             "created",
@@ -175,7 +171,7 @@ impl StratagemMutation {
                 "expression": expression,
                 "action": action,
             }),
-            fs_id,
+            &fsname,
             &context.pg_pool,
         )
         .await?;
@@ -276,8 +272,6 @@ impl StratagemMutation {
 
         let mut groups = vec!["size_distribution".into(), "user_distribution".into()];
 
-        let fs_id = fs_id_by_name(&context.pg_pool, &fsname).await?;
-
         if report_duration.is_some() {
             let task = insert_task(
                 &format!("{}-warn_fids-fids_expiring_soon", uuid),
@@ -288,7 +282,7 @@ impl StratagemMutation {
                 serde_json::json!({
                     "report_name": format!("expiring_fids-{}-{}.txt", fsname, uuid)
                 }),
-                fs_id,
+                &fsname,
                 &context.pg_pool,
             )
             .await?;
@@ -313,7 +307,7 @@ impl StratagemMutation {
                 false,
                 &["stratagem.purge".into()],
                 serde_json::json!({}),
-                fs_id,
+                &fsname,
                 &context.pg_pool,
             )
             .await?;
@@ -500,8 +494,6 @@ impl StratagemMutation {
     ) -> juniper::FieldResult<Command> {
         let mut jobs: Vec<SendJob<HashMap<String, serde_json::Value>>> = vec![];
 
-        let fs_id = fs_id_by_name(&context.pg_pool, &fsname).await?;
-
         let mut cleanup_tasks = vec![];
 
         for t in tasks {
@@ -515,7 +507,7 @@ impl StratagemMutation {
                 t.keep_failed,
                 &t.actions,
                 serde_json::to_value(&args)?,
-                fs_id,
+                &fsname,
                 &context.pg_pool,
             )
             .await?;

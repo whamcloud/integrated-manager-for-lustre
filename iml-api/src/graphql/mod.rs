@@ -1386,7 +1386,7 @@ async fn insert_task(
     keep_failed: bool,
     actions: &[String],
     args: serde_json::Value,
-    fs_id: i32,
+    fs_name: &str,
     pool: &PgPool,
 ) -> Result<Task, ImlApiError> {
     let x = sqlx::query_as!(
@@ -1404,7 +1404,7 @@ async fn insert_task(
                     keep_failed,
                     actions,
                     args,
-                    filesystem_id
+                    fs_name
                 )
                 VALUES (
                     $1,
@@ -1428,7 +1428,7 @@ async fn insert_task(
         keep_failed,
         actions,
         args,
-        fs_id
+        fs_name
     )
     .fetch_one(pool)
     .await?;

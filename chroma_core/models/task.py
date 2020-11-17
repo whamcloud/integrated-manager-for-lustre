@@ -8,7 +8,6 @@ from django.contrib.postgres.fields import ArrayField, JSONField
 import django.utils.timezone
 
 from chroma_core.lib.job import DependOn, DependAll, Step
-from chroma_core.models import ManagedFilesystem, ManagedHost
 from chroma_core.models import AdvertisedJob
 
 
@@ -29,7 +28,7 @@ class LustreFidField(models.Field):
 class Task(models.Model):
     """ List of task queues """
 
-    filesystem = models.ForeignKey("ManagedFilesystem", on_delete=CASCADE)
+    fs_name = models.CharField(max_length=8, null=False)
 
     name = models.CharField(max_length=128)
     start = models.DateTimeField(null=False)
@@ -56,13 +55,22 @@ class Task(models.Model):
     # diesel on the rust side
     actions = ArrayField(models.TextField())
 
-    running_on = models.ForeignKey("ManagedHost", blank=True, null=True, on_delete=SET_NULL)
+    running_on_fqdn = models.TextField(null=True)
 
     args = JSONField(default={})
 
     class Meta:
         app_label = "chroma_core"
         unique_together = ("name",)
+
+    def server_list(self):
+        from chroma_core.lib.graphql import graphql_query
+
+        query = '{{ getFsClusterHosts(fsName: "{}") }}'.format(self.fs_name)
+
+        clusters = graphql_query(query)["getFsClusterHosts"]
+
+        return [host for hostlist in clusters for host in hostlist]
 
 
 class CreateTaskJob(AdvertisedJob):
@@ -88,8 +96,8 @@ class CreateTaskJob(AdvertisedJob):
 
     def get_steps(self):
         steps = []
-        for host in self.task.filesystem.get_servers():
-            steps.append((CreateTaskStep, {"task": self.task.name, "host": host.fqdn}))
+        for host in self.task.server_list():
+            steps.append((CreateTaskStep, {"task": self.task.name, "host": host}))
 
         return steps
 
@@ -123,8 +131,8 @@ class RemoveTaskJob(AdvertisedJob):
     def get_steps(self):
         steps = []
         if self.task.state != "removed":
-            for host in self.task.filesystem.get_servers():
-                steps.append((RemoveTaskStep, {"task": self.task.name, "host": host.fqdn}))
+            for host in self.task.server_list():
+                steps.append((RemoveTaskStep, {"task": self.task.name, "host": host}))
 
         return steps
 

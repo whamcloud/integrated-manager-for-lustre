@@ -131,8 +131,8 @@ pub mod list {
                 key
                 value
               }
-              filesystem_id: filesystemId
-              running_on_id: runningOnId
+              fs_name: fsName
+              running_on_fqdn: runningOnFqdn
             }
           }
         }

@@ -5,7 +5,7 @@
 use crate::{
     command::get_command,
     error::ImlApiError,
-    graphql::{create_task_job, fs_id_by_name, insert_task, run_jobs, Context, SendJob},
+    graphql::{create_task_job, insert_task, run_jobs, Context, SendJob},
 };
 use futures::TryStreamExt;
 use iml_postgres::sqlx;
@@ -52,8 +52,6 @@ impl TaskMutation {
         fsname: String,
         task_args: TaskArgs,
     ) -> juniper::FieldResult<CreateTaskResult> {
-        let fs_id = fs_id_by_name(&context.pg_pool, &fsname).await?;
-
         let args: HashMap<String, String> = task_args
             .pairs
             .into_iter()
@@ -67,7 +65,7 @@ impl TaskMutation {
             task_args.keep_failed,
             &task_args.actions,
             serde_json::to_value(&args)?,
-            fs_id,
+            &fsname,
             &context.pg_pool,
         )
         .await?;
