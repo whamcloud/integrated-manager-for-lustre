@@ -75,8 +75,8 @@ pub struct TaskOut {
     pub keep_failed: bool,
     pub actions: Vec<String>,
     pub args: Vec<KeyValueOut>,
-    pub filesystem_id: i32,
-    pub running_on_id: Option<i32>,
+    pub fs_name: String,
+    pub running_on_fqdn: Option<String>,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
@@ -94,8 +94,8 @@ pub struct Task {
     pub keep_failed: bool,
     pub actions: Vec<String>,
     pub args: serde_json::Value,
-    pub filesystem_id: i32,
-    pub running_on_id: Option<i32>,
+    pub fs_name: String,
+    pub running_on_fqdn: Option<String>,
 }
 
 impl TryFrom<Task> for TaskOut {
@@ -116,8 +116,8 @@ impl TryFrom<Task> for TaskOut {
             keep_failed,
             actions,
             args,
-            filesystem_id,
-            running_on_id,
+            fs_name,
+            running_on_fqdn,
         }: Task,
     ) -> Result<Self, Self::Error> {
         let args = serde_json::from_value::<HashMap<String, String>>(args)?.to_key_value();
@@ -136,8 +136,8 @@ impl TryFrom<Task> for TaskOut {
             keep_failed,
             actions,
             args,
-            filesystem_id,
-            running_on_id,
+            fs_name,
+            running_on_fqdn,
         })
     }
 }

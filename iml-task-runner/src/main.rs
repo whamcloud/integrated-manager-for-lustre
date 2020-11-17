@@ -64,30 +64,19 @@ async fn tasks_per_worker(
     pool: &PgPool,
     worker: &LustreClient,
 ) -> Result<Vec<Task>, error::ImlTaskRunnerError> {
-    let fs_id = sqlx::query!(
-        "select id from chroma_core_managedfilesystem where name = $1 and not_deleted = 't'",
-        &worker.filesystem
-    )
-    .fetch_optional(pool)
-    .await?
-    .map(|x| x.id);
-
-    let fs_id = match fs_id {
-        Some(x) => x,
-        None => return Ok(vec![]),
-    };
+    let fqdn = worker_fqdn(pool, worker).await?;
 
     let tasks = sqlx::query_as!(
         Task,
         r#"
         select * from chroma_core_task 
         where 
-            filesystem_id = $1
+            fs_name = $1
             and state <> 'closed'
             and fids_total > fids_completed 
-            and (running_on_id is Null or running_on_id = $2)"#,
-        fs_id,
-        worker.host_id
+            and (running_on_fqdn is Null or running_on_fqdn = $2)"#,
+        worker.filesystem,
+        fqdn
     )
     .fetch_all(pool)
     .await?;
@@ -116,27 +105,25 @@ async fn send_work(
     fqdn: &str,
     fsname: &str,
     task: &Task,
-    host_id: i32,
 ) -> Result<i64, error::ImlTaskRunnerError> {
     let taskargs: HashMap<String, String> = serde_json::from_value(task.args.clone())?;
 
     // Setup running_on if unset
-    if task.single_runner && task.running_on_id.is_none() {
+    if task.single_runner && task.running_on_fqdn.is_none() {
         tracing::trace!(
-            "Attempting to Set Task {} ({}) running_on to host {} ({})",
+            "Attempting to Set Task {} ({}) running_on to host {}",
             task.name,
             task.id,
             fqdn,
-            host_id
         );
 
         let cnt = sqlx::query!(
             r#"
             UPDATE chroma_core_task
-            SET running_on_id = $1
+            SET running_on_fqdn = $1
                 WHERE id = $2
-                AND running_on_id is Null"#,
-            host_id,
+                AND running_on_fqdn is Null"#,
+            fqdn,
             task.id
         )
         .execute(pg_pool)
@@ -145,11 +132,10 @@ async fn send_work(
 
         if cnt == 1 {
             tracing::info!(
-                "Set Task {} ({}) running on host {} ({})",
+                "Set Task {} ({}) running on host {}",
                 task.name,
                 task.id,
                 fqdn,
-                host_id
             );
         } else {
             tracing::debug!(
@@ -308,11 +294,10 @@ async fn run_tasks(
     pool: &PgPool,
 ) {
     let fsname = &worker.filesystem;
-    let host_id = worker.host_id;
 
     let xs = xs.into_iter().map(|task| async move {
         for _ in 0..10_u8 {
-            let rc = send_work(action_client, &pool, &fqdn, &fsname, &task, host_id)
+            let rc = send_work(action_client, &pool, &fqdn, &fsname, &task)
                 .inspect_err(|e| tracing::warn!("send_work({}) failed {:?}", task.name, e))
                 .await?;
 
