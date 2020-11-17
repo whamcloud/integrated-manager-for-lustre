@@ -49,6 +49,7 @@ pub fn create_registry() -> action_plugins::Actions {
         .add_plugin("remove_fstab_entry", lustre::client::remove_fstab_entry)
         .add_plugin("ha_resource_start", high_availability::start_resource)
         .add_plugin("ha_resource_stop", high_availability::stop_resource)
+        .add_plugin("ha_resource_move", high_availability::move_resource)
         .add_plugin(
             "ha_resource_create",
             high_availability::create_single_resource,
