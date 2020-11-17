@@ -27,6 +27,9 @@ pub use crate::high_availability::{crm_attribute, pcs};
 
 const NO_EXTRA: Vec<String> = vec![];
 
+const WAIT_SEC: u64 = 300;
+const WAIT_DELAY: u64 = 2;
+
 fn create(elem: &Element) -> ResourceAgentInfo {
     ResourceAgentInfo {
         agent: {
@@ -76,8 +79,8 @@ fn create(elem: &Element) -> ResourceAgentInfo {
 }
 
 async fn wait_resource(resource: &str, running: bool) -> Result<(), ImlAgentError> {
-    let sec_to_wait = 300;
-    let sec_delay = 2;
+    let sec_to_wait = WAIT_SEC;
+    let sec_delay = WAIT_DELAY;
     let delay_duration = Duration::new(sec_delay, 0);
     for _ in 0..(sec_to_wait / sec_delay) {
         let output = crm_mon_cmd().checked_output().await?;
@@ -617,6 +620,37 @@ pub async fn stop_resource(resource: String) -> Result<(), ImlAgentError> {
 
     wait_resource(&resource, false).await?;
     Ok(())
+}
+
+pub async fn move_resource((resource, dest_host): (String, String)) -> Result<(), ImlAgentError> {
+    let delay_duration = Duration::new(WAIT_DELAY, 0);
+
+    crm_resource(&["--resource", &resource, "--move", "--node", &dest_host]).await?;
+
+    let mut counter = 0;
+    let rc = loop {
+        let output = crm_mon_cmd().checked_output().await?;
+        let cluster = read_crm_output(&output.stdout)?;
+
+        let res = cluster.resources.into_iter().find(|r| r.id == resource);
+        if let Some(r) = res {
+            if r.active_node_name.unwrap_or_else(|| "".into()) == dest_host {
+                break Ok(());
+            }
+        }
+        if counter >= WAIT_SEC {
+            break Err(ImlAgentError::from(RequiredError(format!(
+                "Waiting for resource {} to move to {} failed after {} sec",
+                resource, dest_host, WAIT_SEC,
+            ))));
+        }
+        counter += WAIT_DELAY;
+        delay_for(delay_duration).await;
+    };
+
+    crm_resource(&["--resource", &resource, "--un-move", "--node", &dest_host]).await?;
+
+    rc
 }
 
 #[cfg(test)]
