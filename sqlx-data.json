@@ -4619,31 +4619,6 @@
       ]
     }
   },
-  "fd476db34f4391964ce18a3b50a04cbd6c5f42dafa83a42e980ecb42376a6813": {
-    "query": "DELETE FROM chroma_core_serverprofile where name = $1",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": [
-          "Text"
-        ]
-      },
-      "nullable": []
-    }
-  },
-  "fed610ec991f5563f72a042573293f69b13ca76d63b71db622bb32cfd484b60f": {
-    "query": "\n                INSERT INTO chroma_core_serverprofilepackage (package_name, server_profile_id)\n                SELECT package_name, $2\n                FROM UNNEST($1::text[])\n                as t(package_name)\n                ON CONFLICT DO NOTHING\n                ",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": [
-          "TextArray",
-          "Varchar"
-        ]
-      },
-      "nullable": []
-    }
-  },
   "ff665ccfecba5163af63c1cea7652c54d31d79fda9c79084bcf861640c58d0a1": {
     "query": "SELECT state, name, active_host_id, host_ids, filesystems, uuid, mount_path, dev_path, fs_type AS \"fs_type: FsType\" FROM target",
     "describe": {
