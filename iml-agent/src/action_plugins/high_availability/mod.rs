@@ -632,13 +632,9 @@ pub async fn move_resource((resource, dest_host): (String, String)) -> Result<()
         let output = crm_mon_cmd().checked_output().await?;
         let cluster = read_crm_output(&output.stdout)?;
 
-        let res = cluster
-            .resources
-            .into_iter()
-            .filter(|r| r.id == resource)
-            .next();
+        let res = cluster.resources.into_iter().find(|r| r.id == resource);
         if let Some(r) = res {
-            if r.active_node_name.unwrap_or("".into()) == dest_host {
+            if r.active_node_name.unwrap_or_else(|| "".into()) == dest_host {
                 break Ok(());
             }
         }
