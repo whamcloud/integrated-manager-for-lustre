@@ -440,8 +440,7 @@ pub fn find_targets<'a>(
         })
         .collect();
 
-    xs
-        .into_iter()
+    xs.into_iter()
         .map(
             |(fqdn, ids, mntpnt, fs_uuid, dev_path, target, osd)| Target {
                 state: "mounted".into(),

@@ -2114,9 +2114,9 @@ pub struct LustreClient {
 #[serde(rename_all = "lowercase")]
 #[derive(PartialEq, Eq, Clone, Debug, serde::Serialize, serde::Deserialize, Ord, PartialOrd)]
 pub enum FsType {
-    #[graphql(name="zfs")]
+    #[cfg_attr(feature = "graphql", graphql(name = "zfs"))]
     Zfs,
-    #[graphql(name="ldiskfs")]
+    #[cfg_attr(feature = "graphql", graphql(name = "ldiskfs"))]
     Ldiskfs,
 }
 
