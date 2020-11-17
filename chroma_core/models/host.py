@@ -1187,9 +1187,10 @@ class DeleteHostStep(Step):
                 [host.id],
             )
 
-            influx_post(settings.INFLUXDB_IML_STATS_DB, "DELETE FROM net WHERE \"host_id\"='{}'".format(host.id))
-            influx_post(settings.INFLUXDB_IML_STATS_DB, "DELETE FROM lnet WHERE \"host\"='{}'".format(host.fqdn))
-            influx_post(settings.INFLUXDB_IML_STATS_DB, "DELETE FROM host WHERE \"host\"='{}'".format(host.fqdn))
+            influx_post(settings.INFLUXDB_IML_STATS_DB, "DELETE FROM /.*net/ WHERE \"host_id\"='{}'".format(host.id))
+            influx_post(settings.INFLUXDB_IML_STATS_DB, "DELETE FROM /.*lnet/ WHERE \"host\"='{}'".format(host.fqdn))
+            influx_post(settings.INFLUXDB_IML_STATS_DB, "DELETE FROM /.*host/ WHERE \"host\"='{}'".format(host.fqdn))
+            influx_post(settings.INFLUXDB_IML_STATS_DB, "DELETE FROM /.*target/ WHERE \"host\"='{}'".format(host.fqdn))
 
 
 class CommonRemoveHostJob(StateChangeJob):
