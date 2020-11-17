@@ -3179,6 +3179,26 @@
       "nullable": []
     }
   },
+  "ad59dee5dcfb239aaa0044498c60f49f323e477794ca30dd736c378d2fa07a69": {
+    "query": "\n            SELECT n.nid FROM target AS t\n            INNER JOIN lnet as l ON l.host_id = ANY(t.host_ids)\n            INNER JOIN nid as n ON n.id = ANY(l.nids)\n            WHERE t.name='MGS' AND $1 = ANY(t.filesystems) AND n.host_id NOT IN (\n                SELECT nh.host_id\n                FROM corosync_resource_bans b\n                INNER JOIN corosync_node_managed_host nh ON (nh.corosync_node_id).name = b.node\n                AND nh.cluster_id = b.cluster_id\n                INNER JOIN corosync_resource t ON t.id = b.resource AND b.cluster_id = t.cluster_id\n                WHERE t.mount_point is not NULL\n            ) GROUP BY l.host_id, n.nid ORDER BY l.host_id, n.nid;\n            ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "nid",
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      },
+      "nullable": [
+        false
+      ]
+    }
+  },
   "b04b6d9456e4fbd6b7c97cb633393b8971701303845f99a716f581b6ee0eb481": {
     "query": "SELECT repo_name from chroma_core_repo where repo_name = ANY($1)",
     "describe": {

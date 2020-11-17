@@ -4,8 +4,8 @@
 
 use crate::{
     api_utils::{
-        create_command, get, get_all, get_hosts, get_influx, get_one, wait_for_cmds_success,
-        SendCmd, SendJob,
+        create_command, get, get_all, get_hosts, get_influx, get_one, graphql,
+        wait_for_cmds_success, SendCmd, SendJob,
     },
     display_utils::{usage, wrap_fut, DisplayType, IntoDisplayType as _},
     error::ImlManagerCliError,
@@ -13,6 +13,7 @@ use crate::{
 };
 use console::Term;
 use futures::future::{try_join, try_join_all};
+use iml_graphql_queries::client_mount;
 use iml_wire_types::{Filesystem, FlatQuery, Mgt, Ost};
 use number_formatter::{format_bytes, format_number};
 use prettytable::{Row, Table};
@@ -45,6 +46,12 @@ pub enum FilesystemCommand {
     Detect {
         #[structopt(short, long)]
         hosts: Option<String>,
+    },
+    /// Client mount command
+    #[structopt(name = "list-client-mount")]
+    ClientMount {
+        #[structopt(name = "fsname")]
+        fsname: String,
     },
 }
 
@@ -190,6 +197,17 @@ pub async fn filesystem_cli(command: FilesystemCommand) -> Result<(), ImlManager
             ]));
             table.add_row(Row::from(&["Mount Path".to_string(), fs.mount_path]));
             table.printstd();
+        }
+        FilesystemCommand::ClientMount { fsname } => {
+            let query = client_mount::list::build(fsname);
+
+            let resp: iml_graphql_queries::Response<client_mount::list::Resp> =
+                wrap_fut("Fetching client mount", graphql(query)).await?;
+
+            let cmd = Result::from(resp)?.data.client_mount_command;
+
+            let term = Term::stdout();
+            term.write_line(&cmd).unwrap();
         }
         FilesystemCommand::Pool { command } => ostpool_cli(command).await?,
         FilesystemCommand::Detect { hosts } => detect_filesystem(hosts).await?,
