@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use crate::request::Request;
-use futures::{Stream, TryStreamExt};
+use futures::{lock::Mutex, Stream, TryStreamExt};
 use im::{HashMap, HashSet};
 use iml_rabbit::{
     basic_consume, basic_publish, bind_queue, declare_transient_exchange, declare_transient_queue,
@@ -11,6 +11,9 @@ use iml_rabbit::{
     Queue,
 };
 use iml_wire_types::{LockAction, LockChange, ToCompositeId};
+use std::sync::Arc;
+
+pub type SharedLocks = Arc<Mutex<Locks>>;
 
 /// Declares the exchange for rpc comms
 async fn declare_rpc_exchange(c: &Channel) -> Result<(), ImlRabbitError> {

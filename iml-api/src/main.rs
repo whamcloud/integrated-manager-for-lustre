@@ -8,6 +8,7 @@ mod error;
 mod graphql;
 mod timer;
 
+use iml_manager_client::get_client;
 use iml_manager_env::get_pool_limit;
 use iml_postgres::get_db_pool;
 use iml_rabbit::{self, create_connection_filter};
@@ -22,7 +23,7 @@ const DEFAULT_POOL_LIMIT: u32 = 5;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     iml_tracing::init();
 
-    let addr = iml_manager_env::get_iml_api_addr();
+    let addr = iml_manager_env::get_iml_api_bind_addr();
 
     let conf = Conf {
         allow_anonymous_read: iml_manager_env::get_allow_anonymous_read(),
@@ -42,6 +43,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let pg_pool = get_db_pool(get_pool_limit().unwrap_or(DEFAULT_POOL_LIMIT)).await?;
 
+    let http_client = get_client()?;
+
     let schema = Arc::new(graphql::Schema::new(
         graphql::QueryRoot,
         graphql::MutationRoot,
@@ -52,6 +55,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ctx = Arc::new(graphql::Context {
         pg_pool,
         rabbit_pool,
+        http_client,
     });
     let ctx_filter = warp::any().map(move || Arc::clone(&ctx));
 

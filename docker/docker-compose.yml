@@ -322,6 +322,8 @@ services:
       - "manager-config:/var/lib/chroma"
     environment:
       - PROXY_HOST=iml-warp-drive
+      - ACTION_RUNNER_HOST=iml-action-runner
+      - ACTION_RUNNER_PORT=8009
       - RUST_LOG=info,sqlx::query=warn
   iml-action-runner:
     image: "imlteam/iml-action-runner:6.2.0"
@@ -348,6 +350,7 @@ services:
     environment:
       - RUST_LOG=info,sqlx::query=warn
       - PROXY_HOST=iml-action-runner
+      - ACTION_RUNNER_HOST=iml-action-runner
       - ACTION_RUNNER_PORT=8009
   iml-api:
     image: "imlteam/iml-api:6.2.0"
@@ -360,7 +363,8 @@ services:
       - "manager-config:/var/lib/chroma"
       - "report:/var/spool/iml/report"
     environment:
-      - PROXY_HOST=iml-api
+      - PROXY_HOST=nginx
+      - SERVICE_HOST=iml-api
       - RUST_LOG=info,sqlx::query=warn
       - BRANDING
       - USE_STRATAGEM

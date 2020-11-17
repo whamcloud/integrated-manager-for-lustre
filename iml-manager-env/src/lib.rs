@@ -16,11 +16,7 @@ lazy_static! {
 }
 
 lazy_static! {
-    static ref ACTION_RUNNER_HTTP: String = format!(
-        "http://{}:{}",
-        get_server_host(),
-        get_var("ACTION_RUNNER_PORT")
-    );
+    pub static ref ACTION_RUNNER_URL: Url = get_action_runner_url();
 }
 
 /// Get the environment variable or panic
@@ -140,6 +136,10 @@ pub fn get_iml_api_addr() -> SocketAddr {
     to_socket_addr(&get_server_host(), &get_iml_api_port())
 }
 
+pub fn get_iml_api_bind_addr() -> SocketAddr {
+    to_socket_addr(&get_service_host(), &get_iml_api_port())
+}
+
 /// Get the `http_agent2` port from the env or panic
 pub fn get_http_agent2_port() -> String {
     get_var("HTTP_AGENT2_PORT")
@@ -149,7 +149,12 @@ pub fn get_http_agent2_addr() -> SocketAddr {
     to_socket_addr(&get_server_host(), &get_http_agent2_port())
 }
 
-/// Get the server host from the env or panic
+/// Get the name of the host a service should bind to
+pub fn get_service_host() -> String {
+    env::var("SERVICE_HOST").unwrap_or_else(|_| "127.0.0.1".to_string())
+}
+
+/// Get the nginx host from the env or panic
 pub fn get_server_host() -> String {
     get_var("PROXY_HOST")
 }
@@ -287,12 +292,37 @@ pub fn get_use_snapshots() -> bool {
     string_to_bool(env::var("USE_SNAPSHOTS").unwrap_or_else(|_| "false".to_string()))
 }
 
-pub fn get_action_runner_http() -> String {
-    ACTION_RUNNER_HTTP.clone()
+pub fn get_action_runner_host() -> String {
+    get_var("ACTION_RUNNER_HOST")
+}
+
+pub fn get_action_runner_port() -> String {
+    get_var("ACTION_RUNNER_PORT")
+}
+
+pub fn get_action_runner_url() -> Url {
+    Url::parse(&format!(
+        "http://{}:{}",
+        get_action_runner_host(),
+        get_action_runner_port()
+    ))
+    .expect("Could not parse action runner Url")
 }
 
 pub fn get_action_runner_uds() -> String {
     "/var/run/iml-action-runner.sock".to_string()
+}
+
+/// Get the nginx proxy port or panic
+pub fn get_proxy_port() -> String {
+    get_var("HTTPS_FRONTEND_PORT")
+}
+
+/// Get the proxy URL or panic
+pub fn get_proxy_url() -> Url {
+    let x = format!("https://{}:{}/", get_server_host(), get_proxy_port());
+
+    Url::parse(&x).expect("Could not parse proxy URL")
 }
 
 pub fn get_sfa_endpoints() -> Option<Vec<Vec<Url>>> {

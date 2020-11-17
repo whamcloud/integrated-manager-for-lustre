@@ -5,7 +5,7 @@
 use bytes::buf::BufExt as _;
 use hyper::{client::HttpConnector, Body, Request};
 use hyperlocal::{UnixClientExt as _, UnixConnector};
-use iml_manager_env::{get_action_runner_http, get_action_runner_uds, running_in_docker};
+use iml_manager_env::{get_action_runner_uds, running_in_docker, ACTION_RUNNER_URL};
 use iml_wire_types::{Action, ActionId, ActionName, ActionType, AgentResult, Fqdn};
 use std::{ops::Deref, sync::Arc};
 use thiserror::Error;
@@ -57,7 +57,7 @@ impl Default for Client {
         let (inner, uri) = if running_in_docker() {
             (
                 ClientInner::Http(hyper::Client::new()),
-                get_action_runner_http().parse::<hyper::Uri>().unwrap(),
+                ACTION_RUNNER_URL.as_str().parse::<hyper::Uri>().unwrap(),
             )
         } else {
             (

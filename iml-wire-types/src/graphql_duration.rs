@@ -25,7 +25,7 @@ where
         juniper::Value::scalar(humantime::format_duration(self.0).to_string())
     }
 
-    fn from_input_value(value: &juniper::InputValue) -> Option<GraphQLDuration> {
+    fn from_input_value(value: &juniper::InputValue) -> Option<Self> {
         value.as_string_value()?.to_string().try_into().ok()
     }
 

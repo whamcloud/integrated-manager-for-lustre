@@ -2,6 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+mod state_machine;
 mod stratagem;
 mod task;
 
@@ -12,6 +13,7 @@ use crate::{
 };
 use chrono::{DateTime, Utc};
 use futures::{future::join_all, TryFutureExt, TryStreamExt};
+use iml_manager_client::Client;
 use iml_postgres::{
     active_mgs_host_fqdn, fqdn_by_host_id, sqlx, sqlx::postgres::types::PgInterval, PgPool,
 };
@@ -114,6 +116,9 @@ impl QueryRoot {
     }
     fn task(&self) -> task::TaskQuery {
         task::TaskQuery
+    }
+    fn state_machine(&self) -> state_machine::StateMachineQuery {
+        state_machine::StateMachineQuery
     }
     #[graphql(arguments(
         limit(description = "optional paging limit, defaults to all rows"),
@@ -618,6 +623,9 @@ impl MutationRoot {
     fn task(&self) -> task::TaskMutation {
         task::TaskMutation
     }
+    fn state_machine(&self) -> state_machine::StateMachineMutation {
+        state_machine::StateMachineMutation
+    }
     #[graphql(arguments(
         fsname(description = "Filesystem to snapshot"),
         name(description = "Name of the snapshot"),
@@ -868,8 +876,14 @@ impl MutationRoot {
         .map(|x| x.id);
 
         if let Some(id) = maybe_id {
-            configure_snapshot_timer(id, fsname, interval.0, use_barrier.unwrap_or_default())
-                .await?;
+            configure_snapshot_timer(
+                context.http_client.clone(),
+                id,
+                fsname,
+                interval.0,
+                use_barrier.unwrap_or_default(),
+            )
+            .await?;
         }
 
         Ok(true)
@@ -882,7 +896,7 @@ impl MutationRoot {
             .execute(&context.pg_pool)
             .await?;
 
-        remove_snapshot_timer(id).await?;
+        remove_snapshot_timer(context.http_client.clone(), id).await?;
 
         Ok(true)
     }
@@ -1117,6 +1131,7 @@ pub(crate) type Schema = RootNode<'static, QueryRoot, MutationRoot, EmptySubscri
 pub(crate) struct Context {
     pub(crate) pg_pool: PgPool,
     pub(crate) rabbit_pool: Pool,
+    pub(crate) http_client: Client,
 }
 
 impl juniper::Context for Context {}

@@ -7,6 +7,7 @@
 use crate::{
     db::{Id, TableName},
     graphql_duration::GraphQLDuration,
+    warp_drive::RecordId,
 };
 use chrono::{offset::Utc, DateTime};
 use std::str::FromStr;
@@ -53,6 +54,12 @@ pub struct SnapshotRecord {
 impl Id for SnapshotRecord {
     fn id(&self) -> i32 {
         self.id
+    }
+}
+
+impl From<&SnapshotRecord> for RecordId {
+    fn from(x: &SnapshotRecord) -> Self {
+        Self::Snapshot(x.id)
     }
 }
 
@@ -131,7 +138,7 @@ impl FromStr for ReserveUnit {
     }
 }
 
-#[derive(serde::Deserialize, Debug)]
+#[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
 #[cfg_attr(feature = "cli", derive(StructOpt))]
 /// Ask agent to create a snapshot
 pub struct Create {
@@ -147,7 +154,7 @@ pub struct Create {
     pub comment: Option<String>,
 }
 
-#[derive(serde::Deserialize, Debug)]
+#[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
 #[cfg_attr(feature = "cli", derive(StructOpt))]
 /// Ask agent to destroy the snapshot
 pub struct Destroy {
@@ -161,7 +168,7 @@ pub struct Destroy {
     pub force: bool,
 }
 
-#[derive(serde::Deserialize, Debug)]
+#[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
 #[cfg_attr(feature = "cli", derive(StructOpt))]
 /// Ask agent to mount the snapshot
 pub struct Mount {
@@ -171,7 +178,7 @@ pub struct Mount {
     pub name: String,
 }
 
-#[derive(serde::Deserialize, Debug)]
+#[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
 #[cfg_attr(feature = "cli", derive(StructOpt))]
 /// Ask agent to unmount the snapshot
 pub struct Unmount {
