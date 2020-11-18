@@ -11,9 +11,9 @@ StandardOutput=journal
 EnvironmentFile=-/etc/iml-docker/setup/config
 WorkingDirectory=/etc/iml-docker
 ExecStartPre=-/usr/bin/docker load -i /var/lib/iml-images.tgz
-ExecStartPre=/bin/bash -c "/bin/python ./manage.py print-settings > /tmp/temp-settings.conf && mv /tmp/temp-settings.conf /etc/iml/iml-settings.conf"
 ExecStart=/usr/bin/docker stack deploy -c docker-compose.yml -c docker-compose.overrides.yml iml --resolve-image=never
 ExecStart=/bin/bash -c 'until /usr/bin/iml server list > /dev/null 2>&1; do sleep 1; done'
+ExecStartPost=/bin/bash -c '/bin/mkdir -p /etc/iml && /bin/cp /var/lib/docker/volumes/iml_manager-config/_data/iml-settings.conf /etc/iml/iml-settings.conf'
 ExecStop=/usr/bin/docker stack rm iml
 ExecStop=/bin/bash -c 'while /usr/bin/docker stack ps iml > /dev/null 2>&1; do sleep 1; done'
 
