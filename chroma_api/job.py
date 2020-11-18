@@ -181,9 +181,7 @@ class JobResource(ChromaModelResource):
 
         for step_result in bundle.obj.stepresult_set.all():
             uri = StepResource().get_resource_uri(step_result)
-            result[uri] = (
-                json.loads(step_result.result) if step_result.result else None
-            )
+            result[uri] = json.loads(step_result.result) if step_result.result else None
         return result
 
     def dehydrate_description(self, bundle):

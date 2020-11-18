@@ -317,14 +317,13 @@ class StateLock(object):
 
 
 class Job(models.Model):
-
     def __init__(self, *args, **kwargs):
         super(Job, self).__init__(*args, **kwargs)
         self.class_name = self.__class__.__name__
         try:
             self.description_out = self.description()
         except NotImplementedError:
-            self.description_out = ''
+            self.description_out = ""
         self.cancellable_out = self.cancellable
 
     # Hashing functions are specialized to how jobs are used/indexed inside CommandPlan
@@ -359,8 +358,8 @@ class Job(models.Model):
 
     wait_for_json = models.TextField()
     locks_json = models.TextField()
-    class_name = models.TextField(default='')
-    description_out = models.TextField(default='')
+    class_name = models.TextField(default="")
+    description_out = models.TextField(default="")
     cancellable_out = models.BooleanField(default=True)
 
     @classmethod
