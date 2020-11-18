@@ -167,7 +167,7 @@ class JobResource(ChromaModelResource):
         return self._dehydrate_locks(bundle, write=True)
 
     def dehydrate_class_name(self, bundle):
-        return bundle.obj.content_type.model_class().__name__
+        return bundle.obj.class_name
 
     def dehydrate_available_transitions(self, bundle):
         job = bundle.obj.downcast()

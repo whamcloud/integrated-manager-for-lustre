@@ -129,11 +129,6 @@ class CommandPlan(object):
             locks = self._create_locks(job)
             job.locks_json = json.dumps([l.to_dict() for l in locks])
             self._create_dependencies(job, locks, job_deps_map)
-            log.info("job before assign = ", job)
-            job.class_name = job.__class__.__name__
-            job.description_out = job.description()
-            job.cancellable_out = job.cancellable
-            log.info("job before save = ", job)
             job.save()
 
             log.info("add_jobs: created Job %s (%s)" % (job.pk, job.description()))

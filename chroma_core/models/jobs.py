@@ -2,7 +2,6 @@
 # Copyright (c) 2020 DDN. All rights reserved.
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
-import traceback
 import uuid
 
 from collections import defaultdict, namedtuple
@@ -16,7 +15,6 @@ from chroma_core.models.utils import DeletableDowncastableMetaclass
 
 from chroma_core.lib.job import DependOn, DependAll, job_log
 from chroma_core.lib.util import all_subclasses
-from chroma_core.services import log_register
 
 MAX_STATE_STRING = 32
 
@@ -322,6 +320,12 @@ class Job(models.Model):
 
     def __init__(self, *args, **kwargs):
         super(Job, self).__init__(*args, **kwargs)
+        self.class_name = self.__class__.__name__
+        try:
+            self.description_out = self.description()
+        except NotImplementedError:
+            self.description_out = ''
+        self.cancellable_out = self.cancellable
 
     # Hashing functions are specialized to how jobs are used/indexed inside CommandPlan
     # - eq+hash operations are for operating on unsaved jobs
