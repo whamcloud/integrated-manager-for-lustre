@@ -17,7 +17,6 @@ MAX_STATE_STRING = 32
 
 
 class StepResult(models.Model):
-
     def __init__(self, *args, **kwargs):
         super(StepResult, self).__init__(*args, **kwargs)
         self.class_name = self.step_klass.__name__
