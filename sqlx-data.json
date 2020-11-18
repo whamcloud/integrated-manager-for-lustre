@@ -326,6 +326,30 @@
       "nullable": []
     }
   },
+  "12f2675288501efff4eabda622666db5f6ac0e8df536c02e25870ae00e614594": {
+    "query": "SELECT fqdn, id FROM chroma_core_managedhost WHERE not_deleted = 't'",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "fqdn",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 1,
+          "name": "id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false
+      ]
+    }
+  },
   "131959cfcc0275c8797cb5aa12f0ad15dd6baa2f75c716815607a039defac3a6": {
     "query": "select fqdn from chroma_core_managedhost where id = $1 and not_deleted = 't'",
     "describe": {
@@ -495,6 +519,92 @@
         ]
       },
       "nullable": []
+    }
+  },
+  "1cc41f526860fb071f25210fb0c8e661055342e1526968553ae4422959171a6c": {
+    "query": "\n                SELECT id, state, name, active_host_id, host_ids, filesystems, uuid, mount_path, dev_path, fs_type as \"fs_type: FsType\" from target t\n                ORDER BY\n                    CASE WHEN $3 = 'ASC' THEN t.name END ASC,\n                    CASE WHEN $3 = 'DESC' THEN t.name END DESC\n                OFFSET $1 LIMIT $2",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "state",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 3,
+          "name": "active_host_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 4,
+          "name": "host_ids",
+          "type_info": "Int4Array"
+        },
+        {
+          "ordinal": 5,
+          "name": "filesystems",
+          "type_info": "TextArray"
+        },
+        {
+          "ordinal": 6,
+          "name": "uuid",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 7,
+          "name": "mount_path",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 8,
+          "name": "dev_path",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 9,
+          "name": "fs_type: FsType",
+          "type_info": {
+            "Custom": {
+              "name": "fs_type",
+              "kind": {
+                "Enum": [
+                  "zfs",
+                  "ldiskfs"
+                ]
+              }
+            }
+          }
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Int8",
+          "Text"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true
+      ]
     }
   },
   "1f0a3d6d1b9f42c2eeca372f6a030e76015214803fb010c2b2e9f2899c57ac38": {
@@ -1185,6 +1295,43 @@
         true,
         false
       ]
+    }
+  },
+  "3c99aaa8e34a6833fb400741010a76a53b45ce1de7f67e633f56160dcac5de15": {
+    "query": "INSERT INTO target\n                        (state, name, active_host_id, host_ids, filesystems, uuid, mount_path, dev_path, fs_type)\n                        SELECT state, name, active_host_id, string_to_array(host_ids, ',')::int[], string_to_array(filesystems, ',')::text[], uuid, mount_path, dev_path, fs_type\n                        FROM UNNEST($1::text[], $2::text[], $3::int[], $4::text[], $5::text[], $6::text[], $7::text[], $8::text[], $9::fs_type[])\n                        AS t(state, name, active_host_id, host_ids, filesystems, uuid, mount_path, dev_path, fs_type)\n                        ON CONFLICT (uuid)\n                            DO\n                            UPDATE SET  state          = EXCLUDED.state,\n                                        name           = EXCLUDED.name,\n                                        active_host_id = EXCLUDED.active_host_id,\n                                        host_ids       = EXCLUDED.host_ids,\n                                        filesystems    = EXCLUDED.filesystems,\n                                        mount_path     = EXCLUDED.mount_path,\n                                        dev_path       = EXCLUDED.dev_path,\n                                        fs_type        = EXCLUDED.fs_type",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "TextArray",
+          "TextArray",
+          "Int4Array",
+          "TextArray",
+          "TextArray",
+          "TextArray",
+          "TextArray",
+          "TextArray",
+          {
+            "Custom": {
+              "name": "_fs_type",
+              "kind": {
+                "Array": {
+                  "Custom": {
+                    "name": "fs_type",
+                    "kind": {
+                      "Enum": [
+                        "zfs",
+                        "ldiskfs"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "nullable": []
     }
   },
   "3cb1094d7efdccbf02af2f702d8c6accea293012eb426d70648c32c1682cc1b8": {
@@ -2209,72 +2356,6 @@
       ]
     }
   },
-  "7c433739308a525cdead14f9b38d0da9d5ad14df3ce97eeb1b85a28c2635f209": {
-    "query": "select * from target",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "state",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 1,
-          "name": "name",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 2,
-          "name": "active_host_id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 3,
-          "name": "host_ids",
-          "type_info": "Int4Array"
-        },
-        {
-          "ordinal": 4,
-          "name": "filesystems",
-          "type_info": "TextArray"
-        },
-        {
-          "ordinal": 5,
-          "name": "uuid",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 6,
-          "name": "mount_path",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 7,
-          "name": "dev_path",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 8,
-          "name": "id",
-          "type_info": "Int4"
-        }
-      ],
-      "parameters": {
-        "Left": []
-      },
-      "nullable": [
-        false,
-        false,
-        true,
-        false,
-        false,
-        false,
-        true,
-        true,
-        false
-      ]
-    }
-  },
   "8005758717333205858491c0874387c530265e82e482ee3ef31ae05fc7e85fef": {
     "query": "\n            UPDATE chroma_core_alertstate\n            SET message = $1\n            WHERE\n                id = $2\n        ",
     "describe": {
@@ -2778,30 +2859,6 @@
       "nullable": []
     }
   },
-  "9472740d062c38f49e290c6173d7b676329a956cf9713bb55ff7ffdc0eeaae7f": {
-    "query": "select fqdn, id from chroma_core_managedhost where not_deleted = 't'",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "fqdn",
-          "type_info": "Varchar"
-        },
-        {
-          "ordinal": 1,
-          "name": "id",
-          "type_info": "Int4"
-        }
-      ],
-      "parameters": {
-        "Left": []
-      },
-      "nullable": [
-        false,
-        false
-      ]
-    }
-  },
   "9a4c05da9d9233e6b3fa63ca2f50cf90feb0c305b1cc05e0eb2edcf2572db4ba": {
     "query": "select * from chroma_core_volume where not_deleted = 't'",
     "describe": {
@@ -3078,76 +3135,6 @@
         false,
         true,
         false,
-        false
-      ]
-    }
-  },
-  "a36f75c883918331f080025b809fb0d2ebf00ef9a4c40d5cdb5e6e960c3f7c58": {
-    "query": "\n                SELECT * from target t\n                ORDER BY\n                    CASE WHEN $3 = 'ASC' THEN t.name END ASC,\n                    CASE WHEN $3 = 'DESC' THEN t.name END DESC\n                OFFSET $1 LIMIT $2",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "state",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 1,
-          "name": "name",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 2,
-          "name": "active_host_id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 3,
-          "name": "host_ids",
-          "type_info": "Int4Array"
-        },
-        {
-          "ordinal": 4,
-          "name": "filesystems",
-          "type_info": "TextArray"
-        },
-        {
-          "ordinal": 5,
-          "name": "uuid",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 6,
-          "name": "mount_path",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 7,
-          "name": "dev_path",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 8,
-          "name": "id",
-          "type_info": "Int4"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "Int8",
-          "Int8",
-          "Text"
-        ]
-      },
-      "nullable": [
-        false,
-        false,
-        true,
-        false,
-        false,
-        false,
-        true,
-        true,
         false
       ]
     }
@@ -4397,25 +4384,6 @@
       "nullable": []
     }
   },
-  "f4165ef6b0015f9503e88fafa27d7e5dc1e6c7150254dbdb9e67c5d10cbef4be": {
-    "query": "INSERT INTO target\n                        (state, name, active_host_id, host_ids, filesystems, uuid, mount_path, dev_path)\n                        SELECT state, name, active_host_id, string_to_array(host_ids, ',')::int[], string_to_array(filesystems, ',')::text[], uuid, mount_path, dev_path\n                        FROM UNNEST($1::text[], $2::text[], $3::int[], $4::text[], $5::text[], $6::text[], $7::text[], $8::text[])\n                        AS t(state, name, active_host_id, host_ids, filesystems, uuid, mount_path, dev_path)\n                        ON CONFLICT (uuid)\n                            DO\n                            UPDATE SET  state          = EXCLUDED.state,\n                                        name           = EXCLUDED.name,\n                                        active_host_id = EXCLUDED.active_host_id,\n                                        host_ids       = EXCLUDED.host_ids,\n                                        filesystems    = EXCLUDED.filesystems,\n                                        mount_path     = EXCLUDED.mount_path,\n                                        dev_path       = EXCLUDED.dev_path",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": [
-          "TextArray",
-          "TextArray",
-          "Int4Array",
-          "TextArray",
-          "TextArray",
-          "TextArray",
-          "TextArray",
-          "TextArray"
-        ]
-      },
-      "nullable": []
-    }
-  },
   "f41f8df43f7062267e95bb90cabcb67d07d4978f9f27e834c7ca21ab91ce99c6": {
     "query": "SELECT * FROM chroma_core_task",
     "describe": {
@@ -4648,6 +4616,82 @@
         true,
         false,
         false
+      ]
+    }
+  },
+  "ff665ccfecba5163af63c1cea7652c54d31d79fda9c79084bcf861640c58d0a1": {
+    "query": "SELECT state, name, active_host_id, host_ids, filesystems, uuid, mount_path, dev_path, fs_type AS \"fs_type: FsType\" FROM target",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "state",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 1,
+          "name": "name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "active_host_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 3,
+          "name": "host_ids",
+          "type_info": "Int4Array"
+        },
+        {
+          "ordinal": 4,
+          "name": "filesystems",
+          "type_info": "TextArray"
+        },
+        {
+          "ordinal": 5,
+          "name": "uuid",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 6,
+          "name": "mount_path",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 7,
+          "name": "dev_path",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 8,
+          "name": "fs_type: FsType",
+          "type_info": {
+            "Custom": {
+              "name": "fs_type",
+              "kind": {
+                "Enum": [
+                  "zfs",
+                  "ldiskfs"
+                ]
+              }
+            }
+          }
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true
       ]
     }
   }

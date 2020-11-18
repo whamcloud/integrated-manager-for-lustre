@@ -2,9 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::CompositeId;
-use crate::ToCompositeId;
-use crate::{EndpointName, Label};
+use crate::{CompositeId, EndpointName, FsType, Label, ToCompositeId};
 use chrono::{offset::Utc, DateTime};
 #[cfg(feature = "postgres-interop")]
 use std::str::FromStr;
@@ -329,6 +327,8 @@ pub struct TargetRecord {
     pub uuid: String,
     /// Where this target is mounted
     pub mount_path: Option<String>,
+    /// The filesystem type associated with this target
+    pub fs_type: Option<FsType>,
 }
 
 impl Id for TargetRecord {

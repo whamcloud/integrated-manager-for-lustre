@@ -283,7 +283,14 @@ impl IntoTable for (Vec<Host>, Vec<TargetRecord>) {
         let (hosts, targets) = self;
 
         generate_table(
-            &["Name", "State", "Active Host", "Filesystems", "UUID"],
+            &[
+                "Name",
+                "State",
+                "Active Host",
+                "Filesystems",
+                "UUID",
+                "fs_type",
+            ],
             targets.into_iter().map(|x| {
                 let active_host = x
                     .active_host_id
@@ -298,6 +305,9 @@ impl IntoTable for (Vec<Host>, Vec<TargetRecord>) {
                     active_host,
                     x.filesystems.join(" "),
                     x.uuid,
+                    x.fs_type
+                        .map(|x| x.to_string())
+                        .unwrap_or_else(|| "".into()),
                 ]
             }),
         )

@@ -23,7 +23,7 @@ use iml_wire_types::{
     logs::{LogResponse, Meta},
     snapshot::{ReserveUnit, Snapshot, SnapshotInterval, SnapshotRetention},
     task::Task,
-    Command, EndpointName, Job, LogMessage, LogSeverity, MessageClass, SortDir,
+    Command, EndpointName, FsType, Job, LogMessage, LogSeverity, MessageClass, SortDir,
 };
 use itertools::Itertools;
 use juniper::{
@@ -186,7 +186,7 @@ impl QueryRoot {
         let xs: Vec<TargetRecord> = sqlx::query_as!(
             TargetRecord,
             r#"
-                SELECT * from target t
+                SELECT id, state, name, active_host_id, host_ids, filesystems, uuid, mount_path, dev_path, fs_type as "fs_type: FsType" from target t
                 ORDER BY
                     CASE WHEN $3 = 'ASC' THEN t.name END ASC,
                     CASE WHEN $3 = 'DESC' THEN t.name END DESC
