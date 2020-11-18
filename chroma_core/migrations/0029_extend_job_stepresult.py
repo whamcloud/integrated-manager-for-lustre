@@ -4,7 +4,6 @@
 from __future__ import unicode_literals
 
 from django.db import migrations, models
-from django.core.serializers import json as djangojson
 from tastypie.serializers import Serializer
 
 from chroma_core.models.step_result import StepResult
@@ -27,9 +26,7 @@ def apply_job_changes(apps, schema_editor):
     serializer = Serializer()
     for sr in step_result_klass.objects.all():  # type: StepResult
         sr.class_name = sr.step_klass.__name__
-        args_simple = serializer.to_simple(sr.args, dict())
-        sr.args_json = djangojson.json.dumps(args_simple, cls=djangojson.DjangoJSONEncoder,
-                                             sort_keys=True, ensure_ascii=False)
+        sr.args_json = serializer.to_json(sr.args)
         sr.description = sr.describe()
         sr.save()
 

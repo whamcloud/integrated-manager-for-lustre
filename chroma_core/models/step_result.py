@@ -2,17 +2,16 @@
 # Copyright (c) 2020 DDN. All rights reserved.
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
-import traceback
 from base64 import b64decode
 
 from django.db import models
 from django.db.models import CASCADE
 
 from picklefield.fields import PickledObjectField
+from tastypie.serializers import Serializer
 
 from iml_common.lib import util
 from chroma_core.lib.job import Step
-from chroma_core.services import log_register
 
 MAX_STATE_STRING = 32
 
@@ -21,6 +20,9 @@ class StepResult(models.Model):
 
     def __init__(self, *args, **kwargs):
         super(StepResult, self).__init__(*args, **kwargs)
+        self.class_name = self.step_klass.__name__
+        self.args_json = Serializer().to_json(self.args)
+        self.description = self.describe()
 
     job = models.ForeignKey("Job", on_delete=CASCADE)
     step_klass = PickledObjectField()
