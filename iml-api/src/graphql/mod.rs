@@ -1245,7 +1245,7 @@ async fn get_banned_targets(pool: &PgPool) -> Result<Vec<BannedTargetResource>, 
             INNER JOIN corosync_node_managed_host nh ON (nh.corosync_node_id).name = b.node
             AND nh.cluster_id = b.cluster_id
             INNER JOIN corosync_resource t ON t.id = b.resource AND b.cluster_id = t.cluster_id
-            WHERE t.mount_point != NULL
+            WHERE t.mount_point is not NULL
         "#
     )
     .fetch(pool)
