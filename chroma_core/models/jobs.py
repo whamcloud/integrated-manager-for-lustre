@@ -319,12 +319,6 @@ class StateLock(object):
 class Job(models.Model):
     def __init__(self, *args, **kwargs):
         super(Job, self).__init__(*args, **kwargs)
-        self.class_name = self.__class__.__name__
-        try:
-            self.description_out = self.description()
-        except NotImplementedError:
-            self.description_out = ""
-        self.cancellable_out = self.cancellable
 
     # Hashing functions are specialized to how jobs are used/indexed inside CommandPlan
     # - eq+hash operations are for operating on unsaved jobs
@@ -382,6 +376,16 @@ class Job(models.Model):
     # see in a list, and look at their order attributes.  Trying to fit any new jobs in.  There can be gaps in the
     # sequence of numbers.  The intent is that the Job will be sorted numerically ascending.
     display_order = DEFAULT_ORDER = 1000
+
+    # Assign the dependent fields, we cannot assign these fields in the constructor,
+    # therefore we intercept the save() method
+    def save(self, *args, **kwargs):
+        self.class_name = self.__class__.__name__
+        try:
+            self.description_out = self.description()
+        except NotImplementedError:
+            self.description_out = ""
+        self.cancellable_out = self.cancellable
 
     # Job classes declare whether presentation layer should
     # request user confirmation (e.g. removals, stops)
