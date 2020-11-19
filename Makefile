@@ -35,11 +35,6 @@ NOSE_ARGS ?= --stop
 
 ZIP_TYPE := $(shell if [ "$(ZIP_DEV)" == "true" ]; then echo '-dev'; else echo ''; fi)
 
-CARGO_HOME := /root/.cargo
-SCCACHE_CACHE_SIZE" := 40G,
-SCCACHE_DIR := /root/.cache,
-RUSTC_WRAPPER := /root/.cargo/bin/sccache
-
 all: copr-rpms rpms device-scanner-rpms iml-gui-rpm docker-rpms
 
 local:
