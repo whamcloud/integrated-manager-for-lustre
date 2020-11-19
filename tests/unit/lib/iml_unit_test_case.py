@@ -18,11 +18,19 @@ class IMLUnitTestCase(TestCase):
         with open("./migrations/20200824170157_corosync.sql", "r") as f:
             sql2 = f.read()
 
+        with open("./migrations/20201102184120_lnet.sql", "r") as f:
+            sql3 = f.read()
+
+        with open("./migrations/20201028182332_network_interface.sql", "r") as f:
+            sql4 = f.read()
+
         from django.db import connection
 
         with connection.cursor() as cursor:
             cursor.execute(sql)
             cursor.execute(sql2)
+            cursor.execute(sql3)
+            cursor.execute(sql4)
 
         mock.patch("chroma_core.services.job_scheduler.job_scheduler.LockQueue.put").start()
         mock.patch("chroma_core.services.dbutils.exit_if_in_transaction").start()

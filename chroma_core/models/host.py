@@ -9,6 +9,7 @@ import json
 import logging
 from collections import defaultdict
 import datetime
+import requests
 
 from django.db import models
 from django.db import transaction
@@ -21,6 +22,7 @@ from django.db.models.aggregates import Aggregate, Count
 from django.db.models.query_utils import Q
 
 from chroma_core.lib.cache import ObjectCache
+from chroma_core.lib.influx import influx_post
 from chroma_core.models import StateChangeJob
 from chroma_core.models import DeletableStatefulObject
 from chroma_core.models import NullStateChangeJob
@@ -1163,6 +1165,32 @@ class DeleteHostStep(Step):
                 """,
                 [host.id],
             )
+            cursor.execute(
+                """
+                DELETE FROM lnet
+                WHERE host_id = %s
+                """,
+                [host.id],
+            )
+            cursor.execute(
+                """
+                DELETE FROM nid
+                WHERE host_id = %s
+                """,
+                [host.id],
+            )
+            cursor.execute(
+                """
+                DELETE FROM network_interface
+                WHERE host_id = %s
+                """,
+                [host.id],
+            )
+
+            influx_post(settings.INFLUXDB_IML_STATS_DB, "DELETE FROM /.*net/ WHERE \"host_id\"='{}'".format(host.id))
+            influx_post(settings.INFLUXDB_IML_STATS_DB, "DELETE FROM /.*lnet/ WHERE \"host\"='{}'".format(host.fqdn))
+            influx_post(settings.INFLUXDB_IML_STATS_DB, "DELETE FROM /.*host/ WHERE \"host\"='{}'".format(host.fqdn))
+            influx_post(settings.INFLUXDB_IML_STATS_DB, "DELETE FROM /.*target/ WHERE \"host\"='{}'".format(host.fqdn))
 
 
 class CommonRemoveHostJob(StateChangeJob):

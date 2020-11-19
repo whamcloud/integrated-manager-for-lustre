@@ -2498,3 +2498,53 @@ pub struct NetworkInterface {
     pub is_up: bool,
     pub is_slave: bool,
 }
+
+#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
+pub struct Nid {
+    pub nid: String,
+    pub status: String,
+    pub interfaces: Option<BTreeMap<i32, String>>,
+}
+
+#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
+pub struct Net {
+    #[serde(rename = "net type")]
+    pub net_type: String,
+    #[serde(rename = "local NI(s)")]
+    pub local_nis: Vec<Nid>,
+}
+
+#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
+pub struct LNet {
+    pub net: Vec<Net>,
+}
+
+pub trait LNetState {
+    fn get_state(&self) -> String;
+}
+
+impl LNetState for LNet {
+    fn get_state(&self) -> String {
+        let up = self
+            .net
+            .iter()
+            .flat_map(|x| {
+                x.local_nis
+                    .iter()
+                    .map(|x| x.status.as_str())
+                    .collect::<Vec<&str>>()
+            })
+            .any(|x| x.to_ascii_lowercase() == "up");
+
+        match up {
+            true => "up".into(),
+            false => "down".into(),
+        }
+    }
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct NetworkData {
+    pub network_interfaces: Vec<NetworkInterface>,
+    pub lnet_data: LNet,
+}

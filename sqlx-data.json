@@ -979,41 +979,6 @@
       ]
     }
   },
-  "321e561cd3b4279dba46176519f5ac2644785954e6bbd229e41ae16fb21f5417": {
-    "query": "\n                INSERT INTO network_interface \n                (mac_address, name, inet4_address, inet6_address, lnd_type, state_up, host_id)\n                SELECT mac_address, name, string_to_array(inet4_address, ',')::inet[], string_to_array(inet6_address, ',')::inet[], lnd_type, state_up, host_id\n                FROM UNNEST($1::text[], $2::text[], $3::text[], $4::text[], $5::lnd_network_type[], $6::bool[], $7::int[])\n                AS t(mac_address, name, inet4_address, inet6_address, lnd_type, state_up, host_id)\n                ON CONFLICT (mac_address)\n                    DO\n                    UPDATE SET  name          = EXCLUDED.name,\n                                inet4_address = EXCLUDED.inet4_address,\n                                inet6_address = EXCLUDED.inet6_address,\n                                lnd_type      = EXCLUDED.lnd_type,\n                                state_up      = EXCLUDED.state_up,\n                                host_id       = EXCLUDED.host_id",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": [
-          "TextArray",
-          "TextArray",
-          "TextArray",
-          "TextArray",
-          {
-            "Custom": {
-              "name": "_lnd_network_type",
-              "kind": {
-                "Array": {
-                  "Custom": {
-                    "name": "lnd_network_type",
-                    "kind": {
-                      "Enum": [
-                        "tcp",
-                        "o2ib"
-                      ]
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "BoolArray",
-          "Int4Array"
-        ]
-      },
-      "nullable": []
-    }
-  },
   "36188079437a0e3df0d4584e22b15673bfadcf66128168b59e13717eedcd8470": {
     "query": "\n            DELETE FROM corosync_node\n            USING corosync_node_managed_host\n            WHERE id = corosync_node_id\n            AND host_id = $1\n            AND corosync_node_id != ALL($2::corosync_node_key[])\n        ",
     "describe": {
@@ -3091,6 +3056,24 @@
       ]
     }
   },
+  "a5e14b628a8f67d458167f1ea5d0390aacd72b92a725bb1092e6d9c104414a7b": {
+    "query": "\n            WITH updated AS (\n                INSERT INTO nid\n                (net_type, host_id, nid, status, interfaces)\n                SELECT net_type, host_id, nid, status, string_to_array(interfaces, ',')::text[]\n                FROM UNNEST($1::text[], $2::int[], $3::text[], $4::text[], $5::text[])\n                AS t(net_type, host_id, nid, status, interfaces)\n                ON CONFLICT (host_id, nid)\n                    DO\n                    UPDATE SET  net_type      = EXCLUDED.net_type,\n                                status        = EXCLUDED.status,\n                                interfaces    = EXCLUDED.interfaces\n                RETURNING id\n            )\n\n            INSERT INTO lnet\n            (host_id, state, nids)\n            (SELECT $6, $7, array_agg(id) from updated)\n            ON CONFLICT (host_id)\n                DO\n                UPDATE SET nids  = EXCLUDED.nids,\n                           state = EXCLUDED.state;\n                ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "TextArray",
+          "Int4Array",
+          "TextArray",
+          "TextArray",
+          "TextArray",
+          "Int4",
+          "Text"
+        ]
+      },
+      "nullable": []
+    }
+  },
   "a8110847776ee7220577529cf0e395fe9ef3d72fa113924a08ef4a1c44664f82": {
     "query": "\n                SELECT\n                    c.id AS id,\n                    cancelled,\n                    complete,\n                    errored,\n                    created_at,\n                    array_agg(cj.job_id)::INT[] AS job_ids,\n                    message\n                FROM chroma_core_command c\n                JOIN chroma_core_command_jobs cj ON c.id = cj.command_id\n                WHERE ($4::BOOL IS NULL OR complete = $4)\n                  AND ($5::TEXT IS NULL OR c.message ILIKE '%' || $5 || '%')\n                GROUP BY c.id\n                ORDER BY\n                    CASE WHEN $3 = 'ASC' THEN c.id END ASC,\n                    CASE WHEN $3 = 'DESC' THEN c.id END DESC\n                OFFSET $1 LIMIT $2\n            ",
     "describe": {
@@ -4551,6 +4534,41 @@
         false,
         false
       ]
+    }
+  },
+  "f98f8c6f1fb7cdffb434c4cc4f9b2fe23c553b5dd61aa8bf9cae9377500e67a8": {
+    "query": "\n            INSERT INTO network_interface \n            (mac_address, name, inet4_address, inet6_address, lnd_type, state_up, host_id)\n            SELECT mac_address, name, string_to_array(inet4_address, ',')::inet[], string_to_array(inet6_address, ',')::inet[], lnd_type, state_up, host_id\n            FROM UNNEST($1::text[], $2::text[], $3::text[], $4::text[], $5::lnd_network_type[], $6::bool[], $7::int[])\n            AS t(mac_address, name, inet4_address, inet6_address, lnd_type, state_up, host_id)\n            ON CONFLICT (mac_address)\n                DO\n                UPDATE SET  name          = EXCLUDED.name,\n                            inet4_address = EXCLUDED.inet4_address,\n                            inet6_address = EXCLUDED.inet6_address,\n                            lnd_type      = EXCLUDED.lnd_type,\n                            state_up      = EXCLUDED.state_up,\n                            host_id       = EXCLUDED.host_id",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "TextArray",
+          "TextArray",
+          "TextArray",
+          "TextArray",
+          {
+            "Custom": {
+              "name": "_lnd_network_type",
+              "kind": {
+                "Array": {
+                  "Custom": {
+                    "name": "lnd_network_type",
+                    "kind": {
+                      "Enum": [
+                        "tcp",
+                        "o2ib"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "BoolArray",
+          "Int4Array"
+        ]
+      },
+      "nullable": []
     }
   },
   "fa7bdf3c5e49361f1afaa6a2075745f0943c461aa87a97854e3004c75c5f6367": {
