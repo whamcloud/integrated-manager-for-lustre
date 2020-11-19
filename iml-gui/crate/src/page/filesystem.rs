@@ -13,6 +13,7 @@ use crate::{
     sleep_with_handle, GMsg, RequestExt, Route,
 };
 use futures::channel::oneshot;
+use gloo_timers::future::TimeoutFuture;
 use iml_graphql_queries::{client_mount, Response};
 use iml_wire_types::{
     warp_drive::{ArcCache, Locks},
@@ -88,6 +89,11 @@ pub fn init(cache: &ArcCache, model: &mut Model, orders: &mut impl Orders<Msg, G
     orders.send_msg(Msg::FetchMountCommand);
 }
 
+async fn delay_and_fetch_mount_command(delay: u32) -> Result<Msg,Msg> {
+    TimeoutFuture::new(delay).await;
+    Ok(Msg::FetchMountCommand)
+}
+
 pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
     match msg {
         Msg::FetchMountCommand => {
@@ -96,23 +102,27 @@ pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl O
 
             orders.perform_cmd(req.fetch_json_data(|x| Msg::MountCommandFetched(x)));
         }
-        Msg::MountCommandFetched(x) => match x {
-            Ok(Response::Data(x)) => {
-                model.mount_command = Some(x.data.client_mount_command);
+        Msg::MountCommandFetched(x) => {
+            match x {
+                Ok(Response::Data(x)) => {
+                    model.mount_command = Some(x.data.client_mount_command);
+                }
+                Ok(Response::Errors(e)) => {
+                    error!(
+                        "An error occurred while retrieving the mount command for filesytem",
+                        model.fs.name, e
+                    );
+                }
+                Err(err) => {
+                    error!(
+                        "An error occurred while retrieving the mount command for filesytem",
+                        model.fs.name, err
+                    );
+                    orders.skip();
+                }
             }
-            Ok(Response::Errors(e)) => {
-                error!(
-                    "An error occurred while retrieving the mount command for filesytem",
-                    model.fs.name, e
-                );
-            }
-            Err(err) => {
-                error!(
-                    "An error occurred while retrieving the mount command for filesytem",
-                    model.fs.name, err
-                );
-                orders.skip();
-            }
+
+            orders.perform_cmd(delay_and_fetch_mount_command(60_000));
         },
         Msg::FetchStats => {
             model.stats_cancel = None;
