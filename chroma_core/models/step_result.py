@@ -19,9 +19,6 @@ MAX_STATE_STRING = 32
 class StepResult(models.Model):
     def __init__(self, *args, **kwargs):
         super(StepResult, self).__init__(*args, **kwargs)
-        self.class_name = self.step_klass.__name__
-        self.args_json = Serializer().to_json(self.args)
-        self.description = self.describe()
 
     job = models.ForeignKey("Job", on_delete=CASCADE)
     step_klass = PickledObjectField()
@@ -54,6 +51,14 @@ class StepResult(models.Model):
     result = models.TextField(null=True, help_text="Arbitrary result data.")
 
     _step_types = {}
+
+    # Assign the dependent fields, we cannot assign these fields in the constructor,
+    # therefore we intercept the save() method
+    def save(self, *args, **kwargs):
+        self.class_name = self.step_klass.__name__
+        self.args_json = Serializer().to_json(self.args)
+        self.description = self.describe()
+        super(StepResult, self).save(*args, **kwargs)
 
     @property
     def step_class(self):
