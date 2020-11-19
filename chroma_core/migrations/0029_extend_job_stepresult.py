@@ -18,7 +18,10 @@ def apply_job_changes(apps, schema_editor):
         # then concrete_job doesn't contain `description` method, so the `downcast` required
         concrete_job = job.downcast()
         job.class_name = concrete_job.__class__.__name__
-        job.description_out = concrete_job.description()
+        try:
+            job.description_out = job.description()
+        except NotImplementedError:
+            job.description_out = ""
         job.cancellable_out = concrete_job.cancellable
         job.save()
 
