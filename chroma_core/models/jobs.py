@@ -377,16 +377,6 @@ class Job(models.Model):
     # sequence of numbers.  The intent is that the Job will be sorted numerically ascending.
     display_order = DEFAULT_ORDER = 1000
 
-    # Assign the dependent fields, we cannot assign these fields in the constructor,
-    # therefore we intercept the save() method
-    def save(self, *args, **kwargs):
-        self.class_name = self.__class__.__name__
-        try:
-            self.description_out = self.description()
-        except NotImplementedError:
-            self.description_out = ""
-        self.cancellable_out = self.cancellable
-
     # Job classes declare whether presentation layer should
     # request user confirmation (e.g. removals, stops)
     def get_requires_confirmation(self):

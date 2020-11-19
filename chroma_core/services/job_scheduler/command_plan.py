@@ -129,6 +129,7 @@ class CommandPlan(object):
             locks = self._create_locks(job)
             job.locks_json = json.dumps([l.to_dict() for l in locks])
             self._create_dependencies(job, locks, job_deps_map)
+            self._assign_job_dependent_fields(job)
             job.save()
 
             log.info("add_jobs: created Job %s (%s)" % (job.pk, job.description()))
@@ -344,6 +345,7 @@ class CommandPlan(object):
             locks = self._create_locks(job)
             job.locks_json = json.dumps([l.to_dict() for l in locks])
             self._create_dependencies(job, locks, {})
+            self._assign_job_dependent_fields(job)
             job.save()
             jobs.append(job)
             for l in locks:
@@ -494,6 +496,18 @@ class CommandPlan(object):
                         Transition(dependent, dependent_state, fix_state), transition_stack
                     )
                     self.edges.add((root_transition, dep_transition))
+
+    @staticmethod
+    def _assign_job_dependent_fields(job):
+        # Assign the dependent fields, we cannot assign these fields in the constructor,
+        # We cannot overload the save() method for Job due to implementation of the
+        # polymorphic.models.PolymorphicMetaclass.__new__.save() method
+        job.class_name = job.__class__.__name__
+        try:
+            job.description_out = job.description()
+        except NotImplementedError:
+            job.description_out = ""
+        job.cancellable_out = job.cancellable
 
     def command_run_jobs(self, job_dicts, message):
         assert len(job_dicts) > 0
