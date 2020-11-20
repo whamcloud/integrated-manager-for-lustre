@@ -89,7 +89,7 @@ pub fn init(cache: &ArcCache, model: &mut Model, orders: &mut impl Orders<Msg, G
     orders.send_msg(Msg::FetchMountCommand);
 }
 
-async fn delay_and_fetch_mount_command(delay: u32) -> Result<Msg,Msg> {
+async fn delay_and_fetch_mount_command(delay: u32) -> Result<Msg, Msg> {
     TimeoutFuture::new(delay).await;
     Ok(Msg::FetchMountCommand)
 }
@@ -123,7 +123,7 @@ pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl O
             }
 
             orders.perform_cmd(delay_and_fetch_mount_command(60_000));
-        },
+        }
         Msg::FetchStats => {
             model.stats_cancel = None;
             let request = seed::fetch::Request::new(model.stats_url.clone());
