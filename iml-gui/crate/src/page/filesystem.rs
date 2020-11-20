@@ -13,7 +13,6 @@ use crate::{
     sleep_with_handle, GMsg, RequestExt, Route,
 };
 use futures::channel::oneshot;
-use gloo_timers::future::TimeoutFuture;
 use iml_graphql_queries::{client_mount, Response};
 use iml_wire_types::{
     warp_drive::{ArcCache, Locks},
@@ -39,6 +38,7 @@ pub struct Model {
     rows: HashMap<i32, Row>,
     stratagem: stratagem::Model,
     stats: iml_influx::filesystem::Response,
+    mount_cancel: Option<oneshot::Sender<()>>,
     stats_cancel: Option<oneshot::Sender<()>>,
     stats_url: String,
 }
@@ -56,6 +56,7 @@ impl Model {
             rows: Default::default(),
             stratagem: stratagem::Model::new(use_stratagem, Arc::clone(fs)),
             stats: iml_influx::filesystem::Response::default(),
+            mount_cancel: None,
             stats_cancel: None,
             stats_url: format!(r#"/influx?db=iml_stats&q={}"#, iml_influx::filesystem::query(&fs.name)),
         }
@@ -89,14 +90,10 @@ pub fn init(cache: &ArcCache, model: &mut Model, orders: &mut impl Orders<Msg, G
     orders.send_msg(Msg::FetchMountCommand);
 }
 
-async fn delay_and_fetch_mount_command(delay: u32) -> Result<Msg, Msg> {
-    TimeoutFuture::new(delay).await;
-    Ok(Msg::FetchMountCommand)
-}
-
 pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
     match msg {
         Msg::FetchMountCommand => {
+            model.mount_cancel = None;
             let query = client_mount::list::build(model.fs.name.to_string());
             let req = seed::fetch::Request::graphql_query(&query);
 
@@ -122,7 +119,9 @@ pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl O
                 }
             }
 
-            orders.perform_cmd(delay_and_fetch_mount_command(60_000));
+            let (cancel, fut) = sleep_with_handle(Duration::from_secs(60), Msg::FetchMountCommand, Msg::Noop);
+            model.mount_cancel = Some(cancel);
+            orders.perform_cmd(fut);
         }
         Msg::FetchStats => {
             model.stats_cancel = None;
