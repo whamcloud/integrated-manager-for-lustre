@@ -4,15 +4,16 @@
 
 use crate::{
     components::{
-        action_dropdown, alert_indicator, lock_indicator, paging, progress_circle, resource_links, stratagem,
-        table as t, Placement,
+        action_dropdown, alert_indicator, font_awesome::*, lock_indicator, paging, progress_circle, resource_links,
+        stratagem, table as t, Placement,
     },
     extensions::MergeAttrs,
     generated::css_classes::C,
     route::RouteId,
-    sleep_with_handle, GMsg, Route,
+    sleep_with_handle, GMsg, RequestExt, Route,
 };
 use futures::channel::oneshot;
+use iml_graphql_queries::{client_mount, Response};
 use iml_wire_types::{
     warp_drive::{ArcCache, Locks},
     Filesystem, Session, Target, TargetConfParam, TargetKind, ToCompositeId,
@@ -31,11 +32,13 @@ pub struct Model {
     mdts: Vec<Arc<Target<TargetConfParam>>>,
     mdt_paging: paging::Model,
     mgt: Vec<Arc<Target<TargetConfParam>>>,
+    mount_command: Option<String>,
     osts: Vec<Arc<Target<TargetConfParam>>>,
     ost_paging: paging::Model,
     rows: HashMap<i32, Row>,
     stratagem: stratagem::Model,
     stats: iml_influx::filesystem::Response,
+    mount_cancel: Option<oneshot::Sender<()>>,
     stats_cancel: Option<oneshot::Sender<()>>,
     stats_url: String,
 }
@@ -47,11 +50,13 @@ impl Model {
             mdts: Default::default(),
             mdt_paging: Default::default(),
             mgt: Default::default(),
+            mount_command: None,
             osts: Default::default(),
             ost_paging: Default::default(),
             rows: Default::default(),
             stratagem: stratagem::Model::new(use_stratagem, Arc::clone(fs)),
             stats: iml_influx::filesystem::Response::default(),
+            mount_cancel: None,
             stats_cancel: None,
             stats_url: format!(r#"/influx?db=iml_stats&q={}"#, iml_influx::filesystem::query(&fs.name)),
         }
@@ -60,6 +65,8 @@ impl Model {
 
 #[derive(Clone, Debug)]
 pub enum Msg {
+    FetchMountCommand,
+    MountCommandFetched(fetch::ResponseDataResult<Response<client_mount::list::Resp>>),
     FetchStats,
     StatsFetched(Box<fetch::ResponseDataResult<iml_influx::filesystem::InfluxResponse>>),
     ActionDropdown(Box<action_dropdown::IdMsg>),
@@ -79,10 +86,43 @@ pub fn init(cache: &ArcCache, model: &mut Model, orders: &mut impl Orders<Msg, G
     stratagem::init(cache, &model.stratagem, &mut orders.proxy(Msg::Stratagem));
 
     orders.send_msg(Msg::FetchStats);
+
+    orders.send_msg(Msg::FetchMountCommand);
 }
 
 pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
     match msg {
+        Msg::FetchMountCommand => {
+            model.mount_cancel = None;
+            let query = client_mount::list::build(model.fs.name.to_string());
+            let req = seed::fetch::Request::graphql_query(&query);
+
+            orders.perform_cmd(req.fetch_json_data(|x| Msg::MountCommandFetched(x)));
+        }
+        Msg::MountCommandFetched(x) => {
+            match x {
+                Ok(Response::Data(x)) => {
+                    model.mount_command = Some(x.data.client_mount_command);
+                }
+                Ok(Response::Errors(e)) => {
+                    error!(
+                        "An error occurred while retrieving the mount command for filesytem",
+                        model.fs.name, e
+                    );
+                }
+                Err(err) => {
+                    error!(
+                        "An error occurred while retrieving the mount command for filesytem",
+                        model.fs.name, err
+                    );
+                    orders.skip();
+                }
+            }
+
+            let (cancel, fut) = sleep_with_handle(Duration::from_secs(60), Msg::FetchMountCommand, Msg::Noop);
+            model.mount_cancel = Some(cancel);
+            orders.perform_cmd(fut);
+        }
         Msg::FetchStats => {
             model.stats_cancel = None;
             let request = seed::fetch::Request::new(model.stats_url.clone());
@@ -313,7 +353,17 @@ fn details(cache: &ArcCache, all_locks: &Locks, model: &Model) -> Node<Msg> {
                 style! {
                     St::BackgroundColor => "black"
                 },
-                model.fs.mount_command.to_string()
+                if let Some(mount_command) = &model.mount_command {
+                    span![mount_command.to_string()]
+                } else {
+                    span![
+                        font_awesome(
+                            class![C.w_5, C.h_5, C.inline, C.mr_4, C.text_gray_500, C.pulse],
+                            "spinner"
+                        ),
+                        "Loading...",
+                    ]
+                }
             ]
         ],
     ]

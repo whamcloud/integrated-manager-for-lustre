@@ -584,6 +584,43 @@ impl QueryRoot {
 
         Ok(server_profiles)
     }
+
+    #[graphql(arguments(fs(description = "The filesystem to mount"),))]
+    async fn client_mount_command(
+        context: &Context,
+        fs_name: String,
+    ) -> juniper::FieldResult<String> {
+        let nids = sqlx::query!(
+            r#"
+            SELECT n.nid FROM target AS t
+            INNER JOIN lnet as l ON l.host_id = ANY(t.host_ids)
+            INNER JOIN nid as n ON n.id = ANY(l.nids)
+            WHERE t.name='MGS' AND $1 = ANY(t.filesystems) AND n.host_id NOT IN (
+                SELECT nh.host_id
+                FROM corosync_resource_bans b
+                INNER JOIN corosync_node_managed_host nh ON (nh.corosync_node_id).name = b.node
+                AND nh.cluster_id = b.cluster_id
+                INNER JOIN corosync_resource t ON t.id = b.resource AND b.cluster_id = t.cluster_id
+                WHERE t.mount_point is not NULL
+            ) GROUP BY l.host_id, n.nid ORDER BY l.host_id, n.nid;
+            "#,
+            fs_name
+        )
+        .fetch_all(&context.pg_pool)
+        .await?
+        .into_iter()
+        .map(|x| x.nid)
+        .collect::<Vec<String>>();
+
+        let mount_command = format!(
+            "mount -t lustre {}:/{} /mnt/{}",
+            nids.join(":"),
+            fs_name,
+            fs_name
+        );
+
+        Ok(mount_command)
+    }
 }
 
 struct SnapshotIntervalName {
