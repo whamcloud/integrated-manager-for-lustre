@@ -6,7 +6,7 @@ from chroma_core.lib.cache import ObjectCache
 from chroma_core.lib.util import dbperf
 from chroma_core.models import ManagedFilesystem
 from chroma_core.models import Nid
-from chroma_core.models import ManagedMdt, ManagedMgs, ManagedOst, ManagedTarget, ManagedTargetMount
+from chroma_core.models import ManagedMdt, ManagedMgs, ManagedOst, ManagedTarget
 from tests.unit.chroma_core.helpers import freshen
 from tests.unit.chroma_core.helpers import synthetic_host
 from tests.unit.services.job_scheduler.job_test_case import JobTestCase, JobTestCaseWithHost
@@ -189,8 +189,6 @@ class TestFSTransitions(JobTestCaseWithHost):
         ost2, ost_tms = ManagedOst.create_for_volume(self._test_lun(self.host).id, filesystem=fs2)
         for target in [mdt2, ost2]:
             ObjectCache.add(ManagedTarget, target.managedtarget_ptr)
-        for tm in chain(mdt_tms, ost_tms):
-            ObjectCache.add(ManagedTargetMount, tm)
 
         self.fs = self.set_and_assert_state(self.fs, "available")
         fs2 = self.set_and_assert_state(fs2, "available")
@@ -245,8 +243,6 @@ class TestFSTransitions(JobTestCaseWithHost):
         self.fs = self.set_and_assert_state(self.fs, "stopped")
         ost_new, ost_new_tms = ManagedOst.create_for_volume(self._test_lun(self.host).id, filesystem=self.fs)
         ObjectCache.add(ManagedTarget, ost_new.managedtarget_ptr)
-        for tm in ost_new_tms:
-            ObjectCache.add(ManagedTargetMount, tm)
         self.mgt.managedtarget_ptr = self.set_and_assert_state(freshen(self.mgt.managedtarget_ptr), "mounted")
         self.mdt.managedtarget_ptr = self.set_and_assert_state(freshen(self.mdt.managedtarget_ptr), "mounted")
         self.ost.managedtarget_ptr = self.set_and_assert_state(freshen(self.ost.managedtarget_ptr), "mounted")

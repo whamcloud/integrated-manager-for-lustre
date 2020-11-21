@@ -6,7 +6,6 @@ from itertools import chain
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.models import Command
 from chroma_core.models import ManagedTarget
-from chroma_core.models import ManagedTargetMount
 from chroma_core.models import Nid
 from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemonRpcInterface
 from chroma_core.services.queue import ServiceQueue
@@ -274,8 +273,6 @@ class JobTestCase(IMLUnitTestCase):
 
         for target in [self.mgt, self.ost, self.mdt]:
             ObjectCache.add(ManagedTarget, target.managedtarget_ptr)
-        for tm in chain(mgt_tms, mdt_tms, ost_tms):
-            ObjectCache.add(ManagedTargetMount, tm)
 
         if start:
             self.fs = self.set_and_assert_state(self.fs, "available")

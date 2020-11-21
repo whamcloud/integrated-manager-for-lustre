@@ -94,7 +94,6 @@ class TestUpdateNids(NidTestCase):
             ManagedOst,
             ManagedFilesystem,
             ManagedTarget,
-            ManagedTargetMount,
         )
 
         self.mgt, mgt_tms = ManagedMgs.create_for_volume(synthetic_volume_full(mgs).id, name="MGS")
@@ -104,8 +103,6 @@ class TestUpdateNids(NidTestCase):
         self.ost, ost_tms = ManagedOst.create_for_volume(synthetic_volume_full(oss).id, filesystem=self.fs)
         for target in [self.mgt, self.ost, self.mdt]:
             ObjectCache.add(ManagedTarget, target.managedtarget_ptr)
-        for tm in chain(mgt_tms, mdt_tms, ost_tms):
-            ObjectCache.add(ManagedTargetMount, tm)
 
         self.fs = self.set_and_assert_state(self.fs, "available")
 

@@ -6,7 +6,7 @@ import django.utils.timezone
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.models.jobs import SchedulingError, Job
 from chroma_core.models.command import Command
-from chroma_core.models import ManagedMgs, ManagedTarget, ManagedTargetMount
+from chroma_core.models import ManagedMgs, ManagedTarget
 from chroma_core.models import LNetConfiguration
 from chroma_core.services.job_scheduler.job_scheduler import RunJobThread
 from chroma_core.services.job_scheduler import job_scheduler_notify
@@ -71,8 +71,6 @@ class TestStateManager(JobTestCaseWithHost):
     def test_failing_job(self):
         mgt, tms = ManagedMgs.create_for_volume(self._test_lun(self.host).id, name="MGS")
         ObjectCache.add(ManagedTarget, mgt.managedtarget_ptr)
-        for tm in tms:
-            ObjectCache.add(ManagedTargetMount, tm)
 
         try:
             MockAgentRpc.succeed = False
