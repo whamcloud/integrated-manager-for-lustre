@@ -4,6 +4,7 @@ import mock
 
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.services.job_scheduler.job_scheduler import JobScheduler
+from django.db import connection
 from tests.unit.chroma_api.tastypie_test import ResourceTestCase
 from tests.unit.chroma_core.helpers import synthetic_volume_full
 from chroma_core.models import ManagedTarget
@@ -133,20 +134,40 @@ class ChromaApiTestCase(ResourceTestCase):
         return self.deserialize(response)
 
     def create_simple_filesystem(self, host):
-        from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst, ManagedFilesystem, ManagedTargetMount
+        from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst, ManagedFilesystem
 
-        self.mgt, _ = ManagedMgs.create_for_volume(synthetic_volume_full(host).id, name="MGS")
-        self.fs = ManagedFilesystem.objects.create(mgs=self.mgt, name="testfs")
+        with connection.cursor() as cursor:
+            # The MGT
+            cursor.execute(
+                "INSERT INTO chroma_core_managedtarget \
+                (id, state_modified_at, state, immutable_state, name, uuid, ha_label, inode_size, bytes_per_inode, inode_count, reformat, not_deleted, content_type_id) \
+                VALUES(1, '2020-11-11T23:52:23.938603+00:00', 'unformatted', False, 'MGS', null, null, null, null, null, False, True, 32)"
+            )
+
+            # The MDT
+            cursor.execute(
+                "INSERT INTO chroma_core_managedtarget \
+                (id, state_modified_at, state, immutable_state, name, uuid, ha_label, inode_size, bytes_per_inode, inode_count, reformat, not_deleted, content_type_id) \
+                VALUES(2, '2020-11-11T23:52:23.938603+00:00', 'unformatted', False, 'testfs-MDT0000', null, null, null, null, null, False, True, 38)"
+            )
+
+            # The OST
+            cursor.execute(
+                "INSERT INTO chroma_core_managedtarget \
+                (id, state_modified_at, state, immutable_state, name, uuid, ha_label, inode_size, bytes_per_inode, inode_count, reformat, not_deleted, content_type_id) \
+                VALUES(3, '2020-11-11T23:52:23.938603+00:00', 'unformatted', False, 'testfs-OST0000', null, null, null, null, null, False, True, 54)"
+            )
+
+        self.mgt = ManagedMgs.objects.create(managedtarget_ptr_id=1, conf_param_version=0, conf_param_version_applied=0)
+
+        self.fs = ManagedFilesystem.objects.create(mgs=self.mgt, name="testfs", id=1, mdt_next_index=1, ost_next_index=1)
         ObjectCache.add(ManagedFilesystem, self.fs)
         ObjectCache.add(ManagedTarget, ManagedTarget.objects.get(id=self.mgt.id))
 
-        self.mdt, _ = ManagedMdt.create_for_volume(synthetic_volume_full(host).id, filesystem=self.fs)
-        self.ost, _ = ManagedOst.create_for_volume(synthetic_volume_full(host).id, filesystem=self.fs)
+        self.mdt = ManagedMdt.objects.create(managedtarget_ptr_id=2, index=0, filesystem_id=1)
+        self.ost = ManagedOst.objects.create(managedtarget_ptr_id=3, index=0, filesystem_id=1)
         ObjectCache.add(ManagedTarget, ManagedTarget.objects.get(id=self.mdt.id))
         ObjectCache.add(ManagedTarget, ManagedTarget.objects.get(id=self.ost.id))
-        ObjectCache.add(ManagedTargetMount, ManagedTargetMount.objects.get(target_id=self.mgt.id))
-        ObjectCache.add(ManagedTargetMount, ManagedTargetMount.objects.get(target_id=self.mdt.id))
-        ObjectCache.add(ManagedTargetMount, ManagedTargetMount.objects.get(target_id=self.ost.id))
 
     def api_get_list(self, uri, **kwargs):
         response = self.api_client.get(uri, **kwargs)
