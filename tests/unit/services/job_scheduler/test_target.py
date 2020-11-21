@@ -1,5 +1,4 @@
 from chroma_core.lib.cache import ObjectCache
-from chroma_core.models import ManagedTargetMount
 from chroma_core.models import Nid
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 from chroma_core.models import ManagedTarget, ManagedMgs, ManagedHost
@@ -43,8 +42,6 @@ class TestTargetTransitions(JobTestCaseWithHost):
 
         self.mgt, mgt_tms = ManagedMgs.create_for_volume(self._test_lun(self.host).id, name="MGS")
         ObjectCache.add(ManagedTarget, self.mgt.managedtarget_ptr)
-        for tm in mgt_tms:
-            ObjectCache.add(ManagedTargetMount, tm)
         self.assertEqual(ManagedMgs.objects.get(pk=self.mgt.pk).state, "unformatted")
 
     def test_start_stop(self):
@@ -187,18 +184,12 @@ class TestSharedTarget(JobTestCaseWithHost):
         )
 
         ObjectCache.add(ManagedTarget, self.mgt.managedtarget_ptr)
-        for tm in tms:
-            ObjectCache.add(ManagedTargetMount, tm)
         self.assertEqual(ManagedMgs.objects.get(pk=self.mgt.pk).state, "unformatted")
 
     def test_clean_setup(self):
         # Start it normally the way the API would on creation
         self.mgt.managedtarget_ptr = self.set_and_assert_state(self.mgt.managedtarget_ptr, "mounted")
         self.assertEqual(ManagedTarget.objects.get(pk=self.mgt.pk).state, "mounted")
-        self.assertEqual(
-            ManagedTarget.objects.get(pk=self.mgt.pk).active_mount,
-            ManagedTargetMount.objects.get(host=self.hosts[0], target=self.mgt),
-        )
 
     def test_teardown_unformatted(self):
         self.assertEqual(ManagedTarget.objects.get(pk=self.mgt.pk).state, "unformatted")
