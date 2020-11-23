@@ -112,8 +112,8 @@ arg_enum! {
     #[derive(Debug, serde::Serialize, serde::Deserialize, Clone, Copy)]
     #[serde(rename_all = "lowercase")]
     pub enum FilesyncAction {
-	Push,
-	Pull,
+    Push,
+    Pull,
     }
 }
 
