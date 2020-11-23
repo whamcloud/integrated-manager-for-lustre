@@ -12,7 +12,7 @@ EnvironmentFile=-/etc/iml-docker/setup/config
 WorkingDirectory=/etc/iml-docker
 ExecStartPre=-/usr/bin/docker load -i /var/lib/iml-images.tgz
 ExecStart=/usr/bin/docker stack deploy -c docker-compose.yml -c docker-compose.overrides.yml iml --resolve-image=never
-ExecStart=/bin/bash -c '/bin/mkdir -p /etc/iml && /bin/cp /var/lib/docker/volumes/iml_manager-config/_data/iml-settings.conf /etc/iml/iml-settings.conf'
+ExecStart=/bin/bash /usr/bin/iml-copy-settings.sh
 ExecStart=/bin/bash -c 'until /usr/bin/iml server list > /dev/null 2>&1; do sleep 1; done'
 ExecStop=/usr/bin/docker stack rm iml
 ExecStop=/bin/bash -c 'while /usr/bin/docker stack ps iml > /dev/null 2>&1; do sleep 1; done'
