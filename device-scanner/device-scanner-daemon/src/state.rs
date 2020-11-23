@@ -297,6 +297,13 @@ fn get_datasets(b: &Buckets, ys: &HashSet<Mount>, guid: u64) -> Result<HashSet<D
 }
 
 fn build_device_graph<'a>(ptr: &mut Device, b: &Buckets<'a>, ys: &HashSet<Mount>) -> Result<()> {
+    tracing::debug!(
+        "build_device_graph: ptr: {:?}, buckets: {:?}, ys:{:?}",
+        ptr,
+        b,
+        ys
+    );
+    
     match ptr {
         Device::Root(r) => {
             let ss = get_scsis(&b, &ys)?;
