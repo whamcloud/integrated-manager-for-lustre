@@ -3968,6 +3968,16 @@
       ]
     }
   },
+  "b8e774ab32b79eb3f2d87b7f373b609831f72f63f716dcbb7917871531466b1a": {
+    "query": "\n        INSERT INTO chroma_core_serverprofile\n        (name, ui_name, ui_description, managed, worker, user_selectable, initial_state, ntp, corosync, corosync2, pacemaker, \"default\")\n        VALUES\n        ('foo', 'foo', 'foo', 'f', 'f', 't', 'bar', 'f', 'f', 'f', 'f', 't')\n        ON CONFLICT DO NOTHING\n    ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": []
+    }
+  },
   "b90d797530fd50b0596cbdc7bce108066fc5c4e8d8feec13f22143f7e44653e9": {
     "query": "SELECT id, filesystem_name, snapshot_name, snapshot_fsname FROM snapshot",
     "describe": {
