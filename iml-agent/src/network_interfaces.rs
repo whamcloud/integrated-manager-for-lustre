@@ -50,11 +50,15 @@ pub async fn get_interfaces() -> Result<Vec<NetworkInterface>, ImlAgentError> {
 pub async fn get_lnet_data() -> Result<LNet, ImlAgentError> {
     let output = get_lnet_data_cmd().checked_output().await?;
 
-    let lnet_data = std::str::from_utf8(&output.stdout)?;
+    let lnet_data = std::str::from_utf8(&output.stdout)?.trim();
 
-    let xs: LNet = serde_yaml::from_str(lnet_data)?;
+    if lnet_data.is_empty() {
+        return Ok(LNet::default());
+    };
 
-    Ok(xs)
+    let x: LNet = serde_yaml::from_str(lnet_data)?;
+
+    Ok(x)
 }
 
 #[cfg(test)]
