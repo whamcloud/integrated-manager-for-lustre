@@ -1217,12 +1217,12 @@
         },
         {
           "ordinal": 10,
-          "name": "description",
+          "name": "description_out",
           "type_info": "Text"
         },
         {
           "ordinal": 11,
-          "name": "cancellable",
+          "name": "cancellable_out",
           "type_info": "Bool"
         }
       ],
