@@ -132,8 +132,12 @@ async fn update_network_stats(
 fn parse_lnet_data(
     lnet_data: &LNet,
     host_id: i32,
-) -> (Vec<String>, Vec<i32>, Vec<String>, Vec<String>, Vec<String>) {
-    lnet_data
+) -> Option<(Vec<String>, Vec<i32>, Vec<String>, Vec<String>, Vec<String>)> {
+    if lnet_data.net.is_empty() {
+        return None;
+    }
+
+    let xs = lnet_data
         .net
         .iter()
         .cloned()
@@ -169,7 +173,9 @@ fn parse_lnet_data(
 
                 acc
             },
-        )
+        );
+
+    Some(xs)
 }
 
 async fn update_lnet_data(
@@ -177,7 +183,10 @@ async fn update_lnet_data(
     host_id: i32,
     lnet_data: &LNet,
 ) -> Result<(), sqlx::Error> {
-    let xs = parse_lnet_data(lnet_data, host_id);
+    let xs = match parse_lnet_data(lnet_data, host_id) {
+        Some(xs) => xs,
+        None => return Ok(()),
+    };
 
     sqlx::query!(
         r#"
@@ -330,6 +339,15 @@ mod tests {
                 },
             ],
         };
+
+        let parsed_data = parse_lnet_data(&data, 2);
+
+        insta::assert_debug_snapshot!(parsed_data)
+    }
+
+    #[test]
+    fn test_parse_empty_lnetctl_data() {
+        let data = LNet { net: vec![] };
 
         let parsed_data = parse_lnet_data(&data, 2);
 
