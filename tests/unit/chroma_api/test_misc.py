@@ -10,7 +10,7 @@ from chroma_core.models import Command
 from chroma_core.models import StepResult
 from chroma_core.models import ManagedTarget
 from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
-from tests.unit.chroma_core.helpers import synthetic_host
+from tests.unit.chroma_core.helpers import create_simple_fs, synthetic_host
 from iml_common.lib.date_time import IMLDateTime
 
 
@@ -51,7 +51,6 @@ class TestMisc(ChromaApiTestCase):
 
     @mock.patch("chroma_core.services.http_agent.HttpAgentRpc.remove_host", new=mock.Mock(), create=True)
     @mock.patch("chroma_core.services.job_scheduler.agent_rpc.AgentRpc.remove", new=mock.Mock())
-    @mock.patch("chroma_core.models.host.influx_post", new=mock.Mock())
     @remove_host_resources_patch
     def test_removals(self):
         """Test that after objects are removed all GETs still work
@@ -62,7 +61,7 @@ class TestMisc(ChromaApiTestCase):
         things incorrectly)"""
 
         host = synthetic_host("myserver")
-        self.create_simple_filesystem(host)
+        create_simple_fs()
 
         # Create a command/job/step result referencing the host
         command = Command.objects.create(message="test command", complete=True, errored=True)

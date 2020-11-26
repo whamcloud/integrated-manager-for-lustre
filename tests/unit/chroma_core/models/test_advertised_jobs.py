@@ -5,6 +5,7 @@ from tests.unit.chroma_core.helpers import load_default_profile
 from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
 from chroma_core.models import HostContactAlert, HostOfflineAlert, ServerProfile
 from chroma_core.models import (
+    ManagedTarget,
     FailoverTargetJob,
     RebootHostJob,
     ShutdownHostJob,
@@ -76,12 +77,14 @@ class TestAdvertisedTargetJobs(TestAdvertisedCase):
         self.target.immutable_state = False
         self.target.primary_host = synthetic_host()
         self.target.active_host = self.target.primary_host
+        self.target.inactive_hosts = [synthetic_host()]
 
     def test_FailoverTargetJob(self):
         # Normal situation
         self.assertTrue(FailoverTargetJob.can_run(self.target))
 
         # Failover
+        self.target.inactive_hosts = []
         self.assertFalse(FailoverTargetJob.can_run(self.target))
 
         # Monitor-only
@@ -279,11 +282,72 @@ class TestClientManagementJobs(TestAdvertisedCase):
         from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst, ManagedFilesystem, LustreClientMount
         from tests.unit.chroma_core.helpers import synthetic_volume_full
 
-        mgt, _ = ManagedMgs.create_for_volume(synthetic_volume_full(self.server).id, name="MGS")
-        fs = ManagedFilesystem.objects.create(mgs=mgt, name="testfs")
+        # mgt, _ = ManagedMgs.create_for_volume(synthetic_volume_full(self.server).id, name="MGS")
+        # fs = ManagedFilesystem.objects.create(mgs=mgt, name="testfs")
+        # ObjectCache.add(ManagedFilesystem, fs)
+        # ManagedMdt.create_for_volume(synthetic_volume_full(self.server).id, filesystem=fs)
+        # ManagedOst.create_for_volume(synthetic_volume_full(self.server).id, filesystem=fs)
+
+        mgt_target = ManagedTarget.objects.create(
+            id=1,
+            state_modified_at='2020-11-11T23:52:23.938603+00:00',
+            state="unformatted",
+            immutable_state=False,
+            name="MGS",
+            uuid=None,
+            ha_label=None,
+            inode_size=None,
+            bytes_per_inode=None,
+            inode_count=None,
+            reformat=False,
+            not_deleted=True,
+        );
+        mgt_target.save()
+
+        mgt = ManagedMgs.objects.create(managedtarget_ptr_id=1, conf_param_version=0, conf_param_version_applied=0)
+        mgt.save()
+
+        fs = ManagedFilesystem.objects.create(mgs=mgt, name="testfs", id=1, mdt_next_index=1, ost_next_index=1)
         ObjectCache.add(ManagedFilesystem, fs)
-        ManagedMdt.create_for_volume(synthetic_volume_full(self.server).id, filesystem=fs)
-        ManagedOst.create_for_volume(synthetic_volume_full(self.server).id, filesystem=fs)
+
+        mdt_target = ManagedTarget.objects.create(
+            id=2,
+            state_modified_at='2020-11-11T23:52:23.938603+00:00',
+            state="unformatted",
+            immutable_state=False,
+            name="testfs-MDT0000",
+            uuid=None,
+            ha_label=None,
+            inode_size=None,
+            bytes_per_inode=None,
+            inode_count=None,
+            reformat=False,
+            not_deleted=True,
+        );
+        mdt_target.save()
+
+        mdt = ManagedMdt.objects.create(managedtarget_ptr_id=2, index=0, filesystem_id=1)
+        mdt.save()
+
+        ost_target = ManagedTarget.objects.create(
+            id=3,
+            state_modified_at='2020-11-11T23:52:23.938603+00:00',
+            state="unformatted",
+            immutable_state=False,
+            name="foo-OST0000",
+            uuid=None,
+            ha_label=None,
+            inode_size=None,
+            bytes_per_inode=None,
+            inode_count=None,
+            reformat=False,
+            not_deleted=True,
+        );
+        ost_target.save()
+
+        ost = ManagedOst.objects.create(managedtarget_ptr_id=3, index=0, filesystem_id=1)
+        ost.save()
+
         state = "mounted" if active else "unmounted"
         self.mount = LustreClientMount.objects.create(host=self.worker, filesystem=fs.name, state=state)
 

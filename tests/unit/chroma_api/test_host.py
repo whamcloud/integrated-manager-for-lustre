@@ -317,21 +317,6 @@ class TestHostResource(ChromaApiTestCase):
 
         return hosts
 
-    @create_targets_patch
-    def test_select_by_filesystem(self):
-        """Test selecting host by filesystem with valid and invalid filesystem ids."""
-        self.create_simple_filesystem(synthetic_host("myserver"))
-
-        response = self.api_client.get("/api/host/", data={"filesystem_id": self.fs.id})
-        self.assertHttpOK(response)
-        content = json.loads(response.content)
-        self.assertEqual(1, len(content["objects"]))
-
-        response = self.api_client.get("/api/host/", data={"filesystem_id": -1000})
-        self.assertHttpOK(response)
-        content = json.loads(response.content)
-        self.assertEqual(0, len(content["objects"]))
-
 
 sample_private_key = """-----BEGIN RSA PRIVATE KEY-----
 MIIEpAIBAAKCAQEAwkuskn4QIxHVKcDqN7wIhedt2HxCJg2PZ2N8goUaJwVd6uU3
