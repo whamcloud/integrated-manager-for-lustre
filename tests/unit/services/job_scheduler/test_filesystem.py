@@ -60,6 +60,7 @@ class TestBigFilesystem(JobTestCase):
         super(TestBigFilesystem, self).tearDown()
         connection.use_debug_cursor = False
 
+
 class TestFSTransitions(JobTestCaseWithHost):
     def setUp(self):
         super(TestFSTransitions, self).setUp()
@@ -81,7 +82,7 @@ class TestFSTransitions(JobTestCaseWithHost):
 
         self.mdt.managedtarget_ptr = self.set_and_assert_state(self.mdt.managedtarget_ptr, "unmounted")
         self.assertEqual(ManagedMdt.objects.get(pk=self.mdt.pk).state, "unmounted")
-        self.assertEqual(ManagedFilesystem.objects.get(pk=self.fs.pk).state, "unavailable")
+        self.assertEqual(ManagedFilesystem.objects.get(pk=self.fs.pk).state, "available")
 
     def test_target_start(self):
         from chroma_core.models import ManagedMdt, ManagedOst, ManagedFilesystem
@@ -94,7 +95,7 @@ class TestFSTransitions(JobTestCaseWithHost):
         self.assertEqual(ManagedFilesystem.objects.get(pk=self.fs.pk).state, "stopped")
 
         self.ost.managedtarget_ptr = self.set_and_assert_state(freshen(self.ost.managedtarget_ptr), "mounted")
-        self.assertState(self.fs, "available")
+        self.assertState(self.fs, "stopped")
 
     def test_stop_start(self):
         from chroma_core.models import ManagedMdt, ManagedOst, ManagedFilesystem
