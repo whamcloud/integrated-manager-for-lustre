@@ -25,23 +25,6 @@ class TestTransitionsWithCommands(JobTestCaseWithHost):
 
         self.lnet_configuration = self.host.lnet_configuration
 
-    def test_onejob(self):
-        # Our self.host is initially lnet_up
-        self.assertEqual(LNetConfiguration.objects.get(pk=self.lnet_configuration.pk).state, "lnet_up")
-
-        # This tests a state transition which is done by a single job
-        command_id = JobSchedulerClient.command_run_jobs(
-            [{"class_name": "UpdateDevicesJob", "args": {}}], "Test single job action"
-        )
-        self.drain_progress()
-
-        self.assertEqual(Command.objects.get(pk=command_id).complete, True)
-        self.assertEqual(Command.objects.get(pk=command_id).jobs.count(), 1)
-
-        # Test that if I try to run the same again I get None
-        command = Command.set_state([(freshen(self.lnet_configuration), "lnet_up")])
-        self.assertEqual(command, None)
-
     def test_2steps(self):
         self.assertEqual(LNetConfiguration.objects.get(pk=self.lnet_configuration.pk).state, "lnet_up")
 
