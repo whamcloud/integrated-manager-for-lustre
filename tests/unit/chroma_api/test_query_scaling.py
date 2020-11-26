@@ -16,12 +16,12 @@ from chroma_core.models import (
     Volume,
     ManagedFilesystem,
     ManagedTarget,
-    ManagedTargetMount,
     ManagedMgs,
     ManagedMdt,
     ManagedOst,
     CorosyncConfiguration,
 )
+from django.db import connection
 from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
 from tests.unit.chroma_core.helpers import fake_log_message, synthetic_volume
 
@@ -194,26 +194,97 @@ class TestQueryScaling(ChromaApiTestCase):
 
     def _create_filesystem_n_osts(self, n_targets):
         assert n_targets >= 3
-        ManagedFilesystem.objects.update(not_deleted=None)
-        ManagedTarget.objects.update(not_deleted=None)
-        ManagedTargetMount.objects.update(not_deleted=None)
+
+        with connection.cursor() as cursor:
+            cursor.execute(
+                "DELETE FROM chroma_core_managedtarget"
+            )
+
+            cursor.execute(
+                "DELETE FROM chroma_core_managedmgs"
+            )
+
+            cursor.execute(
+                "DELETE FROM chroma_core_managedmdt"
+            )
+
+            cursor.execute(
+                "DELETE FROM chroma_core_managedost"
+            )
+
+            cursor.execute(
+                "DELETE FROM chroma_core_managedfilesystem"
+            )
+
         self._create_n_volumes_host_pairs(n_targets)
         assert ManagedTarget.objects.count() == 0
 
         fs = None
         for i, volume in enumerate(Volume.objects.all()):
             if i == 0:
-                mgt, mounts = ManagedMgs.create_for_volume(volume.id)
-                fs = ManagedFilesystem.objects.create(name="foo", mgs=mgt)
+                mgt_target = ManagedTarget.objects.create(
+                    id=i,
+                    state_modified_at='2020-11-11T23:52:23.938603+00:00',
+                    state="unformatted",
+                    immutable_state=False,
+                    name="MGS",
+                    uuid=None,
+                    ha_label=None,
+                    inode_size=None,
+                    bytes_per_inode=None,
+                    inode_count=None,
+                    reformat=False,
+                    not_deleted=True,
+                );
+                mgt_target.save()
+
+                mgt = ManagedMgs.objects.create(managedtarget_ptr_id=i, conf_param_version=0, conf_param_version_applied=0)
+                mgt.save()
+
+                fs = ManagedFilesystem.objects.create(mgs=mgt, name="foo", id=1, mdt_next_index=1, ost_next_index=1)
                 ObjectCache.add(ManagedFilesystem, fs)
             elif i == 1:
-                ObjectCache.add(
-                    ManagedTarget, ManagedMdt.create_for_volume(volume.id, filesystem=fs)[0].managedtarget_ptr
-                )
+                mdt_target = ManagedTarget.objects.create(
+                    id=i,
+                    state_modified_at='2020-11-11T23:52:23.938603+00:00',
+                    state="unformatted",
+                    immutable_state=False,
+                    name="foo-MDT0000",
+                    uuid=None,
+                    ha_label=None,
+                    inode_size=None,
+                    bytes_per_inode=None,
+                    inode_count=None,
+                    reformat=False,
+                    not_deleted=True,
+                );
+                mdt_target.save()
+
+                mdt = ManagedMdt.objects.create(managedtarget_ptr_id=i, index=0, filesystem_id=1)
+                mdt.save()
+
+                ObjectCache.add(ManagedTarget, mdt_target)
             else:
-                ObjectCache.add(
-                    ManagedTarget, ManagedOst.create_for_volume(volume.id, filesystem=fs)[0].managedtarget_ptr
-                )
+                ost_target = ManagedTarget.objects.create(
+                    id=i,
+                    state_modified_at='2020-11-11T23:52:23.938603+00:00',
+                    state="unformatted",
+                    immutable_state=False,
+                    name="foo-OST000{}".format(i-2),
+                    uuid=None,
+                    ha_label=None,
+                    inode_size=None,
+                    bytes_per_inode=None,
+                    inode_count=None,
+                    reformat=False,
+                    not_deleted=True,
+                );
+                ost_target.save()
+
+                ost = ManagedOst.objects.create(managedtarget_ptr_id=i, index=i-2, filesystem_id=1)
+                ost.save()
+
+                ObjectCache.add(ManagedTarget, ost_target)
 
     def test_filesystem_targets(self):
         target_scaling = self._measure_scaling(self._create_filesystem_n_osts, TargetResource, TargetResource)

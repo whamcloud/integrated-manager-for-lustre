@@ -60,88 +60,14 @@ class TestBigFilesystem(JobTestCase):
         super(TestBigFilesystem, self).tearDown()
         connection.use_debug_cursor = False
 
-    # def test_big_filesystem(self):
-    #     OSS_COUNT = 2
-    #     OST_COUNT = 4
-    #
-    #     assert OST_COUNT % OSS_COUNT == 0
-    #
-    #     for i, address in enumerate(["oss%d" % i for i in range(0, OSS_COUNT)] + ['mds0', 'mds1', 'mgs0', 'mgs1']):
-    #         self.mock_servers[address] = {
-    #             'fqdn': address,
-    #             'nodename': address,
-    #             'nids': [Nid.Nid("192.168.0.%d" % i, "tcp", 0)]
-    #         }
-    #
-    #     with dbperf("object creation"):
-    #         self.mgs0 = self._synthetic_host_with_nids('mgs0')
-    #         self.mgs1 = self._synthetic_host_with_nids('mgs1')
-    #         self.mds0 = self._synthetic_host_with_nids('mds0')
-    #         self.mds1 = self._synthetic_host_with_nids('mds1')
-    #         self.osss = {}
-    #         for i in range(0, OSS_COUNT):
-    #             self.osss[i] = self._synthetic_host_with_nids('oss%d' % i)
-    #
-    #         self.mgt, mgt_tms = ManagedMgs.create_for_volume(self._test_lun(self.mgs0, self.mgs1).id, name = "MGS")
-    #         self.fs = ManagedFilesystem.objects.create(mgs = self.mgt, name = "testfs")
-    #         self.mdt, mdt_tms = ManagedMdt.create_for_volume(self._test_lun(self.mds0, self.mds1).id, filesystem = self.fs)
-    #
-    #         self.osts = {}
-    #         ost_tms = []
-    #         for i in range(0, OST_COUNT):
-    #             primary_oss_i = (i * OSS_COUNT) / OST_COUNT
-    #             if primary_oss_i % 2 == 1:
-    #                 secondary_oss_i = primary_oss_i - 1
-    #             else:
-    #                 secondary_oss_i = primary_oss_i + 1
-    #             primary_oss = self.osss[primary_oss_i]
-    #             secondary_oss = self.osss[secondary_oss_i]
-    #             self.osts[i], tms = ManagedOst.create_for_volume(self._test_lun(primary_oss, secondary_oss).id, filesystem = self.fs)
-    #             ost_tms.extend(tms)
-    #         ObjectCache.add(ManagedFilesystem, self.fs)
-    #         for target in [self.mgt, self.mdt] + self.osts.values():
-    #             ObjectCache.add(ManagedTarget, target.managedtarget_ptr)
-    #         for tm in chain(mgt_tms, mdt_tms, ost_tms):
-    #             ObjectCache.add(ManagedTargetMount, tm)
-    #
-    #     try:
-    #         dbperf.enabled = True
-    #         import cProfile
-    #         total = dbperf('total')
-    #         with total:
-    #             with dbperf("set_state"):
-    #                 cProfile.runctx("self.set_state_delayed([(self.fs, 'available')])", globals(), locals(), 'set_state.prof')
-    #             with dbperf('run_next'):
-    #                 self.job_scheduler._run_next()
-    #     finally:
-    #         dbperf.enabled = False
-    #     self.assertState(self.fs, 'available')
-
-
-class TestIncompleteSetup(JobTestCaseWithHost):
-    def test_fs_removal_mgt_unformatted(self):
-        """Test that removing a filesystem which was never formatted (and whose mgt was
-        never formatted) works (needs to be smart enough to avoid trying to purge
-        config logs from an unformatted mgs)
-
-        """
-        self.create_simple_filesystem(self.host, start=False)
-
-        self.assertState(self.mgt, "unformatted")
-        self.fs = self.set_and_assert_state(self.fs, "removed")
-        self.assertState(self.mgt, "unformatted")
-        with self.assertRaises(ManagedFilesystem.DoesNotExist):
-            ManagedFilesystem.objects.get(pk=self.fs.pk)
-
-
 class TestFSTransitions(JobTestCaseWithHost):
     def setUp(self):
         super(TestFSTransitions, self).setUp()
 
-        self.create_simple_filesystem(self.host, start=False)
-        self.assertEqual(self.mgt.state, "unformatted")
-        self.assertEqual(self.mdt.state, "unformatted")
-        self.assertEqual(self.ost.state, "unformatted")
+        self.create_simple_filesystem(start=False)
+        self.assertEqual(self.mgt.state, "unmounted")
+        self.assertEqual(self.mdt.state, "unmounted")
+        self.assertEqual(self.ost.state, "unmounted")
 
         self.fs = self.set_and_assert_state(self.fs, "available")
 
@@ -149,60 +75,6 @@ class TestFSTransitions(JobTestCaseWithHost):
         self.assertState(self.mdt, "mounted")
         self.assertState(self.ost, "mounted")
         self.assertState(self.fs, "available")
-
-    def test_fs_removal(self):
-        """Test that removing a filesystem takes its targets with it"""
-        self.fs = self.set_and_assert_state(self.fs, "removed")
-
-        with self.assertRaises(ManagedMdt.DoesNotExist):
-            ManagedMdt.objects.get(pk=self.mdt.pk)
-        self.assertEqual(ManagedMdt._base_manager.get(pk=self.mdt.pk).state, "removed")
-        with self.assertRaises(ManagedOst.DoesNotExist):
-            ManagedOst.objects.get(pk=self.ost.pk)
-        self.assertEqual(ManagedOst._base_manager.get(pk=self.ost.pk).state, "removed")
-        with self.assertRaises(ManagedFilesystem.DoesNotExist):
-            ManagedFilesystem.objects.get(pk=self.fs.pk)
-
-    def test_fs_removal_mgt_offline(self):
-        """Test that removing a filesystem whose MGT is offline starts the MGT and can remove successfully"""
-        self.mgt.managedtarget_ptr = self.set_and_assert_state(self.mgt.managedtarget_ptr, "unmounted")
-        self.fs = self.set_and_assert_state(self.fs, "removed")
-        self.assertState(self.mgt.managedtarget_ptr, "mounted")
-        with self.assertRaises(ManagedFilesystem.DoesNotExist):
-            ManagedFilesystem.objects.get(pk=self.fs.pk)
-
-    def test_fs_removal_mgt_online(self):
-        """Test removing a filesystem whose MGT is online."""
-        self.mgt.managedtarget_ptr = self.set_and_assert_state(self.mgt.managedtarget_ptr, "mounted")
-        self.fs = self.set_and_assert_state(self.fs, "removed")
-        self.assertState(self.mgt, "mounted")
-        with self.assertRaises(ManagedFilesystem.DoesNotExist):
-            ManagedFilesystem.objects.get(pk=self.fs.pk)
-
-    def test_two_concurrent_removes(self):
-        """
-        Test that we can concurrently remove two filesystems which depend on the same mgt
-        """
-        fs2 = ManagedFilesystem.objects.create(mgs=self.mgt, name="testfs2")
-        ObjectCache.add(ManagedFilesystem, fs2)
-        mdt2, mdt_tms = ManagedMdt.create_for_volume(self._test_lun(self.host).id, filesystem=fs2)
-        ost2, ost_tms = ManagedOst.create_for_volume(self._test_lun(self.host).id, filesystem=fs2)
-        for target in [mdt2, ost2]:
-            ObjectCache.add(ManagedTarget, target.managedtarget_ptr)
-
-        self.fs = self.set_and_assert_state(self.fs, "available")
-        fs2 = self.set_and_assert_state(fs2, "available")
-
-        self.set_state_delayed([(self.fs, "removed")])
-        self.set_state_delayed([(fs2, "removed")])
-
-        self.set_state_complete()
-
-        with self.assertRaises(ManagedFilesystem.DoesNotExist):
-            ManagedFilesystem.objects.get(pk=self.fs.pk)
-
-        with self.assertRaises(ManagedFilesystem.DoesNotExist):
-            ManagedFilesystem.objects.get(pk=fs2.pk)
 
     def test_target_stop(self):
         from chroma_core.models import ManagedMdt, ManagedFilesystem
@@ -239,31 +111,16 @@ class TestFSTransitions(JobTestCaseWithHost):
         self.assertEqual(ManagedOst.objects.get(pk=self.ost.pk).state, "mounted")
         self.assertEqual(ManagedFilesystem.objects.get(pk=self.fs.pk).state, "available")
 
-    def test_ost_changes(self):
-        self.fs = self.set_and_assert_state(self.fs, "stopped")
-        ost_new, ost_new_tms = ManagedOst.create_for_volume(self._test_lun(self.host).id, filesystem=self.fs)
-        ObjectCache.add(ManagedTarget, ost_new.managedtarget_ptr)
-        self.mgt.managedtarget_ptr = self.set_and_assert_state(freshen(self.mgt.managedtarget_ptr), "mounted")
-        self.mdt.managedtarget_ptr = self.set_and_assert_state(freshen(self.mdt.managedtarget_ptr), "mounted")
-        self.ost.managedtarget_ptr = self.set_and_assert_state(freshen(self.ost.managedtarget_ptr), "mounted")
-        ost_new.managedtarget_ptr = self.set_and_assert_state(ost_new.managedtarget_ptr, "mounted")
-        self.assertState(self.fs, "available")
-
-        ost_new.managedtarget_ptr = self.set_and_assert_state(ost_new.managedtarget_ptr, "unmounted")
-        self.assertState(self.fs, "unavailable")
-        ost_new.managedtarget_ptr = self.set_and_assert_state(ost_new.managedtarget_ptr, "removed")
-        self.assertState(self.fs, "available")
-
 
 class TestDetectedFSTransitions(JobTestCaseWithHost):
     def setUp(self):
         super(TestDetectedFSTransitions, self).setUp()
 
-        self.create_simple_filesystem(self.host, start=False)
+        self.create_simple_filesystem(start=False)
 
-        self.assertEqual(ManagedMgs.objects.get(pk=self.mgt.pk).state, "unformatted")
-        self.assertEqual(ManagedMdt.objects.get(pk=self.mdt.pk).state, "unformatted")
-        self.assertEqual(ManagedOst.objects.get(pk=self.ost.pk).state, "unformatted")
+        self.assertEqual(ManagedMgs.objects.get(pk=self.mgt.pk).state, "unmounted")
+        self.assertEqual(ManagedMdt.objects.get(pk=self.mdt.pk).state, "unmounted")
+        self.assertEqual(ManagedOst.objects.get(pk=self.ost.pk).state, "unmounted")
 
         self.fs = self.set_and_assert_state(self.fs, "available")
 

@@ -83,7 +83,21 @@ class ChromaApiTestCase(ResourceTestCase):
         self.old_get_locks = job_scheduler_client.JobSchedulerClient.get_locks
         job_scheduler_client.JobSchedulerClient.get_locks = fake_get_locks
 
-        mock.patch("chroma_core.lib.graphql.get_targets", new=mock.MagicMock()).start()
+        def get_targets_fn():
+            from chroma_core.models import ManagedHost
+
+            ids = [x.id for x in ManagedHost.objects.all()]
+            host_id = ids[0]
+
+            return [
+                {"name": "MGS", "active_host_id": host_id, "host_ids": ids, "uuid": "uuid_mgt"},
+                {"name": "testfs-MDT0000", "active_host_id": host_id, "host_ids": ids, "uuid": "uuid_mdt"},
+                {"name": "testfs-OST0000", "active_host_id": host_id, "host_ids": ids, "uuid": "uuid_ost0"},
+                {"name": "testfs-OST0001", "active_host_id": host_id, "host_ids": ids, "uuid": "uuid_ost1"},
+            ]
+
+        self.get_targets_mock = mock.MagicMock(side_effect=get_targets_fn)
+        mock.patch("chroma_core.lib.graphql.get_targets", new=self.get_targets_mock).start()
 
         self.addCleanup(mock.patch.stopall)
 
@@ -132,42 +146,6 @@ class ChromaApiTestCase(ResourceTestCase):
         except AssertionError:
             raise AssertionError("response = %s:%s" % (response.status_code, self.deserialize(response)))
         return self.deserialize(response)
-
-    def create_simple_filesystem(self, host):
-        from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst, ManagedFilesystem
-
-        with connection.cursor() as cursor:
-            # The MGT
-            cursor.execute(
-                "INSERT INTO chroma_core_managedtarget \
-                (id, state_modified_at, state, immutable_state, name, uuid, ha_label, inode_size, bytes_per_inode, inode_count, reformat, not_deleted, content_type_id) \
-                VALUES(1, '2020-11-11T23:52:23.938603+00:00', 'unformatted', False, 'MGS', null, null, null, null, null, False, True, 32)"
-            )
-
-            # The MDT
-            cursor.execute(
-                "INSERT INTO chroma_core_managedtarget \
-                (id, state_modified_at, state, immutable_state, name, uuid, ha_label, inode_size, bytes_per_inode, inode_count, reformat, not_deleted, content_type_id) \
-                VALUES(2, '2020-11-11T23:52:23.938603+00:00', 'unformatted', False, 'testfs-MDT0000', null, null, null, null, null, False, True, 38)"
-            )
-
-            # The OST
-            cursor.execute(
-                "INSERT INTO chroma_core_managedtarget \
-                (id, state_modified_at, state, immutable_state, name, uuid, ha_label, inode_size, bytes_per_inode, inode_count, reformat, not_deleted, content_type_id) \
-                VALUES(3, '2020-11-11T23:52:23.938603+00:00', 'unformatted', False, 'testfs-OST0000', null, null, null, null, null, False, True, 54)"
-            )
-
-        self.mgt = ManagedMgs.objects.create(managedtarget_ptr_id=1, conf_param_version=0, conf_param_version_applied=0)
-
-        self.fs = ManagedFilesystem.objects.create(mgs=self.mgt, name="testfs", id=1, mdt_next_index=1, ost_next_index=1)
-        ObjectCache.add(ManagedFilesystem, self.fs)
-        ObjectCache.add(ManagedTarget, ManagedTarget.objects.get(id=self.mgt.id))
-
-        self.mdt = ManagedMdt.objects.create(managedtarget_ptr_id=2, index=0, filesystem_id=1)
-        self.ost = ManagedOst.objects.create(managedtarget_ptr_id=3, index=0, filesystem_id=1)
-        ObjectCache.add(ManagedTarget, ManagedTarget.objects.get(id=self.mdt.id))
-        ObjectCache.add(ManagedTarget, ManagedTarget.objects.get(id=self.ost.id))
 
     def api_get_list(self, uri, **kwargs):
         response = self.api_client.get(uri, **kwargs)
