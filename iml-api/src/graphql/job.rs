@@ -8,7 +8,7 @@ use iml_wire_types::{
 use juniper::{DefaultScalarValue, FieldError};
 use std::convert::TryFrom;
 use std::fmt;
-use std::{collections::HashMap, ops::Deref};
+use std::collections::HashMap;
 
 pub(crate) struct JobQuery;
 
