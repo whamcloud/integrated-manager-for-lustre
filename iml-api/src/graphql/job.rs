@@ -1,17 +1,87 @@
-use std::fmt;
-use std::collections::HashMap;
+use crate::graphql::Context;
 use chrono::{DateTime, Utc};
-use iml_wire_types::{AvailableTransition, JobLock, Command, EndpointName, Step, Job};
-use std::convert::TryFrom;
-use juniper::{
-    DefaultScalarValue,
-    FieldError,
+use futures::TryFutureExt;
+use iml_postgres::sqlx;
+use iml_wire_types::{
+    graphql::map::GraphQLMap, AvailableTransition, Command, EndpointName, Job, JobLock, Step,
 };
-use crate::graphql_map::GraphQLMap;
+use juniper::{DefaultScalarValue, FieldError};
+use std::convert::TryFrom;
+use std::fmt;
+use std::{collections::HashMap, ops::Deref};
+
+pub(crate) struct JobQuery;
+
+#[juniper::graphql_object(Context = Context)]
+impl JobQuery {
+    /// Fetch the list of jobs
+    #[graphql(arguments(ids(description = "The list of job ids to fetch, may be empty array"),))]
+    async fn jobs_by_ids(context: &Context, ids: Vec<i32>) -> juniper::FieldResult<Vec<JobGQL>> {
+        let ids: &[i32] = &ids[..];
+        let unordered_jobs: Vec<JobGQL> = sqlx::query_as!(
+            JobRecord,
+            r#"
+                SELECT job.id,
+                       array(SELECT cj.command_id
+                             FROM chroma_core_command_jobs AS cj
+                             WHERE cj.job_id = job.id) :: INT[] AS commands,
+                       job.state,
+                       job.errored,
+                       job.cancelled,
+                       job.modified_at,
+                       job.created_at,
+                       job.wait_for_json,
+                       job.locks_json,
+                       job.content_type_id,
+                       job.class_name,
+                       job.description_out,
+                       job.cancellable_out,
+                       array_agg(sr.id)::INT[]                  AS step_result_keys,
+                       array_agg(sr.result)::TEXT[]             AS step_results_values
+                FROM chroma_core_job AS job
+                         JOIN chroma_core_command_jobs AS cj ON cj.job_id = job.id
+                         JOIN chroma_core_stepresult AS sr ON sr.job_id = job.id
+                WHERE (job.id = ANY ($1::INT[]))
+                GROUP BY job.id
+            "#,
+            ids
+        )
+        .fetch_all(&context.pg_pool)
+        .map_ok(|xs: Vec<JobRecord>| {
+            xs.into_iter()
+                .filter_map(|x| JobGQL::try_from(x).ok())
+                .collect::<Vec<JobGQL>>()
+        })
+        .await?;
+
+        let mut hm = unordered_jobs
+            .into_iter()
+            .map(|x| (x.id, x))
+            .collect::<HashMap<i32, JobGQL>>();
+        let mut not_found = Vec::new();
+        let jobs = ids
+            .iter()
+            .filter_map(|id| {
+                hm.remove(id).or_else(|| {
+                    not_found.push(id);
+                    None
+                })
+            })
+            .collect::<Vec<JobGQL>>();
+
+        if !not_found.is_empty() {
+            Err(FieldError::from(format!(
+                "Jobs not found for ids: {:?}",
+                not_found
+            )))
+        } else {
+            Ok(jobs)
+        }
+    }
+}
 
 /// Concrete version of `iml_wire_types::Job<T>` needed for GraphQL
-#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
-#[derive(juniper::GraphQLObject)]
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, juniper::GraphQLObject)]
 pub struct JobGQL {
     pub available_transitions: Vec<AvailableTransition>,
     pub cancelled: bool,
@@ -46,8 +116,8 @@ pub struct JobRecord {
     pub step_result_keys: Option<Vec<i32>>,
     pub step_results_values: Option<Vec<String>>,
     pub class_name: String,
-    pub description: String,
-    pub cancellable: bool,
+    pub description_out: String,
+    pub cancellable_out: bool,
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -64,24 +134,25 @@ impl TryFrom<JobRecord> for JobGQL {
     type Error = FieldError<DefaultScalarValue>;
 
     fn try_from(x: JobRecord) -> juniper::FieldResult<Self> {
-        let available_transitions =
-            if x.state == "complete" || !x.cancellable {
-                vec![]
-            } else {
-                vec![AvailableTransition {
-                    label: "Cancel".to_string(),
-                    state: "cancelled".to_string(),
-                }]
-            };
+        let available_transitions = if x.state == "complete" || !x.cancellable_out {
+            vec![]
+        } else {
+            vec![AvailableTransition {
+                label: "Cancel".to_string(),
+                state: "cancelled".to_string(),
+            }]
+        };
         let (read_locks, write_locks) = convert_job_locks(&x.locks_json)?;
-        let commands = x.commands
+        let commands = x
+            .commands
             .unwrap_or_default()
             .into_iter()
             .map(|id| format!("/api/{}/{}/", Command::endpoint_name(), id))
             .collect();
         let wait_for = convert_job_wait_for(&x.wait_for_json)?;
         let step_results = convert_job_step_results(&x.step_result_keys, &x.step_results_values)?;
-        let steps = x.step_result_keys
+        let steps = x
+            .step_result_keys
             .unwrap_or_default()
             .iter()
             .map(|id| format!("/api/{}/{}/", Step::endpoint_name(), id))
@@ -96,7 +167,7 @@ impl TryFrom<JobRecord> for JobGQL {
             modified_at: x.modified_at.format("%Y-%m-%dT%T%.6f").to_string(),
             created_at: x.created_at.format("%Y-%m-%dT%T%.6f").to_string(),
             resource_uri: format!("/api/{}/{}/", Job::<()>::endpoint_name(), x.id),
-            description: x.description,
+            description: x.description_out,
             step_results,
             steps,
             wait_for,
@@ -158,13 +229,17 @@ fn convert_job_wait_for(json: &str) -> juniper::FieldResult<Vec<String>> {
     // raw_ids is like "[6, 7, 8, 9, 12, 13, 14]"
     let ids = serde_json::from_str::<serde_json::Value>(json)?;
     if let serde_json::Value::Array(ids) = ids {
-        let wait_for = ids.into_iter()
+        let wait_for = ids
+            .into_iter()
             .flat_map(|x| x.as_i64())
             .map(|x| format!("/api/{}/{}/", Job::<()>::endpoint_name(), x))
             .collect::<Vec<String>>();
         Ok(wait_for)
     } else {
-        Err(juniper::FieldError::from(format!("Expected json array in '{}'", json)))
+        Err(juniper::FieldError::from(format!(
+            "Expected json array in '{}'",
+            json
+        )))
     }
 }
 
@@ -187,7 +262,10 @@ fn convert_to_item_type(id: i32) -> juniper::FieldResult<LockedItemType> {
         65 => Ok(LockedItemType::PacemakerConfiguration),
         52 => Ok(LockedItemType::StratagemConfiguration),
         42 => Ok(LockedItemType::Ticket),
-        _ => Err(juniper::FieldError::from(format!("Unknown lock type with id={}", id))),
+        _ => Err(juniper::FieldError::from(format!(
+            "Unknown lock type with id={}",
+            id
+        ))),
     }
 }
 

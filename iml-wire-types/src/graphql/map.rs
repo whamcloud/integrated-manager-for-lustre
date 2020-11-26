@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use crate::graphql_json::convert_to_juniper_value;
+use crate::graphql::json::convert_to_juniper_value;
 
 #[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
 pub struct GraphQLMap(pub HashMap<String, serde_json::Value>);

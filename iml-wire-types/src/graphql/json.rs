@@ -64,7 +64,7 @@ pub fn convert_to_juniper_value<S>(json: &serde_json::Value) -> juniper::Value<S
 
 #[cfg(test)]
 mod tests {
-    use crate::graphql_json::convert_to_juniper_value;
+    use super::convert_to_juniper_value;
     use juniper::DefaultScalarValue;
 
     #[test]
