@@ -10,7 +10,7 @@ from chroma_core.models import (
     ManagedMdt,
     ManagedOst,
     ManagedTarget,
-    ServerProfile
+    ServerProfile,
 )
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.services.job_scheduler.job_scheduler import JobScheduler
@@ -103,11 +103,12 @@ def load_default_profile():
     )
     default_sp.save()
 
+
 def create_simple_fs(fs_name="testfs"):
     # Create the MGT
     mgt = ManagedMgs.objects.create(
         id=1,
-        state_modified_at='2020-11-11T23:52:23.938603+00:00',
+        state_modified_at="2020-11-11T23:52:23.938603+00:00",
         state="unmounted",
         immutable_state=False,
         name="MGS",
@@ -118,7 +119,7 @@ def create_simple_fs(fs_name="testfs"):
         inode_count=None,
         reformat=False,
         not_deleted=True,
-    );
+    )
     mgt.save()
 
     ObjectCache.add(ManagedTarget, mgt.managedtarget_ptr)
@@ -132,7 +133,7 @@ def create_simple_fs(fs_name="testfs"):
         id=2,
         index=0,
         filesystem_id=1,
-        state_modified_at='2020-11-11T23:52:23.938603+00:00',
+        state_modified_at="2020-11-11T23:52:23.938603+00:00",
         state="unmounted",
         immutable_state=False,
         name="{}-MDT0000".format(fs_name),
@@ -143,7 +144,7 @@ def create_simple_fs(fs_name="testfs"):
         inode_count=None,
         reformat=False,
         not_deleted=True,
-    );
+    )
     mdt.save()
 
     ObjectCache.add(ManagedTarget, mdt.managedtarget_ptr)
@@ -153,7 +154,7 @@ def create_simple_fs(fs_name="testfs"):
         id=3,
         index=0,
         filesystem_id=1,
-        state_modified_at='2020-11-11T23:52:23.938603+00:00',
+        state_modified_at="2020-11-11T23:52:23.938603+00:00",
         state="unmounted",
         immutable_state=False,
         name="{}-OST0000".format(fs_name),
@@ -164,10 +165,9 @@ def create_simple_fs(fs_name="testfs"):
         inode_count=None,
         reformat=False,
         not_deleted=True,
-    );
+    )
     ost.save()
 
     ObjectCache.add(ManagedTarget, ost.managedtarget_ptr)
-
 
     return (mgt, fs, mdt, ost)

@@ -20,7 +20,7 @@ class TestTargetResource(ChromaApiTestCase):
         host = synthetic_host("myserver")
         (mgt, fs, mdt, ost) = create_simple_fs()
         self.mgt = mgt
-        
+
         mgt_uri = "/api/target/%s/" % self.mgt.id
         with mock.patch("chroma_core.models.Command.set_state", mock.Mock(return_value=None)):
             self.api_set_state_partial(mgt_uri, "unmounted")

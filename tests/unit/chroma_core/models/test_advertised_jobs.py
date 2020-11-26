@@ -290,7 +290,7 @@ class TestClientManagementJobs(TestAdvertisedCase):
 
         mgt_target = ManagedTarget.objects.create(
             id=1,
-            state_modified_at='2020-11-11T23:52:23.938603+00:00',
+            state_modified_at="2020-11-11T23:52:23.938603+00:00",
             state="unformatted",
             immutable_state=False,
             name="MGS",
@@ -301,7 +301,7 @@ class TestClientManagementJobs(TestAdvertisedCase):
             inode_count=None,
             reformat=False,
             not_deleted=True,
-        );
+        )
         mgt_target.save()
 
         mgt = ManagedMgs.objects.create(managedtarget_ptr_id=1, conf_param_version=0, conf_param_version_applied=0)
@@ -312,7 +312,7 @@ class TestClientManagementJobs(TestAdvertisedCase):
 
         mdt_target = ManagedTarget.objects.create(
             id=2,
-            state_modified_at='2020-11-11T23:52:23.938603+00:00',
+            state_modified_at="2020-11-11T23:52:23.938603+00:00",
             state="unformatted",
             immutable_state=False,
             name="testfs-MDT0000",
@@ -323,7 +323,7 @@ class TestClientManagementJobs(TestAdvertisedCase):
             inode_count=None,
             reformat=False,
             not_deleted=True,
-        );
+        )
         mdt_target.save()
 
         mdt = ManagedMdt.objects.create(managedtarget_ptr_id=2, index=0, filesystem_id=1)
@@ -331,7 +331,7 @@ class TestClientManagementJobs(TestAdvertisedCase):
 
         ost_target = ManagedTarget.objects.create(
             id=3,
-            state_modified_at='2020-11-11T23:52:23.938603+00:00',
+            state_modified_at="2020-11-11T23:52:23.938603+00:00",
             state="unformatted",
             immutable_state=False,
             name="foo-OST0000",
@@ -342,7 +342,7 @@ class TestClientManagementJobs(TestAdvertisedCase):
             inode_count=None,
             reformat=False,
             not_deleted=True,
-        );
+        )
         ost_target.save()
 
         ost = ManagedOst.objects.create(managedtarget_ptr_id=3, index=0, filesystem_id=1)

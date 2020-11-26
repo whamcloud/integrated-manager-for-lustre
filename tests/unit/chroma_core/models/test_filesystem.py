@@ -79,7 +79,7 @@ class TestNidStrings(IMLUnitTestCase):
         mgs0 = self._host_with_nids("primary-mgs-twonid")
         mgs1 = self._host_with_nids("failover-mgs-twonid")
         other = self._host_with_nids("othernode")
-        
+
         self.mgt.name = "MGS_ha"
 
         self.assertEqual(self.mgt.nids(), ((u"1.2.3.4@tcp0", u"4.3.2.1@tcp1"), (u"1.2.3.5@tcp5", u"4.3.2.2@tcp1")))

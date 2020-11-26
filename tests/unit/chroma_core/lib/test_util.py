@@ -14,10 +14,10 @@ class TestInvokeRustAgent(TestCase):
         invoke_rust_agent("mds1.local", "ls")
 
         if runningInDocker():
-            call = "http://127.0.0.1:8009" 
+            call = "http://127.0.0.1:8009"
         else:
             call = "http+unix://%2Fvar%2Frun%2Fiml-action-runner.sock/"
-        
+
         post.assert_called_once_with(
             call,
             json={"REMOTE": ("mds1.local", {"action": "ls", "args": {}, "type": "ACTION_START", "id": "1-2-3-4"})},
