@@ -196,25 +196,15 @@ class TestQueryScaling(ChromaApiTestCase):
         assert n_targets >= 3
 
         with connection.cursor() as cursor:
-            cursor.execute(
-                "DELETE FROM chroma_core_managedtarget"
-            )
+            cursor.execute("DELETE FROM chroma_core_managedtarget")
 
-            cursor.execute(
-                "DELETE FROM chroma_core_managedmgs"
-            )
+            cursor.execute("DELETE FROM chroma_core_managedmgs")
 
-            cursor.execute(
-                "DELETE FROM chroma_core_managedmdt"
-            )
+            cursor.execute("DELETE FROM chroma_core_managedmdt")
 
-            cursor.execute(
-                "DELETE FROM chroma_core_managedost"
-            )
+            cursor.execute("DELETE FROM chroma_core_managedost")
 
-            cursor.execute(
-                "DELETE FROM chroma_core_managedfilesystem"
-            )
+            cursor.execute("DELETE FROM chroma_core_managedfilesystem")
 
         self._create_n_volumes_host_pairs(n_targets)
         assert ManagedTarget.objects.count() == 0
@@ -224,7 +214,7 @@ class TestQueryScaling(ChromaApiTestCase):
             if i == 0:
                 mgt_target = ManagedTarget.objects.create(
                     id=i,
-                    state_modified_at='2020-11-11T23:52:23.938603+00:00',
+                    state_modified_at="2020-11-11T23:52:23.938603+00:00",
                     state="unformatted",
                     immutable_state=False,
                     name="MGS",
@@ -235,10 +225,12 @@ class TestQueryScaling(ChromaApiTestCase):
                     inode_count=None,
                     reformat=False,
                     not_deleted=True,
-                );
+                )
                 mgt_target.save()
 
-                mgt = ManagedMgs.objects.create(managedtarget_ptr_id=i, conf_param_version=0, conf_param_version_applied=0)
+                mgt = ManagedMgs.objects.create(
+                    managedtarget_ptr_id=i, conf_param_version=0, conf_param_version_applied=0
+                )
                 mgt.save()
 
                 fs = ManagedFilesystem.objects.create(mgs=mgt, name="foo", id=1, mdt_next_index=1, ost_next_index=1)
@@ -246,7 +238,7 @@ class TestQueryScaling(ChromaApiTestCase):
             elif i == 1:
                 mdt_target = ManagedTarget.objects.create(
                     id=i,
-                    state_modified_at='2020-11-11T23:52:23.938603+00:00',
+                    state_modified_at="2020-11-11T23:52:23.938603+00:00",
                     state="unformatted",
                     immutable_state=False,
                     name="foo-MDT0000",
@@ -257,7 +249,7 @@ class TestQueryScaling(ChromaApiTestCase):
                     inode_count=None,
                     reformat=False,
                     not_deleted=True,
-                );
+                )
                 mdt_target.save()
 
                 mdt = ManagedMdt.objects.create(managedtarget_ptr_id=i, index=0, filesystem_id=1)
@@ -267,10 +259,10 @@ class TestQueryScaling(ChromaApiTestCase):
             else:
                 ost_target = ManagedTarget.objects.create(
                     id=i,
-                    state_modified_at='2020-11-11T23:52:23.938603+00:00',
+                    state_modified_at="2020-11-11T23:52:23.938603+00:00",
                     state="unformatted",
                     immutable_state=False,
-                    name="foo-OST000{}".format(i-2),
+                    name="foo-OST000{}".format(i - 2),
                     uuid=None,
                     ha_label=None,
                     inode_size=None,
@@ -278,10 +270,10 @@ class TestQueryScaling(ChromaApiTestCase):
                     inode_count=None,
                     reformat=False,
                     not_deleted=True,
-                );
+                )
                 ost_target.save()
 
-                ost = ManagedOst.objects.create(managedtarget_ptr_id=i, index=i-2, filesystem_id=1)
+                ost = ManagedOst.objects.create(managedtarget_ptr_id=i, index=i - 2, filesystem_id=1)
                 ost.save()
 
                 ObjectCache.add(ManagedTarget, ost_target)

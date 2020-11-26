@@ -21,7 +21,7 @@ class TestFilesystemResource(ChromaApiTestCase):
         """Test operations using partial PUT containing only the state attribute, as used in Chroma 1.0.0.0 GUI"""
         (mgt, fs, mdt, ost) = create_simple_fs()
         self.fs = fs
-        
+
         fs_uri = "/api/filesystem/%s/" % self.fs.id
         with mock.patch("chroma_core.models.Command.set_state", mock.Mock(return_value=None)):
             self.api_set_state_partial(fs_uri, "stopped")

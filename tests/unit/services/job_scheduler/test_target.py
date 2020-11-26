@@ -55,11 +55,10 @@ class TestSharedTarget(JobTestCaseWithHost):
 
         (mgt, fs, mdt, ost) = create_simple_fs()
         self.mgt = mgt
-        
+
         self.assertEqual(ManagedMgs.objects.get(pk=self.mgt.pk).state, "unmounted")
 
     def test_clean_setup(self):
         # Start it normally the way the API would on creation
         self.mgt.managedtarget_ptr = self.set_and_assert_state(self.mgt.managedtarget_ptr, "mounted")
         self.assertEqual(ManagedTarget.objects.get(pk=self.mgt.pk).state, "mounted")
-
