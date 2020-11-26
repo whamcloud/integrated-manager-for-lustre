@@ -13,7 +13,7 @@ class LustreClientMountTests(ChromaApiTestCase):
         super(LustreClientMountTests, self).setUp()
 
         self.host = synthetic_host(address="foo")
-    
+
         (mgt, fs, mdt, ost) = create_simple_fs()
         self.fs = fs
 

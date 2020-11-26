@@ -74,4 +74,3 @@ class TestVolumeNodeDelete(ChromaApiTestCase):
 
             # Check the Volume has 3 VolumeNodes
             self.assertEqual(len(content["objects"][0]["volume_nodes"]), 3)
-

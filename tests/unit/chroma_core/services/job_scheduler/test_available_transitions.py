@@ -33,7 +33,7 @@ class TestAvailableTransitions(IMLUnitTestCase):
         super(TestAvailableTransitions, self).setUp()
 
         self.js = JobScheduler()
-        
+
         load_default_profile()
 
         self.host = synthetic_host()
