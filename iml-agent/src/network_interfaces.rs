@@ -6,8 +6,9 @@ use crate::{
     agent_error::ImlAgentError, network_interface::parse as parse_interfaces,
     network_interface_stats,
 };
-use iml_cmd::{CheckedCommandExt, Command};
+use iml_cmd::{CheckedCommandExt, CmdError, Command};
 use iml_wire_types::{LNet, NetworkInterface};
+use std::io;
 
 fn ip_addr_cmd() -> Command {
     let mut cmd = Command::new("ip");
@@ -48,9 +49,19 @@ pub async fn get_interfaces() -> Result<Vec<NetworkInterface>, ImlAgentError> {
 }
 
 pub async fn get_lnet_data() -> Result<LNet, ImlAgentError> {
-    let output = get_lnet_data_cmd().checked_output().await?;
+    let r = get_lnet_data_cmd().checked_output().await;
 
-    let lnet_data = std::str::from_utf8(&output.stdout)?.trim();
+    let x = match r {
+        Ok(x) => Ok(x.stdout),
+        Err(CmdError::Io(ref err)) if err.kind() == io::ErrorKind::NotFound => {
+            tracing::debug!("lnetctl was not found. Will not send net data");
+
+            Ok(vec![])
+        }
+        Err(e) => Err(e),
+    }?;
+
+    let lnet_data = std::str::from_utf8(&x)?.trim();
 
     if lnet_data.is_empty() {
         return Ok(LNet::default());
