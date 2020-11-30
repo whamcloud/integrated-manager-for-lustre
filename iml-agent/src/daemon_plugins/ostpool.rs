@@ -6,7 +6,7 @@ use crate::{
     action_plugins::ostpool::pools,
     agent_error::ImlAgentError,
     daemon_plugins::{DaemonPlugin, Output},
-    lustre::lctl,
+    lustre::list_mdt0s,
 };
 use futures::{future::join_all, lock::Mutex, Future, FutureExt};
 use iml_wire_types::{FsPoolMap, OstPool};
@@ -41,19 +41,12 @@ pub fn create() -> impl DaemonPlugin {
 
 /// List all Lustre Filesystems with MDT0 on this host
 async fn list_fs() -> Vec<String> {
-    lctl(vec!["get_param", "-N", "mdt.*-MDT0000"])
+    list_mdt0s()
         .await
-        .map(|o| {
-            o.lines()
-                .filter_map(|line| {
-                    line.split('.')
-                        .nth(1)
-                        .and_then(|mdt| mdt.split("-MDT").next())
-                })
-                .map(|s| s.to_string())
-                .collect()
-        })
-        .unwrap_or_else(|_| vec![])
+        .iter()
+        .filter_map(|x| x.split("-MDT").next())
+        .map(|x| x.to_string())
+        .collect()
 }
 
 async fn get_fsmap(fsname: String) -> (String, BTreeSet<OstPool>) {

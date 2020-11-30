@@ -13,6 +13,19 @@
       "nullable": []
     }
   },
+  "00ade0264fae96a50e1d496a0affee5d9b3f29a433191e08379205b331685da2": {
+    "query": "\n                DELETE FROM snapshot\n                WHERE snapshot_name NOT IN (SELECT * FROM UNNEST ($1::text[]))\n                AND filesystem_name=$2::text\n                ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "TextArray",
+          "Text"
+        ]
+      },
+      "nullable": []
+    }
+  },
   "044c83becc9a4280aa888bab7106a2fb5501c1a205830e57010416e1aaeae1d3": {
     "query": "\n                SELECT\n                (n.id).name AS \"name!\",\n                (n.id).id AS \"id!\",\n                cluster_id,\n                online,\n                standby,\n                standby_onfail,\n                maintenance,\n                pending,\n                unclean,\n                shutdown,\n                expected_up,\n                is_dc,\n                resources_running,\n                type\n                FROM corosync_node n\n                ORDER BY\n                    CASE WHEN $1 = 'ASC' THEN n.id END ASC,\n                    CASE WHEN $1 = 'DESC' THEN n.id END DESC\n                OFFSET $2 LIMIT $3",
     "describe": {
@@ -814,7 +827,7 @@
         false,
         false,
         false,
-        true,
+        false,
         true
       ]
     }
@@ -2006,19 +2019,6 @@
       ]
     }
   },
-  "628b472cfdf32ba54540531b117c31b3787c03b05ddf57e03cdf840c71155bde": {
-    "query": "\n            DELETE FROM snapshot\n            WHERE (filesystem_name, snapshot_name) NOT IN (SELECT * FROM UNNEST ($1::text[], $2::text[]))\n            ",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": [
-          "TextArray",
-          "TextArray"
-        ]
-      },
-      "nullable": []
-    }
-  },
   "681d997bb965a228c0aa75d93d09faefe5412daaf3e7bda3630df319fb9edabb": {
     "query": "select * from django_content_type",
     "describe": {
@@ -2887,7 +2887,7 @@
         false,
         false,
         false,
-        true,
+        false,
         true
       ]
     }
@@ -3622,7 +3622,7 @@
         false,
         false,
         false,
-        true,
+        false,
         true
       ]
     }

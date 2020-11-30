@@ -12,17 +12,22 @@ use crate::{
     action_plugins::lustre::snapshot,
     agent_error::ImlAgentError,
     daemon_plugins::{DaemonPlugin, Output},
-    lustre::lctl,
+    device_scanner_client,
+    lustre::list_mdt0s,
 };
 use async_trait::async_trait;
 use futures::{
-    future::{join_all, AbortHandle, Abortable},
+    future::{try_join_all, AbortHandle, Abortable},
     lock::Mutex,
-    Future, FutureExt,
+    Future, FutureExt, TryFutureExt,
 };
 use iml_wire_types::snapshot::{List, Snapshot};
-use std::collections::BTreeSet;
-use std::{pin::Pin, sync::Arc, time::Duration};
+use std::{
+    collections::{HashMap, HashSet},
+    pin::Pin,
+    sync::Arc,
+    time::Duration,
+};
 use tokio::time::delay_for;
 
 struct State {
@@ -46,55 +51,80 @@ pub(crate) fn create() -> SnapshotList {
     }
 }
 
-async fn list() -> Result<Vec<Snapshot>, ()> {
-    let fss: Vec<String> = lctl(vec!["get_param", "-N", "mgs.MGS.live.*"])
-        .await
-        .map_err(|e| {
-            // XXX debug because of false positives
-            tracing::debug!("listing filesystems failed: {}", e);
-        })
-        .map(|o| {
-            o.lines()
-                .map(|line| line.split('.').nth(3).unwrap().to_string())
-                .filter(|n| n != "params")
-                .collect()
-        })?;
+async fn list() -> Result<Option<HashMap<String, Vec<Snapshot>>>, ImlAgentError> {
+    // list the mounts
+    // remove any mdt0's that are snapshots
+    let snapshot_mounts = device_scanner_client::get_snapshot_mounts()
+        .await?
+        .into_iter()
+        .filter_map(|x| {
+            let s = x.opts.0.split(',').find(|x| x.starts_with("svname="))?;
 
-    tracing::debug!("filesystems: {:?}", &fss);
+            let s = s.split('=').nth(1)?;
 
-    let futs = fss.into_iter().map(|fs| async move {
-        snapshot::list(List {
-            fsname: fs.clone(),
-            name: None,
+            Some(s.to_string())
         })
-        .await
-        .map_err(|e| (fs, e))
+        .collect::<HashSet<String>>();
+
+    tracing::debug!("snapshot mounts {:?}", snapshot_mounts);
+
+    let xs = list_mdt0s().await.into_iter().collect::<HashSet<String>>();
+    let xs = xs
+        .difference(&snapshot_mounts)
+        .map(|x| x.to_string())
+        .collect::<Vec<String>>();
+
+    tracing::debug!("mdt0s: {:?}", &xs);
+
+    if xs.is_empty() {
+        tracing::debug!("No mdt0's. Returning `None`.");
+
+        return Ok(None);
+    }
+
+    let xs = xs.into_iter().map(|x| async move {
+        let fs_name = x.rsplitn(2, '-').nth(1);
+        tracing::debug!("fs_name is: {:?}", fs_name);
+
+        if let Some(fs_name) = fs_name {
+            snapshot::list(List {
+                target: x.to_string(),
+                name: None,
+            })
+            .inspect_err(|x| {
+                tracing::debug!("Error calling snapshot list: {:?}", x);
+            })
+            .await
+            .map(|x| (fs_name.to_string(), x))
+        } else {
+            tracing::debug!("No fs_name. Returning MarkerNotFound error.");
+
+            Err(ImlAgentError::MarkerNotFound)
+        }
     });
 
-    let (oks, errs): (Vec<_>, Vec<_>) = join_all(futs).await.into_iter().partition(Result::is_ok);
+    let snapshots: HashMap<String, Vec<Snapshot>> = try_join_all(xs).await?.into_iter().collect();
 
-    let snaps = oks
-        .into_iter()
-        .map(|x| x.unwrap())
-        .flatten()
-        .collect::<Vec<Snapshot>>();
+    tracing::debug!("snapshots: {:?}", snapshots);
 
-    let snapshot_fsnames = snaps
-        .iter()
-        .map(|s| &s.snapshot_fsname)
-        .collect::<BTreeSet<&String>>();
+    Ok(Some(snapshots))
+}
 
-    let really_failed_fss = errs
-        .into_iter()
-        .map(|x| x.unwrap_err())
-        .filter(|x| !snapshot_fsnames.contains(&x.0))
-        .collect::<Vec<_>>();
+async fn try_update_state(state: &Arc<Mutex<State>>) -> Result<(), ImlAgentError> {
+    let snapshots = list().await?;
 
-    if !really_failed_fss.is_empty() {
-        // XXX debug because of false positives
-        tracing::debug!("listing failed: {:?}", really_failed_fss);
+    let output = snapshots.map(|xs| serde_json::to_value(xs)).transpose()?;
+
+    let mut lock = state.lock().await;
+
+    if lock.output != output {
+        tracing::debug!("Snapshot output changed. Updating.");
+
+        lock.output = output;
+        lock.updated = true;
     }
-    Ok(snaps)
+
+    Ok(())
 }
 
 #[async_trait]
@@ -111,21 +141,19 @@ impl DaemonPlugin for SnapshotList {
             tokio::spawn(Abortable::new(
                 async move {
                     loop {
-                        if let Ok(snapshots) = list().await {
-                            tracing::debug!("snapshots ({}): {:?}", snapshots.len(), &snapshots);
-
-                            let output = serde_json::to_value(snapshots).map(Some).unwrap();
-                            let mut lock = state.lock().await;
-                            if lock.output != output {
-                                lock.output = output;
-                                lock.updated = true;
-                            }
+                        if let Err(e) = try_update_state(&state).await {
+                            tracing::debug!(
+                                "Error calling list(): {:?}. Not processing snapshots.",
+                                e
+                            );
                         }
+
                         delay_for(Duration::from_secs(10)).await;
                     }
                 },
                 reader_reg,
             ));
+
             Ok(None)
         }
         .boxed()
