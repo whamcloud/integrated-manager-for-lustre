@@ -11,6 +11,7 @@ Source0: iml-docker.tar.gz
 
 Requires: docker-ce
 Requires: sed
+Requires: rust-iml-cli
 
 %description
 %{summary}
