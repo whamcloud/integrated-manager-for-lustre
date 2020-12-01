@@ -100,12 +100,10 @@ pub async fn unmount(unmount: Unmount) -> Result<(), ImlAgentError> {
         Command::new("/bin/umount")
             .arg(unmount.mountpoint)
             .checked_output()
-            .err_into()
-            .await
-            .map(drop)
-    } else {
-        Ok(())
+            .await?;
     }
+
+    Ok(())
 }
 
 /// This action will attempt to:
