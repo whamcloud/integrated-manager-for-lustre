@@ -3,11 +3,12 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
+    db::CorosyncResourceRecord,
     db::{
         AuthGroupRecord, AuthUserGroupRecord, AuthUserRecord, ContentTypeRecord,
-        CorosyncConfigurationRecord, Id, LnetConfigurationRecord, ManagedTargetRecord,
-        OstPoolOstsRecord, OstPoolRecord, PacemakerConfigurationRecord, StratagemConfiguration,
-        TargetRecord, VolumeNodeRecord, VolumeRecord,
+        CorosyncConfigurationRecord, CorosyncResourceBanRecord, Id, LnetConfigurationRecord,
+        ManagedTargetRecord, OstPoolOstsRecord, OstPoolRecord, PacemakerConfigurationRecord,
+        StratagemConfiguration, TargetRecord, VolumeNodeRecord, VolumeRecord,
     },
     sfa::{SfaController, SfaDiskDrive, SfaEnclosure, SfaJob, SfaPowerSupply, SfaStorageSystem},
     snapshot::{SnapshotInterval, SnapshotRecord, SnapshotRetention},
@@ -93,6 +94,8 @@ pub type Locks = HashMap<String, HashSet<LockChange>>;
 pub struct Cache {
     pub content_type: HashMap<i32, ContentTypeRecord>,
     pub corosync_configuration: HashMap<i32, CorosyncConfigurationRecord>,
+    pub corosync_resource: HashMap<i32, CorosyncResourceRecord>,
+    pub corosync_resource_ban: HashMap<i32, CorosyncResourceBanRecord>,
     pub active_alert: HashMap<i32, Alert>,
     pub filesystem: HashMap<i32, Filesystem>,
     pub group: HashMap<i32, AuthGroupRecord>,
@@ -123,6 +126,8 @@ pub struct Cache {
 pub struct ArcCache {
     pub content_type: HashMap<i32, Arc<ContentTypeRecord>>,
     pub corosync_configuration: HashMap<i32, Arc<CorosyncConfigurationRecord>>,
+    pub corosync_resource: HashMap<i32, Arc<CorosyncResourceRecord>>,
+    pub corosync_resource_ban: HashMap<i32, Arc<CorosyncResourceBanRecord>>,
     pub active_alert: HashMap<i32, Arc<Alert>>,
     pub filesystem: HashMap<i32, Arc<Filesystem>>,
     pub group: HashMap<i32, Arc<AuthGroupRecord>>,
@@ -158,6 +163,14 @@ impl Cache {
                 .corosync_configuration
                 .remove(&id)
                 .map(Record::CorosyncConfiguration),
+            RecordId::CorosyncResource(id) => self
+                .corosync_resource
+                .remove(&id)
+                .map(Record::CorosyncResource),
+            RecordId::CorosyncResourceBan(id) => self
+                .corosync_resource_ban
+                .remove(&id)
+                .map(Record::CorosyncResourceBan),
             RecordId::Filesystem(id) => self.filesystem.remove(&id).map(Record::Filesystem),
             RecordId::Group(id) => self.group.remove(&id).map(Record::Group),
             RecordId::Host(id) => self.host.remove(&id).map(Record::Host),
@@ -215,6 +228,12 @@ impl Cache {
             }
             Record::CorosyncConfiguration(x) => {
                 self.corosync_configuration.insert(x.id, x);
+            }
+            Record::CorosyncResource(x) => {
+                self.corosync_resource.insert(x.id, x);
+            }
+            Record::CorosyncResourceBan(x) => {
+                self.corosync_resource_ban.insert(x.id, x);
             }
             Record::Filesystem(x) => {
                 self.filesystem.insert(x.id, x);
@@ -310,6 +329,8 @@ impl ArcCache {
             RecordId::CorosyncConfiguration(id) => {
                 self.corosync_configuration.remove(&id).is_some()
             }
+            RecordId::CorosyncResource(id) => self.corosync_resource.remove(&id).is_some(),
+            RecordId::CorosyncResourceBan(id) => self.corosync_resource_ban.remove(&id).is_some(),
             RecordId::Filesystem(id) => self.filesystem.remove(&id).is_some(),
             RecordId::Group(id) => self.group.remove(&id).is_some(),
             RecordId::Host(id) => self.host.remove(&id).is_some(),
@@ -346,6 +367,12 @@ impl ArcCache {
             }
             Record::CorosyncConfiguration(x) => {
                 self.corosync_configuration.insert(x.id, Arc::new(x));
+            }
+            Record::CorosyncResource(x) => {
+                self.corosync_resource.insert(x.id, Arc::new(x));
+            }
+            Record::CorosyncResourceBan(x) => {
+                self.corosync_resource_ban.insert(x.id, Arc::new(x));
             }
             Record::Filesystem(x) => {
                 self.filesystem.insert(x.id, Arc::new(x));
@@ -457,6 +484,8 @@ impl From<&Cache> for ArcCache {
         Self {
             content_type: hashmap_to_arc_hashmap(&cache.content_type),
             corosync_configuration: hashmap_to_arc_hashmap(&cache.corosync_configuration),
+            corosync_resource: hashmap_to_arc_hashmap(&cache.corosync_resource),
+            corosync_resource_ban: hashmap_to_arc_hashmap(&cache.corosync_resource_ban),
             active_alert: hashmap_to_arc_hashmap(&cache.active_alert),
             filesystem: hashmap_to_arc_hashmap(&cache.filesystem),
             group: hashmap_to_arc_hashmap(&cache.group),
@@ -490,6 +519,8 @@ impl From<&ArcCache> for Cache {
         Self {
             content_type: arc_hashmap_to_hashmap(&cache.content_type),
             corosync_configuration: arc_hashmap_to_hashmap(&cache.corosync_configuration),
+            corosync_resource: arc_hashmap_to_hashmap(&cache.corosync_resource),
+            corosync_resource_ban: arc_hashmap_to_hashmap(&cache.corosync_resource_ban),
             active_alert: arc_hashmap_to_hashmap(&cache.active_alert),
             filesystem: arc_hashmap_to_hashmap(&cache.filesystem),
             group: arc_hashmap_to_hashmap(&cache.group),
@@ -525,6 +556,8 @@ pub enum Record {
     ActiveAlert(Alert),
     ContentType(ContentTypeRecord),
     CorosyncConfiguration(CorosyncConfigurationRecord),
+    CorosyncResource(CorosyncResourceRecord),
+    CorosyncResourceBan(CorosyncResourceBanRecord),
     Filesystem(Filesystem),
     Group(AuthGroupRecord),
     Host(Host),
@@ -555,6 +588,8 @@ pub enum ArcRecord {
     ActiveAlert(Arc<Alert>),
     ContentType(Arc<ContentTypeRecord>),
     CorosyncConfiguration(Arc<CorosyncConfigurationRecord>),
+    CorosyncResource(Arc<CorosyncResourceRecord>),
+    CorosyncResourceBan(Arc<CorosyncResourceBanRecord>),
     Filesystem(Arc<Filesystem>),
     Group(Arc<AuthGroupRecord>),
     Host(Arc<Host>),
@@ -586,6 +621,8 @@ impl From<Record> for ArcRecord {
             Record::ActiveAlert(x) => Self::ActiveAlert(Arc::new(x)),
             Record::ContentType(x) => Self::ContentType(Arc::new(x)),
             Record::CorosyncConfiguration(x) => Self::CorosyncConfiguration(Arc::new(x)),
+            Record::CorosyncResource(x) => Self::CorosyncResource(Arc::new(x)),
+            Record::CorosyncResourceBan(x) => Self::CorosyncResourceBan(Arc::new(x)),
             Record::Filesystem(x) => Self::Filesystem(Arc::new(x)),
             Record::Group(x) => Self::Group(Arc::new(x)),
             Record::Host(x) => Self::Host(Arc::new(x)),
@@ -619,6 +656,8 @@ pub enum RecordId {
     ActiveAlert(i32),
     ContentType(i32),
     CorosyncConfiguration(i32),
+    CorosyncResource(i32),
+    CorosyncResourceBan(i32),
     Filesystem(i32),
     Group(i32),
     Host(i32),
@@ -650,6 +689,8 @@ impl From<&Record> for RecordId {
             Record::ActiveAlert(x) => RecordId::ActiveAlert(x.id),
             Record::ContentType(x) => RecordId::ContentType(x.id),
             Record::CorosyncConfiguration(x) => RecordId::CorosyncConfiguration(x.id),
+            Record::CorosyncResource(x) => RecordId::CorosyncResource(x.id),
+            Record::CorosyncResourceBan(x) => RecordId::CorosyncResourceBan(x.id),
             Record::Filesystem(x) => RecordId::Filesystem(x.id),
             Record::Group(x) => RecordId::Group(x.id),
             Record::Host(x) => RecordId::Host(x.id),
@@ -685,6 +726,8 @@ impl Deref for RecordId {
             Self::ActiveAlert(x)
             | Self::ContentType(x)
             | Self::CorosyncConfiguration(x)
+            | Self::CorosyncResource(x)
+            | Self::CorosyncResourceBan(x)
             | Self::Filesystem(x)
             | Self::Group(x)
             | Self::Host(x)

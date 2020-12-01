@@ -752,6 +752,12 @@ fn handle_record_change(
                 ArcRecord::CorosyncConfiguration(x) => {
                     model.records.corosync_configuration.insert(x.id, x);
                 }
+                ArcRecord::CorosyncResource(x) => {
+                    model.records.corosync_resource.insert(x.id, x);
+                }
+                ArcRecord::CorosyncResourceBan(x) => {
+                    model.records.corosync_resource_ban.insert(x.id, x);
+                }
                 ArcRecord::PacemakerConfiguration(x) => {
                     model.records.pacemaker_configuration.insert(x.id, x);
                 }

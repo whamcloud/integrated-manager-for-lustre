@@ -1,0 +1,5 @@
+ALTER TABLE IF EXISTS corosync_resource_bans RENAME COLUMN id TO name;
+ALTER TABLE IF EXISTS corosync_resource_bans ADD COLUMN id SERIAL PRIMARY KEY;
+
+ALTER TABLE IF EXISTS corosync_resource RENAME COLUMN id TO name;
+ALTER TABLE IF EXISTS corosync_resource ADD COLUMN id SERIAL PRIMARY KEY;
