@@ -594,7 +594,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         for err in reslist.iter() {
                             eprintln!(
                                 "Failed to sync {} {}",
-                                llapi.fid2path(&err.fid).unwrap_or(err.fid.to_string()),
+                                llapi.fid2path(&err.fid).unwrap_or_else(|_| err.fid.to_string()),
                                 std::io::Error::from_raw_os_error(err.errno.into())
                             );
                         }
@@ -647,7 +647,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                         for err in reslist.iter() {
                             eprintln!(
                                 "Failed to sync {} {}",
-                                llapi.fid2path(&err.fid).unwrap_or(err.fid.to_string()),
+                                llapi.fid2path(&err.fid).unwrap_or_else(|_| err.fid.to_string()),
                                 std::io::Error::from_raw_os_error(err.errno.into())
                             );
                         }

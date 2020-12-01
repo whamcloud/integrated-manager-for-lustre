@@ -113,7 +113,7 @@ async fn list() -> Result<Option<HashMap<String, Vec<Snapshot>>>, ImlAgentError>
 async fn try_update_state(state: &Arc<Mutex<State>>) -> Result<(), ImlAgentError> {
     let snapshots = list().await?;
 
-    let output = snapshots.map(|xs| serde_json::to_value(xs)).transpose()?;
+    let output = snapshots.map(serde_json::to_value).transpose()?;
 
     let mut lock = state.lock().await;
 
