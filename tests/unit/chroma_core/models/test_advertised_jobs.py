@@ -282,12 +282,6 @@ class TestClientManagementJobs(TestAdvertisedCase):
         from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst, ManagedFilesystem, LustreClientMount
         from tests.unit.chroma_core.helpers import synthetic_volume_full
 
-        # mgt, _ = ManagedMgs.create_for_volume(synthetic_volume_full(self.server).id, name="MGS")
-        # fs = ManagedFilesystem.objects.create(mgs=mgt, name="testfs")
-        # ObjectCache.add(ManagedFilesystem, fs)
-        # ManagedMdt.create_for_volume(synthetic_volume_full(self.server).id, filesystem=fs)
-        # ManagedOst.create_for_volume(synthetic_volume_full(self.server).id, filesystem=fs)
-
         mgt_target = ManagedTarget.objects.create(
             id=1,
             state_modified_at="2020-11-11T23:52:23.938603+00:00",
