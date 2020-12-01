@@ -4,7 +4,7 @@
 
 mod filesystem;
 mod command;
-mod job;
+pub mod job;
 mod step;
 mod stratagem;
 mod task;

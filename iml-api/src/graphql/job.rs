@@ -1,14 +1,19 @@
 use crate::graphql::Context;
 use chrono::{DateTime, Utc};
 use futures::TryFutureExt;
-use iml_postgres::sqlx;
+use iml_postgres::{sqlx, PgPool};
 use iml_wire_types::{
     graphql::map::GraphQLMap, AvailableTransition, Command, EndpointName, Job, JobLock, Step,
 };
 use juniper::{DefaultScalarValue, FieldError};
+use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::fmt;
-use std::collections::HashMap;
+use std::sync::Mutex;
+
+lazy_static::lazy_static! {
+    static ref CONTENT_TYPES_CACHE: Mutex<HashMap<i32, String>> = Mutex::new(HashMap::new());
+}
 
 pub(crate) struct JobQuery;
 
@@ -226,7 +231,7 @@ fn convert_job_locks(locks_json: &str) -> juniper::FieldResult<(Vec<JobLock>, Ve
 }
 
 fn convert_job_wait_for(json: &str) -> juniper::FieldResult<Vec<String>> {
-    // raw_ids is like "[6, 7, 8, 9, 12, 13, 14]"
+    // json is a string like "[6, 7, 8, 9, 12, 13, 14]"
     let ids = serde_json::from_str::<serde_json::Value>(json)?;
     if let serde_json::Value::Array(ids) = ids {
         let wait_for = ids
@@ -243,7 +248,99 @@ fn convert_job_wait_for(json: &str) -> juniper::FieldResult<Vec<String>> {
     }
 }
 
+pub async fn get_content_types(
+    pg_pool: &PgPool,
+) -> juniper::FieldResult<&'static Mutex<HashMap<i32, String>>> {
+    let mut guard = CONTENT_TYPES_CACHE.lock().unwrap();
+    if guard.is_empty() {
+        let hm = load_content_types(pg_pool).await?;
+        for (k, v) in hm {
+            guard.insert(k, v);
+        }
+    }
+    Ok(&CONTENT_TYPES_CACHE)
+}
+
+async fn load_content_types(pg_pool: &PgPool) -> juniper::FieldResult<HashMap<i32, String>> {
+    // let names = LockedItemType::iter().map(|s| s.to_string().s.to_ascii_lowercase()).collect::<Vec<String>>();
+    let names = vec![
+        "Copytool",
+        "Corosync2Configuration",
+        "CorosyncConfiguration",
+        "FilesystemTicket",
+        "LNetConfiguration",
+        "LustreClientMount",
+        "ManagedFilesystem",
+        "ManagedHost",
+        "ManagedMdt",
+        "ManagedMgs",
+        "ManagedOst",
+        "ManagedTarget",
+        "MasterTicket",
+        "NTPConfiguration",
+        "PacemakerConfiguration",
+        "StratagemConfiguration",
+        "Ticket",
+    ]
+    .into_iter()
+    .map(|s| s.to_ascii_lowercase())
+    .collect::<Vec<_>>();
+
+    let content_types = sqlx::query!(
+        r#"
+            SELECT ct.id,
+                   ct.model
+            FROM django_content_type AS ct
+            WHERE ct.app_label = 'chroma_core'
+              AND ct.model = ANY ($1::VARCHAR[])
+        "#,
+        &names
+    )
+    .fetch_all(pg_pool)
+    .map_ok(|xs| {
+        xs.into_iter()
+            .map(|x| (x.id, x.model))
+            .collect::<Vec<(i32, String)>>()
+    })
+    .await?;
+    let mut m = HashMap::new();
+    for ct in content_types {
+        m.insert(ct.0, ct.1);
+    }
+    Ok(m)
+}
+
+// All _leaf_ python class names, derived from `chroma_core.models.jobs.StatefulObject`
+#[derive(Copy, Clone, Debug, strum_macros::Display, strum_macros::EnumIter)]
+pub enum LockedItemType {
+    Copytool,
+    Corosync2Configuration,
+    CorosyncConfiguration,
+    FilesystemTicket,
+    LNetConfiguration,
+    LustreClientMount,
+    ManagedFilesystem,
+    ManagedHost,
+    ManagedMdt,
+    ManagedMgs,
+    ManagedOst,
+    ManagedTarget,
+    MasterTicket,
+    NTPConfiguration,
+    PacemakerConfiguration,
+    StratagemConfiguration,
+    Ticket,
+}
+
+// impl fmt::Display for LockedItemType {
+//     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+//         fmt::Debug::fmt(self, f)
+//     }
+// }
+
+// all derived classes of stateful
 fn convert_to_item_type(id: i32) -> juniper::FieldResult<LockedItemType> {
+
     match id {
         26 => Ok(LockedItemType::Copytool),
         77 => Ok(LockedItemType::Corosync2Configuration),
@@ -290,32 +387,4 @@ fn item_type_to_uri(lit: LockedItemType, id: i32) -> String {
         LockedItemType::Ticket => "ticket",
     };
     format!("/api/{}/{}/", resource_uri, id)
-}
-
-// all derived classes of StatefulObject in Chroma
-#[derive(Clone, Copy, Debug)]
-pub enum LockedItemType {
-    Copytool,
-    Corosync2Configuration,
-    CorosyncConfiguration,
-    FilesystemTicket,
-    LNetConfiguration,
-    LustreClientMount,
-    ManagedFilesystem,
-    ManagedHost,
-    ManagedMdt,
-    ManagedMgs,
-    ManagedOst,
-    ManagedTarget,
-    MasterTicket,
-    NTPConfiguration,
-    PacemakerConfiguration,
-    StratagemConfiguration,
-    Ticket,
-}
-
-impl fmt::Display for LockedItemType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fmt::Debug::fmt(self, f)
-    }
 }

@@ -5,7 +5,7 @@
 mod action;
 mod command;
 mod error;
-mod graphql;
+pub mod graphql;
 mod timer;
 
 use iml_manager_env::get_pool_limit;
@@ -18,9 +18,36 @@ use warp::Filter;
 // Default pool limit if not overridden by POOL_LIMIT
 const DEFAULT_POOL_LIMIT: u32 = 5;
 
+use strum::IntoEnumIterator;
+
+#[tokio::main]
+async fn main0() -> juniper::FieldResult<()> {
+    dotenv::from_path(".env").expect("Could not load cli env");
+    iml_tracing::init();
+    let pg_pool = get_db_pool(1).await?;
+    let names = graphql::job::LockedItemType::iter()
+        .map(|s| s.to_string().to_ascii_lowercase())
+        .collect::<Vec<String>>();
+
+    for i in 0..20i32 {
+        let hm = graphql::job::get_content_types(&pg_pool)
+            .await
+            .map_err(|e| e)?
+            .lock()
+            .unwrap();
+        println!("{}", i);
+        println!("{:?}", hm);
+    }
+
+    for color in names {
+        println!("My favorite color is {}", color);
+    }
+
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    dotenv::from_path(".env").expect("Could not load cli env");
     iml_tracing::init();
 
     let addr = iml_manager_env::get_iml_api_addr();
