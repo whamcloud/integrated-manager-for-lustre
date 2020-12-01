@@ -57,26 +57,32 @@ su postgres -c "psql -c 'CREATE EXTENSION IF NOT EXISTS btree_gist;' -d chroma"
 
 sed -i -e '/local[[:space:]]\+all/i\
 local   all         chroma                            trust' /var/lib/pgsql/9.6/data/pg_hba.conf
+sed -i "s/host.*all.*all.*127\.0\.0\.1\/32.*ident/host    all             all             127\.0\.0\.1\/32            trust/" /var/lib/pgsql/9.6/data/pg_hba.conf
+sed -i "s/host.*all.*all.*::1\/128.*ident/host    all             all             ::1\/128                 trust/" /var/lib/pgsql/9.6/data/pg_hba.conf
 systemctl restart postgresql-9.6
 
-
 yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/@MFL_COPR_REPO@/repo/epel-7/@MFL_COPR_NAME@-epel-7.repo
-yum -y install ed npm nginx libuv iml-gui iml-online-help
+yum -y install ed npm nginx libuv iml-gui iml-online-help rust-iml-api
 
 cd /integrated-manager-for-lustre
 cp iml-corosync.service iml-gunicorn.service iml-http-agent.service iml-job-scheduler.service /lib/systemd/system
 cp iml-lustre-audit.service iml-manager.target iml-plugin-runner.service iml-power-control.service /lib/systemd/system
-cp iml-api.service iml-settings-populator.service /lib/systemd/system
+cp iml-settings-populator.service /lib/systemd/system
 pip install -r requirements.txt
 pip install -r requirements.test
 echo -e "/^DEBUG =/s/= .*$/= True/\nwq" | ed settings.py
 
-cp -r /integrated-manager-for-lustre /usr/share/chroma-manager
+rsync -ar --exclude='.cargo' --exclude='iml-gui/node_modules' /integrated-manager-for-lustre/ /usr/share/chroma-manager
 mkdir /var/log/chroma
+mkdir /var/lib/chroma
 cd /usr/share/chroma-manager
 
+CARGO_NET_RETRY=25 cargo install sqlx-cli --no-default-features --features postgres --git https://github.com/jgrund/sqlx --branch support-offline-workspaces
+echo "DATABASE_URL=postgres://chroma@localhost:5432/chroma" > .env
 python ./manage.py dev_setup
+cargo sqlx migrate run
 
-env $(python manage.py print-settings 2> /dev/null | xargs) cargo run --bin iml-config nginx generate-config --path /integrated-manager-for-lustre/chroma-manager.conf.template --output /etc/nginx/conf.d/chroma-manager.conf
+env CARGO_NET_RETRY=25 $(python manage.py print-settings 2> /dev/null | xargs) cargo run --bin iml-config nginx generate-config --path /integrated-manager-for-lustre/chroma-manager.conf.template --output /etc/nginx/conf.d/chroma-manager.conf
+systemctl start iml-api
 
 PYTHONPATH=. nosetests tests/services/ --stop
