@@ -3,7 +3,6 @@
 // license that can be found in the LICENSE file.
 
 use crate::agent_error::ImlAgentError;
-use futures::TryFutureExt;
 use iml_cmd::{CheckedCommandExt, Command};
 use iml_fs::read_file_to_end;
 use iml_wire_types::client::{Mount, Unmount};
