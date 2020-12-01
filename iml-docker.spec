@@ -31,7 +31,6 @@ mkdir -p %{buildroot}%{_bindir}
 mkdir -p %{buildroot}%{_unitdir}
 cp docker-compose.yml %{buildroot}%{_sysconfdir}/iml-docker
 mv iml-images.tgz %{buildroot}%{_sharedstatedir}
-mv iml-cli-proxy.sh %{buildroot}%{_bindir}/iml
 mv copy-embedded-settings %{buildroot}%{_bindir}/
 mv update-embedded.sh %{buildroot}%{_bindir}/update-embedded
 mv iml-docker.service %{buildroot}%{_unitdir}
@@ -40,7 +39,6 @@ mv iml-docker.service %{buildroot}%{_unitdir}
 %files
 %{_sysconfdir}/iml-docker
 %attr(0640, root, root) %{_sharedstatedir}/iml-images.tgz
-%attr(0755, root, root) %{_bindir}/iml
 %attr(754, root, root) %{_bindir}/update-embedded
 %attr(754, root, root) %{_bindir}/copy-embedded-settings
 %attr(0644, root, root) %{_unitdir}/iml-docker.service
