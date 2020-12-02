@@ -33,6 +33,7 @@ members = [
   'iml-services/iml-snapshot',
   'iml-services/iml-stats',
   'iml-sfa',
+  'iml-ssh',
   'iml-system-test-utils',
   'iml-systemd',
   'iml-task-runner',

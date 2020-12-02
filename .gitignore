@@ -20,6 +20,7 @@ _topdir
 **/.env
 *~
 *.snap.new
+*.pytest_cache
 artifacts
 /base.repo
 /chroma_support.repo
