@@ -3,7 +3,6 @@
 // license that can be found in the LICENSE file.
 
 use crate::agent_error::ImlAgentError;
-use futures::TryFutureExt;
 use iml_cmd::{CheckedCommandExt, Command};
 use iml_fs::read_file_to_end;
 use iml_wire_types::client::{Mount, Unmount};
@@ -100,12 +99,10 @@ pub async fn unmount(unmount: Unmount) -> Result<(), ImlAgentError> {
         Command::new("/bin/umount")
             .arg(unmount.mountpoint)
             .checked_output()
-            .err_into()
-            .await
-            .map(drop)
-    } else {
-        Ok(())
+            .await?;
     }
+
+    Ok(())
 }
 
 /// This action will attempt to:
