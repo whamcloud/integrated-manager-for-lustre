@@ -180,12 +180,22 @@ pub async fn write_tempfile(contents: Vec<u8>) -> Result<NamedTempFile, io::Erro
     .await?
 }
 
-/// Does the given `str` ref exist as a file?
-pub async fn file_exists(path: &str) -> bool {
-    let f = fs::metadata(path).await;
+/// Does the given path exist as a file?
+pub async fn file_exists(path: impl AsRef<Path>) -> bool {
+    let x = fs::metadata(path).await;
 
-    match f {
+    match x {
         Ok(m) => m.is_file(),
+        Err(_) => false,
+    }
+}
+
+/// Does the given path exist as a directory?
+pub async fn dir_exists(path: impl AsRef<Path>) -> bool {
+    let x = tokio::fs::metadata(path).await;
+
+    match x {
+        Ok(m) => m.is_dir(),
         Err(_) => false,
     }
 }
