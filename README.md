@@ -4,8 +4,6 @@
 
 [![Build Status](https://travis-ci.com/whamcloud/integrated-manager-for-lustre.svg?branch=master)](https://travis-ci.com/whamcloud/integrated-manager-for-lustre)
 
-![devel-release](https://github.com/whamcloud/integrated-manager-for-lustre/workflows/devel-release/badge.svg)
-
 ![iml-rust](https://github.com/whamcloud/integrated-manager-for-lustre/workflows/iml-rust/badge.svg)
 
 ![IML GUI](https://github.com/whamcloud/integrated-manager-for-lustre/workflows/IML%20GUI/badge.svg)
