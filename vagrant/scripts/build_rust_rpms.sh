@@ -18,5 +18,4 @@ EOF
 source /root/.bash_profile
 
 cd /integrated-manager-for-lustre \
-    && sed -i 's/Release: 1.*/Release: 1.'"$(date '+%s')"'/g' rust-iml.spec \
-    && make copr-rpms
+    && RPM_DIST=".$(date '+%s')" make copr-rpms
