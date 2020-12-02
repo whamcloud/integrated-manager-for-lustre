@@ -35,6 +35,25 @@ class IMLUnitTestCase(TestCase):
         mock.patch("chroma_core.services.job_scheduler.job_scheduler.LockQueue.put").start()
         mock.patch("chroma_core.services.dbutils.exit_if_in_transaction").start()
 
+        def get_targets_fn():
+            from chroma_core.models import ManagedHost
+
+            ids = [x.id for x in ManagedHost.objects.all()]
+            host_id = ids[0]
+
+            return [
+                {"name": "MGS", "active_host_id": host_id, "host_ids": ids, "uuid": "uuid_mgt"},
+                {"name": "testfs-MDT0000", "active_host_id": host_id, "host_ids": ids, "uuid": "uuid_mdt"},
+                {"name": "testfs-OST0000", "active_host_id": host_id, "host_ids": ids, "uuid": "uuid_ost0"},
+                {"name": "testfs-OST0001", "active_host_id": host_id, "host_ids": ids, "uuid": "uuid_ost1"},
+            ]
+
+        self.get_targets_mock = mock.MagicMock(side_effect=get_targets_fn)
+        mock.patch("chroma_core.lib.graphql.get_targets", new=self.get_targets_mock).start()
+
+        self.influx_post_mock = mock.MagicMock()
+        mock.patch("chroma_core.lib.influx.requests", new=self.influx_post_mock).start()
+
     def make_command(self, complete=False, created_at=None, errored=True, message="test"):
 
         """

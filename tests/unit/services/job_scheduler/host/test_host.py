@@ -13,127 +13,6 @@ from chroma_core.models.lnet_configuration import Nid
 from tests.unit.services.job_scheduler.job_test_case import JobTestCase
 
 
-class NidTestCase(JobTestCase):
-    def setUp(self):
-        super(NidTestCase, self).setUp()
-        self.default_mock_servers = deepcopy(self.mock_servers)
-
-    def tearDown(self):
-        self.mock_servers = self.default_mock_servers
-        super(NidTestCase, self).tearDown()
-
-    def assertNidsCorrect(self, host):
-        JobSchedulerClient.command_run_jobs(
-            [{"class_name": "UpdateDevicesJob", "args": {"host_ids": json.dumps([host.id])}}], "Test update of nids"
-        )
-        self.drain_progress()
-
-        mock_nids = set(
-            [str(Nid.nid_tuple_to_string(Nid.Nid(n[0], n[1], n[2]))) for n in self.mock_servers[host.address]["nids"]]
-        )
-        recorded_nids = set([str(n.nid_string) for n in Nid.objects.filter(lnet_configuration__host=host)])
-
-        self.assertSetEqual(mock_nids, recorded_nids)
-
-
-class TestNidChange(NidTestCase):
-    mock_servers = {
-        "myaddress": {
-            "fqdn": "myaddress.mycompany.com",
-            "nodename": "test01.myaddress.mycompany.com",
-            "nids": [Nid.Nid("192.168.0.1", "tcp", 0)],
-        }
-    }
-
-    def attempt_nid_change(self, new_nids):
-        host = synthetic_host("myaddress", self.mock_servers["myaddress"]["nids"])
-        self.assertNidsCorrect(host)
-        self.mock_servers["myaddress"]["nids"] = new_nids
-        self.assertNidsCorrect(host)
-
-    def test_relearn_change(self):
-        self.attempt_nid_change([Nid.Nid("192.168.0.2", "tcp", 0)])
-
-    def test_relearn_add(self):
-        self.attempt_nid_change([Nid.Nid("192.168.0.1", "tcp", 0), Nid.Nid("192.168.0.2", "tcp", 0)])
-
-    def test_relearn_remove(self):
-        self.attempt_nid_change([])
-
-
-class TestUpdateNids(NidTestCase):
-    mock_servers = {
-        "mgs": {
-            "fqdn": "mgs.mycompany.com",
-            "nodename": "mgs.mycompany.com",
-            "nids": [Nid.Nid("192.168.0.1", "tcp", 0)],
-        },
-        "mds": {
-            "fqdn": "mds.mycompany.com",
-            "nodename": "mds.mycompany.com",
-            "nids": [Nid.Nid("192.168.0.2", "tcp", 0)],
-        },
-        "oss": {
-            "fqdn": "oss.mycompany.com",
-            "nodename": "oss.mycompany.com",
-            "nids": [Nid.Nid("192.168.0.3", "tcp", 0)],
-        },
-    }
-
-    @patch("chroma_core.lib.job.Step.invoke_rust_agent", return_value=MagicMock())
-    def test_mgs_nid_change(self, invoke):
-        invoke.return_value = '{"Ok": ""}'
-
-        mgs = synthetic_host("mgs")
-        mds = synthetic_host("mds")
-        oss = synthetic_host("oss")
-
-        from chroma_core.models import (
-            ManagedMgs,
-            ManagedMdt,
-            ManagedOst,
-            ManagedFilesystem,
-            ManagedTarget,
-            ManagedTargetMount,
-        )
-
-        self.mgt, mgt_tms = ManagedMgs.create_for_volume(synthetic_volume_full(mgs).id, name="MGS")
-        self.fs = ManagedFilesystem.objects.create(mgs=self.mgt, name="testfs")
-        ObjectCache.add(ManagedFilesystem, self.fs)
-        self.mdt, mdt_tms = ManagedMdt.create_for_volume(synthetic_volume_full(mds).id, filesystem=self.fs)
-        self.ost, ost_tms = ManagedOst.create_for_volume(synthetic_volume_full(oss).id, filesystem=self.fs)
-        for target in [self.mgt, self.ost, self.mdt]:
-            ObjectCache.add(ManagedTarget, target.managedtarget_ptr)
-        for tm in chain(mgt_tms, mdt_tms, ost_tms):
-            ObjectCache.add(ManagedTargetMount, tm)
-
-        self.fs = self.set_and_assert_state(self.fs, "available")
-
-        self.mock_servers["mgs"]["nids"] = [Nid.Nid("192.168.0.99", "tcp", 0)]
-        self.assertNidsCorrect(mgs)
-
-        JobSchedulerClient.command_run_jobs(
-            [{"class_name": "UpdateNidsJob", "args": {"host_ids": json.dumps([mgs.id])}}], "Test update nids"
-        )
-        self.drain_progress()
-        self.assertState(self.fs, "stopped")
-
-        expected_calls = [
-            call(
-                "mgs",
-                "lctl",
-                ["replace_nids", "%s" % self.mdt, "192.168.0.2@tcp0"],
-            ),
-            call(
-                "mgs",
-                "lctl",
-                ["replace_nids", "%s" % self.ost, "192.168.0.3@tcp0"],
-            ),
-        ]
-
-        self.assertEqual(expected_calls, invoke.call_args_list)
-
-
 class TestHostAddRemove(JobTestCase):
     mock_servers = {
         "myaddress": {
@@ -187,7 +66,7 @@ class TestHostAddRemove(JobTestCase):
         is deleted along with the host when doing a force remove"""
 
         host = synthetic_host("myaddress")
-        self.create_simple_filesystem(host)
+        self.create_simple_filesystem()
         from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst, ManagedFilesystem
 
         self.fs = self.set_and_assert_state(self.fs, "available")

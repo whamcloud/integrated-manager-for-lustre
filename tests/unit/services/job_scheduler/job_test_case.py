@@ -6,7 +6,6 @@ from itertools import chain
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.models import Command
 from chroma_core.models import ManagedTarget
-from chroma_core.models import ManagedTargetMount
 from chroma_core.models import Nid
 from chroma_core.services.plugin_runner.agent_daemon_interface import AgentDaemonRpcInterface
 from chroma_core.services.queue import ServiceQueue
@@ -14,6 +13,7 @@ from chroma_core.services.rpc import ServiceRpcInterface
 from tests.unit.chroma_core.helpers import MockAgentRpc, synthetic_volume_full, freshen
 from tests.unit.chroma_core.helpers import (
     MockAgentSsh,
+    create_simple_fs,
     log,
     load_default_profile,
     synthetic_host,
@@ -242,17 +242,19 @@ class JobTestCase(IMLUnitTestCase):
             host_id = ids[0]
 
             return [
-                {"name": "MGS", "active_host_id": host_id, "host_ids": ids},
-                {"name": "testfs-MDT0000", "active_host_id": host_id, "host_ids": ids},
-                {"name": "testfs-OST0000", "active_host_id": host_id, "host_ids": ids},
-                {"name": "testfs-OST0001", "active_host_id": host_id, "host_ids": ids},
-                {"name": "testfs2-OST0000", "active_host_id": host_id, "host_ids": ids},
-                {"name": "testfs2-MDT0000", "active_host_id": host_id, "host_ids": ids},
+                {"name": "MGS", "active_host_id": host_id, "host_ids": ids, "uuid": "uuid_mgt"},
+                {"name": "testfs-MDT0000", "active_host_id": host_id, "host_ids": ids, "uuid": "uuid_mdt"},
+                {"name": "testfs-OST0000", "active_host_id": host_id, "host_ids": ids, "uuid": "uuid_ost0"},
+                {"name": "testfs-OST0001", "active_host_id": host_id, "host_ids": ids, "uuid": "uuid_ost1"},
+                {"name": "testfs2-OST0000", "active_host_id": host_id, "host_ids": ids, "uuid": "uuid_fs2_ost0"},
+                {"name": "testfs2-MDT0000", "active_host_id": host_id, "host_ids": ids, "uuid": "uuid_fs2_mdt"},
             ]
 
         self.get_targets_mock = mock.MagicMock(side_effect=get_targets_fn)
-
         mock.patch("chroma_core.lib.graphql.get_targets", new=self.get_targets_mock).start()
+
+        self.invoke_rust_agent_mock = mock.MagicMock(return_value='{"Ok": ""}')
+        mock.patch("chroma_core.lib.job.invoke_rust_agent", new=self.invoke_rust_agent_mock).start()
 
         self.addCleanup(mock.patch.stopall)
 
@@ -262,26 +264,16 @@ class JobTestCase(IMLUnitTestCase):
         chroma_core.services.job_scheduler.agent_rpc.AgentRpc = self.old_agent_rpc
         chroma_core.services.job_scheduler.agent_rpc.AgentSsh = self.old_agent_ssh
 
-    def create_simple_filesystem(self, host, start=True):
-        from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst, ManagedFilesystem
+    def create_simple_filesystem(self, start=True):
+        (mgt, fs, mdt, ost) = create_simple_fs()
 
-        self.mgt, mgt_tms = ManagedMgs.create_for_volume(self._test_lun(host).id, name="MGS")
-        self.fs = ManagedFilesystem.objects.create(mgs=self.mgt, name="testfs")
-        ObjectCache.add(ManagedFilesystem, self.fs)
-
-        self.mdt, mdt_tms = ManagedMdt.create_for_volume(self._test_lun(host).id, filesystem=self.fs)
-        self.ost, ost_tms = ManagedOst.create_for_volume(self._test_lun(host).id, filesystem=self.fs)
-
-        for target in [self.mgt, self.ost, self.mdt]:
-            ObjectCache.add(ManagedTarget, target.managedtarget_ptr)
-        for tm in chain(mgt_tms, mdt_tms, ost_tms):
-            ObjectCache.add(ManagedTargetMount, tm)
+        self.fs = fs
+        self.mgt = mgt
+        self.mdt = mdt
+        self.ost = ost
 
         if start:
             self.fs = self.set_and_assert_state(self.fs, "available")
-            self.mgt = freshen(self.mgt)
-            self.mdt = freshen(self.mdt)
-            self.ost = freshen(self.ost)
 
 
 class JobTestCaseWithHost(JobTestCase):

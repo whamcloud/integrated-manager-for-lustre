@@ -4,6 +4,7 @@ import mock
 
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.services.job_scheduler.job_scheduler import JobScheduler
+from django.db import connection
 from tests.unit.chroma_api.tastypie_test import ResourceTestCase
 from tests.unit.chroma_core.helpers import synthetic_volume_full
 from chroma_core.models import ManagedTarget
@@ -82,7 +83,21 @@ class ChromaApiTestCase(ResourceTestCase):
         self.old_get_locks = job_scheduler_client.JobSchedulerClient.get_locks
         job_scheduler_client.JobSchedulerClient.get_locks = fake_get_locks
 
-        mock.patch("chroma_core.lib.graphql.get_targets", new=mock.MagicMock()).start()
+        def get_targets_fn():
+            from chroma_core.models import ManagedHost
+
+            ids = [x.id for x in ManagedHost.objects.all()]
+            host_id = ids[0]
+
+            return [
+                {"name": "MGS", "active_host_id": host_id, "host_ids": ids, "uuid": "uuid_mgt"},
+                {"name": "testfs-MDT0000", "active_host_id": host_id, "host_ids": ids, "uuid": "uuid_mdt"},
+                {"name": "testfs-OST0000", "active_host_id": host_id, "host_ids": ids, "uuid": "uuid_ost0"},
+                {"name": "testfs-OST0001", "active_host_id": host_id, "host_ids": ids, "uuid": "uuid_ost1"},
+            ]
+
+        self.get_targets_mock = mock.MagicMock(side_effect=get_targets_fn)
+        mock.patch("chroma_core.lib.graphql.get_targets", new=self.get_targets_mock).start()
 
         self.addCleanup(mock.patch.stopall)
 
@@ -131,22 +146,6 @@ class ChromaApiTestCase(ResourceTestCase):
         except AssertionError:
             raise AssertionError("response = %s:%s" % (response.status_code, self.deserialize(response)))
         return self.deserialize(response)
-
-    def create_simple_filesystem(self, host):
-        from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst, ManagedFilesystem, ManagedTargetMount
-
-        self.mgt, _ = ManagedMgs.create_for_volume(synthetic_volume_full(host).id, name="MGS")
-        self.fs = ManagedFilesystem.objects.create(mgs=self.mgt, name="testfs")
-        ObjectCache.add(ManagedFilesystem, self.fs)
-        ObjectCache.add(ManagedTarget, ManagedTarget.objects.get(id=self.mgt.id))
-
-        self.mdt, _ = ManagedMdt.create_for_volume(synthetic_volume_full(host).id, filesystem=self.fs)
-        self.ost, _ = ManagedOst.create_for_volume(synthetic_volume_full(host).id, filesystem=self.fs)
-        ObjectCache.add(ManagedTarget, ManagedTarget.objects.get(id=self.mdt.id))
-        ObjectCache.add(ManagedTarget, ManagedTarget.objects.get(id=self.ost.id))
-        ObjectCache.add(ManagedTargetMount, ManagedTargetMount.objects.get(target_id=self.mgt.id))
-        ObjectCache.add(ManagedTargetMount, ManagedTargetMount.objects.get(target_id=self.mdt.id))
-        ObjectCache.add(ManagedTargetMount, ManagedTargetMount.objects.get(target_id=self.ost.id))
 
     def api_get_list(self, uri, **kwargs):
         response = self.api_client.get(uri, **kwargs)

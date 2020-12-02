@@ -1,7 +1,10 @@
+import mock
+
 from chroma_core.lib.cache import ObjectCache
-from chroma_core.models import ManagedMgs, ManagedFilesystem, ManagedMdt, ManagedOst, Nid
+from chroma_core.models import ManagedMgs, ManagedFilesystem, ManagedHost, ManagedMdt, ManagedOst, Nid
+from django.db import connection
 from tests.unit.chroma_core.helpers import synthetic_host, synthetic_volume_full
-from tests.unit.chroma_core.helpers import load_default_profile
+from tests.unit.chroma_core.helpers import create_simple_fs, load_default_profile
 from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
 
 
@@ -21,6 +24,22 @@ class TestNidStrings(IMLUnitTestCase):
 
         load_default_profile()
 
+        def get_targets_fn():
+            ids = [x.id for x in ManagedHost.objects.all()]
+            host_id = ids[0]
+
+            return [
+                {"name": "MGS", "active_host_id": host_id, "host_ids": [ids[0]]},
+                {"name": "MGS_ha", "active_host_id": host_id, "host_ids": [ids[0], ids[1]]},
+            ]
+
+        self.get_targets_mock = mock.MagicMock(side_effect=get_targets_fn)
+        mock.patch("chroma_core.lib.graphql.get_targets", new=self.get_targets_mock).start()
+
+        (mgt, fs, mdt, ost) = create_simple_fs()
+        self.mgt = mgt
+        self.fs = fs
+
     def _host_with_nids(self, address):
         host_nids = {
             "primary-mgs": [Nid.Nid("1.2.3.4", "tcp", 0)],
@@ -30,11 +49,3 @@ class TestNidStrings(IMLUnitTestCase):
             "othernode": [Nid.Nid("1.2.3.6", "tcp", 0), Nid.Nid("4.3.2.3", "tcp", 1)],
         }
         return synthetic_host(address, host_nids[address])
-
-    def _create_file_system(self, mgt, other):
-        fs = ManagedFilesystem.objects.create(mgs=mgt, name="testfs")
-        ObjectCache.add(ManagedFilesystem, fs)
-        ManagedMdt.create_for_volume(synthetic_volume_full(other).id, filesystem=fs)
-        ManagedOst.create_for_volume(synthetic_volume_full(other).id, filesystem=fs)
-
-        return fs

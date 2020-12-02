@@ -41,21 +41,6 @@ class TestVolumeNodeDelete(ChromaApiTestCase):
         VolumeNode.objects.filter(host_id=host1.id).delete()
         self.assertEqual(0, len(self._get_volumes(host1.id)))
 
-    @create_targets_patch
-    def test_select_by_filesystem(self):
-        """Test selecting host by filesystem with valid and invalid filesystem ids."""
-        self.create_simple_filesystem(synthetic_host("myserver"))
-
-        response = self.api_client.get("/api/volume/", data={"filesystem_id": self.fs.id})
-        self.assertHttpOK(response)
-        content = json.loads(response.content)
-        self.assertEqual(3, len(content["objects"]))
-
-        response = self.api_client.get("/api/volume/", data={"filesystem_id": -1000})
-        self.assertHttpOK(response)
-        content = json.loads(response.content)
-        self.assertEqual(0, len(content["objects"]))
-
     def test_multiple_volumenodes(self):
         """
         Test that if a Volume and multiple VolumeNodes on the same host a fetch with host_id produces a single Volume
@@ -89,24 +74,3 @@ class TestVolumeNodeDelete(ChromaApiTestCase):
 
             # Check the Volume has 3 VolumeNodes
             self.assertEqual(len(content["objects"][0]["volume_nodes"]), 3)
-
-    def test_unusable_by_lustre(self):
-        """Test selecting host by filesystem with valid and invalid filesystem ids."""
-        host = synthetic_host("myserver")
-        synthetic_volume_full(host)
-        synthetic_volume_full(host, usable_for_lustre=False)
-
-        response = self.api_client.get("/api/volume/")
-        self.assertHttpOK(response)
-        content = json.loads(response.content)
-        self.assertEqual(2, len(content["objects"]))
-
-        response = self.api_client.get("/api/volume/", data={"category": "usable"})
-        self.assertHttpOK(response)
-        content = json.loads(response.content)
-        self.assertEqual(1, len(content["objects"]))
-
-        response = self.api_client.get("/api/volume/", data={"category": "unused"})
-        self.assertHttpOK(response)
-        content = json.loads(response.content)
-        self.assertEqual(1, len(content["objects"]))

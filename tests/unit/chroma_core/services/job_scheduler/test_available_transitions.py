@@ -33,7 +33,6 @@ class TestAvailableTransitions(IMLUnitTestCase):
         super(TestAvailableTransitions, self).setUp()
 
         self.js = JobScheduler()
-        self.volume = synthetic_volume(with_storage=False)
 
         load_default_profile()
 
@@ -61,16 +60,16 @@ class TestAvailableTransitions(IMLUnitTestCase):
         """Test the MGS some possible states."""
 
         #  No FS - mgs unformatted
-        mgs = ManagedMgs.objects.create(volume=self.volume)
+        mgs = ManagedMgs.objects.create()
 
-        expected_transitions = ["registered", "mounted", "formatted", "unmounted", "removed", "forgotten"]
+        expected_transitions = []
         received_transitions = [t["state"] for t in self._get_transition_states(mgs)]
         self.assertEqual(set(received_transitions), set(expected_transitions))
 
         # An fs causes the MGS to be non-removeable.
         ManagedFilesystem.objects.create(name="mgsfs", mgs=mgs)
 
-        expected_transitions = ["registered", "mounted", "formatted", "unmounted"]
+        expected_transitions = []
         received_transitions = [t["state"] for t in self._get_transition_states(mgs)]
         self.assertEqual(set(received_transitions), set(expected_transitions))
 
@@ -78,11 +77,11 @@ class TestAvailableTransitions(IMLUnitTestCase):
         """Test the OST possible states are correct."""
 
         #  ost unformatted
-        mgs = ManagedMgs.objects.create(volume=self.volume)
+        mgs = ManagedMgs.objects.create()
         fs = ManagedFilesystem.objects.create(name="mgsfs", mgs=mgs)
-        ost = ManagedOst.objects.create(volume=self.volume, filesystem=fs, index=1)
+        ost = ManagedOst.objects.create(filesystem=fs, index=1)
 
-        expected_transitions = ["formatted", "registered", "unmounted", "mounted", "removed"]
+        expected_transitions = []
         received_transitions = [t["state"] for t in self._get_transition_states(ost)]
         self.assertEqual(set(received_transitions), set(expected_transitions))
 
@@ -90,11 +89,11 @@ class TestAvailableTransitions(IMLUnitTestCase):
         """Test the MDT possible states are correct."""
 
         #  ost unformatted
-        mgs = ManagedMgs.objects.create(volume=self.volume)
+        mgs = ManagedMgs.objects.create()
         fs = ManagedFilesystem.objects.create(name="mgsfs", mgs=mgs)
-        mdt = ManagedMdt.objects.create(volume=self.volume, filesystem=fs, index=0)
+        mdt = ManagedMdt.objects.create(filesystem=fs, index=0)
 
-        expected_transitions = ["formatted", "registered", "unmounted", "mounted"]
+        expected_transitions = []
         received_transitions = [t["state"] for t in self._get_transition_states(mdt)]
         self.assertEqual(set(received_transitions), set(expected_transitions))
 
@@ -102,11 +101,11 @@ class TestAvailableTransitions(IMLUnitTestCase):
         """Test the MDT possible states are correct."""
 
         #  ost unformatted
-        mgs = ManagedMgs.objects.create(volume=self.volume)
+        mgs = ManagedMgs.objects.create()
         fs = ManagedFilesystem.objects.create(name="mgsfs", mgs=mgs)
-        mdt = ManagedMdt.objects.create(volume=self.volume, filesystem=fs, index=1)
+        mdt = ManagedMdt.objects.create(filesystem=fs, index=1)
 
-        expected_transitions = ["formatted", "registered", "unmounted", "mounted"]
+        expected_transitions = []
         received_transitions = [t["state"] for t in self._get_transition_states(mdt)]
         self.assertEqual(set(received_transitions), set(expected_transitions))
 
@@ -114,10 +113,10 @@ class TestAvailableTransitions(IMLUnitTestCase):
         """Test the MDT possible states are correct."""
 
         #  filesystem unformatted states
-        mgs = ManagedMgs.objects.create(volume=self.volume)
+        mgs = ManagedMgs.objects.create()
         fs = ManagedFilesystem.objects.create(name="mgsfs", mgs=mgs)
 
-        expected_transitions = ["available", "removed", "forgotten"]
+        expected_transitions = ["available", "forgotten"]
         received_transitions = [t["state"] for t in self._get_transition_states(fs)]
         self.assertEqual(set(received_transitions), set(expected_transitions))
 

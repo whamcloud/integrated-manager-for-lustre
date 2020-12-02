@@ -6,7 +6,7 @@ import django.utils.timezone
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.models.jobs import SchedulingError, Job
 from chroma_core.models.command import Command
-from chroma_core.models import ManagedMgs, ManagedTarget, ManagedTargetMount
+from chroma_core.models import ManagedMgs, ManagedTarget
 from chroma_core.models import LNetConfiguration
 from chroma_core.services.job_scheduler.job_scheduler import RunJobThread
 from chroma_core.services.job_scheduler import job_scheduler_notify
@@ -14,6 +14,7 @@ from chroma_core.services.job_scheduler.job_scheduler_client import JobScheduler
 from chroma_core.services.job_scheduler.job_scheduler import JobScheduler
 from tests.unit.chroma_core.helpers import freshen
 from tests.unit.chroma_core.helpers import MockAgentRpc
+from tests.unit.chroma_core.helpers import create_simple_fs
 from tests.unit.services.job_scheduler.job_test_case import JobTestCaseWithHost
 from chroma_api.urls import api
 
@@ -23,23 +24,6 @@ class TestTransitionsWithCommands(JobTestCaseWithHost):
         super(TestTransitionsWithCommands, self).setUp()
 
         self.lnet_configuration = self.host.lnet_configuration
-
-    def test_onejob(self):
-        # Our self.host is initially lnet_up
-        self.assertEqual(LNetConfiguration.objects.get(pk=self.lnet_configuration.pk).state, "lnet_up")
-
-        # This tests a state transition which is done by a single job
-        command_id = JobSchedulerClient.command_run_jobs(
-            [{"class_name": "UpdateDevicesJob", "args": {}}], "Test single job action"
-        )
-        self.drain_progress()
-
-        self.assertEqual(Command.objects.get(pk=command_id).complete, True)
-        self.assertEqual(Command.objects.get(pk=command_id).jobs.count(), 1)
-
-        # Test that if I try to run the same again I get None
-        command = Command.set_state([(freshen(self.lnet_configuration), "lnet_up")])
-        self.assertEqual(command, None)
 
     def test_2steps(self):
         self.assertEqual(LNetConfiguration.objects.get(pk=self.lnet_configuration.pk).state, "lnet_up")
@@ -57,6 +41,10 @@ class TestTransitionsWithCommands(JobTestCaseWithHost):
 class TestStateManager(JobTestCaseWithHost):
     def setUp(self):
         super(TestStateManager, self).setUp()
+        (mgt, fs, mdt, ost) = create_simple_fs()
+        self.mgt = mgt
+        self.fs = fs
+
         self.lnet_configuration = self.host.lnet_configuration
         self._completion_hook_count = 0
         self.job_scheduler.add_completion_hook(self._completion_hook)
@@ -69,25 +57,18 @@ class TestStateManager(JobTestCaseWithHost):
         self._completion_hook_count += 1
 
     def test_failing_job(self):
-        mgt, tms = ManagedMgs.create_for_volume(self._test_lun(self.host).id, name="MGS")
-        ObjectCache.add(ManagedTarget, mgt.managedtarget_ptr)
-        for tm in tms:
-            ObjectCache.add(ManagedTargetMount, tm)
-
         try:
-            MockAgentRpc.succeed = False
+            mock.patch("chroma_core.lib.job.invoke_rust_agent", new=mock.MagicMock(return_value='{"Err": ""}')).start()
             # This is to check that the scheduler doesn't run past the failed job (like in HYD-1572)
-            self.set_and_assert_state(mgt.managedtarget_ptr, "mounted", check=False)
-            mgt = self.assertState(mgt, "unformatted")
+            self.set_and_assert_state(self.mgt.managedtarget_ptr, "mounted", check=False)
+            self.mgt = self.assertState(self.mgt, "unmounted")
         finally:
-            MockAgentRpc.succeed = True
-            mgt.managedtarget_ptr = self.set_and_assert_state(mgt.managedtarget_ptr, "mounted")
+            mock.patch("chroma_core.lib.job.invoke_rust_agent", new=mock.MagicMock(return_value='{"Ok": ""}')).start()
+            self.mgt.managedtarget_ptr = self.set_and_assert_state(self.mgt.managedtarget_ptr, "mounted")
 
     def test_opportunistic_execution(self):
         # Set up an MGS, leave it offline
-        self.create_simple_filesystem(self.host)
-
-        self.mgt.managedtarget_ptr = self.set_and_assert_state(self.mgt.managedtarget_ptr, "unmounted")
+        self.assertState(self.mgt.managedtarget_ptr, "unmounted")
         self.fs = self.assertState(self.fs, "unavailable")
         self.assertEqual(ManagedMgs.objects.get(pk=self.mgt.pk).conf_param_version, 0)
         self.assertEqual(ManagedMgs.objects.get(pk=self.mgt.pk).conf_param_version_applied, 0)
