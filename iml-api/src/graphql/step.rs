@@ -14,9 +14,9 @@ pub(crate) struct StepQuery;
 impl StepQuery {
     /// Fetch the list of steps
     #[graphql(arguments(ids(description = "The list of step ids to fetch, may be empty array")))]
-    async fn steps_by_ids(context: &Context, ids: Vec<i32>) -> juniper::FieldResult<Vec<StepGQL>> {
+    async fn steps_by_ids(context: &Context, ids: Vec<i32>) -> juniper::FieldResult<Vec<StepGraphQL>> {
         let ids: &[i32] = &ids[..];
-        let unordered_steps: Vec<StepGQL> = sqlx::query_as!(
+        let unordered_steps: Vec<StepGraphQL> = sqlx::query_as!(
             StepRecord,
             r#"
                 SELECT sr.created_at,
@@ -41,15 +41,15 @@ impl StepQuery {
         .fetch_all(&context.pg_pool)
         .map_ok(|xs: Vec<StepRecord>| {
             xs.into_iter()
-                .filter_map(|x| StepGQL::try_from(x).ok())
-                .collect::<Vec<StepGQL>>()
+                .filter_map(|x| StepGraphQL::try_from(x).ok())
+                .collect::<Vec<StepGraphQL>>()
         })
         .await?;
 
         let mut hm = unordered_steps
             .into_iter()
             .map(|x| (x.id, x))
-            .collect::<HashMap<i32, StepGQL>>();
+            .collect::<HashMap<i32, StepGraphQL>>();
         let mut not_found = Vec::new();
         let jobs = ids
             .iter()
@@ -59,7 +59,7 @@ impl StepQuery {
                     None
                 })
             })
-            .collect::<Vec<StepGQL>>();
+            .collect::<Vec<StepGraphQL>>();
 
         if !not_found.is_empty() {
             Err(FieldError::from(format!(
@@ -74,7 +74,7 @@ impl StepQuery {
 
 /// Concrete version of `iml_wire_types::Step` needed for GraphQL
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, juniper::GraphQLObject)]
-pub struct StepGQL {
+pub struct StepGraphQL {
     pub args: GraphQLMap,
     pub backtrace: String,
     pub class_name: String,
@@ -109,12 +109,12 @@ pub struct StepRecord {
     pub description: String,
 }
 
-impl TryFrom<StepRecord> for StepGQL {
+impl TryFrom<StepRecord> for StepGraphQL {
     type Error = FieldError<DefaultScalarValue>;
 
     fn try_from(x: StepRecord) -> juniper::FieldResult<Self> {
         let args = serde_json::from_str::<HashMap<String, serde_json::Value>>(&x.args_json)?;
-        let step = StepGQL {
+        let step = StepGraphQL {
             args: GraphQLMap(args),
             backtrace: x.backtrace,
             class_name: x.class_name,

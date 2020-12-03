@@ -1,29 +1,33 @@
 use crate::graphql::Context;
 use chrono::{DateTime, Utc};
-use futures::TryFutureExt;
+use futures::{lock::Mutex, TryFutureExt};
 use iml_postgres::{sqlx, PgPool};
 use iml_wire_types::{
     graphql::map::GraphQLMap, AvailableTransition, Command, EndpointName, Job, JobLock, Step,
 };
-use juniper::{DefaultScalarValue, FieldError};
+use juniper::FieldError;
+use once_cell::sync::Lazy;
 use std::collections::HashMap;
-use std::convert::TryFrom;
-use std::fmt;
-use std::sync::Mutex;
 
-lazy_static::lazy_static! {
-    static ref CONTENT_TYPES_CACHE: Mutex<HashMap<i32, String>> = Mutex::new(HashMap::new());
-}
+static CONTENT_TYPES_CACHE: Lazy<Mutex<HashMap<i32, String>>> =
+    Lazy::new(|| Mutex::new(HashMap::new()));
 
 pub(crate) struct JobQuery;
+
+#[derive(Clone, Debug)]
+struct LockedItemType<'a>(&'a str);
 
 #[juniper::graphql_object(Context = Context)]
 impl JobQuery {
     /// Fetch the list of jobs
     #[graphql(arguments(ids(description = "The list of job ids to fetch, may be empty array"),))]
-    async fn jobs_by_ids(context: &Context, ids: Vec<i32>) -> juniper::FieldResult<Vec<JobGQL>> {
+    async fn jobs_by_ids(context: &Context, ids: Vec<i32>) -> juniper::FieldResult<Vec<JobGraphQL>> {
+        let content_types = ensure_cache_and_get_content_types(&context.pg_pool)
+            .await?
+            .lock()
+            .await;
         let ids: &[i32] = &ids[..];
-        let unordered_jobs: Vec<JobGQL> = sqlx::query_as!(
+        let unordered_jobs: Vec<JobGraphQL> = sqlx::query_as!(
             JobRecord,
             r#"
                 SELECT job.id,
@@ -54,15 +58,15 @@ impl JobQuery {
         .fetch_all(&context.pg_pool)
         .map_ok(|xs: Vec<JobRecord>| {
             xs.into_iter()
-                .filter_map(|x| JobGQL::try_from(x).ok())
-                .collect::<Vec<JobGQL>>()
+                .filter_map(|x| try_from_job_record(x, &content_types).ok())
+                .collect::<Vec<JobGraphQL>>()
         })
         .await?;
 
         let mut hm = unordered_jobs
             .into_iter()
             .map(|x| (x.id, x))
-            .collect::<HashMap<i32, JobGQL>>();
+            .collect::<HashMap<i32, JobGraphQL>>();
         let mut not_found = Vec::new();
         let jobs = ids
             .iter()
@@ -72,7 +76,7 @@ impl JobQuery {
                     None
                 })
             })
-            .collect::<Vec<JobGQL>>();
+            .collect::<Vec<JobGraphQL>>();
 
         if !not_found.is_empty() {
             Err(FieldError::from(format!(
@@ -87,7 +91,7 @@ impl JobQuery {
 
 /// Concrete version of `iml_wire_types::Job<T>` needed for GraphQL
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, juniper::GraphQLObject)]
-pub struct JobGQL {
+pub struct JobGraphQL {
     pub available_transitions: Vec<AvailableTransition>,
     pub cancelled: bool,
     pub class_name: String,
@@ -135,53 +139,52 @@ pub struct JobLockUnresolved {
     pub end_state: Option<String>,
 }
 
-impl TryFrom<JobRecord> for JobGQL {
-    type Error = FieldError<DefaultScalarValue>;
-
-    fn try_from(x: JobRecord) -> juniper::FieldResult<Self> {
-        let available_transitions = if x.state == "complete" || !x.cancellable_out {
-            vec![]
-        } else {
-            vec![AvailableTransition {
-                label: "Cancel".to_string(),
-                state: "cancelled".to_string(),
-            }]
-        };
-        let (read_locks, write_locks) = convert_job_locks(&x.locks_json)?;
-        let commands = x
-            .commands
-            .unwrap_or_default()
-            .into_iter()
-            .map(|id| format!("/api/{}/{}/", Command::endpoint_name(), id))
-            .collect();
-        let wait_for = convert_job_wait_for(&x.wait_for_json)?;
-        let step_results = convert_job_step_results(&x.step_result_keys, &x.step_results_values)?;
-        let steps = x
-            .step_result_keys
-            .unwrap_or_default()
-            .iter()
-            .map(|id| format!("/api/{}/{}/", Step::endpoint_name(), id))
-            .collect();
-        let job = JobGQL {
-            available_transitions,
-            id: x.id,
-            state: x.state,
-            class_name: x.class_name,
-            cancelled: x.cancelled,
-            errored: x.errored,
-            modified_at: x.modified_at.format("%Y-%m-%dT%T%.6f").to_string(),
-            created_at: x.created_at.format("%Y-%m-%dT%T%.6f").to_string(),
-            resource_uri: format!("/api/{}/{}/", Job::<()>::endpoint_name(), x.id),
-            description: x.description_out,
-            step_results,
-            steps,
-            wait_for,
-            commands,
-            read_locks,
-            write_locks,
-        };
-        Ok(job)
-    }
+fn try_from_job_record(
+    x: JobRecord,
+    content_types: &HashMap<i32, String>,
+) -> juniper::FieldResult<JobGraphQL> {
+    let available_transitions = if x.state == "complete" || !x.cancellable_out {
+        vec![]
+    } else {
+        vec![AvailableTransition {
+            label: "Cancel".to_string(),
+            state: "cancelled".to_string(),
+        }]
+    };
+    let (read_locks, write_locks) = convert_job_locks(&x.locks_json, content_types)?;
+    let commands = x
+        .commands
+        .unwrap_or_default()
+        .into_iter()
+        .map(|id| format!("/api/{}/{}/", Command::endpoint_name(), id))
+        .collect();
+    let wait_for = convert_job_wait_for(&x.wait_for_json)?;
+    let step_results = convert_job_step_results(&x.step_result_keys, &x.step_results_values)?;
+    let steps = x
+        .step_result_keys
+        .unwrap_or_default()
+        .iter()
+        .map(|id| format!("/api/{}/{}/", Step::endpoint_name(), id))
+        .collect();
+    let job = JobGraphQL {
+        available_transitions,
+        id: x.id,
+        state: x.state,
+        class_name: x.class_name,
+        cancelled: x.cancelled,
+        errored: x.errored,
+        modified_at: x.modified_at.format("%Y-%m-%dT%T%.6f").to_string(),
+        created_at: x.created_at.format("%Y-%m-%dT%T%.6f").to_string(),
+        resource_uri: format!("/api/{}/{}/", Job::<()>::endpoint_name(), x.id),
+        description: x.description_out,
+        step_results,
+        steps,
+        wait_for,
+        commands,
+        read_locks,
+        write_locks,
+    };
+    Ok(job)
 }
 
 fn convert_job_step_results(
@@ -203,14 +206,18 @@ fn convert_job_step_results(
     Ok(GraphQLMap(hm))
 }
 
-fn convert_job_locks(locks_json: &str) -> juniper::FieldResult<(Vec<JobLock>, Vec<JobLock>)> {
+fn convert_job_locks(
+    locks_json: &str,
+    content_types: &HashMap<i32, String>,
+) -> juniper::FieldResult<(Vec<JobLock>, Vec<JobLock>)> {
     let locks = serde_json::from_str::<serde_json::Value>(locks_json)?;
     let mut read_locks = vec![];
     let mut write_locks = vec![];
-    if let serde_json::Value::Array(locks_raw) = locks {
-        for lock_raw in locks_raw {
-            let lock_unresolved = serde_json::from_value::<JobLockUnresolved>(lock_raw)?;
-            let item_type = convert_to_item_type(lock_unresolved.locked_item_type_id)?;
+    if let serde_json::Value::Array(raw_locks) = locks {
+        for raw_lock in raw_locks {
+            let lock_unresolved = serde_json::from_value::<JobLockUnresolved>(raw_lock)?;
+            let item_type =
+                convert_to_item_type(lock_unresolved.locked_item_type_id, content_types)?;
             let locked_item_id = lock_unresolved.locked_item_id;
             let locked_item_uri = item_type_to_uri(item_type, locked_item_id);
             let resource_uri = "".to_string();
@@ -248,10 +255,10 @@ fn convert_job_wait_for(json: &str) -> juniper::FieldResult<Vec<String>> {
     }
 }
 
-pub async fn get_content_types(
+async fn ensure_cache_and_get_content_types(
     pg_pool: &PgPool,
 ) -> juniper::FieldResult<&'static Mutex<HashMap<i32, String>>> {
-    let mut guard = CONTENT_TYPES_CACHE.lock().unwrap();
+    let mut guard = CONTENT_TYPES_CACHE.lock().await;
     if guard.is_empty() {
         let hm = load_content_types(pg_pool).await?;
         for (k, v) in hm {
@@ -262,8 +269,9 @@ pub async fn get_content_types(
 }
 
 async fn load_content_types(pg_pool: &PgPool) -> juniper::FieldResult<HashMap<i32, String>> {
-    // let names = LockedItemType::iter().map(|s| s.to_string().s.to_ascii_lowercase()).collect::<Vec<String>>();
-    let names = vec![
+    // All _leaf_ python class names, derived from `chroma_core.models.jobs.StatefulObject`,
+    // converted to lowercase. Must be synchronized with graphql::job::item_type_to_uri.
+    let class_names = vec![
         "Copytool",
         "Corosync2Configuration",
         "CorosyncConfiguration",
@@ -286,6 +294,7 @@ async fn load_content_types(pg_pool: &PgPool) -> juniper::FieldResult<HashMap<i3
     .map(|s| s.to_ascii_lowercase())
     .collect::<Vec<_>>();
 
+    let names = &class_names[..];
     let content_types = sqlx::query!(
         r#"
             SELECT ct.id,
@@ -310,81 +319,40 @@ async fn load_content_types(pg_pool: &PgPool) -> juniper::FieldResult<HashMap<i3
     Ok(m)
 }
 
-// All _leaf_ python class names, derived from `chroma_core.models.jobs.StatefulObject`
-#[derive(Copy, Clone, Debug, strum_macros::Display, strum_macros::EnumIter)]
-pub enum LockedItemType {
-    Copytool,
-    Corosync2Configuration,
-    CorosyncConfiguration,
-    FilesystemTicket,
-    LNetConfiguration,
-    LustreClientMount,
-    ManagedFilesystem,
-    ManagedHost,
-    ManagedMdt,
-    ManagedMgs,
-    ManagedOst,
-    ManagedTarget,
-    MasterTicket,
-    NTPConfiguration,
-    PacemakerConfiguration,
-    StratagemConfiguration,
-    Ticket,
-}
-
-// impl fmt::Display for LockedItemType {
-//     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-//         fmt::Debug::fmt(self, f)
-//     }
-// }
-
-// all derived classes of stateful
-fn convert_to_item_type(id: i32) -> juniper::FieldResult<LockedItemType> {
-
-    match id {
-        26 => Ok(LockedItemType::Copytool),
-        77 => Ok(LockedItemType::Corosync2Configuration),
-        60 => Ok(LockedItemType::CorosyncConfiguration),
-        118 => Ok(LockedItemType::FilesystemTicket),
-        55 => Ok(LockedItemType::LNetConfiguration),
-        41 => Ok(LockedItemType::LustreClientMount),
-        27 => Ok(LockedItemType::ManagedFilesystem),
-        19 => Ok(LockedItemType::ManagedHost),
-        38 => Ok(LockedItemType::ManagedMdt),
-        32 => Ok(LockedItemType::ManagedMgs),
-        54 => Ok(LockedItemType::ManagedOst),
-        15 => Ok(LockedItemType::ManagedTarget),
-        122 => Ok(LockedItemType::MasterTicket),
-        25 => Ok(LockedItemType::NTPConfiguration),
-        65 => Ok(LockedItemType::PacemakerConfiguration),
-        52 => Ok(LockedItemType::StratagemConfiguration),
-        42 => Ok(LockedItemType::Ticket),
-        _ => Err(juniper::FieldError::from(format!(
+fn convert_to_item_type(
+    id: i32,
+    content_types: &HashMap<i32, String>,
+) -> juniper::FieldResult<LockedItemType> {
+    if let Some(t) = content_types.get(&id) {
+        Ok(LockedItemType(&t))
+    } else {
+        Err(juniper::FieldError::from(format!(
             "Unknown lock type with id={}",
             id
-        ))),
+        )))
     }
 }
 
 fn item_type_to_uri(lit: LockedItemType, id: i32) -> String {
-    let resource_uri = match lit {
-        LockedItemType::Copytool => "copytool",
-        LockedItemType::Corosync2Configuration => "corosync_configuration",
-        LockedItemType::CorosyncConfiguration => "corosync_configuration",
-        LockedItemType::FilesystemTicket => "ticket",
-        LockedItemType::LNetConfiguration => "lnet_configuration",
-        LockedItemType::LustreClientMount => "client_mount",
-        LockedItemType::ManagedFilesystem => "filesystem",
-        LockedItemType::ManagedHost => "host",
-        LockedItemType::ManagedMdt => "target",
-        LockedItemType::ManagedMgs => "target",
-        LockedItemType::ManagedOst => "target",
-        LockedItemType::ManagedTarget => "target",
-        LockedItemType::MasterTicket => "ticket",
-        LockedItemType::NTPConfiguration => "ntp_configuration",
-        LockedItemType::PacemakerConfiguration => "pacemaker_configuration",
-        LockedItemType::StratagemConfiguration => "stratagem_configuration",
-        LockedItemType::Ticket => "ticket",
+    let resource_uri = match &lit.0[..] {
+        "copytool" => "copytool",
+        "corosync2configuration" => "corosync_configuration",
+        "corosyncconfiguration" => "corosync_configuration",
+        "filesystemticket" => "ticket",
+        "lnetconfiguration" => "lnet_configuration",
+        "lustreclientmount" => "client_mount",
+        "managedfilesystem" => "filesystem",
+        "managedhost" => "host",
+        "managedmdt" => "target",
+        "managedmgs" => "target",
+        "managedost" => "target",
+        "managedtarget" => "target",
+        "masterticket" => "ticket",
+        "ntpconfiguration" => "ntp_configuration",
+        "pacemakerconfiguration" => "pacemaker_configuration",
+        "stratagemconfiguration" => "stratagem_configuration",
+        "ticket" => "ticket",
+        _ => unreachable!("Impossible LockedItemType, see crate::graphql::job::NAMES list"),
     };
     format!("/api/{}/{}/", resource_uri, id)
 }

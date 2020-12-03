@@ -134,6 +134,14 @@ impl QueryRoot {
         command::CommandQuery
     }
 
+    fn job(&self) -> job::JobQuery {
+        job::JobQuery
+    }
+
+    fn step(&self) -> step::StepQuery {
+        step::StepQuery
+    }
+
     /// Given a host id, try to find the matching corosync node name
     #[graphql(arguments(host_id(description = "The id to search on")))]
     async fn corosync_node_name_by_host(
@@ -153,6 +161,7 @@ impl QueryRoot {
 
         Ok(x)
     }
+
     #[graphql(arguments(
         limit(description = "optional paging limit, defaults to all rows"),
         offset(description = "Offset into items, defaults to 0"),
