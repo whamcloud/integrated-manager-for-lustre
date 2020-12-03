@@ -1,7 +1,7 @@
 // Copyright (c) 2020 DDN. All rights reserved.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
-use crate::{Config, TestError};
+use crate::{Config, TestError, TestType};
 use futures::future::{try_join_all, TryFutureExt};
 use iml_cmd::{CheckedChildExt, CheckedCommandExt};
 use iml_graphql_queries::Query;
@@ -198,25 +198,19 @@ pub async fn yum_update<'a, 'b>(hosts: &'b [&'a str]) -> Result<Vec<(&'a str, Ou
     ssh_exec_parallel(hosts, "yum clean metadata; yum update -y").await
 }
 
-pub async fn configure_ntp_for_host_only_if<'a, 'b>(
+pub async fn configure_ntp<'a, 'b>(
+    test_type: TestType,
+    manager: &str,
     hosts: &'b [&'a str],
 ) -> Result<Vec<(&'a str, Output)>, TestError> {
-    ssh_script_parallel(hosts, "scripts/configure_ntp.sh", &["10.73.10.1"]).await
-}
+    if test_type == TestType::Docker {
+        ssh_script(manager, "scripts/install_ntp.sh", &[]).await?;
+    }
 
-pub async fn configure_ntp_for_adm<'a, 'b>(
-    hosts: &'b [&'a str],
-) -> Result<Vec<(&'a str, Output)>, TestError> {
     ssh_script_parallel(hosts, "scripts/configure_ntp.sh", &["adm.local"]).await
 }
 
-pub async fn wait_for_ntp_for_host_only_if<'a, 'b>(
-    hosts: &'b [&'a str],
-) -> Result<Vec<(&'a str, Output)>, TestError> {
-    ssh_script_parallel(hosts, "scripts/wait_for_ntp.sh", &["10.73.10.1"]).await
-}
-
-pub async fn wait_for_ntp_for_adm<'a, 'b>(
+pub async fn wait_for_ntp<'a, 'b>(
     hosts: &'b [&'a str],
 ) -> Result<Vec<(&'a str, Output)>, TestError> {
     ssh_script_parallel(hosts, "scripts/wait_for_ntp.sh", &["adm.local"]).await
