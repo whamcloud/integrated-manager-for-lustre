@@ -344,7 +344,7 @@ mod tests {
 
         assert_eq!(actions[0], WaitFor(Duration::from_secs_f32(1.0)));
         assert_eq!(actions[1], WaitFor(Duration::from_secs_f32(1.5)));
-        assert_eq!(actions[2], WaitFor(Duration::from_secs_f32(2.249999872)));
+        assert_eq!(actions[2], WaitFor(Duration::from_secs_f32(2.249_999_8)));
         assert_eq!(actions[3], ReturnError(Error::Fatal));
     }
 

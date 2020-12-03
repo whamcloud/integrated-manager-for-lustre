@@ -114,13 +114,13 @@ mod tests {
                 columns: vec!["time".into(), "col1".into(), "col2".into(), "col3".into()],
                 values: vec![
                     vec![
-                        json!(1597166951257510515 as i64),
+                        json!(1597166951257510515_i64),
                         json!("foo1"),
                         json!("bar1"),
                         json!("baz1"),
                     ],
                     vec![
-                        json!(1597166951257510515 as i64),
+                        json!(1597166951257510515_i64),
                         json!("foo2"),
                         json!("bar2"),
                         json!("baz2"),
