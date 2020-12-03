@@ -20,7 +20,7 @@ const DEFAULT_POOL_LIMIT: u32 = 5;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    dotenv::from_path(".env").expect("Could not load cli env");
+
     iml_tracing::init();
 
     let addr = iml_manager_env::get_iml_api_addr();
