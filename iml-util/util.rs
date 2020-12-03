@@ -60,13 +60,13 @@ pub mod tokio_utils {
     impl<T: AsyncRead + AsyncWrite + Send> Socket for T {}
 
     pub trait Incoming: Send {
-        fn incoming<'a>(&'a mut self) -> BoxStream<'a, Result<Pin<Box<dyn Socket>>, io::Error>>;
+        fn incoming(&'_ mut self) -> BoxStream<'_, Result<Pin<Box<dyn Socket>>, io::Error>>;
     }
 
     struct TcpIncoming(TcpListener);
 
     impl Incoming for TcpIncoming {
-        fn incoming<'a>(&'a mut self) -> BoxStream<'a, Result<Pin<Box<dyn Socket>>, io::Error>> {
+        fn incoming(&'_ mut self) -> BoxStream<'_, Result<Pin<Box<dyn Socket>>, io::Error>> {
             self.0
                 .incoming()
                 .map_ok(|x| -> Pin<Box<dyn Socket>> { Box::pin(x) })
@@ -77,7 +77,7 @@ pub mod tokio_utils {
     struct UnixIncoming(UnixListener);
 
     impl Incoming for UnixIncoming {
-        fn incoming<'a>(&'a mut self) -> BoxStream<'a, Result<Pin<Box<dyn Socket>>, io::Error>> {
+        fn incoming(&'_ mut self) -> BoxStream<'_, Result<Pin<Box<dyn Socket>>, io::Error>> {
             self.0
                 .incoming()
                 .map_ok(|x| -> Pin<Box<dyn Socket>> { Box::pin(x) })

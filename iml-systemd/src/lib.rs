@@ -39,7 +39,7 @@ fn clean_bus_output(output: &str) -> Result<&str, SystemdError> {
     output
         .split('"')
         .nth(1)
-        .ok_or_else(|| SystemdError::UnexpectedStatusError)
+        .ok_or(SystemdError::UnexpectedStatusError)
 }
 
 /// Dbus object path elements can only be comprised of [A-Z][a-z][0-9]_
