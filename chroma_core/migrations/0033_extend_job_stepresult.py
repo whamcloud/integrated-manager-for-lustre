@@ -40,7 +40,7 @@ def reverse_job_changes(_apps, _schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("chroma_core", "0028_expand_client_serial"),
+        ("chroma_core", "0032_forgetlustreclientjob"),
     ]
 
     operations = [
