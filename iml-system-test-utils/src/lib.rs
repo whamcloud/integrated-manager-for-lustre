@@ -482,10 +482,7 @@ pub async fn deploy_servers(config: Config) -> Result<Config, TestError> {
 
         let hosts: Vec<String> = match config.test_type {
             TestType::Rpm => hosts.iter().map(|x| String::from(*x)).collect(),
-            TestType::Docker => {
-                configure_docker_network(&config).await?;
-                get_local_server_names(hosts)
-            }
+            TestType::Docker => get_local_server_names(hosts),
         };
 
         ssh::add_servers(&config.manager_ip, profile, hosts).await?;
@@ -851,6 +848,8 @@ pub async fn configure_docker_setup(config: &Config) -> Result<(), TestError> {
         .await?
         .checked_status()
         .await?;
+
+    configure_docker_network(&config).await?;
 
     Ok(())
 }
