@@ -523,7 +523,7 @@ pub async fn deploy_servers(config: Config) -> Result<Config, TestError> {
 }
 
 pub async fn configure_docker_network(config: &Config) -> Result<(), TestError> {
-    let host_list = config.profile_map.to_server_list();
+    let host_list = config.all_hosts();
     // The configure-docker-network provisioner must be run individually on
     // each server node.
     tracing::debug!(
