@@ -282,62 +282,6 @@
       ]
     }
   },
-  "0af12b7f6429cd3fe7ee7877df9f8b82109ad6f895c6a759183d4bd0dc6da860": {
-    "query": "\n                SELECT\n                    c.id AS id,\n                    cancelled,\n                    complete,\n                    errored,\n                    created_at,\n                    array_agg(cj.job_id)::INT[] AS job_ids,\n                    message\n                FROM chroma_core_command c\n                JOIN chroma_core_command_jobs cj ON c.id = cj.command_id\n                WHERE (c.id = ANY ($1::INT[]))\n                GROUP BY c.id\n            ",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 1,
-          "name": "cancelled",
-          "type_info": "Bool"
-        },
-        {
-          "ordinal": 2,
-          "name": "complete",
-          "type_info": "Bool"
-        },
-        {
-          "ordinal": 3,
-          "name": "errored",
-          "type_info": "Bool"
-        },
-        {
-          "ordinal": 4,
-          "name": "created_at",
-          "type_info": "Timestamptz"
-        },
-        {
-          "ordinal": 5,
-          "name": "job_ids",
-          "type_info": "Int4Array"
-        },
-        {
-          "ordinal": 6,
-          "name": "message",
-          "type_info": "Varchar"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "Int4Array"
-        ]
-      },
-      "nullable": [
-        false,
-        false,
-        false,
-        false,
-        false,
-        null,
-        false
-      ]
-    }
-  },
   "1167f9862155b35e2bb59ba77286ccfc35c7f6113227d8dce116b3def418e2f9": {
     "query": "\n        INSERT INTO chroma_core_sfastoragesystem\n        (\n            uuid,\n            platform,\n            health_state_reason,\n            health_state,\n            child_health_state\n        )\n        VALUES ($1, $2, $3, $4, $5)\n        ON CONFLICT (uuid) DO UPDATE\n        SET\n            platform = excluded.platform,\n            health_state_reason = excluded.health_state_reason,\n            health_state = excluded.health_state,\n            child_health_state = excluded.child_health_state\n    ",
     "describe": {
@@ -1451,6 +1395,64 @@
       ]
     }
   },
+  "3b1ddcee3dee96365325874c4ea32c832ffd74ab137399443052a0918d69f2ed": {
+    "query": "\n                SELECT\n                    c.id AS id,\n                    cancelled,\n                    complete,\n                    errored,\n                    created_at,\n                    array_agg(cj.job_id)::INT[] AS job_ids,\n                    message\n                FROM chroma_core_command c\n                JOIN chroma_core_command_jobs cj ON c.id = cj.command_id\n                WHERE (c.id = ANY ($3::INT[]))\n                GROUP BY c.id\n                OFFSET $1 LIMIT $2\n            ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "cancelled",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 2,
+          "name": "complete",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 3,
+          "name": "errored",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 4,
+          "name": "created_at",
+          "type_info": "Timestamptz"
+        },
+        {
+          "ordinal": 5,
+          "name": "job_ids",
+          "type_info": "Int4Array"
+        },
+        {
+          "ordinal": 6,
+          "name": "message",
+          "type_info": "Varchar"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int8",
+          "Int8",
+          "Int4Array"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        null,
+        false
+      ]
+    }
+  },
   "3bded6ce17eeea786bb32a1c8b5fe37b40b25391f24e9bd6dd25652381f84bc8": {
     "query": "select * from chroma_core_stratagemconfiguration where not_deleted = 't'",
     "describe": {
@@ -2442,32 +2444,6 @@
         ]
       },
       "nullable": []
-    }
-  },
-  "69f98ed0a7a599aabbb50013317b06e33c44fdeeeb96150ba13f3027ac2009e6": {
-    "query": "\n            SELECT ct.id,\n                   ct.model\n            FROM django_content_type AS ct\n            WHERE ct.app_label = 'chroma_core'\n              AND ct.model = ANY ($1::VARCHAR[])\n        ",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 1,
-          "name": "model",
-          "type_info": "Varchar"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "VarcharArray"
-        ]
-      },
-      "nullable": [
-        false,
-        false
-      ]
     }
   },
   "6d79ab4e8e091dcd8598e521557aa44a4079c8897a021bbda0c0817d9e162461": {
@@ -3557,104 +3533,6 @@
         ]
       },
       "nullable": [
-        false
-      ]
-    }
-  },
-  "9db0db096e6f614b5142e35c41d493b87e90217ed2e86b8d3e2f97f5f8993871": {
-    "query": "\n                SELECT sr.created_at,\n                    sr.backtrace,\n                    sr.console,\n                    sr.id,\n                    sr.description,\n                    sr.step_index,\n                    sr.log,\n                    sr.class_name,\n                    sr.job_id,\n                    sr.modified_at,\n                    sr.state,\n                    sr.result,\n                    sr.args_json,\n                    sr.step_count\n                FROM chroma_core_stepresult as sr\n                WHERE (sr.id = ANY ($1::INT[]))\n            ",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "created_at",
-          "type_info": "Timestamptz"
-        },
-        {
-          "ordinal": 1,
-          "name": "backtrace",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 2,
-          "name": "console",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 3,
-          "name": "id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 4,
-          "name": "description",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 5,
-          "name": "step_index",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 6,
-          "name": "log",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 7,
-          "name": "class_name",
-          "type_info": "Varchar"
-        },
-        {
-          "ordinal": 8,
-          "name": "job_id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 9,
-          "name": "modified_at",
-          "type_info": "Timestamptz"
-        },
-        {
-          "ordinal": 10,
-          "name": "state",
-          "type_info": "Varchar"
-        },
-        {
-          "ordinal": 11,
-          "name": "result",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 12,
-          "name": "args_json",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 13,
-          "name": "step_count",
-          "type_info": "Int4"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "Int4Array"
-        ]
-      },
-      "nullable": [
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        true,
-        false,
         false
       ]
     }
@@ -4928,110 +4806,6 @@
         ]
       },
       "nullable": []
-    }
-  },
-  "daf145ef78d3d9df4c6a651edae3c32fa743824f0e2bf6e0b7ad4ecfe849f0dc": {
-    "query": "\n                SELECT job.id,\n                       array(SELECT cj.command_id\n                             FROM chroma_core_command_jobs AS cj\n                             WHERE cj.job_id = job.id) :: INT[] AS commands,\n                       job.state,\n                       job.errored,\n                       job.cancelled,\n                       job.modified_at,\n                       job.created_at,\n                       job.wait_for_json,\n                       job.locks_json,\n                       job.content_type_id,\n                       job.class_name,\n                       job.description_out,\n                       job.cancellable_out,\n                       array_agg(sr.id)::INT[]                  AS step_result_keys,\n                       array_agg(sr.result)::TEXT[]             AS step_results_values\n                FROM chroma_core_job AS job\n                         JOIN chroma_core_command_jobs AS cj ON cj.job_id = job.id\n                         JOIN chroma_core_stepresult AS sr ON sr.job_id = job.id\n                WHERE (job.id = ANY ($1::INT[]))\n                GROUP BY job.id\n            ",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 1,
-          "name": "commands",
-          "type_info": "Int4Array"
-        },
-        {
-          "ordinal": 2,
-          "name": "state",
-          "type_info": "Varchar"
-        },
-        {
-          "ordinal": 3,
-          "name": "errored",
-          "type_info": "Bool"
-        },
-        {
-          "ordinal": 4,
-          "name": "cancelled",
-          "type_info": "Bool"
-        },
-        {
-          "ordinal": 5,
-          "name": "modified_at",
-          "type_info": "Timestamptz"
-        },
-        {
-          "ordinal": 6,
-          "name": "created_at",
-          "type_info": "Timestamptz"
-        },
-        {
-          "ordinal": 7,
-          "name": "wait_for_json",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 8,
-          "name": "locks_json",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 9,
-          "name": "content_type_id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 10,
-          "name": "class_name",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 11,
-          "name": "description_out",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 12,
-          "name": "cancellable_out",
-          "type_info": "Bool"
-        },
-        {
-          "ordinal": 13,
-          "name": "step_result_keys",
-          "type_info": "Int4Array"
-        },
-        {
-          "ordinal": 14,
-          "name": "step_results_values",
-          "type_info": "TextArray"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "Int4Array"
-        ]
-      },
-      "nullable": [
-        false,
-        null,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        true,
-        false,
-        false,
-        false,
-        null,
-        null
-      ]
     }
   },
   "db376dc602b8672ed6efcb337fe708665edce6970e9302e50f8fb2a38365d7d2": {
