@@ -1,6 +1,6 @@
 pub mod duration;
-pub mod map;
 pub mod json;
+pub mod map;
 
 use crate::db::ServerProfileRecord;
 

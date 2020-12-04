@@ -1,13 +1,10 @@
 #[derive(serde::Deserialize, serde::Serialize, Debug, Clone)]
 pub struct GraphQLJson(pub serde_json::Value);
 
-#[juniper::graphql_scalar(
-    name = "Json",
-    description = "An opaque json value",
-)]
+#[juniper::graphql_scalar(name = "Json", description = "An opaque json value")]
 impl<S> GraphQLScalar for GraphQLJson
-    where
-        S: juniper::ScalarValue,
+where
+    S: juniper::ScalarValue,
 {
     fn resolve(&self) -> juniper::Value {
         convert_to_juniper_value(&self.0)
@@ -27,8 +24,8 @@ impl<S> GraphQLScalar for GraphQLJson
 }
 
 pub fn convert_to_juniper_value<S>(json: &serde_json::Value) -> juniper::Value<S>
-    where
-        S: juniper::ScalarValue,
+where
+    S: juniper::ScalarValue,
 {
     match json {
         serde_json::Value::Null => juniper::Value::null(),

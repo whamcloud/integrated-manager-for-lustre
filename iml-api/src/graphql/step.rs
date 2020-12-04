@@ -14,7 +14,10 @@ pub(crate) struct StepQuery;
 impl StepQuery {
     /// Fetch the list of steps
     #[graphql(arguments(ids(description = "The list of step ids to fetch, may be empty array")))]
-    async fn steps_by_ids(context: &Context, ids: Vec<i32>) -> juniper::FieldResult<Vec<StepGraphQL>> {
+    async fn steps_by_ids(
+        context: &Context,
+        ids: Vec<i32>,
+    ) -> juniper::FieldResult<Vec<StepGraphQL>> {
         let ids: &[i32] = &ids[..];
         let unordered_steps: Vec<StepGraphQL> = sqlx::query_as!(
             StepRecord,

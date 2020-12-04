@@ -21,7 +21,10 @@ struct LockedItemType<'a>(&'a str);
 impl JobQuery {
     /// Fetch the list of jobs
     #[graphql(arguments(ids(description = "The list of job ids to fetch, may be empty array"),))]
-    async fn jobs_by_ids(context: &Context, ids: Vec<i32>) -> juniper::FieldResult<Vec<JobGraphQL>> {
+    async fn jobs_by_ids(
+        context: &Context,
+        ids: Vec<i32>,
+    ) -> juniper::FieldResult<Vec<JobGraphQL>> {
         let content_types = ensure_cache_and_get_content_types(&context.pg_pool)
             .await?
             .lock()

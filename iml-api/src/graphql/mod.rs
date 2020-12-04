@@ -2,9 +2,9 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-mod filesystem;
 mod command;
-pub mod job;
+mod filesystem;
+mod job;
 mod step;
 mod stratagem;
 mod task;
@@ -562,7 +562,7 @@ struct SnapshotIntervalName {
 }
 
 fn parse_snapshot_name(name: &str) -> Option<SnapshotIntervalName> {
-    match name.trim().splitn(3, "-").collect::<Vec<&str>>().as_slice() {
+    match name.trim().splitn(3, '-').collect::<Vec<&str>>().as_slice() {
         [id, fs, ts] => {
             let ts = ts.parse::<DateTime<Utc>>().ok()?;
             let id = id.parse::<i32>().ok()?;

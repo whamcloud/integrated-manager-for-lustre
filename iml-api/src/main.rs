@@ -5,7 +5,7 @@
 mod action;
 mod command;
 mod error;
-pub mod graphql;
+mod graphql;
 mod timer;
 
 use iml_manager_env::get_pool_limit;
@@ -20,7 +20,6 @@ const DEFAULT_POOL_LIMIT: u32 = 5;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-
     iml_tracing::init();
 
     let addr = iml_manager_env::get_iml_api_addr();
