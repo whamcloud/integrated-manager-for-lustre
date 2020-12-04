@@ -10,6 +10,7 @@ pub use cim_xml::{
     CimXmlError, {req, resp},
 };
 use futures::{future, Future, FutureExt, TryFutureExt};
+use iml_tracing::tracing;
 pub use reqwest::Client;
 use reqwest::{header, IntoUrl, Response};
 use resp::{Cim, IReturnValueInstance, IReturnValueNamedInstance};
@@ -131,6 +132,8 @@ impl ClientExt for Client {
             ),
         ));
 
+        tracing::debug!(wbem_req = ?xs);
+
         let req = self
             .post(url)
             .header("CIMOperation", "MethodCall")
@@ -140,6 +143,11 @@ impl ClientExt for Client {
         future::ready(req::evs_to_bytes(xs))
             .err_into()
             .and_then(|body| req.body(body).send().err_into())
+            .and_then(|resp| async {
+                let x = resp.error_for_status()?;
+
+                Ok(x)
+            })
             .and_then(|x| x.xml::<Cim<T>>().err_into())
             .boxed()
     }
@@ -155,6 +163,8 @@ pub trait ResponseExt {
 impl ResponseExt for Response {
     async fn xml<T: DeserializeOwned>(self) -> Result<T, WbemClientError> {
         let full = self.bytes().await?;
+
+        tracing::trace!(xml = ?full);
 
         quick_xml::de::from_reader(&mut full.reader()).map_err(WbemClientError::QuickXmlDeError)
     }

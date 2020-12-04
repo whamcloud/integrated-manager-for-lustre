@@ -5195,6 +5195,7 @@ dependencies = [
  "base64 0.12.3",
  "bytes",
  "futures",
+ "iml-tracing",
  "insta 1.3.0",
  "quick-xml 0.19.0",
  "reqwest",

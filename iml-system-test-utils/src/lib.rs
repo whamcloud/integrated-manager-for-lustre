@@ -36,16 +36,10 @@ impl From<std::io::Error> for TestError {
     }
 }
 
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Copy)]
 pub enum TestType {
     Rpm,
     Docker,
-}
-
-#[derive(Clone)]
-pub enum NtpServer {
-    HostOnly,
-    Adm,
 }
 
 pub enum TestState {
@@ -180,7 +174,6 @@ pub struct Config {
     pub use_stratagem: bool,
     pub branding: Branding,
     pub test_type: TestType,
-    pub ntp_server: NtpServer,
     pub fs_type: FsType,
 }
 
@@ -213,7 +206,6 @@ impl Default for Config {
             use_stratagem: false,
             branding: Branding::default(),
             test_type: TestType::Rpm,
-            ntp_server: NtpServer::Adm,
             fs_type: FsType::Ldiskfs,
         }
     }
@@ -280,38 +272,21 @@ impl Config {
             .collect()
     }
     pub fn get_setup_config(&self) -> String {
-        match &self.test_type {
-            TestType::Rpm => format!(
-                r#"USE_STRATAGEM={}
+        format!(
+            r#"USE_STRATAGEM={}
 BRANDING={}
 LOG_LEVEL=10
 RUST_LOG=debug
 NTP_SERVER_HOSTNAME=adm.local
 "#,
-                if self.use_stratagem { "True" } else { "False" },
-                self.branding.to_string()
-            ),
-            TestType::Docker => format!(
-                r#"USE_STRATAGEM={}
-BRANDING={}
-LOG_LEVEL=10
-RUST_LOG=debug
-NTP_SERVER_HOSTNAME=10.73.10.1
-"#,
-                self.use_stratagem,
-                self.branding.to_string()
-            ),
-        }
+            if self.use_stratagem { "True" } else { "False" },
+            self.branding.to_string()
+        )
     }
 }
 
 pub async fn wait_for_ntp(config: &Config) -> Result<(), TestError> {
-    match config.test_type {
-        TestType::Rpm => ssh::wait_for_ntp_for_adm(&config.storage_server_ips()).await?,
-        TestType::Docker => {
-            ssh::wait_for_ntp_for_host_only_if(&config.storage_server_ips()).await?
-        }
-    };
+    ssh::wait_for_ntp(&config.storage_server_ips()).await?;
 
     Ok(())
 }
@@ -396,12 +371,12 @@ pub async fn setup_bare(config: Config) -> Result<Config, TestError> {
         .checked_status()
         .await?;
 
-    match config.ntp_server {
-        NtpServer::HostOnly => {
-            ssh::configure_ntp_for_host_only_if(&config.storage_server_ips()).await?
-        }
-        NtpServer::Adm => ssh::configure_ntp_for_adm(&config.storage_server_ips()).await?,
-    };
+    ssh::configure_ntp(
+        config.test_type,
+        &config.manager_ip,
+        &config.storage_server_ips(),
+    )
+    .await?;
 
     vagrant::halt()
         .await?

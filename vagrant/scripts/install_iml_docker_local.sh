@@ -25,13 +25,14 @@ version: "3.7"
 services:
   job-scheduler:
     extra_hosts:
+      - "adm.local:10.73.10.10"
       - "mds1.local:10.73.10.11"
       - "mds2.local:10.73.10.12"
       - "oss1.local:10.73.10.21"
       - "oss2.local:10.73.10.22"
       - "client1.local:10.73.10.31"
     environment:
-      - "NTP_SERVER_HOSTNAME=10.73.10.1"
+      - "NTP_SERVER_HOSTNAME=adm.local"
   iml-warp-drive:
     environment:
       - RUST_LOG=debug
