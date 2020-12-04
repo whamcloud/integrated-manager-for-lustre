@@ -36,6 +36,8 @@ pub(crate) use extensions::*;
 use futures::channel::oneshot;
 use generated::css_classes::C;
 use iml_wire_types::{
+    db::{ManagedTargetRecord, TargetRecord},
+    warp_drive::ArcCache,
     warp_drive::{self, ArcRecord},
     Conf, GroupType,
 };
@@ -44,7 +46,7 @@ use page::{Page, RecordChange};
 use route::Route;
 use seed::{app::MessageMapper, prelude::*, EventHandler, *};
 pub(crate) use sleep::sleep_with_handle;
-use std::{cmp, sync::Arc};
+use std::{cmp, ops::Deref as _, sync::Arc};
 pub use watch_state::*;
 use web_sys::MessageEvent;
 use Visibility::*;
@@ -648,9 +650,6 @@ fn handle_record_change(
                             model.records.corosync_configuration.clone(),
                         ));
                 }
-                ArcRecord::ManagedTargetMount(x) => {
-                    model.records.managed_target_mount.insert(x.id, x);
-                }
                 ArcRecord::OstPool(x) => {
                     model.records.ost_pool.insert(x.id, x);
                 }
@@ -723,7 +722,7 @@ fn handle_record_change(
                         .send_msg(page::mgts::Msg::AddTarget(x));
                 }
                 ArcRecord::TargetRecord(x) => {
-                    model.records.target_record.insert(x.id, x);
+                    model.records.target_record.insert(x.id, Arc::clone(&x));
                 }
                 ArcRecord::User(x) => {
                     model.records.user.insert(x.id, Arc::clone(&x));
@@ -1074,4 +1073,12 @@ pub fn run() {
         .build_and_start();
 
     log!("App started.");
+}
+
+fn get_target_from_managed_target<'a>(cache: &'a ArcCache, x: &ManagedTargetRecord) -> Option<&'a TargetRecord> {
+    cache
+        .target_record
+        .values()
+        .find(|y| x.uuid.as_deref() == Some(y.uuid.as_str()))
+        .map(|x| x.deref())
 }

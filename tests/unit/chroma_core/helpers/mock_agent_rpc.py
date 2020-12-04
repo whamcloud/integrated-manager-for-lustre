@@ -252,10 +252,7 @@ class MockAgentRpc(object):
             "set_profile",
             "update_profile",
             "failover_target",
-            "failback_target",
             "configure_network",
-            "open_firewall",
-            "close_firewall",
         ]:
             return agent_result_ok
         elif cmd == "get_corosync_autoconfig":

@@ -1,5 +1,18 @@
 {
   "db": "PostgreSQL",
+  "000ace9d13ddbf3e5222af88a4933fef80215384fa6095e3ba5bad13a10d695c": {
+    "query": "\n        UPDATE chroma_core_managedfilesystem\n        SET \n            state = updates.state\n        FROM (\n                SELECT state, fsname\n                FROM UNNEST($1::text[], $2::text[])\n                AS t(state, fsname)\n            ) AS updates\n        WHERE \n        name = updates.fsname\n        AND not_deleted = 't'\n    ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "TextArray",
+          "TextArray"
+        ]
+      },
+      "nullable": []
+    }
+  },
   "00687c9ad8074d4f792c5f4ec3339132da1e5384bcd88b8c7607d83e098687a3": {
     "query": "\n            INSERT INTO chroma_core_serverprofilepackage (package_name, server_profile_id)\n            SELECT package_name, $2\n            FROM UNNEST($1::text[])\n            as t(package_name)\n            ON CONFLICT DO NOTHING\n            ",
     "describe": {
@@ -149,6 +162,20 @@
       "nullable": []
     }
   },
+  "0761649fc9c56d0df01d7da86be16d35bbac342a32f785c17d1f77a3b2fba4af": {
+    "query": "\n            UPDATE chroma_core_ticket t\n            SET state = updates.state\n            FROM (\n                SELECT state, id\n                FROM UNNEST($1::text[], $2::text[])\n                AS t(state, id)\n            ) AS updates\n            WHERE\n                t.ha_label = updates.id\n                AND t.cluster_id = $3\n                AND t.not_deleted = 't'\n        ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "TextArray",
+          "TextArray",
+          "Int4"
+        ]
+      },
+      "nullable": []
+    }
+  },
   "07d03b70c5d9813b0432b582ad8239edd1a3ce7ef7ce9be7c22dbb8189db8861": {
     "query": "select id from chroma_core_managedfilesystem where name = $1 and not_deleted = 't'",
     "describe": {
@@ -206,6 +233,66 @@
         ]
       },
       "nullable": []
+    }
+  },
+  "090ddd0694789d14c256adfe605f6af443e883d26c1103f09b4e0e40e6f90164": {
+    "query": "\n            SELECT\n                rh.cluster_id,\n                r.id,\n                t.name,\n                t.mount_path,\n                t.filesystems,\n                t.uuid,\n                t.state,\n                array_agg(DISTINCT rh.host_id) AS \"cluster_hosts!\"\n            FROM target t\n            INNER JOIN corosync_resource r ON r.mount_point = t.mount_path\n            INNER JOIN corosync_resource_managed_host rh ON rh.corosync_resource_id = r.id AND rh.host_id = ANY(t.host_ids)\n            WHERE CARDINALITY(t.filesystems) > 0\n            GROUP BY rh.cluster_id, t.name, r.id, t.mount_path, t.uuid, t.filesystems, t.state\n        ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "cluster_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "id",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 3,
+          "name": "mount_path",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 4,
+          "name": "filesystems",
+          "type_info": "TextArray"
+        },
+        {
+          "ordinal": 5,
+          "name": "uuid",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 6,
+          "name": "state",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 7,
+          "name": "cluster_hosts!",
+          "type_info": "Int4Array"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+        null
+      ]
     }
   },
   "1167f9862155b35e2bb59ba77286ccfc35c7f6113227d8dce116b3def418e2f9": {
@@ -319,6 +406,108 @@
       ]
     }
   },
+  "12aa75b3a9d8aa6326873caf6b8b804f7838a840b9c8d75e3001e6bb7334839c": {
+    "query": "\n                SELECT (nmh.corosync_node_id).name AS \"name!\" FROM corosync_node_managed_host nmh\n                WHERE host_id = $1\n            ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "name!",
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      },
+      "nullable": [
+        null
+      ]
+    }
+  },
+  "12b039adc74d7bebed739164545198b3de53a44940dbf3b8dc6137a3ae61af69": {
+    "query": "\n        SELECT\n            id,\n            state,\n            name,\n            dev_path,\n            active_host_id,\n            host_ids,\n            filesystems,\n            uuid,\n            mount_path,\n            fs_type as \"fs_type: FsType\"\n        FROM target\n        ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "state",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 3,
+          "name": "dev_path",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 4,
+          "name": "active_host_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 5,
+          "name": "host_ids",
+          "type_info": "Int4Array"
+        },
+        {
+          "ordinal": 6,
+          "name": "filesystems",
+          "type_info": "TextArray"
+        },
+        {
+          "ordinal": 7,
+          "name": "uuid",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 8,
+          "name": "mount_path",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 9,
+          "name": "fs_type: FsType",
+          "type_info": {
+            "Custom": {
+              "name": "fs_type",
+              "kind": {
+                "Enum": [
+                  "zfs",
+                  "ldiskfs"
+                ]
+              }
+            }
+          }
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        true,
+        true,
+        false,
+        false,
+        false,
+        true,
+        true
+      ]
+    }
+  },
   "12b85bdac2a34efedc73bb817f38fd589a8e2754392d863cf4211e169e935153": {
     "query": "\n        INSERT INTO chroma_core_sfadiskdrive\n        (\n            index,\n            enclosure_index,\n            failed,\n            slot_number,\n            health_state,\n            health_state_reason,\n            member_index,\n            member_state,\n            storage_system\n        )\n        SELECT * FROM UNNEST(\n            $1::integer[],\n            $2::integer[],\n            $3::bool[],\n            $4::integer[],\n            $5::smallint[],\n            $6::text[],\n            $7::smallint[],\n            $8::smallint[],\n            $9::text[]\n        )\n        ON CONFLICT (index, storage_system) DO UPDATE\n        SET\n            enclosure_index = excluded.enclosure_index,\n            failed = excluded.failed,\n            slot_number = excluded.slot_number,\n            health_state = excluded.health_state,\n            health_state_reason = excluded.health_state_reason,\n            member_index = excluded.member_index,\n            member_state = excluded.member_state\n    ",
     "describe": {
@@ -381,6 +570,20 @@
       "nullable": [
         false
       ]
+    }
+  },
+  "13b22b7919ebcafafc359963684439ac2dded1f90012e471cb4dbda11773dcaa": {
+    "query": "\n                        INSERT INTO chroma_core_managedost VALUES ($1, $2, $3)\n                        ON CONFLICT (managedtarget_ptr_id) DO NOTHING\n                    ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Int4",
+          "Int4"
+        ]
+      },
+      "nullable": []
     }
   },
   "17645262c426038efcc8e22bf999c0d3cee07f52c4e276a1b607e2e00b2e62bd": {
@@ -718,6 +921,26 @@
       ]
     }
   },
+  "236fc72035901d28d2d6fbdb64a222ce1a4cdb2eb829448ff48be5a4c42a8de7": {
+    "query": "SELECT id FROM chroma_core_managedfilesystem WHERE name = $1 AND not_deleted = 't'",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      },
+      "nullable": [
+        false
+      ]
+    }
+  },
   "26a2bb0d30e2f8220b38a06a45a02ff5791a5f3895267d58316a43dc1823af77": {
     "query": "select * from chroma_core_pacemakerconfiguration where not_deleted = 't'",
     "describe": {
@@ -829,6 +1052,29 @@
         false,
         false,
         true
+      ]
+    }
+  },
+  "2a8f27f3b5842558f9547fda6f8e8675fde8011f883ac6d6b5426bd7c2288afd": {
+    "query": "\n        INSERT INTO chroma_core_ticket (\n                state_modified_at,\n                state,\n                immutable_state,\n                ha_label,\n                name,\n                resource_controlled,\n                not_deleted,\n                cluster_id,\n                content_type_id\n            ) VALUES (now(), $1, 'f', $2, $2, 't', 't', $3, $4)\n        RETURNING id\n        ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Varchar",
+          "Varchar",
+          "Int4",
+          "Int4"
+        ]
+      },
+      "nullable": [
+        false
       ]
     }
   },
@@ -990,6 +1236,22 @@
         false,
         false
       ]
+    }
+  },
+  "31d5f12351c7525918c775e2c44008375fa398b283629be6986865b3262d9547": {
+    "query": "\n            UPDATE chroma_core_ticket SET\n                state_modified_at = now(),\n                state = $1,\n                immutable_state = 'f',\n                name = $2,\n                ha_label = $2,\n                resource_controlled = 't',\n                cluster_id = $3,\n                content_type_id = $4\n            WHERE id = $5\n        ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Varchar",
+          "Varchar",
+          "Int4",
+          "Int4",
+          "Int4"
+        ]
+      },
+      "nullable": []
     }
   },
   "36188079437a0e3df0d4584e22b15673bfadcf66128168b59e13717eedcd8470": {
@@ -1800,6 +2062,30 @@
       ]
     }
   },
+  "5787f25ead6210b7d5cf3ad16c9cab57a9853c49377b0d853497186135553297": {
+    "query": "\n                SELECT id, model FROM django_content_type\n                WHERE app_label = 'chroma_core'\n                AND model IN ('managedfilesystem','managedmdt','managedmgs','managedost', 'filesystemticket', 'masterticket')\n            ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "model",
+          "type_info": "Varchar"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false
+      ]
+    }
+  },
   "590a26c2f79e7fadfff3866f32f726edf0b4c27fe222690cfab2191d97219cc7": {
     "query": "\n            INSERT INTO corosync_node_managed_host (host_id, cluster_id, corosync_node_id)\n            VALUES($1, $2, $3::corosync_node_key)\n            ON CONFLICT (host_id, corosync_node_id, cluster_id)\n            DO NOTHING\n            ",
     "describe": {
@@ -2019,6 +2305,31 @@
       ]
     }
   },
+  "64b915764b52476d0cd6e58b633bad25b3f90e840dfefc11ce71332e77e24b40": {
+    "query": "\n                    UPDATE chroma_core_managedfilesystem f\n                    SET mdt_next_index = (SELECT MAX(index) + 1 FROM chroma_core_managedmdt WHERE filesystem_id = $1),\n                    ost_next_index = (SELECT MAX(index) + 1 FROM chroma_core_managedost WHERE filesystem_id = $1)\n                    where id = $1",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      },
+      "nullable": []
+    }
+  },
+  "65606a0f41f31d06b704e173a376ba6edf45658b2892799e9f65cfdeebb732cc": {
+    "query": "\n                    INSERT INTO chroma_core_masterticket\n                    (ticket_ptr_id, mgs_id) \n                    VALUES\n                    ($1, $2)\n                    ON CONFLICT (ticket_ptr_id)\n                    DO UPDATE SET\n                    mgs_id = EXCLUDED.mgs_id\n                ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Int4"
+        ]
+      },
+      "nullable": []
+    }
+  },
   "681d997bb965a228c0aa75d93d09faefe5412daaf3e7bda3630df319fb9edabb": {
     "query": "select * from django_content_type",
     "describe": {
@@ -2060,6 +2371,36 @@
         ]
       },
       "nullable": []
+    }
+  },
+  "6d79ab4e8e091dcd8598e521557aa44a4079c8897a021bbda0c0817d9e162461": {
+    "query": "\n            SELECT cluster_id, id, active\n            FROM corosync_resource\n            WHERE resource_agent = 'ocf::ddn:Ticketer';\n            ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "cluster_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "id",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "active",
+          "type_info": "Bool"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false,
+        false
+      ]
     }
   },
   "6d7c1af5cf5e15bc84444013fa6989b6317052dc7f82a198003c690f9c0d3c5f": {
@@ -2168,6 +2509,21 @@
         false,
         false
       ]
+    }
+  },
+  "78b8a5d4f2a0f92377ff7921c89adb5d188bce96d9cc5fcf25a05f6213bf8be4": {
+    "query": "\n            UPDATE chroma_core_managedtarget SET\n                state_modified_at = now(),\n                state = 'mounted',\n                immutable_state = 'f',\n                name = $1,\n                ha_label = $2,\n                reformat = 'f',\n                content_type_id = $3\n            WHERE uuid = $4\n        ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Varchar",
+          "Varchar",
+          "Int4",
+          "Text"
+        ]
+      },
+      "nullable": []
     }
   },
   "7ba0b27a4f4fca50c30701d9adbbf0c0421c310b6b99453bffb4bc7834fa765c": {
@@ -2338,6 +2694,18 @@
         false,
         false
       ]
+    }
+  },
+  "80ad29b544d425cf7b8af0e45e37ea38fe40ff278fb4d39fe5e968af02c416f7": {
+    "query": "\n                    INSERT INTO chroma_core_managedmgs\n                    VALUES ($1, 0, 0)\n                    ON CONFLICT (managedtarget_ptr_id) DO NOTHING\n                ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      },
+      "nullable": []
     }
   },
   "80e0fc9b1b45fb3488bed52b35e7f54cc7f8cb08003caffe344baf2094b25cd9": {
@@ -2626,6 +2994,48 @@
       ]
     }
   },
+  "8a308ea09e530d8822db9088bc92d602121f4e0908a62551d33b2a8e84caacc0": {
+    "query": "\n                SELECT\n                    name,\n                    mount_path,\n                    filesystems,\n                    uuid,\n                    state\n                FROM target\n                WHERE CARDINALITY(filesystems) > 0",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 1,
+          "name": "mount_path",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "filesystems",
+          "type_info": "TextArray"
+        },
+        {
+          "ordinal": 3,
+          "name": "uuid",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 4,
+          "name": "state",
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        true,
+        false,
+        false,
+        false
+      ]
+    }
+  },
   "8a7e849cf7654907787343223c017f302c514e4728439d79ff4f91fca17e1ebb": {
     "query": "SELECT total_rows FROM rowcount WHERE table_name = 'chroma_core_logmessage';",
     "describe": {
@@ -2702,6 +3112,20 @@
       "nullable": [
         false
       ]
+    }
+  },
+  "8efee1c402b7b03e10afa5e0cf35d025c969a36b46c6ab2b9c9542e8a4da0cbf": {
+    "query": "\n                        INSERT INTO chroma_core_managedmdt VALUES ($1, $2, $3)\n                        ON CONFLICT (managedtarget_ptr_id) DO NOTHING\n                    ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Int4",
+          "Int4"
+        ]
+      },
+      "nullable": []
     }
   },
   "903636cd946e4fb1f28ae3774b58c46f8bb601803e6fdf745669a5c76fdb88fd": {
@@ -2889,6 +3313,29 @@
         false,
         false,
         true
+      ]
+    }
+  },
+  "9d75d9c59b4e8e5e54653866451a026b2308d9d97f1a5ea65513de4a1ce3862c": {
+    "query": "\n        INSERT INTO chroma_core_managedtarget (\n                state_modified_at,\n                state,\n                immutable_state,\n                name,\n                uuid,\n                ha_label,\n                reformat,\n                not_deleted,\n                content_type_id\n            ) VALUES (now(), 'mounted', 'f', $1, $2, $3, 'f', 't', $4)\n        RETURNING id\n        ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Varchar",
+          "Varchar",
+          "Varchar",
+          "Int4"
+        ]
+      },
+      "nullable": [
+        false
       ]
     }
   },
@@ -3132,6 +3579,109 @@
         null,
         false
       ]
+    }
+  },
+  "a821b69cd35756a02cdb691a3ff0eb80a8846b1266315e5308cad4cbbeb22142": {
+    "query": "select * from chroma_core_managedtarget where not_deleted = 't'",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "state_modified_at",
+          "type_info": "Timestamptz"
+        },
+        {
+          "ordinal": 2,
+          "name": "state",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 3,
+          "name": "immutable_state",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 4,
+          "name": "name",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 5,
+          "name": "uuid",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 6,
+          "name": "ha_label",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 7,
+          "name": "inode_size",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 8,
+          "name": "bytes_per_inode",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 9,
+          "name": "inode_count",
+          "type_info": "Int8"
+        },
+        {
+          "ordinal": 10,
+          "name": "reformat",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 11,
+          "name": "not_deleted",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 12,
+          "name": "content_type_id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false,
+        true,
+        true
+      ]
+    }
+  },
+  "aad647085b43509084a1783a4c011b3ed8bd73bfd8f25c98d5951f094f3486d9": {
+    "query": "\n        UPDATE chroma_core_managedtarget t\n        SET state = updates.state\n        FROM (\n            SELECT state, uuid\n            FROM UNNEST($1::text[], $2::text[])\n            AS t(state, uuid)\n        ) as updates\n        WHERE t.uuid = updates.uuid\n            AND t.not_deleted = 't'\n    ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "TextArray",
+          "TextArray"
+        ]
+      },
+      "nullable": []
     }
   },
   "acce0ef57e02705ad538be4229e49aca7b61cab3e9755149a9382d86717467fb": {
@@ -3472,54 +4022,6 @@
       ]
     }
   },
-  "b92506b46f4f927f6900c498084e5a60d76bc004d82fa2988e225357a6ddd322": {
-    "query": "\n            SELECT rh.cluster_id, r.id, t.name, t.mount_path, t.filesystems, array_agg(DISTINCT rh.host_id) AS \"cluster_hosts!\"\n            FROM target t\n            INNER JOIN corosync_resource r ON r.mount_point = t.mount_path\n            INNER JOIN corosync_resource_managed_host rh ON rh.corosync_resource_id = r.id AND rh.host_id = ANY(t.host_ids)\n            WHERE CARDINALITY(t.filesystems) > 0\n            GROUP BY rh.cluster_id, t.name, r.id, t.mount_path, t.filesystems\n        ",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "cluster_id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 1,
-          "name": "id",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 2,
-          "name": "name",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 3,
-          "name": "mount_path",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 4,
-          "name": "filesystems",
-          "type_info": "TextArray"
-        },
-        {
-          "ordinal": 5,
-          "name": "cluster_hosts!",
-          "type_info": "Int4Array"
-        }
-      ],
-      "parameters": {
-        "Left": []
-      },
-      "nullable": [
-        false,
-        false,
-        false,
-        true,
-        false,
-        null
-      ]
-    }
-  },
   "b94684b98d9c2877a51d94070b43e039ea62218cb9c1e561e9280bed7de35e15": {
     "query": "\n            INSERT INTO chroma_core_serverprofile\n            (\n                name,\n                ui_name,\n                ui_description,\n                managed,\n                worker,\n                user_selectable,\n                initial_state,\n                ntp,\n                corosync,\n                corosync2,\n                pacemaker,\n                \"default\"\n            )\n            VALUES\n            ($1, $2, $3, $4, $5, 'true', $6, $7, $8, $9, $10, 'false')\n            ON CONFLICT (name)\n            DO UPDATE\n            SET\n            ui_name = excluded.ui_name,\n            ui_description = excluded.ui_description,\n            managed = excluded.managed,\n            worker = excluded.worker,\n            user_selectable = excluded.user_selectable,\n            initial_state = excluded.initial_state,\n            ntp = excluded.ntp,\n            corosync = excluded.corosync,\n            corosync2 = excluded.corosync2,\n            pacemaker = excluded.pacemaker,\n            \"default\" = excluded.default\n        ",
     "describe": {
@@ -3536,6 +4038,18 @@
           "Bool",
           "Bool",
           "Bool"
+        ]
+      },
+      "nullable": []
+    }
+  },
+  "b9b02a8a5582f6158bb4f9ca81035be62b602c42dbb6bf76b09f811fdca3a84b": {
+    "query": "\n                UPDATE chroma_core_managedfilesystem SET\n                    state_modified_at = now(),\n                    state = 'available',\n                    immutable_state = 'f',\n                    mgs_id = $1\n            ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int4"
         ]
       },
       "nullable": []
@@ -3625,6 +4139,19 @@
         false,
         true
       ]
+    }
+  },
+  "c03e3ebe9b215be0ae06d3ce2c9488c554405124ac503e2a98c19ec904f26a15": {
+    "query": "\n                        INSERT INTO chroma_core_filesystemticket\n                            (ticket_ptr_id, filesystem_id)\n                            VALUES\n                            ($1, $2)\n                            ON CONFLICT (ticket_ptr_id)\n                            DO UPDATE SET\n                            filesystem_id = EXCLUDED.filesystem_id\n                    ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "Int4"
+        ]
+      },
+      "nullable": []
     }
   },
   "c0976422207fb3d2a45cc9f4cc6182133c51442f462c867708d93260ae6a6e9c": {
@@ -4057,6 +4584,28 @@
       "nullable": []
     }
   },
+  "e0db02aa237c28cb697a6095b6e8b421c489b3402592e6aaf0d5ff0d3e6f4f6b": {
+    "query": "\n                    INSERT INTO chroma_core_managedfilesystem (\n                        state_modified_at,\n                        state,\n                        immutable_state,\n                        name,\n                        mdt_next_index,\n                        ost_next_index,\n                        not_deleted,\n                        content_type_id,\n                        mgs_id\n                    ) VALUES (\n                        now(),\n                        'available',\n                        'f',\n                        $1,\n                        1,\n                        1,\n                        't',\n                        $2,\n                        $3\n                    )\n                    RETURNING id\n                ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Varchar",
+          "Int4",
+          "Int4"
+        ]
+      },
+      "nullable": [
+        false
+      ]
+    }
+  },
   "e0f0ada5205a6f2d4f62861c2f7f5eb3c7d227588e25f056038bd1f87f7a2ff3": {
     "query": "select * from chroma_core_ostpool where not_deleted = 't'",
     "describe": {
@@ -4154,6 +4703,58 @@
         false,
         false,
         true,
+        false
+      ]
+    }
+  },
+  "e556047b44f30c75388944aa4d96d4ade4f5eed4e0a401bbd766943cf9495ca0": {
+    "query": "\n        SELECT \n            mt.state,\n            t.name,\n            t.filesystems\n            FROM chroma_core_managedtarget mt\n            INNER JOIN target t\n            ON t.uuid = mt.uuid\n            WHERE mt.not_deleted = 't'\n            AND $1::text[]  @> t.filesystems;\n        ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "state",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 1,
+          "name": "name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "filesystems",
+          "type_info": "TextArray"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "TextArray"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        false
+      ]
+    }
+  },
+  "e7530dba139d6c2354611f4fcfef1de5b8419d923a3f8422f0f2247ac77d10a6": {
+    "query": "SELECT id FROM chroma_core_managedtarget WHERE uuid = $1 AND not_deleted = 't'",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      },
+      "nullable": [
         false
       ]
     }
@@ -4308,6 +4909,26 @@
         ]
       },
       "nullable": []
+    }
+  },
+  "ee30cb8e02989a791c99bda8a1caad3235132c539e3e6610b8df5b1f62858093": {
+    "query": "SELECT id FROM chroma_core_ticket WHERE ha_label = $1 AND not_deleted = 't'",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      },
+      "nullable": [
+        false
+      ]
     }
   },
   "eec700b9428870eec0c867b7663c22c369f5bb4bb2ea0d2e2774d591c4f891ae": {
@@ -4500,60 +5121,6 @@
         ]
       },
       "nullable": []
-    }
-  },
-  "f8cd2baf66e0d74fea5babd851be21a3badca94a53aee6bac038141cece53646": {
-    "query": "select * from chroma_core_managedtargetmount where not_deleted = 't'",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 1,
-          "name": "mount_point",
-          "type_info": "Varchar"
-        },
-        {
-          "ordinal": 2,
-          "name": "primary",
-          "type_info": "Bool"
-        },
-        {
-          "ordinal": 3,
-          "name": "not_deleted",
-          "type_info": "Bool"
-        },
-        {
-          "ordinal": 4,
-          "name": "host_id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 5,
-          "name": "target_id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 6,
-          "name": "volume_node_id",
-          "type_info": "Int4"
-        }
-      ],
-      "parameters": {
-        "Left": []
-      },
-      "nullable": [
-        false,
-        true,
-        false,
-        true,
-        false,
-        false,
-        false
-      ]
     }
   },
   "f98f8c6f1fb7cdffb434c4cc4f9b2fe23c553b5dd61aa8bf9cae9377500e67a8": {

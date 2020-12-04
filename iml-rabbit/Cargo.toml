@@ -5,7 +5,7 @@ name = "iml-rabbit"
 version = "0.4.0"
 
 [dependencies]
-deadpool-lapin = {version = "0.6", default-features = false}
+deadpool-lapin = {version = "=0.6.0", default-features = false}
 futures = "0.3"
 iml-manager-env = {path = "../iml-manager-env", version = "0.4"}
 iml-wire-types = {path = "../iml-wire-types", version = "0.4"}

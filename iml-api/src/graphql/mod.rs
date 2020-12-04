@@ -2,6 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+mod filesystem;
 mod stratagem;
 mod task;
 
@@ -11,7 +12,10 @@ use crate::{
     timer::{configure_snapshot_timer, remove_snapshot_timer},
 };
 use chrono::{DateTime, Utc};
-use futures::{future::join_all, TryFutureExt, TryStreamExt};
+use futures::{
+    future::{self, join_all},
+    TryFutureExt, TryStreamExt,
+};
 use iml_postgres::{
     active_mgs_host_fqdn, fqdn_by_host_id, sqlx, sqlx::postgres::types::PgInterval, PgPool,
 };
@@ -60,17 +64,21 @@ struct CorosyncNode {
     r#type: String,
 }
 
-#[derive(juniper::GraphQLObject)]
+#[derive(juniper::GraphQLObject, Hash, Eq, PartialEq)]
 /// A Lustre Target and it's corresponding resource
 struct TargetResource {
     /// The id of the cluster
     cluster_id: i32,
-    /// The filesystem associated with this target
-    fs_name: String,
+    /// The filesystems associated with this target
+    fs_names: Vec<String>,
+    /// The uuid of this target
+    uuid: String,
     /// The name of this target
     name: String,
     /// The corosync resource id associated with this target
     resource_id: String,
+    /// The current state of this target
+    state: String,
     /// The list of host ids this target could possibly run on
     cluster_hosts: Vec<i32>,
 }
@@ -114,6 +122,25 @@ impl QueryRoot {
     }
     fn task(&self) -> task::TaskQuery {
         task::TaskQuery
+    }
+    /// Given a host id, try to find the matching corosync node name
+    #[graphql(arguments(host_id(description = "The id to search on")))]
+    async fn corosync_node_name_by_host(
+        context: &Context,
+        host_id: i32,
+    ) -> juniper::FieldResult<Option<String>> {
+        let x = sqlx::query!(
+            r#"
+                SELECT (nmh.corosync_node_id).name AS "name!" FROM corosync_node_managed_host nmh
+                WHERE host_id = $1
+            "#,
+            host_id
+        )
+        .fetch_optional(&context.pg_pool)
+        .await?
+        .map(|x| x.name);
+
+        Ok(x)
     }
     #[graphql(arguments(
         limit(description = "optional paging limit, defaults to all rows"),
@@ -584,40 +611,31 @@ impl QueryRoot {
 
         Ok(server_profiles)
     }
+    /// List the client mount source.
+    /// This will build up the source using known mgs locations
+    /// for the given filesystem.
+    #[graphql(arguments(fs(description = "The filesystem to generate the source for"),))]
+    async fn client_mount_source(
+        context: &Context,
+        fs_name: String,
+    ) -> juniper::FieldResult<String> {
+        let x = client_mount_source(&context.pg_pool, &fs_name).await?;
 
-    #[graphql(arguments(fs(description = "The filesystem to mount"),))]
+        Ok(x)
+    }
+    /// List the full client mount command.
+    /// This will build up the source using known mgs locations
+    /// for the given filesystem.
+    /// The output can be directly pasted on a server to mount a client,
+    /// after the mount directory has been created.
+    #[graphql(arguments(fs(description = "The filesystem to generate the mount command for"),))]
     async fn client_mount_command(
         context: &Context,
         fs_name: String,
     ) -> juniper::FieldResult<String> {
-        let nids = sqlx::query!(
-            r#"
-            SELECT n.nid FROM target AS t
-            INNER JOIN lnet as l ON l.host_id = ANY(t.host_ids)
-            INNER JOIN nid as n ON n.id = ANY(l.nids)
-            WHERE t.name='MGS' AND $1 = ANY(t.filesystems) AND n.host_id NOT IN (
-                SELECT nh.host_id
-                FROM corosync_resource_bans b
-                INNER JOIN corosync_node_managed_host nh ON (nh.corosync_node_id).name = b.node
-                AND nh.cluster_id = b.cluster_id
-                INNER JOIN corosync_resource t ON t.id = b.resource AND b.cluster_id = t.cluster_id
-                WHERE t.mount_point is not NULL
-            ) GROUP BY l.host_id, n.nid ORDER BY l.host_id, n.nid;
-            "#,
-            fs_name
-        )
-        .fetch_all(&context.pg_pool)
-        .await?
-        .into_iter()
-        .map(|x| x.nid)
-        .collect::<Vec<String>>();
+        let x = client_mount_source(&context.pg_pool, &fs_name).await?;
 
-        let mount_command = format!(
-            "mount -t lustre {}:/{} /mnt/{}",
-            nids.join(":"),
-            fs_name,
-            fs_name
-        );
+        let mount_command = format!("mount -t lustre {} /mnt/{}", x, fs_name);
 
         Ok(mount_command)
     }
@@ -649,6 +667,9 @@ pub(crate) struct MutationRoot;
 
 #[juniper::graphql_object(Context = Context)]
 impl MutationRoot {
+    fn filesystem(&self) -> filesystem::FilesystemMutation {
+        filesystem::FilesystemMutation
+    }
     fn stratagem(&self) -> stratagem::StratagemMutation {
         stratagem::StratagemMutation
     }
@@ -1199,23 +1220,29 @@ async fn get_fs_target_resources(
     let banned_resources = get_banned_targets(pool).await?;
 
     let xs = sqlx::query!(r#"
-            SELECT rh.cluster_id, r.id, t.name, t.mount_path, t.filesystems, array_agg(DISTINCT rh.host_id) AS "cluster_hosts!"
+            SELECT
+                rh.cluster_id,
+                r.id,
+                t.name,
+                t.mount_path,
+                t.filesystems,
+                t.uuid,
+                t.state,
+                array_agg(DISTINCT rh.host_id) AS "cluster_hosts!"
             FROM target t
             INNER JOIN corosync_resource r ON r.mount_point = t.mount_path
             INNER JOIN corosync_resource_managed_host rh ON rh.corosync_resource_id = r.id AND rh.host_id = ANY(t.host_ids)
             WHERE CARDINALITY(t.filesystems) > 0
-            GROUP BY rh.cluster_id, t.name, r.id, t.mount_path, t.filesystems
+            GROUP BY rh.cluster_id, t.name, r.id, t.mount_path, t.uuid, t.filesystems, t.state
         "#)
             .fetch(pool)
             .try_filter(|x| {
-                let fs_name2 = fs_name.clone();
-                let filesystems = x.filesystems.clone();
-                async move {
-                    match fs_name2 {
-                        None => true,
-                        Some(fs) => filesystems.contains(&fs)
-                    }
-                }
+                let x = match fs_name.as_ref() {
+                    None => true,
+                    Some(fs) => (&x.filesystems).contains(fs)
+                };
+
+                future::ready(x)
             })
             .map_ok(|mut x| {
                 let xs:HashSet<_> = banned_resources
@@ -1233,9 +1260,11 @@ async fn get_fs_target_resources(
             .map_ok(|x| {
                 TargetResource {
                     cluster_id: x.cluster_id,
-                    fs_name: fs_name.as_ref().unwrap_or_else(|| &x.filesystems[0]).to_string(),
+                    fs_names: x.filesystems,
+                    uuid: x.uuid,
                     name: x.name,
                     resource_id: x.id,
+                    state: x.state,
                     cluster_hosts: x.cluster_hosts
                 }
             }).try_collect()
@@ -1434,4 +1463,32 @@ fn create_task_job<'a>(task_id: i32) -> SendJob<'a, HashMap<String, serde_json::
             .into_iter()
             .collect(),
     }
+}
+
+async fn client_mount_source(pg_pool: &PgPool, fs_name: &str) -> Result<String, ImlApiError> {
+    let nids = sqlx::query!(
+        r#"
+            SELECT n.nid FROM target AS t
+            INNER JOIN lnet as l ON l.host_id = ANY(t.host_ids)
+            INNER JOIN nid as n ON n.id = ANY(l.nids)
+            WHERE t.name='MGS' AND $1 = ANY(t.filesystems) AND n.host_id NOT IN (
+                SELECT nh.host_id
+                FROM corosync_resource_bans b
+                INNER JOIN corosync_node_managed_host nh ON (nh.corosync_node_id).name = b.node
+                AND nh.cluster_id = b.cluster_id
+                INNER JOIN corosync_resource t ON t.id = b.resource AND b.cluster_id = t.cluster_id
+                WHERE t.mount_point is not NULL
+            ) GROUP BY l.host_id, n.nid ORDER BY l.host_id, n.nid;
+            "#,
+        fs_name
+    )
+    .fetch_all(pg_pool)
+    .await?
+    .into_iter()
+    .map(|x| x.nid)
+    .collect::<Vec<String>>();
+
+    let mount_command = format!("{}:/{}", nids.join(":"), fs_name);
+
+    Ok(mount_command)
 }

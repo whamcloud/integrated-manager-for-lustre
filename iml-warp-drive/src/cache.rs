@@ -10,8 +10,8 @@ use iml_wire_types::{
     db::{
         AlertStateRecord, AuthGroupRecord, AuthUserGroupRecord, AuthUserRecord, ContentTypeRecord,
         CorosyncConfigurationRecord, FsRecord, Id, LnetConfigurationRecord, ManagedHostRecord,
-        ManagedTargetMountRecord, ManagedTargetRecord, NotDeleted, OstPoolOstsRecord,
-        OstPoolRecord, PacemakerConfigurationRecord, StratagemConfiguration, VolumeNodeRecord,
+        ManagedTargetRecord, NotDeleted, OstPoolOstsRecord, OstPoolRecord,
+        PacemakerConfigurationRecord, StratagemConfiguration, TargetRecord, VolumeNodeRecord,
         VolumeRecord,
     },
     sfa::{
@@ -20,7 +20,7 @@ use iml_wire_types::{
     },
     snapshot::{ReserveUnit, SnapshotInterval, SnapshotRecord, SnapshotRetention},
     warp_drive::{Cache, Record, RecordChange, RecordId},
-    Alert, ApiList, EndpointName, Filesystem, FlatQuery, Host, Target, TargetConfParam,
+    Alert, ApiList, EndpointName, Filesystem, FlatQuery, FsType, Host,
 };
 use std::{fmt::Debug, pin::Pin, sync::Arc};
 
@@ -107,9 +107,13 @@ pub async fn db_record_to_change_record(
             )
             .await
         }
-        DbRecord::ManagedTarget(x) => {
-            converter(client, msg_type, x, Record::Target, RecordId::Target).await
-        }
+        DbRecord::ManagedTarget(x) => match (msg_type, x) {
+            (MessageType::Delete, x) => Ok(RecordChange::Delete(RecordId::Target(x.id()))),
+            (_, x) if x.deleted() => Ok(RecordChange::Delete(RecordId::Target(x.id()))),
+            (MessageType::Insert, x) | (MessageType::Update, x) => {
+                Ok(RecordChange::Update(Record::Target(x)))
+            }
+        },
         DbRecord::AlertState(x) => match (msg_type, &x) {
             (MessageType::Delete, x) => Ok(RecordChange::Delete(RecordId::ActiveAlert(x.id()))),
             (_, x) if !x.is_active() => Ok(RecordChange::Delete(RecordId::ActiveAlert(x.id()))),
@@ -255,17 +259,6 @@ pub async fn db_record_to_change_record(
                 Ok(RecordChange::Update(Record::PacemakerConfiguration(x)))
             }
         },
-        DbRecord::ManagedTargetMount(x) => match (msg_type, x) {
-            (MessageType::Delete, x) => {
-                Ok(RecordChange::Delete(RecordId::ManagedTargetMount(x.id())))
-            }
-            (_, ref x) if x.deleted() => {
-                Ok(RecordChange::Delete(RecordId::ManagedTargetMount(x.id())))
-            }
-            (MessageType::Insert, x) | (MessageType::Update, x) => {
-                Ok(RecordChange::Update(Record::ManagedTargetMount(x)))
-            }
-        },
         DbRecord::TargetRecord(x) => match (msg_type, x) {
             (MessageType::Delete, x) => Ok(RecordChange::Delete(RecordId::TargetRecord(x.id()))),
             (MessageType::Insert, x) | (MessageType::Update, x) => {
@@ -302,14 +295,6 @@ pub async fn populate_from_api(shared_api_cache: SharedCache) -> Result<(), ImlM
     .map_ok(|fs: ApiList<Filesystem>| fs.objects)
     .map_ok(|fs: Vec<Filesystem>| fs.into_iter().map(|f| (f.id, f)).collect());
 
-    let target_fut = get_retry(
-        client.clone(),
-        <Target<TargetConfParam>>::endpoint_name(),
-        <Target<TargetConfParam>>::query(),
-    )
-    .map_ok(|x: ApiList<Target<TargetConfParam>>| x.objects)
-    .map_ok(|x: Vec<Target<TargetConfParam>>| x.into_iter().map(|x| (x.id, x)).collect());
-
     let active_alert_fut = get_retry(client.clone(), Alert::endpoint_name(), Alert::query())
         .map_ok(|x: ApiList<Alert>| x.objects)
         .map_ok(|x: Vec<Alert>| x.into_iter().map(|x| (x.id, x)).collect());
@@ -318,13 +303,11 @@ pub async fn populate_from_api(shared_api_cache: SharedCache) -> Result<(), ImlM
         .map_ok(|x: ApiList<Host>| x.objects)
         .map_ok(|x: Vec<Host>| x.into_iter().map(|x| (x.id, x)).collect());
 
-    let (filesystem, target, alert, host) =
-        future::try_join4(fs_fut, target_fut, active_alert_fut, host_fut).await?;
+    let (filesystem, alert, host) = future::try_join3(fs_fut, active_alert_fut, host_fut).await?;
 
     let mut api_cache = shared_api_cache.lock().await;
 
     api_cache.filesystem = filesystem;
-    api_cache.target = target;
     api_cache.active_alert = alert;
     api_cache.host = host;
 
@@ -371,9 +354,31 @@ pub async fn populate_from_db(
     .try_collect()
     .await?;
 
-    cache.managed_target_mount = sqlx::query_as!(
-        ManagedTargetMountRecord,
-        "select * from chroma_core_managedtargetmount where not_deleted = 't'"
+    cache.target = sqlx::query_as!(
+        ManagedTargetRecord,
+        "select * from chroma_core_managedtarget where not_deleted = 't'"
+    )
+    .fetch(pool)
+    .map_ok(|x| (x.id(), x))
+    .try_collect()
+    .await?;
+
+    cache.target_record = sqlx::query_as!(
+        TargetRecord,
+        r#"
+        SELECT
+            id,
+            state,
+            name,
+            dev_path,
+            active_host_id,
+            host_ids,
+            filesystems,
+            uuid,
+            mount_path,
+            fs_type as "fs_type: FsType"
+        FROM target
+        "#
     )
     .fetch(pool)
     .map_ok(|x| (x.id(), x))

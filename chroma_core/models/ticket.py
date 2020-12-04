@@ -3,10 +3,10 @@
 # license that can be found in the LICENSE file.
 
 from django.db import models
-from django.db.models import CASCADE, Q
-from chroma_core.lib.job import DependOn, DependAll, Step, job_log
-from chroma_core.models import DeletableDowncastableMetaclass, ManagedFilesystem
-from chroma_core.models import StatefulObject, StateChangeJob, StateLock, Job, AdvertisedJob
+from django.db.models import CASCADE
+from chroma_core.lib.job import DependOn, DependAll, Step
+from chroma_core.models import DeletableDowncastableMetaclass
+from chroma_core.models import StatefulObject, StateChangeJob
 from chroma_help.help import help_text
 
 
@@ -34,6 +34,8 @@ class Ticket(StatefulObject):
     resource_controlled = models.BooleanField(
         default=True, help_text="Ticket is controlled by a resources named in `ha_label`"
     )
+
+    cluster_id = models.IntegerField(help_text="The cluster this ticket belongs to", null=True)
 
     @property
     def ticket(self):
@@ -70,13 +72,6 @@ class FilesystemTicket(Ticket):
         app_label = "chroma_core"
         ordering = ["id"]
 
-    def get_deps(self, state=None):
-        deps = []
-        if state == "granted":
-            mt = MasterTicket.objects.filter(mgs=self.filesystem.mgs)[0]
-            deps.append(DependOn(mt, "granted"))
-        return DependAll(deps)
-
     def get_host(self):
         return self.filesystem.mgs.best_available_host()
 
@@ -98,7 +93,7 @@ class GrantRevokedTicketJob(StateChangeJob):
         steps = []
         ticket = self.ticket.downcast()
         if ticket.resource_controlled:
-            steps.append((StartResourceStep, {"host": ticket.get_host(), "ha_label": ticket.ha_label}))
+            steps.append((StartResourceStep, {"fqdn": ticket.get_host().fqdn, "ha_label": ticket.ha_label}))
         else:
             raise RuntimeError("Ticket `%s' is not resource controlled" % self.ticket.name)
 
@@ -110,6 +105,15 @@ class GrantRevokedTicketJob(StateChangeJob):
 
     def description(self):
         return "Grant ticket %s" % self.ticket.name
+
+    def get_deps(self):
+        ticket = self.ticket.downcast()
+
+        if isinstance(ticket, FilesystemTicket):
+            mt = MasterTicket.objects.filter(mgs=ticket.filesystem.mgs)[0]
+            return DependOn(mt.ticket, "granted")
+
+        return DependAll()
 
 
 class RevokeGrantedTicketJob(StateChangeJob):
@@ -124,7 +128,7 @@ class RevokeGrantedTicketJob(StateChangeJob):
         ticket = self.ticket.downcast()
 
         if ticket.resource_controlled:
-            steps.append((StopResourceStep, {"host": ticket.get_host(), "ha_label": ticket.ha_label}))
+            steps.append((StopResourceStep, {"fqdn": ticket.get_host().fqdn, "ha_label": ticket.ha_label}))
         else:
             raise RuntimeError("Ticket `%s' is not resource controlled" % ticket.name)
 
@@ -142,18 +146,14 @@ class StartResourceStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        host = kwargs["host"]
-        label = kwargs["ha_label"]
-        self.invoke_agent_expect_result(host, "start_target", {"ha_label": label})
+        self.invoke_rust_agent_expect_result(kwargs["fqdn"], "ha_resource_start", kwargs["ha_label"])
 
 
 class StopResourceStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        host = kwargs["host"]
-        label = kwargs["ha_label"]
-        self.invoke_agent_expect_result(host, "stop_target", {"ha_label": label})
+        self.invoke_rust_agent_expect_result(kwargs["fqdn"], "ha_resource_stop", kwargs["ha_label"])
 
 
 class ForgetTicketJob(StateChangeJob):

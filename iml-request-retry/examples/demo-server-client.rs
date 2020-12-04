@@ -103,7 +103,7 @@ pub async fn http_call(addr: &SocketAddr, id: u32) -> reqwest::Result<String> {
     let client: Client = reqwest::Client::new();
     let resp: Response = client.post(uri).json(&map).send().await?;
 
-    Ok(resp.error_for_status()?.text().await?.to_string())
+    Ok(resp.error_for_status()?.text().await?)
 }
 
 #[derive(Debug)]

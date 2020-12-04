@@ -1,4 +1,6 @@
 version: "3.7"
+x-logging: &default-logging
+  driver: "journald"
 x-deploy: &default-deploy
   restart_policy:
     condition: any
@@ -11,6 +13,7 @@ services:
       context: ../
       dockerfile: ./docker/postgres.dockerfile
     hostname: "postgres"
+    logging: *default-logging
     deploy:
       <<: *default-deploy
       endpoint_mode: dnsrr
@@ -31,6 +34,7 @@ services:
       context: ../
       dockerfile: ./docker/influxdb.dockerfile
     hostname: "influxdb"
+    logging: *default-logging
     deploy:
       <<: *default-deploy
       resources:
@@ -62,6 +66,7 @@ services:
       context: ../
       dockerfile: ./docker/grafana.dockerfile
     hostname: "grafana"
+    logging: *default-logging
     deploy: *default-deploy
     environment:
       - GF_SERVER_DOMAIN=grafana
@@ -79,6 +84,7 @@ services:
       context: ../
       dockerfile: ./docker/rabbitmq.dockerfile
     hostname: "rabbit"
+    logging: *default-logging
     deploy:
       <<: *default-deploy
       endpoint_mode: dnsrr
@@ -109,6 +115,7 @@ services:
       context: ../
       dockerfile: ./docker/nginx.dockerfile
     hostname: "nginx"
+    logging: *default-logging
     deploy: *default-deploy
     volumes:
       - "/etc/iml-docker/setup/branding:/var/lib/chroma/branding"
@@ -121,6 +128,7 @@ services:
   update-handler:
     image: "imlteam/iml-update-check:5.1"
     hostname: "update-handler"
+    logging: *default-logging
     deploy: *default-deploy
     volumes:
       - "manager-config:/var/lib/chroma"
@@ -133,6 +141,7 @@ services:
       context: ../
       dockerfile: ./docker/iml-snapshot.dockerfile
     deploy: *default-deploy
+    logging: *default-logging
     environment:
       - RUST_LOG=info,sqlx::query=warn
     volumes:
@@ -144,6 +153,7 @@ services:
       context: ../
       dockerfile: ./docker/iml-device.dockerfile
     deploy: *default-deploy
+    logging: *default-logging
     environment:
       - DEVICE_AGGREGATOR_PORT=8008
       - PROXY_HOST=device
@@ -157,21 +167,23 @@ services:
       context: ../
       dockerfile: ./docker/iml-corosync.dockerfile
     deploy: *default-deploy
+    logging: *default-logging
     environment:
       - RUST_LOG=info,sqlx::query=warn
     volumes:
       - "manager-config:/var/lib/chroma"
   network:
-        image: "imlteam/network:6.2.0"
-        hostname: "iml-network"
-        build:
-          context: ../
-          dockerfile: ./docker/iml-network.dockerfile
-        deploy: *default-deploy
-        volumes:
-          - "manager-config:/var/lib/chroma"
-        environment:
-          - RUST_LOG=info,sqlx::query=warn
+    image: "imlteam/network:6.2.0"
+    hostname: "iml-network"
+    build:
+      context: ../
+      dockerfile: ./docker/iml-network.dockerfile
+    deploy: *default-deploy
+    logging: *default-logging
+    volumes:
+      - "manager-config:/var/lib/chroma"
+    environment:
+      - RUST_LOG=info,sqlx::query=warn
   ntp:
     image: "imlteam/ntp:6.2.0"
     hostname: "iml-ntp"
@@ -179,6 +191,7 @@ services:
       context: ../
       dockerfile: ./docker/iml-ntp.dockerfile
     deploy: *default-deploy
+    logging: *default-logging
     volumes:
       - "manager-config:/var/lib/chroma"
     environment:
@@ -186,6 +199,7 @@ services:
   sfa:
     image: "imlteam/sfa:6.2.0"
     hostname: "iml-sfa"
+    logging: *default-logging
     build:
       context: ../
       dockerfile: ./docker/iml-sfa.dockerfile
@@ -202,6 +216,7 @@ services:
   corosync:
     image: "imlteam/manager-corosync:6.2.0"
     hostname: "corosync"
+    logging: *default-logging
     build:
       context: .
       dockerfile: ./corosync.dockerfile
@@ -213,6 +228,7 @@ services:
   gunicorn:
     image: "imlteam/manager-gunicorn:6.2.0"
     hostname: "gunicorn"
+    logging: *default-logging
     build:
       context: .
       dockerfile: ./gunicorn.dockerfile
@@ -228,6 +244,7 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
     hostname: "http-agent"
+    logging: *default-logging
     build:
       context: .
       dockerfile: ./http-agent.dockerfile
@@ -240,6 +257,7 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
     hostname: "iml-agent-comms"
+    logging: *default-logging
     build:
       context: ../
       dockerfile: ./docker/iml-agent-comms.dockerfile
@@ -247,7 +265,7 @@ services:
     environment:
       - HTTP_AGENT2_PORT=8003
       - PROXY_HOST=iml-agent-comms
-      - RUST_LOG=info
+      - RUST_LOG=info,iml_agent_comms::api=warn
   job-scheduler:
     image: "imlteam/manager-job-scheduler:6.2.0"
     hostname: "job-scheduler"
@@ -255,6 +273,7 @@ services:
       context: .
       dockerfile: ./job-scheduler.dockerfile
     deploy: *default-deploy
+    logging: *default-logging
     volumes:
       - "manager-config:/var/lib/chroma"
       - "report:/var/spool/iml/report"
@@ -266,6 +285,7 @@ services:
   lustre-audit:
     image: "imlteam/manager-lustre-audit:6.2.0"
     hostname: "lustre-audit"
+    logging: *default-logging
     build:
       context: .
       dockerfile: ./lustre-audit.dockerfile
@@ -277,6 +297,7 @@ services:
   plugin-runner:
     image: "imlteam/manager-plugin-runner:6.2.0"
     hostname: "plugin-runner"
+    logging: *default-logging
     build:
       context: .
       dockerfile: ./plugin-runner.dockerfile
@@ -289,6 +310,7 @@ services:
   power-control:
     image: "imlteam/manager-power-control:6.2.0"
     hostname: "power-control"
+    logging: *default-logging
     build:
       context: .
       dockerfile: ./power-control.dockerfile
@@ -300,6 +322,7 @@ services:
   journal:
     image: "imlteam/journal:6.2.0"
     hostname: "journal"
+    logging: *default-logging
     build:
       context: ../
       dockerfile: ./docker/journal.dockerfile
@@ -314,6 +337,7 @@ services:
   iml-warp-drive:
     image: "imlteam/iml-warp-drive:6.2.0"
     hostname: "iml-warp-drive"
+    logging: *default-logging
     build:
       context: ../
       dockerfile: ./docker/iml-warp-drive.dockerfile
@@ -326,6 +350,7 @@ services:
   iml-action-runner:
     image: "imlteam/iml-action-runner:6.2.0"
     hostname: "iml-action-runner"
+    logging: *default-logging
     build:
       context: ../
       dockerfile: ./docker/iml-action-runner.dockerfile
@@ -339,6 +364,7 @@ services:
   iml-task-runner:
     image: "imlteam/iml-task-runner:6.2.0"
     hostname: "iml-task-runner"
+    logging: *default-logging
     build:
       context: ../
       dockerfile: ./docker/iml-task-runner.dockerfile
@@ -352,6 +378,7 @@ services:
   iml-api:
     image: "imlteam/iml-api:6.2.0"
     hostname: "iml-api"
+    logging: *default-logging
     build:
       context: ../
       dockerfile: ./docker/iml-api.dockerfile
@@ -383,6 +410,7 @@ services:
   iml-ostpool:
     image: "imlteam/iml-ostpool:6.2.0"
     hostname: "iml-ostpool"
+    logging: *default-logging
     build:
       context: ../
       dockerfile: ./docker/iml-ostpool.dockerfile
@@ -394,6 +422,7 @@ services:
   iml-mailbox:
     image: "imlteam/iml-mailbox:6.2.0"
     hostname: "iml-mailbox"
+    logging: *default-logging
     build:
       context: ../
       dockerfile: ./docker/iml-mailbox.dockerfile
@@ -406,6 +435,7 @@ services:
   iml-report:
     image: "imlteam/iml-report:6.2.0"
     hostname: "iml-report"
+    logging: *default-logging
     build:
       context: ../
       dockerfile: ./docker/iml-report.dockerfile
@@ -420,6 +450,7 @@ services:
   iml-stats:
     image: "imlteam/iml-stats:6.2.0"
     hostname: "iml-stats"
+    logging: *default-logging
     build:
       context: ../
       dockerfile: ./docker/iml-stats.dockerfile
@@ -432,6 +463,7 @@ services:
   iml-postoffice:
     image: "imlteam/iml-postoffice:6.2.0"
     hostname: "iml-postoffice"
+    logging: *default-logging
     build:
       context: ../
       dockerfile: ./docker/iml-postoffice.dockerfile
@@ -444,6 +476,7 @@ services:
   iml-timer:
     image: "imlteam/iml-timer:6.2.0"
     hostname: "iml-timer"
+    logging: *default-logging
     build:
       context: ../
       dockerfile: ./docker/iml-timer.dockerfile
@@ -459,6 +492,7 @@ services:
       - "manager-config:/var/lib/chroma"
   setup:
     image: "imlteam/manager-setup:6.2.0"
+    logging: *default-logging
     command: ["tail", "-f", "/dev/null"]
     build:
       context: .

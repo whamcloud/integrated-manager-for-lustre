@@ -5,14 +5,13 @@
 use crate::{
     db::{
         AuthGroupRecord, AuthUserGroupRecord, AuthUserRecord, ContentTypeRecord,
-        CorosyncConfigurationRecord, Id, LnetConfigurationRecord, ManagedTargetMountRecord,
+        CorosyncConfigurationRecord, Id, LnetConfigurationRecord, ManagedTargetRecord,
         OstPoolOstsRecord, OstPoolRecord, PacemakerConfigurationRecord, StratagemConfiguration,
         TargetRecord, VolumeNodeRecord, VolumeRecord,
     },
     sfa::{SfaController, SfaDiskDrive, SfaEnclosure, SfaJob, SfaPowerSupply, SfaStorageSystem},
     snapshot::{SnapshotInterval, SnapshotRecord, SnapshotRetention},
-    Alert, CompositeId, EndpointNameSelf, Filesystem, Host, Label, LockChange, Target,
-    TargetConfParam, ToCompositeId,
+    Alert, CompositeId, EndpointNameSelf, Filesystem, Host, Label, LockChange, ToCompositeId,
 };
 use im::{HashMap, HashSet};
 use std::{
@@ -99,7 +98,6 @@ pub struct Cache {
     pub group: HashMap<i32, AuthGroupRecord>,
     pub host: HashMap<i32, Host>,
     pub lnet_configuration: HashMap<i32, LnetConfigurationRecord>,
-    pub managed_target_mount: HashMap<i32, ManagedTargetMountRecord>,
     pub ost_pool: HashMap<i32, OstPoolRecord>,
     pub ost_pool_osts: HashMap<i32, OstPoolOstsRecord>,
     pub sfa_disk_drive: HashMap<i32, SfaDiskDrive>,
@@ -112,7 +110,7 @@ pub struct Cache {
     pub snapshot_interval: HashMap<i32, SnapshotInterval>,
     pub snapshot_retention: HashMap<i32, SnapshotRetention>,
     pub stratagem_config: HashMap<i32, StratagemConfiguration>,
-    pub target: HashMap<i32, Target<TargetConfParam>>,
+    pub target: HashMap<i32, ManagedTargetRecord>,
     pub target_record: HashMap<i32, TargetRecord>,
     pub user: HashMap<i32, AuthUserRecord>,
     pub user_group: HashMap<i32, AuthUserGroupRecord>,
@@ -130,7 +128,6 @@ pub struct ArcCache {
     pub group: HashMap<i32, Arc<AuthGroupRecord>>,
     pub host: HashMap<i32, Arc<Host>>,
     pub lnet_configuration: HashMap<i32, Arc<LnetConfigurationRecord>>,
-    pub managed_target_mount: HashMap<i32, Arc<ManagedTargetMountRecord>>,
     pub ost_pool: HashMap<i32, Arc<OstPoolRecord>>,
     pub ost_pool_osts: HashMap<i32, Arc<OstPoolOstsRecord>>,
     pub pacemaker_configuration: HashMap<i32, Arc<PacemakerConfigurationRecord>>,
@@ -144,7 +141,7 @@ pub struct ArcCache {
     pub snapshot_interval: HashMap<i32, Arc<SnapshotInterval>>,
     pub snapshot_retention: HashMap<i32, Arc<SnapshotRetention>>,
     pub stratagem_config: HashMap<i32, Arc<StratagemConfiguration>>,
-    pub target: HashMap<i32, Arc<Target<TargetConfParam>>>,
+    pub target: HashMap<i32, Arc<ManagedTargetRecord>>,
     pub target_record: HashMap<i32, Arc<TargetRecord>>,
     pub user: HashMap<i32, Arc<AuthUserRecord>>,
     pub user_group: HashMap<i32, Arc<AuthUserGroupRecord>>,
@@ -165,7 +162,6 @@ impl Cache {
             RecordId::Host(id) => self.host.remove(&id).is_some(),
             RecordId::LnetConfiguration(id) => self.lnet_configuration.remove(&id).is_some(),
             RecordId::ContentType(id) => self.content_type.remove(&id).is_some(),
-            RecordId::ManagedTargetMount(id) => self.managed_target_mount.remove(&id).is_some(),
             RecordId::OstPool(id) => self.ost_pool.remove(&id).is_some(),
             RecordId::OstPoolOsts(id) => self.ost_pool_osts.remove(&id).is_some(),
             RecordId::PacemakerConfiguration(id) => {
@@ -212,9 +208,6 @@ impl Cache {
             }
             Record::LnetConfiguration(x) => {
                 self.lnet_configuration.insert(x.id(), x);
-            }
-            Record::ManagedTargetMount(x) => {
-                self.managed_target_mount.insert(x.id(), x);
             }
             Record::OstPool(x) => {
                 self.ost_pool.insert(x.id(), x);
@@ -300,7 +293,6 @@ impl ArcCache {
             RecordId::Host(id) => self.host.remove(&id).is_some(),
             RecordId::ContentType(id) => self.content_type.remove(&id).is_some(),
             RecordId::LnetConfiguration(id) => self.lnet_configuration.remove(&id).is_some(),
-            RecordId::ManagedTargetMount(id) => self.managed_target_mount.remove(&id).is_some(),
             RecordId::OstPool(id) => self.ost_pool.remove(&id).is_some(),
             RecordId::OstPoolOsts(id) => self.ost_pool_osts.remove(&id).is_some(),
             RecordId::PacemakerConfiguration(id) => {
@@ -347,9 +339,6 @@ impl ArcCache {
             }
             Record::LnetConfiguration(x) => {
                 self.lnet_configuration.insert(x.id(), Arc::new(x));
-            }
-            Record::ManagedTargetMount(x) => {
-                self.managed_target_mount.insert(x.id(), Arc::new(x));
             }
             Record::OstPool(x) => {
                 self.ost_pool.insert(x.id(), Arc::new(x));
@@ -451,7 +440,6 @@ impl From<&Cache> for ArcCache {
             group: hashmap_to_arc_hashmap(&cache.group),
             host: hashmap_to_arc_hashmap(&cache.host),
             lnet_configuration: hashmap_to_arc_hashmap(&cache.lnet_configuration),
-            managed_target_mount: hashmap_to_arc_hashmap(&cache.managed_target_mount),
             ost_pool: hashmap_to_arc_hashmap(&cache.ost_pool),
             ost_pool_osts: hashmap_to_arc_hashmap(&cache.ost_pool_osts),
             pacemaker_configuration: hashmap_to_arc_hashmap(&cache.pacemaker_configuration),
@@ -485,7 +473,6 @@ impl From<&ArcCache> for Cache {
             group: arc_hashmap_to_hashmap(&cache.group),
             host: arc_hashmap_to_hashmap(&cache.host),
             lnet_configuration: arc_hashmap_to_hashmap(&cache.lnet_configuration),
-            managed_target_mount: arc_hashmap_to_hashmap(&cache.managed_target_mount),
             ost_pool: arc_hashmap_to_hashmap(&cache.ost_pool),
             ost_pool_osts: arc_hashmap_to_hashmap(&cache.ost_pool_osts),
             pacemaker_configuration: arc_hashmap_to_hashmap(&cache.pacemaker_configuration),
@@ -520,7 +507,6 @@ pub enum Record {
     Group(AuthGroupRecord),
     Host(Host),
     LnetConfiguration(LnetConfigurationRecord),
-    ManagedTargetMount(ManagedTargetMountRecord),
     OstPool(OstPoolRecord),
     OstPoolOsts(OstPoolOstsRecord),
     PacemakerConfiguration(PacemakerConfigurationRecord),
@@ -534,7 +520,7 @@ pub enum Record {
     SnapshotInterval(SnapshotInterval),
     SnapshotRetention(SnapshotRetention),
     StratagemConfig(StratagemConfiguration),
-    Target(Target<TargetConfParam>),
+    Target(ManagedTargetRecord),
     TargetRecord(TargetRecord),
     User(AuthUserRecord),
     UserGroup(AuthUserGroupRecord),
@@ -551,7 +537,6 @@ pub enum ArcRecord {
     Group(Arc<AuthGroupRecord>),
     Host(Arc<Host>),
     LnetConfiguration(Arc<LnetConfigurationRecord>),
-    ManagedTargetMount(Arc<ManagedTargetMountRecord>),
     OstPool(Arc<OstPoolRecord>),
     OstPoolOsts(Arc<OstPoolOstsRecord>),
     PacemakerConfiguration(Arc<PacemakerConfigurationRecord>),
@@ -565,7 +550,7 @@ pub enum ArcRecord {
     SnapshotInterval(Arc<SnapshotInterval>),
     SnapshotRetention(Arc<SnapshotRetention>),
     StratagemConfig(Arc<StratagemConfiguration>),
-    Target(Arc<Target<TargetConfParam>>),
+    Target(Arc<ManagedTargetRecord>),
     TargetRecord(Arc<TargetRecord>),
     User(Arc<AuthUserRecord>),
     UserGroup(Arc<AuthUserGroupRecord>),
@@ -583,7 +568,6 @@ impl From<Record> for ArcRecord {
             Record::Group(x) => Self::Group(Arc::new(x)),
             Record::Host(x) => Self::Host(Arc::new(x)),
             Record::LnetConfiguration(x) => Self::LnetConfiguration(Arc::new(x)),
-            Record::ManagedTargetMount(x) => Self::ManagedTargetMount(Arc::new(x)),
             Record::OstPool(x) => Self::OstPool(Arc::new(x)),
             Record::OstPoolOsts(x) => Self::OstPoolOsts(Arc::new(x)),
             Record::PacemakerConfiguration(x) => Self::PacemakerConfiguration(Arc::new(x)),
@@ -617,7 +601,6 @@ pub enum RecordId {
     Group(i32),
     Host(i32),
     LnetConfiguration(i32),
-    ManagedTargetMount(i32),
     OstPool(i32),
     OstPoolOsts(i32),
     PacemakerConfiguration(i32),
@@ -650,7 +633,6 @@ impl Deref for RecordId {
             | Self::Filesystem(x)
             | Self::Group(x)
             | Self::Host(x)
-            | Self::ManagedTargetMount(x)
             | Self::OstPool(x)
             | Self::OstPoolOsts(x)
             | Self::PacemakerConfiguration(x)

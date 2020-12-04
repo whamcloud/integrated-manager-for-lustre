@@ -3,7 +3,7 @@ from django.contrib.contenttypes.models import ContentType
 from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.models import ManagedMgs, ManagedFilesystem, ManagedOst, ManagedMdt, RebootHostJob, ShutdownHostJob
-from tests.unit.chroma_core.helpers import synthetic_volume, synthetic_host
+from tests.unit.chroma_core.helpers import create_simple_fs, synthetic_host
 
 
 class TestAvailableJobs(IMLUnitTestCase):
@@ -31,14 +31,16 @@ class TestAvailableJobs(IMLUnitTestCase):
 
         self.JobScheduler = JobScheduler
         self.js = JobScheduler()
-        volume = synthetic_volume(with_storage=False)
 
         # Create object before ObjectCache init, so they are in the cache.
         self.host = synthetic_host()
-        self.mgs = ManagedMgs.objects.create(volume=volume)
-        self.fs = ManagedFilesystem.objects.create(name="mgsfs", mgs=self.mgs)
-        self.mdt = ManagedMdt.objects.create(volume=volume, filesystem=self.fs, index=1)
-        self.ost = ManagedOst.objects.create(volume=volume, filesystem=self.fs, index=1)
+
+        (mgt, fs, mdt, ost) = create_simple_fs()
+
+        self.mgs = mgt
+        self.fs = fs
+        self.mdt = mdt
+        self.ost = ost
 
         # If you create object after init of this case, they will not be in it.
         ObjectCache.getInstance()

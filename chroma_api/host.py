@@ -2,9 +2,7 @@
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
 
-import re
 from collections import defaultdict
-from collections import namedtuple
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 from chroma_core.services import log_register
 from tastypie.validation import Validation
@@ -13,13 +11,10 @@ from chroma_api.validation_utils import validate
 
 import json
 
-
-from chroma_core.models import ManagedHost, Nid, ManagedFilesystem, ServerProfile, LustreClientMount, Command
-from chroma_core.models import LNetConfiguration, NetworkInterface
-
-from django.shortcuts import get_object_or_404
-from django.db.models import Q
-from tastypie.bundle import Bundle
+from chroma_core.models.host import ManagedHost
+from chroma_core.models.client_mount import LustreClientMount
+from chroma_core.models.server_profile import ServerProfile
+from chroma_core.models.nid import Nid
 from tastypie.exceptions import ImmediateHttpResponse
 
 
@@ -27,15 +22,12 @@ import tastypie.http as http
 from tastypie.resources import Resource
 from tastypie import fields
 from chroma_api.utils import (
-    custom_response,
     StatefulModelResource,
     dehydrate_command,
     BulkResourceOperation,
 )
 from chroma_api.authentication import AnonymousAuthentication, PatchedDjangoAuthorization
 from chroma_api.authentication import PermissionAuthorization
-from iml_common.lib.evaluator import safe_eval
-from chroma_api.utils import filter_fields_to_type
 from chroma_api.chroma_model_resource import ChromaModelResource
 
 log = log_register(__name__)
@@ -148,21 +140,6 @@ class ClientMountResource(ChromaModelResource):
 
         filtering = {"host": ["exact"], "filesystem": ["exact"]}
 
-    def prepare_mount(self, client_mount):
-        return self.alter_detail_data_to_serialize(None, self.full_dehydrate(self.build_bundle(obj=client_mount))).data
-
-    @validate
-    def obj_create(self, bundle, **kwargs):
-        request = bundle.request
-        host = self.fields["host"].hydrate(bundle).obj
-        filesystem = ManagedFilesystem.objects.get(name=bundle.data["filesystem"])
-        mountpoint = bundle.data["mountpoint"]
-
-        client_mount = JobSchedulerClient.create_client_mount(host, filesystem, mountpoint)
-
-        args = dict(client_mount=self.prepare_mount(client_mount))
-        raise custom_response(self, request, http.HttpAccepted, args)
-
 
 class HostResource(StatefulModelResource, BulkResourceOperation):
     """
@@ -174,8 +151,6 @@ class HostResource(StatefulModelResource, BulkResourceOperation):
     """
 
     nids = fields.ListField(null=True)
-    member_of_active_filesystem = fields.BooleanField()
-    client_mounts = fields.ListField(null=True)
     root_pw = fields.CharField(help_text="ssh root password to new server.")
     private_key = fields.CharField(help_text="ssh private key matching a " "public key on the new server.")
     private_key_passphrase = fields.CharField(help_text="passphrase to " "decrypt private key")
@@ -197,20 +172,6 @@ class HostResource(StatefulModelResource, BulkResourceOperation):
     def dehydrate_nids(self, bundle):
         return [n.nid_string for n in Nid.objects.filter(lnet_configuration=bundle.obj.lnet_configuration)]
 
-    def dehydrate_member_of_active_filesystem(self, bundle):
-        return bundle.obj.member_of_active_filesystem
-
-    def dehydrate_client_mounts(self, bundle):
-        from chroma_core.lib.cache import ObjectCache
-        from chroma_core.models import LustreClientMount
-
-        search = lambda cm: cm.host == bundle.obj
-        mounts = ObjectCache.get(LustreClientMount, search)
-        return [
-            {"filesystem_name": mount.filesystem, "mountpoints": mount.mountpoints, "state": mount.state}
-            for mount in mounts
-        ]
-
     class Meta:
         queryset = ManagedHost.objects.select_related("lnet_configuration").prefetch_related(
             "lnet_configuration__nid_set"
@@ -226,17 +187,15 @@ class HostResource(StatefulModelResource, BulkResourceOperation):
             "nodename",
             "fqdn",
             "nids",
-            "member_of_active_filesystem",
             "needs_update",
             "boot_time",
-            "client_mounts",
         ]
         # HYD-2256: remove these fields when other auth schemes work
         readonly += ["root_pw", "private_key_passphrase", "private_key"]
         validation = HostValidation()
         always_return_data = True
 
-        filtering = {"id": ["exact"], "fqdn": ["exact", "startswith"], "role": ["exact"]}
+        filtering = {"id": ["exact"], "fqdn": ["exact", "startswith"]}
 
     def put_list(self, request, **kwargs):
         """
@@ -335,40 +294,10 @@ class HostResource(StatefulModelResource, BulkResourceOperation):
 
     def apply_filters(self, request, filters=None):
         objects = super(HostResource, self).apply_filters(request, filters)
-        try:
-            try:
-                fs = ManagedFilesystem.objects.get(pk=request.GET["filesystem_id"])
-            except ManagedFilesystem.DoesNotExist:
-                objects = objects.filter(id=-1)  # No filesystem so we want to produce an empty list.
-            else:
-                objects = objects.filter(
-                    (
-                        Q(managedtargetmount__target__managedmdt__filesystem=fs)
-                        | Q(managedtargetmount__target__managedost__filesystem=fs)
-                    )
-                    | Q(managedtargetmount__target__id=fs.mgs.id)
-                )
-        except KeyError:
-            # Not filtering on filesystem_id
-            pass
 
         # convenience filter for the UI client
         if request.GET.get("worker", False):
             objects = objects.filter(server_profile__worker=True)
-
-        try:
-            from chroma_api.target import KIND_TO_MODEL_NAME
-
-            server_role = request.GET["role"].upper()
-        except KeyError:
-            # No 'role' argument
-            pass
-        else:
-            target_model = KIND_TO_MODEL_NAME["%sT" % server_role[:-1]]
-            objects = objects.filter(
-                Q(managedtargetmount__target__content_type__model=target_model)
-                & Q(managedtargetmount__target__not_deleted=True)
-            )
 
         return objects.distinct()
 

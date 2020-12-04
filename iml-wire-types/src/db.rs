@@ -230,56 +230,22 @@ impl Name for VolumeNodeRecord {
     }
 }
 
-/// Record from the `chroma_core_managedtargetmount` table
-#[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
-pub struct ManagedTargetMountRecord {
-    pub id: i32,
-    pub host_id: i32,
-    pub mount_point: Option<String>,
-    pub volume_node_id: i32,
-    pub primary: bool,
-    pub target_id: i32,
-    pub not_deleted: Option<bool>,
-}
-
-impl Id for ManagedTargetMountRecord {
-    fn id(&self) -> i32 {
-        self.id
-    }
-}
-
-impl NotDeleted for ManagedTargetMountRecord {
-    fn not_deleted(&self) -> bool {
-        not_deleted(self.not_deleted)
-    }
-}
-
-pub const MANAGED_TARGET_MOUNT_TABLE_NAME: TableName = TableName("chroma_core_managedtargetmount");
-
-impl Name for ManagedTargetMountRecord {
-    fn table_name() -> TableName<'static> {
-        MANAGED_TARGET_MOUNT_TABLE_NAME
-    }
-}
-
 /// Record from the `chroma_core_managedtarget` table
-#[derive(serde::Deserialize, Debug)]
+#[derive(Clone, Debug, Eq, PartialEq, serde::Deserialize, serde::Serialize)]
 pub struct ManagedTargetRecord {
-    id: i32,
-    state_modified_at: String,
-    state: String,
-    immutable_state: bool,
-    name: Option<String>,
-    uuid: Option<String>,
-    ha_label: Option<String>,
-    volume_id: i32,
-    inode_size: Option<i32>,
-    bytes_per_inode: Option<i32>,
-    inode_count: Option<u64>,
-    reformat: bool,
-    active_mount_id: Option<i32>,
-    not_deleted: Option<bool>,
-    content_type_id: Option<i32>,
+    pub id: i32,
+    pub state_modified_at: DateTime<Utc>,
+    pub state: String,
+    pub immutable_state: bool,
+    pub name: Option<String>,
+    pub uuid: Option<String>,
+    pub ha_label: Option<String>,
+    pub inode_size: Option<i32>,
+    pub bytes_per_inode: Option<i32>,
+    pub inode_count: Option<i64>,
+    pub reformat: bool,
+    pub not_deleted: Option<bool>,
+    pub content_type_id: Option<i32>,
 }
 
 impl Id for ManagedTargetRecord {
@@ -302,6 +268,58 @@ impl Name for ManagedTargetRecord {
     }
 }
 
+impl ToCompositeId for ManagedTargetRecord {
+    fn composite_id(&self) -> CompositeId {
+        CompositeId(self.content_type_id.unwrap(), self.id)
+    }
+}
+
+impl ToCompositeId for &ManagedTargetRecord {
+    fn composite_id(&self) -> CompositeId {
+        CompositeId(self.content_type_id.unwrap(), self.id)
+    }
+}
+
+impl Label for ManagedTargetRecord {
+    fn label(&self) -> &str {
+        self.name.as_deref().unwrap()
+    }
+}
+
+impl Label for &ManagedTargetRecord {
+    fn label(&self) -> &str {
+        &self.name.as_deref().unwrap()
+    }
+}
+
+impl EndpointName for ManagedTargetRecord {
+    fn endpoint_name() -> &'static str {
+        "target"
+    }
+}
+
+impl ManagedTargetRecord {
+    pub fn get_kind(&self) -> TargetKind {
+        get_kind(self.label())
+    }
+}
+
+#[derive(serde::Deserialize, serde::Serialize, Clone, Copy, Debug, Eq, PartialEq)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum TargetKind {
+    Mgt,
+    Mdt,
+    Ost,
+}
+
+fn get_kind(x: &str) -> TargetKind {
+    match x {
+        "MGS" => TargetKind::Mgt,
+        name if name.contains("-MDT") => TargetKind::Mdt,
+        _ => TargetKind::Ost,
+    }
+}
+
 /// A Lustre Target
 #[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -315,10 +333,8 @@ pub struct TargetRecord {
     pub dev_path: Option<String>,
     /// The `host.id` of the host running this target
     pub active_host_id: Option<i32>,
-    /// The list of `hosts.id`s the target can be mounted on.
-    ///
-    /// *Note*. This list represents where the backing storage can be mounted,
-    /// it does not represent any HA configuration.
+    /// The list of `hosts.id`s the target can be mounted on
+    /// taking HA configuration into account.
     pub host_ids: Vec<i32>,
     /// The list of `filesystem.name`s this target belongs to.
     /// Only an `MGS` may have more than one filesystem.
@@ -340,6 +356,24 @@ impl Id for TargetRecord {
 impl Id for &TargetRecord {
     fn id(&self) -> i32 {
         self.id
+    }
+}
+
+impl Label for TargetRecord {
+    fn label(&self) -> &str {
+        &self.name
+    }
+}
+
+impl Label for &TargetRecord {
+    fn label(&self) -> &str {
+        &self.name
+    }
+}
+
+impl TargetRecord {
+    pub fn get_kind(&self) -> TargetKind {
+        get_kind(self.name.as_str())
     }
 }
 

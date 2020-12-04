@@ -4,20 +4,10 @@
 # license that can be found in the LICENSE file.
 
 
-import json
 from itertools import chain
 from chroma_core.services import log_register
-
-from django.db import transaction
-from django.db.models import Q
-
-from chroma_core.models.target import ManagedTarget, TargetRecoveryInfo, TargetRecoveryAlert
-from chroma_core.models.host import ManagedHost, VolumeNode
-from chroma_core.models.client_mount import LustreClientMount
-from chroma_core.models.filesystem import ManagedFilesystem
+from chroma_core.models.host import ManagedHost
 from chroma_core.services.job_scheduler import job_scheduler_notify
-from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
-from chroma_core.models import ManagedTargetMount
 from iml_common.lib.date_time import IMLDateTime
 from iml_common.lib.package_version_info import VersionInfo
 
@@ -44,9 +34,6 @@ class UpdateScan(object):
 
     def audit_host(self):
         self.update_packages(self.host_data.get("packages"))
-        self.update_resource_locations()
-
-        self.update_target_mounts()
 
     def run(self, host_id, host_data):
         host = ManagedHost.objects.get(pk=host_id)
@@ -123,112 +110,3 @@ class UpdateScan(object):
 
         log.info("update_packages(%s): updates=%s" % (self.host, updates))
         job_scheduler_notify.notify(self.host, self.started_at, {"needs_update": updates})
-
-    def update_target_mounts(self):
-        # If mounts is None then nothing changed since the last update and so we can just return.
-        # Not the same as [] empty list which means no mounts
-        if self.host_data["mounts"] is None:
-            return
-
-        # Loop over all mountables we expected on this host, whether they
-        # were actually seen in the results or not.
-        mounted_uuids = dict([(str(m["fs_uuid"]), m) for m in self.host_data["mounts"]])
-        for target_mount in ManagedTargetMount.objects.filter(host=self.host):
-
-            # Mounted-ness
-            # ============
-            mounted_locally = target_mount.target.uuid in mounted_uuids
-
-            # Recovery status
-            # ===============
-            if mounted_locally:
-                mount_info = mounted_uuids[target_mount.target.uuid]
-                recovery_status = mount_info["recovery_status"]
-            else:
-                recovery_status = {}
-
-            # Update to active_mount and alerts for monitor-only
-            # targets done here instead of resource_locations
-            if target_mount.target.immutable_state:
-                target = target_mount.target
-                if mounted_locally:
-                    job_scheduler_notify.notify(
-                        target,
-                        self.started_at,
-                        {"state": "mounted", "active_mount_id": target_mount.id},
-                        ["mounted", "unmounted"],
-                    )
-                elif not mounted_locally and target.active_mount == target_mount:
-                    log.debug("clearing active_mount, %s %s", self.started_at, self.host)
-
-                    job_scheduler_notify.notify(
-                        target,
-                        self.started_at,
-                        {"state": "unmounted", "active_mount_id": None},
-                        ["mounted", "unmounted"],
-                    )
-
-            with transaction.atomic():
-                if target_mount.target.active_mount is None:
-                    TargetRecoveryInfo.update(target_mount.target, {})
-                    TargetRecoveryAlert.notify(target_mount.target, False)
-                elif mounted_locally:
-                    recovering = TargetRecoveryInfo.update(target_mount.target, recovery_status)
-                    TargetRecoveryAlert.notify(target_mount.target, recovering)
-
-    def update_resource_locations(self):
-        # If resource_locations is None then nothing changed since the last update and so we can just return.
-        # Not the same as [] empty list which means no resource_locations
-        if self.host_data["resource_locations"] is None:
-            return
-
-        if "crm_mon_error" in self.host_data["resource_locations"]:
-            # Means that it was not possible to obtain a
-            # list from corosync: corosync may well be absent if
-            # we're monitoring a non-chroma-managed monitor-only
-            # system.  But if there are managed mounts
-            # then this is a problem.
-            crm_mon_error = self.host_data["resource_locations"]["crm_mon_error"]
-            if ManagedTarget.objects.filter(immutable_state=False, managedtargetmount__host=self.host).count():
-                log.error(
-                    "Got no resource_locations from host %s, but there are chroma-configured mounts on that server!\n"
-                    "crm_mon returned rc=%s,stdout=%s,stderr=%s"
-                    % (self.host, crm_mon_error["rc"], crm_mon_error["stdout"], crm_mon_error["stderr"])
-                )
-            return
-
-        for resource_name, node_name in self.host_data["resource_locations"].items():
-            try:
-                target = ManagedTarget.objects.get(ha_label=resource_name)
-            except ManagedTarget.DoesNotExist:
-                # audit_log.warning("Resource %s on host %s is not a known target" % (resource_name, self.host))
-                continue
-
-            # If we're operating on a Managed* rather than a purely monitored target
-            if not target.immutable_state:
-                if node_name is None:
-                    active_mount = None
-                else:
-                    try:
-                        host = ManagedHost.objects.get(Q(nodename=node_name) | Q(fqdn=node_name))
-                        try:
-                            active_mount = ManagedTargetMount.objects.get(target=target, host=host)
-                        except ManagedTargetMount.DoesNotExist:
-                            log.warning(
-                                "Resource for target '%s' is running on host '%s', but there is no such TargetMount"
-                                % (target, host)
-                            )
-                            active_mount = None
-                    except ManagedHost.DoesNotExist:
-                        log.warning("Resource location node '%s' does not match any Host" % (node_name))
-                        active_mount = None
-
-                job_scheduler_notify.notify(
-                    target,
-                    self.started_at,
-                    {
-                        "state": ["unmounted", "mounted"][active_mount is not None],
-                        "active_mount_id": None if active_mount is None else active_mount.id,
-                    },
-                    ["mounted", "unmounted"],
-                )

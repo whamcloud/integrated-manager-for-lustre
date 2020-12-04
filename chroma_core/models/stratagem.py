@@ -2,21 +2,17 @@
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
 
-import json
-import logging
 import os
 import requests
 
-from os import path
-from toolz.functoolz import pipe, partial, flip
-from settings import SERVER_HTTP_URL, TIMER_PROXY_PASS
+from settings import TIMER_PROXY_PASS
 from django.db import models
 from django.db.models import CASCADE, Q
 from django.contrib.postgres import fields
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.models.jobs import StatefulObject
 from chroma_core.models.utils import DeletableMetaclass
-from chroma_core.lib.job import Step, job_log, DependOn, DependAll, DependAny
+from chroma_core.lib.job import Step, job_log, DependOn, DependAll
 from chroma_core.lib.stratagem import (
     parse_stratagem_results_to_influx,
     record_stratagem_point,
@@ -27,22 +23,9 @@ from chroma_core.lib.stratagem import (
     submit_aggregated_data,
 )
 from chroma_core.lib.util import CommandLine, runningInDocker
-
-from chroma_core.models import Job
-from chroma_core.models import StateChangeJob, StateLock, StepResult, LustreClientMount
+from chroma_core.models.jobs import Job, StateChangeJob, StateLock
 from chroma_help.help import help_text
-from chroma_core.models import (
-    AlertEvent,
-    AlertStateBase,
-    ManagedFilesystem,
-    ManagedHost,
-    ManagedMdt,
-    ManagedTarget,
-    ManagedTargetMount,
-    StorageResourceRecord,
-    Volume,
-    VolumeNode,
-)
+from chroma_core.models.filesystem import ManagedFilesystem
 
 
 class StratagemConfiguration(StatefulObject):

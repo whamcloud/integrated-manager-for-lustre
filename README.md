@@ -43,3 +43,9 @@ You may need to install the sqlx-cli as well:
 ```sh
 cargo install sqlx-cli --no-default-features --features postgres --git https://github.com/jgrund/sqlx --branch support-offline-workspaces
 ```
+
+Precommit checks are run by [rusty-hook](https://github.com/swellaby/rusty-hook). To setup do the following:
+
+```sh
+cargo install --git https://github.com/swellaby/rusty-hook.git
+```

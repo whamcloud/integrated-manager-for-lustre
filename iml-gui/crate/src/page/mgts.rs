@@ -6,16 +6,19 @@ use crate::{
     components::{action_dropdown, alert_indicator, lock_indicator, resource_links, table, Placement},
     extensions::MergeAttrs,
     generated::css_classes::C,
+    get_target_from_managed_target,
+    page::filesystem::standby_hosts_view,
     route::RouteId,
     GMsg, Route,
 };
 use iml_api_utils::extract_id;
 use iml_wire_types::{
+    db::{ManagedTargetRecord, TargetKind},
     warp_drive::{ArcCache, ArcValuesExt, Locks},
-    Session, Target, TargetConfParam, TargetKind, ToCompositeId,
+    Label, Session, ToCompositeId,
 };
 use seed::{prelude::*, *};
-use std::{collections::HashMap, sync::Arc};
+use std::{borrow::Cow, collections::HashMap, sync::Arc};
 
 pub struct Row {
     dropdown: action_dropdown::Model,
@@ -24,15 +27,15 @@ pub struct Row {
 #[derive(Default)]
 pub struct Model {
     pub rows: HashMap<i32, Row>,
-    pub mgts: Vec<Arc<Target<TargetConfParam>>>,
+    pub mgts: Vec<Arc<ManagedTargetRecord>>,
 }
 
 #[derive(Clone, Debug)]
 pub enum Msg {
     ActionDropdown(Box<action_dropdown::IdMsg>),
-    SetTargets(Vec<Arc<Target<TargetConfParam>>>),
+    SetTargets(Vec<Arc<ManagedTargetRecord>>),
     RemoveTarget(i32),
-    AddTarget(Arc<Target<TargetConfParam>>),
+    AddTarget(Arc<ManagedTargetRecord>),
 }
 
 pub fn init(cache: &ArcCache, orders: &mut impl Orders<Msg, GMsg>) {
@@ -66,9 +69,9 @@ pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl O
                 })
                 .collect();
 
-            let mut mgts: Vec<_> = xs.into_iter().filter(|x| x.kind == TargetKind::Mgt).collect();
+            let mut mgts: Vec<_> = xs.into_iter().filter(|x| x.get_kind() == TargetKind::Mgt).collect();
 
-            mgts.sort_by(|a, b| natord::compare(&a.name, &b.name));
+            mgts.sort_by(|a, b| natord::compare(a.label(), b.label()));
 
             model.mgts = mgts;
         }
@@ -110,44 +113,59 @@ pub fn view(cache: &ArcCache, model: &Model, all_locks: &Locks, session: Option<
                 table::thead_view(vec![
                     table::th_view(plain!["Name"]),
                     table::th_view(plain!["Filesystems"]),
-                    table::th_view(plain!["Volume"]),
-                    table::th_view(plain!["Primary Server"]),
-                    table::th_view(plain!["Failover Server"]),
-                    table::th_view(plain!["Started on"]),
+                    table::th_view(plain!["Device Path"]),
+                    table::th_view(plain!["Active Server"]),
+                    table::th_view(plain!["Standby Servers"]),
                     th![],
                 ]),
                 tbody![model.mgts.iter().map(|x| match model.rows.get(&x.id) {
                     None => empty![],
                     Some(row) => {
-                        let fs = cache.filesystem.arc_values().filter(|y| {
-                            extract_id(&y.mgt)
-                                .and_then(|y| y.parse::<i32>().ok())
-                                .filter(|y| y == &x.id)
-                                .is_some()
-                        });
+                        let fs: Vec<_> = cache
+                            .filesystem
+                            .arc_values()
+                            .filter(|y| {
+                                extract_id(&y.mgt)
+                                    .and_then(|y| y.parse::<i32>().ok())
+                                    .filter(|y| y == &x.id)
+                                    .is_some()
+                            })
+                            .collect();
+
+                        let t = get_target_from_managed_target(cache, x);
+
+                        let active_host = t.and_then(|x| x.active_host_id).and_then(|x| cache.host.get(&x));
+
+                        let dev_path = t
+                            .and_then(|x| x.dev_path.as_ref())
+                            .map(|x| Cow::from(x.to_string()))
+                            .unwrap_or_else(|| Cow::from("---"));
 
                         tr![
                             table::td_center(vec![
                                 a![
                                     class![C.text_blue_500, C.hover__underline],
                                     attrs! {At::Href => Route::Target(RouteId::from(x.id)).to_href()},
-                                    &x.name
+                                    &x.label()
                                 ],
                                 lock_indicator::view(all_locks, &x).merge_attrs(class![C.ml_2]),
                                 alert_indicator(&cache.active_alert, &x, true, Placement::Right)
                                     .merge_attrs(class![C.ml_2]),
                             ]),
-                            table::td_center(fs.map(resource_links::fs_link).collect::<Vec<_>>()),
-                            table::td_center(resource_links::volume_link(x)),
+                            table::td_center(fs.into_iter().map(resource_links::fs_link).collect::<Vec<_>>()),
+                            table::td_center(plain![dev_path]),
                             table::td_center(resource_links::server_link(
-                                Some(&x.primary_server),
-                                &x.primary_server_name
+                                active_host.map(|x| &x.resource_uri),
+                                active_host.map(|x| x.fqdn.to_string()).as_deref().unwrap_or_default(),
                             )),
-                            table::td_center(resource_links::server_link(
-                                x.failover_servers.first(),
-                                &x.failover_server_name
-                            )),
-                            table::td_center(resource_links::server_link(x.active_host.as_ref(), &x.active_host_name)),
+                            table::td_center(match t {
+                                Some(t) => {
+                                    standby_hosts_view(cache, &t)
+                                }
+                                None => {
+                                    plain!["---"]
+                                }
+                            }),
                             td![
                                 class![C.p_3, C.text_center],
                                 action_dropdown::view(x.id, &row.dropdown, all_locks, session)

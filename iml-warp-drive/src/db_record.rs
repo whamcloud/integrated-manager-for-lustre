@@ -6,12 +6,11 @@ use iml_wire_types::{
     db::{
         AlertStateRecord, AuthGroupRecord, AuthUserGroupRecord, AuthUserRecord, ContentTypeRecord,
         CorosyncConfigurationRecord, FsRecord, LnetConfigurationRecord, ManagedHostRecord,
-        ManagedTargetMountRecord, ManagedTargetRecord, OstPoolOstsRecord, OstPoolRecord,
-        PacemakerConfigurationRecord, StratagemConfiguration, TableName, TargetRecord,
-        VolumeNodeRecord, VolumeRecord, ALERT_STATE_TABLE_NAME, AUTH_GROUP_TABLE_NAME,
-        AUTH_USER_GROUP_TABLE_NAME, AUTH_USER_TABLE_NAME, CONTENT_TYPE_TABLE_NAME,
-        COROSYNC_CONFIGURATION_TABLE_NAME, LNET_CONFIGURATION_TABLE_NAME,
-        MANAGED_FILESYSTEM_TABLE_NAME, MANAGED_HOST_TABLE_NAME, MANAGED_TARGET_MOUNT_TABLE_NAME,
+        ManagedTargetRecord, OstPoolOstsRecord, OstPoolRecord, PacemakerConfigurationRecord,
+        StratagemConfiguration, TableName, TargetRecord, VolumeNodeRecord, VolumeRecord,
+        ALERT_STATE_TABLE_NAME, AUTH_GROUP_TABLE_NAME, AUTH_USER_GROUP_TABLE_NAME,
+        AUTH_USER_TABLE_NAME, CONTENT_TYPE_TABLE_NAME, COROSYNC_CONFIGURATION_TABLE_NAME,
+        LNET_CONFIGURATION_TABLE_NAME, MANAGED_FILESYSTEM_TABLE_NAME, MANAGED_HOST_TABLE_NAME,
         MANAGED_TARGET_TABLE_NAME, OSTPOOL_OSTS_TABLE_NAME, OSTPOOL_TABLE_NAME,
         PACEMAKER_CONFIGURATION_TABLE_NAME, STRATAGEM_CONFIGURATION_TABLE_NAME, TARGET_TABLE_NAME,
         VOLUME_NODE_TABLE_NAME, VOLUME_TABLE_NAME,
@@ -43,7 +42,6 @@ pub enum DbRecord {
     ManagedFilesystem(FsRecord),
     ManagedHost(ManagedHostRecord),
     ManagedTarget(ManagedTargetRecord),
-    ManagedTargetMount(ManagedTargetMountRecord),
     OstPool(OstPoolRecord),
     OstPoolOsts(OstPoolOstsRecord),
     PacemakerConfiguration(PacemakerConfigurationRecord),
@@ -76,9 +74,6 @@ impl TryFrom<(TableName<'_>, serde_json::Value)> for DbRecord {
             }
             VOLUME_TABLE_NAME => serde_json::from_value(x).map(DbRecord::Volume),
             VOLUME_NODE_TABLE_NAME => serde_json::from_value(x).map(DbRecord::VolumeNode),
-            MANAGED_TARGET_MOUNT_TABLE_NAME => {
-                serde_json::from_value(x).map(DbRecord::ManagedTargetMount)
-            }
             MANAGED_TARGET_TABLE_NAME => serde_json::from_value(x).map(DbRecord::ManagedTarget),
             MANAGED_HOST_TABLE_NAME => serde_json::from_value(x).map(DbRecord::ManagedHost),
             ALERT_STATE_TABLE_NAME => serde_json::from_value(x).map(DbRecord::AlertState),

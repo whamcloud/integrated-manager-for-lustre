@@ -309,7 +309,7 @@ pub async fn basic_consume_one(
         .await;
 
     let x = x.transpose()?;
-    let x = x.ok_or_else(|| ImlRabbitError::ConsumerEndedError)?;
+    let x = x.ok_or(ImlRabbitError::ConsumerEndedError)?;
 
     Ok(x)
 }
@@ -431,13 +431,7 @@ mod tests {
         bind_queue(&ch, exchange_name, queue_name, "").await?;
 
         Ok(ch
-            .basic_get(
-                queue_name,
-                BasicGetOptions {
-                    no_ack: true,
-                    ..BasicGetOptions::default()
-                },
-            )
+            .basic_get(queue_name, BasicGetOptions { no_ack: true })
             .await?)
     }
 

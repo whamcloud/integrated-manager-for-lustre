@@ -541,3 +541,45 @@ pub async fn upsert_target_resource_managed_host(
 
     Ok(())
 }
+
+pub async fn update_chroma_ticket(
+    resources: &Vec<Resource>,
+    cluster_id: i32,
+    pool: &PgPool,
+) -> Result<(), ImlCorosyncError> {
+    let x = resources
+        .iter()
+        .filter(|x| x.resource_agent == "ocf::ddn:Ticketer")
+        .fold((vec![], vec![]), |mut acc, x| {
+            let state = if x.active { "granted" } else { "revoked" };
+
+            acc.0.push(state.to_string());
+
+            acc.1.push(x.id.to_string());
+
+            acc
+        });
+
+    sqlx::query!(
+        r#"
+            UPDATE chroma_core_ticket t
+            SET state = updates.state
+            FROM (
+                SELECT state, id
+                FROM UNNEST($1::text[], $2::text[])
+                AS t(state, id)
+            ) AS updates
+            WHERE
+                t.ha_label = updates.id
+                AND t.cluster_id = $3
+                AND t.not_deleted = 't'
+        "#,
+        &x.0,
+        &x.1,
+        cluster_id
+    )
+    .execute(pool)
+    .await?;
+
+    Ok(())
+}

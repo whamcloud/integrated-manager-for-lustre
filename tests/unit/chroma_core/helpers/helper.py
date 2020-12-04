@@ -3,8 +3,15 @@ import tempfile
 import uuid
 import mock
 
-from chroma_core.models import LogMessage
-from chroma_core.models import ServerProfile
+from chroma_core.models import (
+    LogMessage,
+    ManagedFilesystem,
+    ManagedMgs,
+    ManagedMdt,
+    ManagedOst,
+    ManagedTarget,
+    ServerProfile,
+)
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.services.job_scheduler.job_scheduler import JobScheduler
 from chroma_core.services.log import log_register
@@ -95,3 +102,72 @@ def load_default_profile():
         initial_state="managed",
     )
     default_sp.save()
+
+
+def create_simple_fs(fs_name="testfs"):
+    # Create the MGT
+    mgt = ManagedMgs.objects.create(
+        id=1,
+        state_modified_at="2020-11-11T23:52:23.938603+00:00",
+        state="unmounted",
+        immutable_state=False,
+        name="MGS",
+        uuid="uuid_mgt",
+        ha_label=None,
+        inode_size=None,
+        bytes_per_inode=None,
+        inode_count=None,
+        reformat=False,
+        not_deleted=True,
+    )
+    mgt.save()
+
+    ObjectCache.add(ManagedTarget, mgt.managedtarget_ptr)
+
+    # Create a filesystem using the mgt
+    fs = ManagedFilesystem.objects.create(mgs=mgt, name=fs_name, id=1, mdt_next_index=1, ost_next_index=1)
+    ObjectCache.add(ManagedFilesystem, fs)
+
+    # Create the mdt
+    mdt = ManagedMdt.objects.create(
+        id=2,
+        index=0,
+        filesystem_id=1,
+        state_modified_at="2020-11-11T23:52:23.938603+00:00",
+        state="unmounted",
+        immutable_state=False,
+        name="{}-MDT0000".format(fs_name),
+        uuid="uuid_mdt",
+        ha_label=None,
+        inode_size=None,
+        bytes_per_inode=None,
+        inode_count=None,
+        reformat=False,
+        not_deleted=True,
+    )
+    mdt.save()
+
+    ObjectCache.add(ManagedTarget, mdt.managedtarget_ptr)
+
+    # Create the ost
+    ost = ManagedOst.objects.create(
+        id=3,
+        index=0,
+        filesystem_id=1,
+        state_modified_at="2020-11-11T23:52:23.938603+00:00",
+        state="unmounted",
+        immutable_state=False,
+        name="{}-OST0000".format(fs_name),
+        uuid="uuid_ost0",
+        ha_label=None,
+        inode_size=None,
+        bytes_per_inode=None,
+        inode_count=None,
+        reformat=False,
+        not_deleted=True,
+    )
+    ost.save()
+
+    ObjectCache.add(ManagedTarget, ost.managedtarget_ptr)
+
+    return (mgt, fs, mdt, ost)

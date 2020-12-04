@@ -52,10 +52,7 @@ fn empty_str_to_none(x: String) -> Option<String> {
 }
 
 fn string_to_bool(x: String) -> bool {
-    match x.trim().to_lowercase().as_ref() {
-        "true" => true,
-        _ => false,
-    }
+    matches!(x.trim().to_lowercase().as_ref(), "true")
 }
 
 pub fn get_log_path() -> PathBuf {

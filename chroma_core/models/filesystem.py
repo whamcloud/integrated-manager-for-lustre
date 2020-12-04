@@ -2,14 +2,13 @@
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
 
-from toolz.functoolz import pipe, partial, flip
-
+import functools
+import operator
 from django.db import models
 from django.db.models import CASCADE
-from chroma_core.lib.job import DependOn, DependAll, Step, job_log
-from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst, FilesystemMember, ManagedTarget
-from chroma_core.models import NoNidsPresent
-from chroma_core.models import StatefulObject, StateChangeJob, StateLock, Job, AdvertisedJob
+from chroma_core.lib.job import DependOn, DependAll, Step
+from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst, FilesystemMember, ManagedTarget, ManagedHost
+from chroma_core.models import StatefulObject, StateChangeJob, Job, AdvertisedJob
 from chroma_core.models import DeletableDowncastableMetaclass
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.lib.util import target_label_split
@@ -97,17 +96,13 @@ class ManagedFilesystem(StatefulObject):
         return ManagedTarget.objects.filter((Q(managedmdt__filesystem=self) | Q(managedost__filesystem=self)))
 
     def get_servers(self):
-        from collections import defaultdict
+        from chroma_core.lib.graphql import get_targets
 
-        targets = self.get_targets()
-        servers = defaultdict(list)
-        for t in targets:
-            for tm in t.managedtargetmount_set.all():
-                servers[tm.host].append(tm)
+        xs = [x["host_ids"] for x in get_targets(fsname=self.name)]
 
-        # NB converting to dict because django templates don't place nice with defaultdict
-        # (http://stackoverflow.com/questions/4764110/django-template-cant-loop-defaultdict)
-        return dict(servers)
+        ids = set(functools.reduce(operator.iconcat, xs, []))
+
+        return ManagedHost.objects.filter(id__in=ids)
 
     def get_server_groups(self):
         """Return: Array(Array(ManagedHost)) """
@@ -120,16 +115,6 @@ class ManagedFilesystem(StatefulObject):
     def get_pools(self):
         return OstPool.objects.filter(filesystem=self)
 
-    def mgs_spec(self):
-        """Return a string which is foo in <foo>:/lustre for client mounts"""
-        return ":".join([",".join(nids) for nids in self.mgs.nids()])
-
-    def mount_path(self):
-        try:
-            return "%s:/%s" % (self.mgs_spec(), self.name)
-        except NoNidsPresent:
-            return None
-
     def __str__(self):
         return self.name
 
@@ -139,7 +124,7 @@ class ManagedFilesystem(StatefulObject):
 
         deps = []
 
-        mgs = ObjectCache.get_one(ManagedTarget, lambda t: t.id == self.mgs_id)
+        mgs = ObjectCache.get_one(ManagedTarget, lambda t: t.id == self.mgs_id, fill_on_miss=True)
 
         remove_state = "forgotten" if self.immutable_state else "removed"
 
@@ -166,117 +151,6 @@ class ManagedFilesystem(StatefulObject):
         "ManagedTarget": lambda mt: ManagedFilesystem.filter_by_target(mt),
         "FilesystemTicket": lambda fst: [fst.ticket],
     }
-
-
-class PurgeFilesystemStep(Step):
-    idempotent = True
-
-    def run(self, kwargs):
-        host = kwargs["host"]
-        mgs_device_path = kwargs["mgs_device_path"]
-        mgs_device_type = kwargs["mgs_device_type"]
-        fs = kwargs["filesystem"]
-
-        self.invoke_agent(
-            host,
-            "purge_configuration",
-            {"mgs_device_path": mgs_device_path, "mgs_device_type": mgs_device_type, "filesystem_name": fs.name},
-        )
-
-
-class RemoveFilesystemJob(StateChangeJob):
-    state_transition = StateChangeJob.StateTransition(ManagedFilesystem, "stopped", "removed")
-    stateful_object = "filesystem"
-    state_verb = "Remove"
-    filesystem = models.ForeignKey("ManagedFilesystem", on_delete=CASCADE)
-
-    display_group = Job.JOB_GROUPS.COMMON
-    display_order = 20
-
-    def get_requires_confirmation(self):
-        return True
-
-    class Meta:
-        app_label = "chroma_core"
-        ordering = ["id"]
-
-    @classmethod
-    def long_description(cls, stateful_object):
-        return help_text["remove_file_system"]
-
-    def description(self):
-        return "Remove file system %s from configuration" % self.filesystem.name
-
-    def create_locks(self):
-        locks = super(RemoveFilesystemJob, self).create_locks()
-        locks.append(
-            StateLock(
-                job=self,
-                locked_item=self.filesystem.mgs.managedtarget_ptr,
-                begin_state=None,
-                end_state=None,
-                write=True,
-            )
-        )
-        return locks
-
-    def get_deps(self):
-        deps = []
-
-        ticket = self.filesystem.get_ticket()
-        if ticket:
-            deps.append(DependOn(ticket, "revoked", fix_state="unavailable"))
-
-        mgs_target = ObjectCache.get_one(ManagedTarget, lambda t: t.id == self.filesystem.mgs_id)
-
-        # Can't start a MGT that hasn't made it past formatting.
-        if mgs_target.state not in ["unformatted", "formatted"]:
-            deps.append(DependOn(mgs_target, "mounted", fix_state="unavailable"))
-        return DependAll(deps)
-
-    def get_steps(self):
-        steps = []
-
-        mgs_target = ObjectCache.get_one(ManagedTarget, lambda t: t.id == self.filesystem.mgs_id)
-
-        # Only try to purge filesystem from MGT if the MGT has made it past
-        # being formatted (case where a filesystem was created but is being
-        # removed before it or its MGT got off the ground)
-        if mgs_target.state in ["unformatted", "formatted"]:
-            return steps
-
-        # Don't purge immutable filesystems. (Although how this gets called in that case is beyond me)
-        if self.filesystem.immutable_state:
-            return steps
-
-        # MGS needs to be started
-        if not mgs_target.active_mount:
-            raise RuntimeError("MGT needs to be running in order to remove the filesystem.")
-
-        steps.append(
-            (
-                PurgeFilesystemStep,
-                {
-                    "filesystem": self.filesystem,
-                    "mgs_device_path": mgs_target.active_mount.volume_node.path,
-                    "mgs_device_type": mgs_target.active_mount.volume_node.volume.storage_resource.to_resource_class().device_type(),
-                    "host": mgs_target.active_mount.host,
-                },
-            )
-        )
-
-        return steps
-
-    def on_success(self):
-        job_log.debug("on_success: mark_deleted on filesystem %s" % id(self.filesystem))
-
-        from chroma_core.models.target import ManagedMdt, ManagedOst
-
-        assert ManagedMdt.objects.filter(filesystem=self.filesystem).count() == 0
-        assert ManagedOst.objects.filter(filesystem=self.filesystem).count() == 0
-        self.filesystem.mark_deleted()
-
-        super(RemoveFilesystemJob, self).on_success()
 
 
 class StartStoppedFilesystemJob(StateChangeJob):
@@ -440,11 +314,10 @@ class ForgetFilesystemJob(StateChangeJob):
 
     @classmethod
     def long_description(cls, stateful_object):
-        return help_text["remove_file_system"]
+        return "Forget this filesystem on the manager. The actual filesystem will not be altered."
 
     def description(self):
-        modifier = "unmanaged" if self.filesystem.immutable_state else "managed"
-        return "Forget %s file system %s" % (modifier, self.filesystem.name)
+        return "Forget filesystem {}".format(self.filesystem.name)
 
     def on_success(self):
         super(ForgetFilesystemJob, self).on_success()
@@ -458,6 +331,9 @@ class ForgetFilesystemJob(StateChangeJob):
         ticket = self.filesystem.get_ticket()
         if ticket:
             deps.append(DependOn(ticket, "forgotten", fix_state=ticket.state))
+
+        for t in self.filesystem.get_filesystem_targets():
+            deps.append(DependOn(t, "forgotten"))
 
         return DependAll(deps)
 

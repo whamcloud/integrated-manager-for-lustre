@@ -6,10 +6,7 @@ use crate::error::Error;
 use futures::future::try_join_all;
 use iml_postgres::Client;
 use iml_wire_types::{
-    db::{
-        FsRecord, ManagedHostRecord, ManagedMdtRecord, ManagedOstRecord, ManagedTargetMountRecord,
-        ManagedTargetRecord, Name, OstPoolOstsRecord, OstPoolRecord,
-    },
+    db::{FsRecord, ManagedOstRecord, ManagedTargetRecord, Name, OstPoolOstsRecord, OstPoolRecord},
     Fqdn, OstPool,
 };
 use std::{collections::BTreeSet, sync::Arc};
@@ -68,23 +65,26 @@ impl PoolClient {
             0 => Err(Error::NotFound),
             1 => vr[0].try_get(0).map_err(Error::Postgres),
             _ => {
-                // check fqdn of managedhost (id)->(host_id)
-                // managedtargetmount (target_id)-> (via
-                // managedtarget.id) ->(managedtarget_ptr_id)
-                // managed{ost,mdt} (filesystem_id)->(id) filesystem
                 tracing::debug!("Multiple filesystems named {} found", fsname);
-                let union = format!(
-                    "SELECT managedtarget_ptr_id, filesystem_id FROM {} UNION SELECT managedtarget_ptr_id, filesystem_id FROM {}",
-                    ManagedMdtRecord::table_name(),
-                    ManagedOstRecord::table_name(),
-                );
-                let query = format!(
-                    "SELECT FS.id FROM {} AS FS INNER JOIN ({}) AS MTFS ON FS.id = MTFS.filesystem_id INNER JOIN {} AS MTM ON MTFS.managedtarget_ptr_id = MTM.target_id INNER JOIN {} AS MH ON MTM.host_id = MH.id WHERE FS.name = $1 AND MH.fqdn = $2 AND FS.not_deleted = True AND MTM.not_deleted = True AND MH.not_deleted = True",
-                    FsRecord::table_name(),
-                    union,
-                    ManagedTargetMountRecord::table_name(),
-                    ManagedHostRecord::table_name());
-                let s = self.client.prepare(&query).await?;
+                let query = r#"
+                    SELECT FS.id FROM chroma_core_managedfilesystem AS FS
+                    INNER JOIN (
+                        SELECT managedtarget_ptr_id, filesystem_id 
+                        FROM chroma_core_managedmdt 
+                        UNION 
+                        SELECT managedtarget_ptr_id, filesystem_id 
+                        FROM chroma_core_managedost
+                    ) AS MTFS ON FS.id = MTFS.filesystem_id
+                    INNER JOIN chroma_core_managedtarget AS MT ON MTFS.managedtarget_ptr_id = MT.id
+                    INNER JOIN target AS T on MT.uuid = T.uuid
+                    INNER JOIN chroma_core_managedhost AS MH ON MH.id = ANY(T.host_ids)
+                    WHERE FS.name = $1
+                    AND MH.fqdn = $2
+                    AND FS.not_deleted = True
+                    AND MT.not_deleted = True
+                    AND MH.not_deleted = True
+                "#;
+                let s = self.client.prepare(query).await?;
                 match self.client.query_one(&s, &[&fsname, &self.fqdn]).await {
                     Ok(row) => row.try_get(0).map_err(Error::Postgres),
                     Err(e) => {
