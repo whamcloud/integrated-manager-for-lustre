@@ -345,21 +345,24 @@ pub async fn setup_bare(config: Config) -> Result<Config, TestError> {
                     .await?;
             }
         },
-        TestType::Docker => match env::var("REPO_URI") {
-            Ok(x) => {
-                vagrant::provision_node(config.manager, "install-iml-docker-repouri")
-                    .await?
-                    .env("REPO_URI", x)
-                    .checked_status()
-                    .await?;
+        TestType::Docker => {
+            configure_docker_network(&[config.manager]).await?;
+            match env::var("REPO_URI") {
+                Ok(x) => {
+                    vagrant::provision_node(config.manager, "install-iml-docker-repouri")
+                        .await?
+                        .env("REPO_URI", x)
+                        .checked_status()
+                        .await?;
+                }
+                _ => {
+                    vagrant::provision_node(config.manager, "install-iml-docker-local")
+                        .await?
+                        .checked_status()
+                        .await?;
+                }
             }
-            _ => {
-                vagrant::provision_node(config.manager, "install-iml-docker-local")
-                    .await?
-                    .checked_status()
-                    .await?;
-            }
-        },
+        }
     };
 
     vagrant::up()
@@ -452,7 +455,7 @@ pub async fn deploy_servers(config: Config) -> Result<Config, TestError> {
         let hosts: Vec<String> = match config.test_type {
             TestType::Rpm => hosts.iter().map(|x| String::from(*x)).collect(),
             TestType::Docker => {
-                configure_docker_network(&config).await?;
+                configure_docker_network(&config.profile_map.to_server_list()).await?;
                 get_local_server_names(hosts)
             }
         };
@@ -491,8 +494,7 @@ pub async fn deploy_servers(config: Config) -> Result<Config, TestError> {
     Ok(config)
 }
 
-pub async fn configure_docker_network(config: &Config) -> Result<(), TestError> {
-    let host_list = config.profile_map.to_server_list();
+pub async fn configure_docker_network(host_list: &[&str]) -> Result<(), TestError> {
     // The configure-docker-network provisioner must be run individually on
     // each server node.
     tracing::debug!(
