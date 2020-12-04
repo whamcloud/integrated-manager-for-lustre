@@ -15,7 +15,6 @@ async fn test_docker_zfs_setup() -> Result<(), TestError> {
             ("base_client".into(), config.client_servers()),
         ],
         test_type: TestType::Docker,
-        ntp_server: NtpServer::HostOnly,
         fs_type: FsType::Zfs,
         ..config
     };

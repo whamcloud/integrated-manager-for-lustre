@@ -14,7 +14,6 @@ async fn test_docker_ldiskfs_setup() -> Result<(), TestError> {
             ("base_client".into(), config.client_servers()),
         ],
         test_type: TestType::Docker,
-        ntp_server: NtpServer::HostOnly,
         ..config
     };
 
