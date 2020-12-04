@@ -138,6 +138,8 @@ Vagrant.configure('2') do |config|
     # Admin / management network
     provision_mgmt_net adm, '10'
 
+    configure_docker_network adm
+
     provision_fence_agents adm
 
     provision_clush adm
