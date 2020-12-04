@@ -371,7 +371,7 @@ pub async fn setup_bare(config: Config) -> Result<Config, TestError> {
             }
         },
         TestType::Docker => {
-            configure_docker_network(&config).await?;
+            configure_docker_network(&[config.manager]).await?;
             match env::var("REPO_URI") {
                 Ok(x) => {
                     vagrant::provision_node(config.manager, "install-iml-docker-repouri")
@@ -479,7 +479,10 @@ pub async fn deploy_servers(config: Config) -> Result<Config, TestError> {
 
         let hosts: Vec<String> = match config.test_type {
             TestType::Rpm => hosts.iter().map(|x| String::from(*x)).collect(),
-            TestType::Docker => get_local_server_names(hosts),
+            TestType::Docker => {
+                configure_docker_network(&config.storage_servers()).await?;
+                get_local_server_names(hosts)
+            }
         };
 
         ssh::add_servers(&config.manager_ip, profile, hosts).await?;
@@ -516,8 +519,7 @@ pub async fn deploy_servers(config: Config) -> Result<Config, TestError> {
     Ok(config)
 }
 
-pub async fn configure_docker_network(config: &Config) -> Result<(), TestError> {
-    let host_list = config.all_hosts();
+pub async fn configure_docker_network(host_list: &[&str]) -> Result<(), TestError> {
     // The configure-docker-network provisioner must be run individually on
     // each server node.
     tracing::debug!(
