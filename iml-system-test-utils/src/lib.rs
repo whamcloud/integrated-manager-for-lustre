@@ -480,7 +480,7 @@ pub async fn deploy_servers(config: Config) -> Result<Config, TestError> {
         let hosts: Vec<String> = match config.test_type {
             TestType::Rpm => hosts.iter().map(|x| String::from(*x)).collect(),
             TestType::Docker => {
-                configure_docker_network(&config.storage_servers()).await?;
+                configure_docker_network(&config.profile_map.to_server_list()).await?;
                 get_local_server_names(hosts)
             }
         };
