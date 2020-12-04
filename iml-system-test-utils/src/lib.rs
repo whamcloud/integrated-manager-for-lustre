@@ -370,21 +370,24 @@ pub async fn setup_bare(config: Config) -> Result<Config, TestError> {
                     .await?;
             }
         },
-        TestType::Docker => match env::var("REPO_URI") {
-            Ok(x) => {
-                vagrant::provision_node(config.manager, "install-iml-docker-repouri")
-                    .await?
-                    .env("REPO_URI", x)
-                    .checked_status()
-                    .await?;
+        TestType::Docker => {
+            configure_docker_network(&config).await?;
+            match env::var("REPO_URI") {
+                Ok(x) => {
+                    vagrant::provision_node(config.manager, "install-iml-docker-repouri")
+                        .await?
+                        .env("REPO_URI", x)
+                        .checked_status()
+                        .await?;
+                }
+                _ => {
+                    vagrant::provision_node(config.manager, "install-iml-docker-local")
+                        .await?
+                        .checked_status()
+                        .await?;
+                }
             }
-            _ => {
-                vagrant::provision_node(config.manager, "install-iml-docker-local")
-                    .await?
-                    .checked_status()
-                    .await?;
-            }
-        },
+        }
     };
 
     vagrant::up()
@@ -842,8 +845,6 @@ pub async fn configure_docker_setup(config: &Config) -> Result<(), TestError> {
         .await?
         .checked_status()
         .await?;
-
-    configure_docker_network(&config).await?;
 
     Ok(())
 }
