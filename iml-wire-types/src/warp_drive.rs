@@ -151,38 +151,60 @@ pub struct ArcCache {
 
 impl Cache {
     /// Removes the record from the cache
-    pub fn remove_record(&mut self, x: RecordId) -> bool {
+    pub fn remove_record(&mut self, x: RecordId) -> Option<Record> {
         match x {
-            RecordId::ActiveAlert(id) => self.active_alert.remove(&id).is_some(),
-            RecordId::CorosyncConfiguration(id) => {
-                self.corosync_configuration.remove(&id).is_some()
+            RecordId::ActiveAlert(id) => self.active_alert.remove(&id).map(Record::ActiveAlert),
+            RecordId::CorosyncConfiguration(id) => self
+                .corosync_configuration
+                .remove(&id)
+                .map(Record::CorosyncConfiguration),
+            RecordId::Filesystem(id) => self.filesystem.remove(&id).map(Record::Filesystem),
+            RecordId::Group(id) => self.group.remove(&id).map(Record::Group),
+            RecordId::Host(id) => self.host.remove(&id).map(Record::Host),
+            RecordId::LnetConfiguration(id) => self
+                .lnet_configuration
+                .remove(&id)
+                .map(Record::LnetConfiguration),
+            RecordId::ContentType(id) => self.content_type.remove(&id).map(Record::ContentType),
+            RecordId::OstPool(id) => self.ost_pool.remove(&id).map(Record::OstPool),
+            RecordId::OstPoolOsts(id) => self.ost_pool_osts.remove(&id).map(Record::OstPoolOsts),
+            RecordId::PacemakerConfiguration(id) => self
+                .pacemaker_configuration
+                .remove(&id)
+                .map(Record::PacemakerConfiguration),
+            RecordId::SfaDiskDrive(id) => self.sfa_disk_drive.remove(&id).map(Record::SfaDiskDrive),
+            RecordId::SfaEnclosure(id) => self.sfa_enclosure.remove(&id).map(Record::SfaEnclosure),
+            RecordId::SfaStorageSystem(id) => self
+                .sfa_storage_system
+                .remove(&id)
+                .map(Record::SfaStorageSystem),
+            RecordId::SfaJob(id) => self.sfa_job.remove(&id).map(Record::SfaJob),
+            RecordId::SfaPowerSupply(id) => self
+                .sfa_power_supply
+                .remove(&id)
+                .map(Record::SfaPowerSupply),
+            RecordId::SfaController(id) => {
+                self.sfa_controller.remove(&id).map(Record::SfaController)
             }
-            RecordId::Filesystem(id) => self.filesystem.remove(&id).is_some(),
-            RecordId::Group(id) => self.group.remove(&id).is_some(),
-            RecordId::Host(id) => self.host.remove(&id).is_some(),
-            RecordId::LnetConfiguration(id) => self.lnet_configuration.remove(&id).is_some(),
-            RecordId::ContentType(id) => self.content_type.remove(&id).is_some(),
-            RecordId::OstPool(id) => self.ost_pool.remove(&id).is_some(),
-            RecordId::OstPoolOsts(id) => self.ost_pool_osts.remove(&id).is_some(),
-            RecordId::PacemakerConfiguration(id) => {
-                self.pacemaker_configuration.remove(&id).is_some()
-            }
-            RecordId::SfaDiskDrive(id) => self.sfa_disk_drive.remove(&id).is_some(),
-            RecordId::SfaEnclosure(id) => self.sfa_enclosure.remove(&id).is_some(),
-            RecordId::SfaStorageSystem(id) => self.sfa_storage_system.remove(&id).is_some(),
-            RecordId::SfaJob(id) => self.sfa_job.remove(&id).is_some(),
-            RecordId::SfaPowerSupply(id) => self.sfa_power_supply.remove(&id).is_some(),
-            RecordId::SfaController(id) => self.sfa_controller.remove(&id).is_some(),
-            RecordId::StratagemConfig(id) => self.stratagem_config.remove(&id).is_some(),
-            RecordId::Snapshot(id) => self.snapshot.remove(&id).is_some(),
-            RecordId::SnapshotInterval(id) => self.snapshot_interval.remove(&id).is_some(),
-            RecordId::SnapshotRetention(id) => self.snapshot_retention.remove(&id).is_some(),
-            RecordId::Target(id) => self.target.remove(&id).is_some(),
-            RecordId::TargetRecord(id) => self.target_record.remove(&id).is_some(),
-            RecordId::User(id) => self.user.remove(&id).is_some(),
-            RecordId::UserGroup(id) => self.user_group.remove(&id).is_some(),
-            RecordId::Volume(id) => self.volume.remove(&id).is_some(),
-            RecordId::VolumeNode(id) => self.volume_node.remove(&id).is_some(),
+            RecordId::StratagemConfig(id) => self
+                .stratagem_config
+                .remove(&id)
+                .map(Record::StratagemConfig),
+            RecordId::Snapshot(id) => self.snapshot.remove(&id).map(Record::Snapshot),
+            RecordId::SnapshotInterval(id) => self
+                .snapshot_interval
+                .remove(&id)
+                .map(Record::SnapshotInterval),
+            RecordId::SnapshotRetention(id) => self
+                .snapshot_retention
+                .remove(&id)
+                .map(Record::SnapshotRetention),
+            RecordId::Target(id) => self.target.remove(&id).map(Record::Target),
+            RecordId::TargetRecord(id) => self.target_record.remove(&id).map(Record::TargetRecord),
+            RecordId::User(id) => self.user.remove(&id).map(Record::User),
+            RecordId::UserGroup(id) => self.user_group.remove(&id).map(Record::UserGroup),
+            RecordId::Volume(id) => self.volume.remove(&id).map(Record::Volume),
+            RecordId::VolumeNode(id) => self.volume_node.remove(&id).map(Record::VolumeNode),
         }
     }
     /// Inserts the record into the cache
@@ -497,7 +519,7 @@ impl From<&ArcCache> for Cache {
 }
 
 #[allow(clippy::large_enum_variant)]
-#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq)]
 #[serde(tag = "tag", content = "payload")]
 pub enum Record {
     ActiveAlert(Alert),
@@ -620,6 +642,39 @@ pub enum RecordId {
     UserGroup(i32),
     Volume(i32),
     VolumeNode(i32),
+}
+
+impl From<&Record> for RecordId {
+    fn from(record: &Record) -> Self {
+        match record {
+            Record::ActiveAlert(x) => RecordId::ActiveAlert(x.id),
+            Record::ContentType(x) => RecordId::ContentType(x.id),
+            Record::CorosyncConfiguration(x) => RecordId::CorosyncConfiguration(x.id),
+            Record::Filesystem(x) => RecordId::Filesystem(x.id),
+            Record::Group(x) => RecordId::Group(x.id),
+            Record::Host(x) => RecordId::Host(x.id),
+            Record::LnetConfiguration(x) => RecordId::LnetConfiguration(x.id),
+            Record::OstPool(x) => RecordId::OstPool(x.id),
+            Record::OstPoolOsts(x) => RecordId::OstPoolOsts(x.id),
+            Record::PacemakerConfiguration(x) => RecordId::PacemakerConfiguration(x.id),
+            Record::SfaDiskDrive(x) => RecordId::SfaDiskDrive(x.id),
+            Record::SfaEnclosure(x) => RecordId::SfaEnclosure(x.id),
+            Record::SfaStorageSystem(x) => RecordId::SfaStorageSystem(x.id),
+            Record::SfaJob(x) => RecordId::SfaJob(x.id),
+            Record::SfaPowerSupply(x) => RecordId::SfaPowerSupply(x.id),
+            Record::SfaController(x) => RecordId::SfaController(x.id),
+            Record::StratagemConfig(x) => RecordId::StratagemConfig(x.id),
+            Record::Snapshot(x) => RecordId::Snapshot(x.id),
+            Record::SnapshotInterval(x) => RecordId::SnapshotInterval(x.id),
+            Record::SnapshotRetention(x) => RecordId::SnapshotRetention(x.id),
+            Record::Target(x) => RecordId::Target(x.id),
+            Record::TargetRecord(x) => RecordId::TargetRecord(x.id),
+            Record::User(x) => RecordId::User(x.id),
+            Record::UserGroup(x) => RecordId::UserGroup(x.id),
+            Record::Volume(x) => RecordId::Volume(x.id),
+            Record::VolumeNode(x) => RecordId::VolumeNode(x.id),
+        }
+    }
 }
 
 impl Deref for RecordId {
