@@ -36,7 +36,7 @@ async fn handle_record_change(
         RecordChange::Delete(r) => {
             tracing::debug!("LISTEN / NOTIFY Delete record: {:?}", r);
 
-            let removed = api_cache_state.lock().await.remove_record(r);
+            let removed = api_cache_state.lock().await.remove_record(r).is_some();
 
             if removed {
                 users::send_message(
@@ -47,15 +47,29 @@ async fn handle_record_change(
             }
         }
         RecordChange::Update(r) => {
-            tracing::debug!("LISTEN / NOTIFY Update record: {:?}", r);
+            let record_id = (&r).into();
 
-            api_cache_state.lock().await.insert_record(r);
+            let mut cache_state = api_cache_state.lock().await;
 
-            users::send_message(
-                Message::RecordChange(record_change),
-                Arc::clone(&user_state),
-            )
-            .await;
+            let old_record = cache_state.remove_record(record_id);
+
+            let changed = old_record.as_ref() != Some(&r);
+
+            tracing::debug!(
+                ?old_record,
+                new_record = ?r,
+                changed,
+                "LISTEN / NOTIFY Update");
+
+            cache_state.insert_record(r);
+
+            if changed {
+                users::send_message(
+                    Message::RecordChange(record_change),
+                    Arc::clone(&user_state),
+                )
+                .await;
+            }
         }
     };
 }

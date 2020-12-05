@@ -22,7 +22,7 @@ use iml_service_queue::service_queue::consume_data;
 use iml_tracing::tracing;
 use iml_wire_types::Fqdn;
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::{BTreeMap, BTreeSet, HashMap},
     iter::FromIterator,
     sync::Arc,
 };
@@ -180,16 +180,16 @@ async fn main() -> Result<(), ImlDeviceError> {
                 vec![],
             ),
             |mut acc, x| {
+                let host_ids = BTreeSet::from_iter(x.host_ids)
+                    .into_iter()
+                    .map(|x: i32| x.to_string())
+                    .collect::<Vec<_>>()
+                    .join(",");
+
                 acc.0.push(x.state);
                 acc.1.push(x.name);
                 acc.2.push(x.active_host_id);
-                acc.3.push(
-                    x.host_ids
-                        .into_iter()
-                        .map(|x| x.to_string())
-                        .collect::<Vec<String>>()
-                        .join(","),
-                );
+                acc.3.push(host_ids);
                 acc.4.push(x.filesystems.join(","));
                 acc.5.push(x.uuid);
                 acc.6.push(x.mount_path);
