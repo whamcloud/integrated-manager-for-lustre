@@ -49,9 +49,3 @@ Precommit checks are run by [rusty-hook](https://github.com/swellaby/rusty-hook)
 ```sh
 cargo install --git https://github.com/swellaby/rusty-hook.git
 ```
-
-Basic formatting pre-commit hook
-
-```sh
-cp scripts/pre-commit .git/hooks/
-```
