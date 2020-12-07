@@ -4,9 +4,9 @@
 
 use crate::{
     agent_error::{NoSessionError, Result},
-    daemon_plugins::{DaemonBox, OutputValue},
+    daemon_plugins::{DaemonBox, Output, OutputValue},
 };
-use futures::{channel::oneshot, future, future::Either, Future};
+use futures::{channel::oneshot, future, future::Either, lock::Mutex, Future};
 use iml_wire_types::{AgentResult, Id, PluginName};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::{
@@ -18,6 +18,8 @@ use std::{
 use tokio::sync::RwLock;
 use tracing::{info, warn};
 
+const WAIT_TIME: Duration = Duration::from_secs(5);
+
 /// Takes a `Duration` and figures out the next duration
 /// for a bounded linear backoff.
 ///
@@ -26,7 +28,7 @@ use tracing::{info, warn};
 /// * `d` - The `Duration` used to calculate the next `Duration`
 pub fn backoff_schedule(d: Duration) -> Duration {
     match d.as_secs() {
-        0 | 1 => Duration::from_secs(10),
+        0 | 1 => WAIT_TIME,
         r => Duration::from_secs(std::cmp::min(r * 2, 60)),
     }
 }
@@ -63,7 +65,7 @@ impl State {
     }
     pub fn reset_active(&mut self) {
         if let State::Active(a) = self {
-            a.instant = Instant::now() + Duration::from_secs(10);
+            a.instant = Instant::now() + WAIT_TIME;
             a.in_flight = None;
         }
     }
@@ -73,12 +75,12 @@ impl State {
             State::Active(Active {
                 session,
                 in_flight: Some(in_flight),
-                instant: Instant::now() + Duration::from_secs(10),
+                instant: Instant::now() + WAIT_TIME,
             }),
         );
     }
     pub fn reset_empty(&mut self) {
-        let _ = std::mem::replace(self, State::Empty(Instant::now() + Duration::from_secs(10)));
+        let _ = std::mem::replace(self, State::Empty(Instant::now() + WAIT_TIME));
     }
     pub fn convert_to_pending(&mut self) {
         if let State::Empty(_) = self {
@@ -199,6 +201,8 @@ pub struct Session {
     pub info: Arc<AtomicU64>,
     pub name: PluginName,
     pub id: Id,
+    /// The state from the last `update_session` call.
+    pub last_update: Arc<Mutex<Output>>,
     plugin: DaemonBox,
 }
 
@@ -210,6 +214,7 @@ impl Session {
             name,
             id,
             info: Arc::new(AtomicU64::new(0)),
+            last_update: Arc::new(Mutex::new(None)),
             plugin,
         }
     }
@@ -266,6 +271,8 @@ impl Session {
     ) {
         let info = Arc::clone(&self.info);
 
+        let last_update = Arc::clone(&self.last_update);
+
         let (mut tx, rx) = oneshot::channel();
 
         let fut = self.plugin.update_session();
@@ -287,6 +294,14 @@ impl Session {
                     Ok(None)
                 }
                 Either::Right((Ok(Some(x)), _)) => {
+                    let mut last_update = last_update.lock().await;
+
+                    if last_update.deref().as_ref() == Some(&x) {
+                        return Ok(None);
+                    }
+
+                    last_update.replace(x.clone());
+
                     info.fetch_add(1, Ordering::SeqCst);
                     let seq = info.load(Ordering::SeqCst);
 
