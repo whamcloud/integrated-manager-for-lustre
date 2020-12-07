@@ -8,15 +8,13 @@ use im::HashSet;
 use iml_change::GetChanges as _;
 use iml_device::{
     build_device_index, client_mount_content_id, create_cache, create_target_cache, find_targets,
-    get_mgs_filesystem_map, get_target_filesystem_map,
     linux_plugin_transforms::{
         build_device_lookup, devtree2linuxoutput, get_shared_pools, populate_zpool, update_vgs,
         LinuxPluginData,
     },
-    update_client_mounts, update_devices, Cache, ImlDeviceError, TargetFsRecord,
+    update_client_mounts, update_devices, Cache, ImlDeviceError,
 };
-use iml_influx::Client;
-use iml_manager_env::{get_influxdb_addr, get_influxdb_metrics_db, get_pool_limit};
+use iml_manager_env::get_pool_limit;
 use iml_postgres::{get_db_pool, sqlx, PgPool};
 use iml_service_queue::service_queue::consume_data;
 use iml_tracing::tracing;
@@ -26,7 +24,6 @@ use std::{
     iter::FromIterator,
     sync::Arc,
 };
-use url::Url;
 use warp::Filter;
 
 // Default pool limit if not overridden by POOL_LIMIT
@@ -102,20 +99,16 @@ async fn main() -> Result<(), ImlDeviceError> {
 
     let ch = iml_rabbit::create_channel(&conn).await?;
 
-    let mut s = consume_data::<(Device, HashSet<Mount>)>(&ch, "rust_agent_device_rx");
+    let mut s =
+        consume_data::<((Device, HashSet<Mount>), Vec<String>)>(&ch, "rust_agent_device_rx");
 
     let lustreclientmount_ct_id = client_mount_content_id(&pool).await?;
 
-    let influx_url: String = format!("http://{}", get_influxdb_addr());
-
     let mut mount_cache = HashMap::new();
 
-    let influx_client = Client::new(
-        Url::parse(&influx_url).expect("Influx URL is invalid."),
-        get_influxdb_metrics_db(),
-    );
+    let mut mgs_fs_cache = HashMap::new();
 
-    while let Some((host, (devices, mounts))) = s.try_next().await? {
+    while let Some((host, ((devices, mounts), mgs_fses))) = s.try_next().await? {
         update_devices(&pool, &host, &devices).await?;
         update_client_mounts(&pool, lustreclientmount_ct_id, &host, &mounts).await?;
 
@@ -123,7 +116,8 @@ async fn main() -> Result<(), ImlDeviceError> {
 
         let mut device_cache = cache2.lock().await;
         device_cache.insert(host.clone(), devices);
-        mount_cache.insert(host, mounts);
+        mount_cache.insert(host.clone(), mounts);
+        mgs_fs_cache.insert(host, mgs_fses);
 
         let index = build_device_index(&device_cache);
 
@@ -134,15 +128,6 @@ async fn main() -> Result<(), ImlDeviceError> {
                 .try_collect()
                 .await?;
 
-        let target_to_fs_map = get_target_filesystem_map(&influx_client).await?;
-        let mgs_targets_to_fs_map = get_mgs_filesystem_map(&influx_client, &mount_cache).await?;
-        let target_to_fs_map: TargetFsRecord = target_to_fs_map
-            .into_iter()
-            .chain(mgs_targets_to_fs_map)
-            .collect();
-
-        tracing::debug!("target_to_fs_map: {:?}", target_to_fs_map);
-
         tracing::debug!("mount_cache: {:?}", mount_cache);
 
         let targets = find_targets(
@@ -150,7 +135,7 @@ async fn main() -> Result<(), ImlDeviceError> {
             &mount_cache,
             &host_ids,
             &index,
-            &target_to_fs_map,
+            &mgs_fs_cache,
         );
 
         tracing::debug!("targets: {:?}", targets);

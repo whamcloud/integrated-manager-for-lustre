@@ -9,26 +9,56 @@ use crate::{
 };
 use async_trait::async_trait;
 use futures::{future, lock::Mutex, Future, FutureExt, StreamExt, TryFutureExt, TryStreamExt};
+use iml_cmd::Command;
+use lustre_collector::{mgs::mgs_fs_parser, parse_mgs_fs_output, Record, TargetStats};
+use serde_json::Value;
 use std::{io, pin::Pin, sync::Arc};
 use stream_cancel::{Trigger, Tripwire};
 
-#[derive(Eq, PartialEq)]
-enum State {
-    Pending,
-    Sent,
+#[derive(Debug)]
+pub struct Devices {
+    trigger: Option<Trigger>,
+    state: Arc<Mutex<Output>>,
 }
 
 pub fn create() -> impl DaemonPlugin {
     Devices {
         trigger: None,
-        state: Arc::new(Mutex::new((None, State::Sent))),
+        state: Arc::new(Mutex::new(None)),
     }
 }
 
-#[derive(Debug)]
-pub struct Devices {
-    trigger: Option<Trigger>,
-    state: Arc<Mutex<(Output, State)>>,
+async fn get_mgs_fses() -> Result<Vec<String>, ImlAgentError> {
+    let output = Command::new("lctl")
+        .arg("get_param")
+        .arg("-N")
+        .args(mgs_fs_parser::params())
+        .output()
+        .err_into()
+        .await;
+
+    let output = match output {
+        Ok(x) => x,
+        Err(ImlAgentError::Io(ref err)) if err.kind() == io::ErrorKind::NotFound => {
+            tracing::debug!("lctl binary was not found; will not send mgs fs info.");
+
+            return Ok(vec![]);
+        }
+        Err(e) => return Err(e),
+    };
+
+    let fses: Vec<_> = parse_mgs_fs_output(&output.stdout)
+        .unwrap_or_default()
+        .into_iter()
+        .filter_map(|x| match x {
+            Record::Target(TargetStats::FsNames(x)) => Some(x),
+            _ => None,
+        })
+        .flat_map(|x| x.value)
+        .map(|x| x.0)
+        .collect();
+
+    Ok(fses)
 }
 
 #[async_trait]
@@ -48,22 +78,20 @@ impl DaemonPlugin for Devices {
         let state = Arc::clone(&self.state);
 
         Box::pin(async move {
-            let (x, s) = fut.await;
+            let (x, s): (Option<Result<Value, ImlAgentError>>, _) = fut.await;
 
-            let x: Output = match x {
-                Some(x) => x,
+            let x: Value = match x {
+                Some(x) => x?,
                 None => {
                     return Err(ImlAgentError::Io(io::Error::new(
                         io::ErrorKind::ConnectionAborted,
                         "Device scanner connection aborted before any data was sent",
                     )))
                 }
-            }?;
+            };
 
             {
-                let mut lock = state.lock().await;
-
-                lock.0 = x.clone();
+                state.lock().await.replace(x.clone());
             }
 
             tokio::spawn(
@@ -72,14 +100,7 @@ impl DaemonPlugin for Devices {
                         let state = Arc::clone(&state);
 
                         async move {
-                            let mut lock = state.lock().await;
-
-                            if lock.0 != x {
-                                tracing::debug!("marking pending (is none: {}) ", x.is_none());
-
-                                lock.0 = x;
-                                lock.1 = State::Pending;
-                            }
+                            state.lock().await.replace(x);
 
                             Ok(())
                         }
@@ -91,6 +112,11 @@ impl DaemonPlugin for Devices {
                     }),
             );
 
+            let fses = get_mgs_fses().await?;
+            let fses = serde_json::to_value(fses)?;
+
+            let x = Some(Value::Array(vec![x, fses]));
+
             Ok(x)
         })
     }
@@ -100,16 +126,16 @@ impl DaemonPlugin for Devices {
         let state = Arc::clone(&self.state);
 
         async move {
-            let mut lock = state.lock().await;
+            let fses = get_mgs_fses().await?;
+            let fses = serde_json::to_value(fses)?;
 
-            if lock.1 == State::Pending {
-                tracing::debug!("Sending new value");
-                lock.1 = State::Sent;
+            let x = state
+                .lock()
+                .await
+                .take()
+                .map(|x| Value::Array(vec![x, fses]));
 
-                Ok(lock.0.clone())
-            } else {
-                Ok(None)
-            }
+            Ok(x)
         }
         .boxed()
     }
