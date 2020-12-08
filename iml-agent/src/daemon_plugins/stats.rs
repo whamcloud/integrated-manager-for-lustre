@@ -9,8 +9,7 @@ use crate::{
 use futures::{future, Future, FutureExt, StreamExt, TryFutureExt, TryStreamExt};
 use iml_cmd::Command;
 use lustre_collector::{
-    mgs::mgs_fs_parser, parse_cpustats_output, parse_lctl_output, parse_lnetctl_output,
-    parse_meminfo_output, parse_mgs_fs_output, parser,
+    parse_cpustats_output, parse_lctl_output, parse_lnetctl_output, parse_meminfo_output, parser,
 };
 use std::{io, pin::Pin, str};
 
@@ -41,14 +40,6 @@ impl DaemonPlugin for Stats {
             let mut cmd1 = Command::new("lctl");
             let cmd1 = cmd1.arg("get_param").args(params()).output().err_into();
 
-            let mut cmd1a = Command::new("lctl");
-            let cmd1a = cmd1a
-                .arg("get_param")
-                .arg("-N")
-                .args(mgs_fs_parser::params())
-                .output()
-                .err_into();
-
             let mut cmd2 = Command::new("lnetctl");
             let cmd2 = cmd2.arg("export").output().err_into();
 
@@ -57,14 +48,11 @@ impl DaemonPlugin for Stats {
             let mut cmd4 = iml_fs::stream_file_lines("/proc/stat").boxed();
             let cmd4 = cmd4.try_next().err_into();
 
-            let result = future::try_join5(cmd1, cmd1a, cmd2, cmd3, cmd4).await;
+            let result = future::try_join4(cmd1, cmd2, cmd3, cmd4).await;
 
             match result {
-                Ok((lctl, mgs_fs, lnetctl, meminfo, maybe_cpustats)) => {
+                Ok((lctl, lnetctl, meminfo, maybe_cpustats)) => {
                     let mut lctl_output = parse_lctl_output(&lctl.stdout)?;
-                    let mut mgs_fs_output = parse_mgs_fs_output(&mgs_fs.stdout).unwrap_or_default();
-
-                    lctl_output.append(&mut mgs_fs_output);
 
                     let lnetctl_stats = str::from_utf8(&lnetctl.stdout)?;
 

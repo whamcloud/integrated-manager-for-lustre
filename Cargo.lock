@@ -1796,7 +1796,6 @@ dependencies = [
  "futures",
  "im",
  "iml-change",
- "iml-influx",
  "iml-manager-env",
  "iml-postgres",
  "iml-rabbit",

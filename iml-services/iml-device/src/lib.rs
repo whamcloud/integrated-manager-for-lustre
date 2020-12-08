@@ -13,7 +13,6 @@ pub use error::ImlDeviceError;
 use futures::{future::try_join_all, lock::Mutex, TryStreamExt};
 use im::HashSet;
 use iml_change::*;
-use iml_influx::{Client, InfluxClientExt as _, Precision};
 use iml_postgres::sqlx::{self, PgPool};
 use iml_tracing::tracing;
 use iml_wire_types::{Fqdn, FsType};
@@ -31,18 +30,6 @@ struct FsRecord {
     target: String,
     fs: Option<String>,
     mgs_fs: Option<String>,
-}
-
-impl FsRecord {
-    fn filesystems(&self) -> String {
-        if let Some(fs) = self.fs.clone() {
-            fs
-        } else if let Some(fs) = self.mgs_fs.clone() {
-            fs
-        } else {
-            "".into()
-        }
-    }
 }
 
 /// Given a db pool, create a new cache and fill it with initial data.
@@ -63,21 +50,8 @@ pub async fn create_cache(pool: &PgPool) -> Result<Cache, ImlDeviceError> {
 }
 
 pub async fn create_target_cache(pool: &PgPool) -> Result<Vec<Target>, ImlDeviceError> {
-    let xs: Vec<Target> = sqlx::query!(r#"SELECT state, name, active_host_id, host_ids, filesystems, uuid, mount_path, dev_path, fs_type AS "fs_type: FsType" FROM target"#)
+    let xs: Vec<Target> = sqlx::query_as!(Target, r#"SELECT state, name, active_host_id, host_ids, filesystems, uuid, mount_path, dev_path, fs_type AS "fs_type: FsType" FROM target"#)
         .fetch(pool)
-        .map_ok(|x| {
-            Target {
-                state: x.state,
-                name: x.name,
-                active_host_id: x.active_host_id,
-                host_ids: x.host_ids,
-                filesystems: x.filesystems,
-                uuid: x.uuid,
-                mount_path: x.mount_path,
-                dev_path: x.dev_path,
-                fs_type: x.fs_type,
-            }
-        })
         .try_collect()
         .await?;
 
@@ -370,7 +344,7 @@ pub fn find_targets<'a>(
     mounts: &HashMap<Fqdn, HashSet<Mount>>,
     host_map: &HashMap<Fqdn, i32>,
     device_index: &DeviceIndex<'a>,
-    target_to_fs_map: &TargetFsRecord,
+    mgs_fs_cache: &HashMap<Fqdn, Vec<String>>,
 ) -> Vec<Target> {
     let xs: Vec<_> = mounts
         .iter()
@@ -429,6 +403,7 @@ pub fn find_targets<'a>(
             tracing::debug!("host id: {:?}", host_id);
 
             Some((
+                fqdn,
                 host_id,
                 [vec![*host_id], ys].concat(),
                 mntpnt,
@@ -442,33 +417,33 @@ pub fn find_targets<'a>(
 
     xs.into_iter()
         .map(
-            |(fqdn, ids, mntpnt, fs_uuid, dev_path, target, osd)| Target {
-                state: "mounted".into(),
-                active_host_id: Some(*fqdn),
-                host_ids: ids,
-                dev_path: Some(dev_path.0.to_string_lossy().to_string()),
-                filesystems: target_to_fs_map
-                    .get(target)
-                    .map(|xs| {
-                        xs.iter()
-                            .filter(|(host, _)| {
-                                host_map
-                                    .get(host)
-                                    .unwrap_or_else(|| panic!("Couldn't get host {}", host.0))
-                                    == fqdn
-                            })
-                            .map(|(_, fs)| fs.clone())
-                            .collect::<Vec<String>>()
-                    })
-                    .unwrap_or_default(),
-                name: target.into(),
-                uuid: fs_uuid.into(),
-                mount_path: Some(mntpnt.0.to_string_lossy().to_string()),
-                fs_type: match osd {
-                    osd if osd.contains("zfs") => Some(FsType::Zfs),
-                    osd if osd.contains("ldiskfs") => Some(FsType::Ldiskfs),
-                    _ => None,
-                },
+            |(fqdn, host_id, ids, mntpnt, fs_uuid, dev_path, target, osd)| {
+                let filesystems = if target == "MGS" {
+                    mgs_fs_cache.get(&fqdn).cloned().unwrap_or_default()
+                } else {
+                    target
+                        .rsplitn(2, '-')
+                        .nth(1)
+                        .map(String::from)
+                        .map(|x| vec![x])
+                        .unwrap_or_default()
+                };
+
+                Target {
+                    state: "mounted".into(),
+                    active_host_id: Some(*host_id),
+                    host_ids: ids,
+                    dev_path: Some(dev_path.0.to_string_lossy().to_string()),
+                    filesystems,
+                    name: target.into(),
+                    uuid: fs_uuid.into(),
+                    mount_path: Some(mntpnt.0.to_string_lossy().to_string()),
+                    fs_type: match osd {
+                        osd if osd.contains("zfs") => Some(FsType::Zfs),
+                        osd if osd.contains("ldiskfs") => Some(FsType::Ldiskfs),
+                        _ => None,
+                    },
+                }
             },
         )
         .fold(HashMap::new(), |mut acc: HashMap<String, Target>, x| {
@@ -547,107 +522,6 @@ pub fn build_updates(x: Changes<'_, Target>) -> Vec<Target> {
             .collect(),
         (None, None) => vec![],
     }
-}
-
-fn parse_filesystem_data(query_result: Option<Vec<FsRecord>>) -> TargetFsRecord {
-    let x = match query_result {
-        Some(x) => x,
-        None => return HashMap::new(),
-    };
-
-    let items = x
-        .into_iter()
-        .map(|x| {
-            let filesystems: String = x.filesystems();
-            let host: String = x.host;
-            let target: String = x.target;
-
-            (
-                target,
-                filesystems
-                    .split(',')
-                    .map(|x| (Fqdn(host.clone()), x.to_string()))
-                    .collect(),
-            )
-        })
-        .collect::<Vec<(String, Vec<(Fqdn, String)>)>>();
-
-    let target_to_fs = items.into_iter().fold(
-        HashMap::new(),
-        |mut acc: HashMap<String, Vec<(Fqdn, String)>>, xs| {
-            let existing = acc.remove(xs.0.as_str());
-
-            let x = if let Some(entry) = existing {
-                [&entry[..], &xs.1[..]].concat()
-            } else {
-                xs.1
-            };
-
-            acc.insert(xs.0, x);
-
-            acc
-        },
-    );
-
-    tracing::debug!("target_to_fs: {:?}", target_to_fs);
-
-    target_to_fs
-}
-
-pub async fn get_target_filesystem_map(
-    influx_client: &Client,
-) -> Result<TargetFsRecord, ImlDeviceError> {
-    let query_result: Option<Vec<FsRecord>> = influx_client
-        .query_into(
-            "select host,target,fs,bytes_free from target group by target order by time desc limit 1;",
-            Some(Precision::Nanoseconds),
-        )
-        .await?;
-
-    Ok(parse_filesystem_data(query_result))
-}
-
-pub async fn get_mgs_filesystem_map(
-    influx_client: &Client,
-    mounts: &HashMap<Fqdn, HashSet<Mount>>,
-) -> Result<TargetFsRecord, ImlDeviceError> {
-    let query_result: Option<Vec<FsRecord>> = influx_client
-        .query_into(
-            "select host,target,mgs_fs,is_mgs_fs from target group by mgs_fs order by time desc limit 1;",
-            Some(Precision::Nanoseconds),
-        )
-        .await?;
-
-    let target_to_fs_map = parse_filesystem_data(query_result);
-
-    let snapshots: Vec<String> = mounts
-        .iter()
-        .map(|(k, xs)| xs.into_iter().map(move |x| (k, x)))
-        .flatten()
-        .filter(|(_, x)| x.fs_type.0 == "lustre")
-        .filter(|(_, x)| x.opts.0.split(',').any(|x| x == "nomgs"))
-        .filter_map(|(_, x)| {
-            let s = x.opts.0.split(',').find(|x| x.starts_with("svname="))?;
-
-            let s = s.split('=').nth(1)?;
-
-            Some(s.to_string())
-        })
-        .collect();
-
-    let target_to_fs_map = target_to_fs_map
-        .into_iter()
-        .map(|(key, xs)| {
-            (
-                key,
-                xs.into_iter()
-                    .filter(|(_, x)| snapshots.iter().find(|s| s.contains(x)).is_none())
-                    .collect::<Vec<(Fqdn, String)>>(),
-            )
-        })
-        .collect::<TargetFsRecord>();
-
-    Ok(target_to_fs_map)
 }
 
 #[cfg(test)]
@@ -775,115 +649,5 @@ mod tests {
         let xs = build_updates((None, None));
 
         assert_eq!(xs, vec![]);
-    }
-
-    #[test]
-    fn test_parse_target_filesystem_data() {
-        let query_result = Some(vec![
-            FsRecord {
-                host: "oss1".into(),
-                target: "fs-OST0009".into(),
-                fs: Some("fs".into()),
-                mgs_fs: None,
-            },
-            FsRecord {
-                host: "oss1".into(),
-                target: "fs-OST0008".into(),
-                fs: Some("fs2".into()),
-                mgs_fs: None,
-            },
-        ]);
-
-        let result = parse_filesystem_data(query_result);
-        assert_eq!(
-            result,
-            vec![
-                (
-                    "fs-OST0009".to_string(),
-                    vec![(Fqdn("oss1".to_string()), "fs".to_string())]
-                ),
-                (
-                    "fs-OST0008".to_string(),
-                    vec![(Fqdn("oss1".to_string()), "fs2".to_string())]
-                ),
-            ]
-            .into_iter()
-            .collect::<TargetFsRecord>(),
-        );
-    }
-
-    #[test]
-    fn test_parse_mgs_filesystem_data() {
-        let query_result = Some(vec![
-            FsRecord {
-                host: "mds1".into(),
-                target: "MGS".into(),
-                fs: None,
-                mgs_fs: Some("mgs1fs1,mgs1fs2".into()),
-            },
-            FsRecord {
-                host: "mds1".into(),
-                target: "MGS2".into(),
-                fs: None,
-                mgs_fs: Some("mgs2fs1,mgs2fs2".into()),
-            },
-        ]);
-
-        let result = parse_filesystem_data(query_result);
-
-        assert_eq!(
-            result,
-            vec![
-                (
-                    "MGS".to_string(),
-                    vec![
-                        (Fqdn("mds1".to_string()), "mgs1fs1".to_string()),
-                        (Fqdn("mds1".to_string()), "mgs1fs2".to_string())
-                    ]
-                ),
-                (
-                    "MGS2".to_string(),
-                    vec![
-                        (Fqdn("mds1".to_string()), "mgs2fs1".to_string()),
-                        (Fqdn("mds1".to_string()), "mgs2fs2".to_string())
-                    ]
-                ),
-            ]
-            .into_iter()
-            .collect::<TargetFsRecord>(),
-        );
-    }
-
-    #[test]
-    fn test_parse_mgs_filesystem_data_on_separate_hosts() {
-        let query_result = Some(vec![
-            FsRecord {
-                host: "mds1".into(),
-                target: "MGS".into(),
-                fs: None,
-                mgs_fs: Some("fs1".into()),
-            },
-            FsRecord {
-                host: "oss1".into(),
-                target: "MGS".into(),
-                fs: None,
-                mgs_fs: Some("fs2".into()),
-            },
-        ]);
-
-        let result = parse_filesystem_data(query_result);
-
-        assert_eq!(
-            result,
-            vec![(
-                "MGS".to_string(),
-                vec![
-                    (Fqdn("mds1".to_string()), "fs1".to_string()),
-                    (Fqdn("oss1".to_string()), "fs2".to_string())
-                ]
-            ),]
-            .into_iter()
-            .collect::<TargetFsRecord>(),
-        );
     }
 }

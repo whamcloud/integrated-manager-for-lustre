@@ -2,8 +2,8 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use futures::{future::try_join_all, stream::TryStreamExt, TryFutureExt};
-use iml_influx::{Client, InfluxClientExt, Point, Points, Precision, Value};
+use futures::stream::TryStreamExt;
+use iml_influx::{Client, Point, Points, Precision, Value};
 use iml_manager_env::{get_influxdb_addr, get_influxdb_metrics_db};
 use iml_service_queue::service_queue::consume_data;
 use iml_stats::error::ImlStatsError;
@@ -12,10 +12,9 @@ use lustre_collector::{
     HostStats, LNetStats, NodeStats, Record, Target, TargetStats,
     {
         types::{BrwStats, TargetVariant},
-        FsName, Stat, TargetStat,
+        Stat, TargetStat,
     },
 };
-use std::collections::{HashMap, HashSet};
 use url::Url;
 
 fn build_stats_query(x: &TargetStat<Vec<Stat>>, stat: &Stat, query: Point) -> Point {
@@ -365,16 +364,9 @@ fn handle_target_records(target_stats: TargetStats, host: &Fqdn) -> Option<Vec<P
                 )])
         }
         TargetStats::FsNames(x) => {
-            tracing::debug!("Fs names: {:?}", x);
+            tracing::warn!(data = ?x, "Unexpected MGS fses");
 
-            let fs_names = join_fs_names(x.value);
-
-            Some(vec![Point::new("target")
-                .add_tag("host", Value::String(host.0.to_string()))
-                .add_tag("kind", Value::String(x.kind.to_string()))
-                .add_tag("target", Value::String(x.target.to_string()))
-                .add_tag("mgs_fs", Value::String(fs_names))
-                .add_field("is_mgs_fs", Value::Boolean(true))])
+            None
         }
         TargetStats::JobStatsOst(_) => {
             // Not storing jobstats... yet.
@@ -490,15 +482,8 @@ async fn main() -> Result<(), ImlStatsError> {
             get_influxdb_metrics_db(),
         );
 
-        let mut fs_names = None;
-
         let entries: Vec<_> = xs
             .into_iter()
-            .inspect(|x| {
-                if let Record::Target(TargetStats::FsNames(x)) = x {
-                    fs_names = Some(fs_names_vec_to_hash_set(&x.value));
-                }
-            })
             .filter_map(|record| match record {
                 Record::Target(target_stats) => handle_target_records(target_stats, &host),
                 Record::Host(host_stats) => handle_host_records(host_stats, &host),
@@ -522,10 +507,6 @@ async fn main() -> Result<(), ImlStatsError> {
             if let Err(e) = r {
                 tracing::error!("Error writing series to influxdb: {}", e);
             }
-
-            if let Some(fs_names) = fs_names {
-                delete_existing_mgs_fs_records(fs_names, &client).await?;
-            }
         }
     }
 
@@ -539,111 +520,8 @@ struct MgsFsTime {
     mgs_fs_count: Option<u32>,
 }
 
-async fn delete_existing_mgs_fs_records(
-    fs_names: HashSet<String>,
-    client: &Client,
-) -> Result<(), ImlStatsError> {
-    let xs: Vec<MgsFsTime> = client
-        .query_into(
-            format!(
-                r#"
-                SELECT mgs_fs, mgs_fs_count FROM
-                    (SELECT count(is_mgs_fs) AS mgs_fs_count FROM target WHERE is_mgs_fs=true GROUP BY mgs_fs),
-                    (SELECT LAST(is_mgs_fs),time as last_time FROM target GROUP BY mgs_fs)
-                GROUP BY mgs_fs
-                "#
-            )
-            .as_str(),
-            Some(Precision::Nanoseconds)
-        )
-        .await?
-        .unwrap_or_default();
-
-    tracing::debug!(
-        "delete stale mgs_fs records - fs_names: {:?}; query results: {:?}",
-        fs_names,
-        xs
-    );
-
-    let subsets: HashMap<String, (u64, u32)> = xs
-        .into_iter()
-        .filter(|x| {
-            let mgs_fs_set = fs_names_to_hash_set(&x.mgs_fs);
-
-            let intersection = mgs_fs_set.intersection(&fs_names).collect::<Vec<_>>();
-
-            !intersection.is_empty()
-        })
-        .fold(HashMap::new(), |mut acc, record| {
-            let mgs_fs = record.mgs_fs;
-            let mut entry = acc.entry(mgs_fs).or_insert((0, 0));
-
-            if record.time > 0 {
-                entry.0 = record.time;
-            }
-
-            if let Some(count) = record.mgs_fs_count {
-                entry.1 = count;
-            }
-
-            acc
-        });
-
-    let delete_subset_futures = subsets
-        .into_iter()
-        .filter(|(mgs_fs, (_time, count))| {
-            let mgs_fs_set = fs_names_to_hash_set(&mgs_fs);
-
-            mgs_fs_set != fs_names || *count > 1
-        })
-        .map(|(mgs_fs, (time, count))| {
-            let mds_fs_set = fs_names_to_hash_set(&mgs_fs);
-
-            let query = if mds_fs_set == fs_names && count > 1 {
-                format!(
-                    "DELETE FROM target WHERE time < {} AND mgs_fs = '{}' AND kind = '{}'",
-                    time,
-                    mgs_fs,
-                    TargetVariant::MGT
-                )
-            } else {
-                format!(
-                    "DELETE FROM target WHERE time <= {} AND mgs_fs = '{}' AND kind = '{}'",
-                    time,
-                    mgs_fs,
-                    TargetVariant::MGT
-                )
-            };
-
-            tracing::debug!("Deleting entries with query: {}", query);
-
-            client
-                .query(query.as_str(), Some(Precision::Nanoseconds))
-                .map_err(|e| iml_influx::Error::InfluxDbError(e))
-        });
-
-    try_join_all(delete_subset_futures).await?;
-
-    Ok(())
-}
-
 fn fs_name(t: &Target) -> &str {
     let s = &*t;
 
     s.split_at(s.rfind('-').unwrap_or(0)).0
-}
-
-fn join_fs_names(xs: Vec<FsName>) -> String {
-    xs.into_iter()
-        .map(|x| x.0)
-        .collect::<Vec<String>>()
-        .join(",")
-}
-
-fn fs_names_vec_to_hash_set(xs: &[FsName]) -> HashSet<String> {
-    xs.into_iter().map(|x| x.0.to_string()).collect()
-}
-
-fn fs_names_to_hash_set(xs: &str) -> HashSet<String> {
-    xs.split(',').map(|x| x.to_string()).collect()
 }
