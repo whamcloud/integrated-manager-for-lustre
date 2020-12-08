@@ -136,7 +136,11 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 }
             }
 
-            let (cancel, fut) = sleep_with_handle(Duration::from_secs(10), Msg::FetchData(model.filesystems.clone()), Msg::Noop);
+            let (cancel, fut) = sleep_with_handle(
+                Duration::from_secs(10),
+                Msg::FetchData(model.filesystems.clone()),
+                Msg::Noop,
+            );
 
             model.cancel = Some(cancel);
 

@@ -131,6 +131,12 @@ pub fn init(cache: &ArcCache, model: &mut Model, orders: &mut impl Orders<Msg, G
         sfa_overview::init(overview, &mut orders.proxy(Msg::SfaOverview));
     }
 
-    let filesystems = cache.filesystem.values().map(|x| x.name.to_string()).collect::<Vec<String>>();
-    orders.proxy(Msg::FsUsage).send_msg(fs_usage::Msg::FetchData(Some(filesystems)));
+    let filesystems = cache
+        .filesystem
+        .values()
+        .map(|x| x.name.to_string())
+        .collect::<Vec<String>>();
+    orders
+        .proxy(Msg::FsUsage)
+        .send_msg(fs_usage::Msg::FetchData(Some(filesystems)));
 }
