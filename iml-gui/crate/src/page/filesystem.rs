@@ -10,13 +10,16 @@ use crate::{
     extensions::MergeAttrs,
     generated::css_classes::C,
     get_target_from_managed_target,
+    page::RecordChange,
     route::RouteId,
     sleep_with_handle, GMsg, RequestExt, Route,
 };
 use futures::channel::oneshot;
 use iml_graphql_queries::{client_mount, Response};
 use iml_wire_types::{
-    db::{ManagedTargetRecord, TargetKind, TargetRecord},
+    db::{CorosyncResourceBanRecord, ManagedTargetRecord, TargetKind, TargetRecord},
+    warp_drive::ArcRecord,
+    warp_drive::RecordId,
     warp_drive::{ArcCache, Locks},
     Filesystem, Label, Session, ToCompositeId,
 };
@@ -61,6 +64,34 @@ impl Model {
             stats_cancel: None,
             stats_url: format!(r#"/influx?db=iml_stats&q={}"#, iml_influx::filesystem::query(&fs.name)),
         }
+    }
+}
+
+impl RecordChange<Msg> for Model {
+    fn update_record(&mut self, record: ArcRecord, cache: &ArcCache, orders: &mut impl Orders<Msg, GMsg>) {
+        match record {
+            ArcRecord::CorosyncResourceBan(_)
+            | ArcRecord::CorosyncResource(_)
+            | ArcRecord::Host(_)
+            | ArcRecord::Target(_) => {
+                orders.send_msg(Msg::SetTargets(cache.target.values().cloned().collect()));
+            }
+            _ => {}
+        }
+    }
+    fn remove_record(&mut self, id: RecordId, cache: &ArcCache, orders: &mut impl Orders<Msg, GMsg>) {
+        match id {
+            RecordId::CorosyncResourceBan(_)
+            | RecordId::CorosyncResource(_)
+            | RecordId::Host(_)
+            | RecordId::Target(_) => {
+                orders.send_msg(Msg::SetTargets(cache.target.values().cloned().collect()));
+            }
+            _ => {}
+        }
+    }
+    fn set_records(&mut self, cache: &ArcCache, orders: &mut impl Orders<Msg, GMsg>) {
+        orders.send_msg(Msg::SetTargets(cache.target.values().cloned().collect()));
     }
 }
 
@@ -477,11 +508,43 @@ pub(crate) fn standby_hosts_view<T>(cache: &ArcCache, target: &TargetRecord) -> 
         .filter_map(|x| cache.host.get(&x))
         .collect();
 
+    let resource = cache
+        .corosync_resource
+        .values()
+        .find(|x| x.mount_point == target.mount_path);
+
+    let banned_standby_hosts: Option<Vec<i32>> = resource
+        .map(|r| {
+            cache
+                .corosync_resource_ban
+                .values()
+                .cloned()
+                .filter(|b| b.resource == r.name && b.cluster_id == r.cluster_id)
+                .collect::<Vec<Arc<CorosyncResourceBanRecord>>>()
+        })
+        .map(|bans| {
+            bans.into_iter()
+                .filter_map(|b| cache.host.values().find(|h| h.nodename == b.node))
+                .map(|x| x.id)
+                .collect()
+        });
+
+    if let Some(banned) = banned_standby_hosts {
+        standby_hosts = standby_hosts
+            .into_iter()
+            .filter(|x| banned.iter().find(|b| x.id == **b).is_none())
+            .collect();
+    }
+
     standby_hosts.sort_by(|a, b| natord::compare(&a.fqdn, &b.fqdn));
 
-    ul![standby_hosts
-        .iter()
-        .map(|x| li![resource_links::server_link(Some(&x.resource_uri), &x.fqdn)])]
+    if standby_hosts.len() > 0 {
+        ul![standby_hosts
+            .iter()
+            .map(|x| li![resource_links::server_link(Some(&x.resource_uri), &x.fqdn)])]
+    } else {
+        ul![li!["---"]]
+    }
 }
 
 pub(crate) fn status_view<T>(cache: &ArcCache, all_locks: &Locks, x: &Filesystem) -> Node<T> {

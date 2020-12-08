@@ -117,7 +117,7 @@ impl FilesystemMutation {
 
         let tickets = sqlx::query!(
             r#"
-            SELECT cluster_id, id, active
+            SELECT cluster_id, name, active
             FROM corosync_resource
             WHERE resource_agent = 'ocf::ddn:Ticketer';
             "#
@@ -126,7 +126,7 @@ impl FilesystemMutation {
         .try_fold(HashMap::new(), |mut acc, x| async {
             let xs = acc.entry(x.cluster_id).or_insert_with(|| HashSet::new());
 
-            xs.insert((x.id, x.active));
+            xs.insert((x.name, x.active));
 
             Ok(acc)
         })

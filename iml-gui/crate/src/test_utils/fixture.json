@@ -852,6 +852,8 @@
         }
     },
     "corosync_configuration": {},
+    "corosync_resource_ban": {},
+    "corosync_resource": {},
     "active_alert": {
         "408": {
             "_message": "Time is out of sync on server oss1.local",

@@ -93,8 +93,10 @@ struct BannedTargetResource {
 #[derive(juniper::GraphQLObject)]
 /// A Corosync banned resource
 struct BannedResource {
-    /// The resource id
-    id: String,
+    // The primary id
+    id: i32,
+    /// The resource name
+    name: String,
     /// The id of the cluster in which the resource lives
     cluster_id: i32,
     /// The resource name
@@ -1222,7 +1224,7 @@ async fn get_fs_target_resources(
     let xs = sqlx::query!(r#"
             SELECT
                 rh.cluster_id,
-                r.id,
+                r.name as id,
                 t.name,
                 t.mount_path,
                 t.filesystems,
@@ -1231,9 +1233,9 @@ async fn get_fs_target_resources(
                 array_agg(DISTINCT rh.host_id) AS "cluster_hosts!"
             FROM target t
             INNER JOIN corosync_resource r ON r.mount_point = t.mount_path
-            INNER JOIN corosync_resource_managed_host rh ON rh.corosync_resource_id = r.id AND rh.host_id = ANY(t.host_ids)
+            INNER JOIN corosync_resource_managed_host rh ON rh.corosync_resource_id = r.name AND rh.host_id = ANY(t.host_ids)
             WHERE CARDINALITY(t.filesystems) > 0
-            GROUP BY rh.cluster_id, t.name, r.id, t.mount_path, t.uuid, t.filesystems, t.state
+            GROUP BY rh.cluster_id, t.name, r.name, t.mount_path, t.uuid, t.filesystems, t.state
         "#)
             .fetch(pool)
             .try_filter(|x| {
@@ -1310,7 +1312,7 @@ async fn get_banned_targets(pool: &PgPool) -> Result<Vec<BannedTargetResource>, 
             FROM corosync_resource_bans b
             INNER JOIN corosync_node_managed_host nh ON (nh.corosync_node_id).name = b.node
             AND nh.cluster_id = b.cluster_id
-            INNER JOIN corosync_resource t ON t.id = b.resource AND b.cluster_id = t.cluster_id
+            INNER JOIN corosync_resource t ON t.name = b.resource AND b.cluster_id = t.cluster_id
             WHERE t.mount_point is not NULL
         "#
     )
@@ -1331,8 +1333,7 @@ async fn get_banned_resources(pool: &PgPool) -> Result<Vec<BannedResource>, ImlA
     let xs = sqlx::query_as!(
         BannedResource,
         r#"
-            SELECT id, cluster_id, resource, node, weight, master_only
-            FROM corosync_resource_bans
+            SELECT * FROM corosync_resource_bans
         "#
     )
     .fetch_all(pool)
@@ -1476,7 +1477,7 @@ async fn client_mount_source(pg_pool: &PgPool, fs_name: &str) -> Result<String, 
                 FROM corosync_resource_bans b
                 INNER JOIN corosync_node_managed_host nh ON (nh.corosync_node_id).name = b.node
                 AND nh.cluster_id = b.cluster_id
-                INNER JOIN corosync_resource t ON t.id = b.resource AND b.cluster_id = t.cluster_id
+                INNER JOIN corosync_resource t ON t.name = b.resource AND b.cluster_id = t.cluster_id
                 WHERE t.mount_point is not NULL
             ) GROUP BY l.host_id, n.nid ORDER BY l.host_id, n.nid;
             "#,

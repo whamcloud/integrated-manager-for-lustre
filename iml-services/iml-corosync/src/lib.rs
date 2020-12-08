@@ -107,7 +107,7 @@ pub async fn delete_corosync_resource_bans(
             USING corosync_node_managed_host
             WHERE host_id = $1
             AND node = (corosync_node_id).name
-            AND id != ALL($2)
+            AND name != ALL($2)
             "#,
         host_id,
         &ban_ids
@@ -149,7 +149,7 @@ pub async fn delete_target_resources(
         r#"
             DELETE FROM corosync_resource
             USING corosync_resource_managed_host
-            WHERE id = corosync_resource_id
+            WHERE name = corosync_resource_id
             AND corosync_resource_id != ALL($1)
             AND host_id = $2
         "#,
@@ -193,9 +193,9 @@ pub async fn upsert_resource_bans(
 
     sqlx::query!(
         r#"
-            INSERT INTO corosync_resource_bans (id, cluster_id, resource, node, weight, master_only)
+            INSERT INTO corosync_resource_bans (name, cluster_id, resource, node, weight, master_only)
             SELECT
-                id,
+                name,
                 $6,
                 resource,
                 node,
@@ -209,13 +209,13 @@ pub async fn upsert_resource_bans(
                 $5::bool[]
             )
             AS t(
-                id,
+                name,
                 resource,
                 node,
                 weight,
                 master_only
             )
-            ON CONFLICT (id, cluster_id, resource, node) DO UPDATE
+            ON CONFLICT (name, cluster_id, resource, node) DO UPDATE
             SET
                 weight = excluded.weight,
                 master_only = excluded.master_only
@@ -280,7 +280,7 @@ pub async fn upsert_target_resources(
     sqlx::query!(
         r#"
         INSERT INTO corosync_resource (
-            id,
+            name,
             cluster_id,
             resource_agent,
             role,
@@ -294,7 +294,7 @@ pub async fn upsert_target_resources(
             mount_point
         )
         SELECT
-            id,
+            name,
             $12,
             resource_agent,
             role,
@@ -320,7 +320,7 @@ pub async fn upsert_target_resources(
                 $11::text[]
             )
             AS t(
-            id,
+            name,
             resource_agent,
             role,
             active,
@@ -332,7 +332,7 @@ pub async fn upsert_target_resources(
             active_node,
             mount_point
             )
-            ON CONFLICT (id, cluster_id) DO UPDATE
+            ON CONFLICT (name, cluster_id) DO UPDATE
             SET
                 resource_agent = excluded.resource_agent,
                 role = excluded.role,

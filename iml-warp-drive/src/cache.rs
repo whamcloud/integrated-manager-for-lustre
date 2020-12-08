@@ -9,10 +9,10 @@ use iml_postgres::{sqlx, PgPool};
 use iml_wire_types::{
     db::{
         AlertStateRecord, AuthGroupRecord, AuthUserGroupRecord, AuthUserRecord, ContentTypeRecord,
-        CorosyncConfigurationRecord, FsRecord, Id, LnetConfigurationRecord, ManagedHostRecord,
-        ManagedTargetRecord, NotDeleted, OstPoolOstsRecord, OstPoolRecord,
-        PacemakerConfigurationRecord, StratagemConfiguration, TargetRecord, VolumeNodeRecord,
-        VolumeRecord,
+        CorosyncConfigurationRecord, CorosyncResourceBanRecord, CorosyncResourceRecord, FsRecord,
+        Id, LnetConfigurationRecord, ManagedHostRecord, ManagedTargetRecord, NotDeleted,
+        OstPoolOstsRecord, OstPoolRecord, PacemakerConfigurationRecord, StratagemConfiguration,
+        TargetRecord, VolumeNodeRecord, VolumeRecord,
     },
     sfa::{
         EnclosureType, HealthState, JobState, JobType, MemberState, SfaController, SfaDiskDrive,
@@ -248,6 +248,22 @@ pub async fn db_record_to_change_record(
                 Ok(RecordChange::Update(Record::CorosyncConfiguration(x)))
             }
         },
+        DbRecord::CorosyncResource(x) => match (msg_type, x) {
+            (MessageType::Delete, x) => {
+                Ok(RecordChange::Delete(RecordId::CorosyncResource(x.id())))
+            }
+            (MessageType::Insert, x) | (MessageType::Update, x) => {
+                Ok(RecordChange::Update(Record::CorosyncResource(x)))
+            }
+        },
+        DbRecord::CorosyncResourceBan(x) => match (msg_type, x) {
+            (MessageType::Delete, x) => {
+                Ok(RecordChange::Delete(RecordId::CorosyncResourceBan(x.id())))
+            }
+            (MessageType::Insert, x) | (MessageType::Update, x) => {
+                Ok(RecordChange::Update(Record::CorosyncResourceBan(x)))
+            }
+        },
         DbRecord::PacemakerConfiguration(x) => match (msg_type, x) {
             (MessageType::Delete, x) => Ok(RecordChange::Delete(RecordId::PacemakerConfiguration(
                 x.id(),
@@ -333,6 +349,47 @@ pub async fn populate_from_db(
     cache.corosync_configuration = sqlx::query_as!(
         CorosyncConfigurationRecord,
         "select * from chroma_core_corosyncconfiguration where not_deleted = 't'"
+    )
+    .fetch(pool)
+    .map_ok(|x| (x.id(), x))
+    .try_collect()
+    .await?;
+
+    cache.corosync_resource = sqlx::query!(
+        r#"SELECT id, name, cluster_id, resource_agent, role, active, orphaned, managed,
+            failed, failure_ignored, nodes_running_on, (active_node).id AS active_node_id,
+            (active_node).name AS active_node_name, mount_point
+        FROM corosync_resource"#
+    )
+    .fetch_all(pool)
+    .await?
+    .into_iter()
+    .map(|x| {
+        (
+            x.id,
+            CorosyncResourceRecord {
+                id: x.id,
+                name: x.name,
+                cluster_id: x.cluster_id,
+                resource_agent: x.resource_agent,
+                role: x.role,
+                active: x.active,
+                orphaned: x.orphaned,
+                managed: x.managed,
+                failed: x.failed,
+                failure_ignored: x.failure_ignored,
+                nodes_running_on: x.nodes_running_on,
+                active_node_id: x.active_node_id,
+                active_node_name: x.active_node_name,
+                mount_point: x.mount_point,
+            },
+        )
+    })
+    .collect();
+
+    cache.corosync_resource_ban = sqlx::query_as!(
+        CorosyncResourceBanRecord,
+        "SELECT * FROM corosync_resource_bans"
     )
     .fetch(pool)
     .map_ok(|x| (x.id(), x))
