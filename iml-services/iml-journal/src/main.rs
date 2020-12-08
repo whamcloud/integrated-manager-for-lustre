@@ -2,6 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use chrono::TimeZone;
 use futures::TryStreamExt;
 use iml_journal::{execute_handlers, get_message_class, ImlJournalError};
 use iml_manager_env::get_pool_limit;
@@ -128,9 +129,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .map(|t| {
                     let t = t.as_secs().try_into()?;
 
-                    Ok(time::OffsetDateTime::from_unix_timestamp(t))
+                    Ok(chrono::offset::Utc.timestamp(t, 0))
                 })
-                .collect::<Result<Vec<time::OffsetDateTime>, ImlJournalError>>()?;
+                .collect::<Result<Vec<_>, ImlJournalError>>()?;
 
         sqlx::query!(
             r#"
@@ -140,7 +141,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
              FROM UNNEST($1::timestamptz[], $3::smallint[], $4::smallint[], $5::text[], $6::text[], $7::smallint[])
              AS t(datetime, severity, facility, source, message, message_class)
          "#,
-            &times,
+            times.as_slice(),
             host.to_string(),
             &x.1,
             &x.2,

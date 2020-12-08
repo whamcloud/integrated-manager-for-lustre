@@ -29,19 +29,19 @@ DATABASE_URL=postgres://chroma@localhost:5432/chroma
 Once a change has been made to a query, run the following in this directory:
 
 ```sh
-cargo sqlx prepare -- --tests
+cargo sqlx prepare --merged -- --tests
 ```
 
 You can check if the generated queries are up to date with:
 
 ```sh
-cargo sqlx prepare --check -- --tests
+cargo sqlx prepare --merged --check -- --tests
 ```
 
 You may need to install the sqlx-cli as well:
 
 ```sh
-cargo install sqlx-cli --no-default-features --features postgres --git https://github.com/jgrund/sqlx --branch support-offline-workspaces
+cargo install sqlx-cli --no-default-features --features postgres --git https://github.com/jgrund/sqlx --branch workspace-support
 ```
 
 Precommit checks are run by [rusty-hook](https://github.com/swellaby/rusty-hook). To setup do the following:
