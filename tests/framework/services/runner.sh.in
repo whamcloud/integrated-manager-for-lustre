@@ -76,7 +76,7 @@ rsync -ar --exclude='.cargo' --exclude='iml-gui/node_modules' /integrated-manage
 mkdir /var/log/chroma
 cd /usr/share/chroma-manager
 
-CARGO_NET_RETRY=25 cargo install sqlx-cli --no-default-features --features postgres --git https://github.com/jgrund/sqlx --branch support-offline-workspaces
+CARGO_NET_RETRY=25 cargo install sqlx-cli --no-default-features --features postgres --git https://github.com/jgrund/sqlx --branch workspace-support
 echo "DATABASE_URL=postgres://chroma@localhost:5432/chroma" > .env
 python ./manage.py dev_setup
 cargo sqlx migrate run
