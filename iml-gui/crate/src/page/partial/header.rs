@@ -151,7 +151,8 @@ fn main_menu_items(model: &Model) -> Node<Msg> {
                 &menu_class,
                 class![
                     C.lg__border_blue_400 => model.manage_menu_state.is_open(),
-                    C.relative
+                    C.relative,
+                    C.cursor_pointer
                 ],
                 simple_ev(Ev::Click, Msg::ManageMenuState),
                 span![
