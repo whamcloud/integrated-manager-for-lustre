@@ -305,6 +305,7 @@ pub async fn trigger_scan(
 
     let output = Command::new("/usr/bin/lipe_scan")
         .args(&["-c", &f.path().to_str().unwrap(), "-W", &tmp_dir])
+        .kill_on_drop(true)
         .checked_output()
         .await?;
 

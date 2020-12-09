@@ -11,6 +11,7 @@ static DUPLICATE_MESSAGE: &[u8] = b"Warning: ALREADY_ENABLED\n";
 async fn port_change(action: &str, port: u16, proto: String) -> Result<(), ImlAgentError> {
     Command::new("firewall-cmd")
         .arg(format!("--{}-port={}/{}", action, port, proto))
+        .kill_on_drop(true)
         .checked_output()
         .await
         .map(drop)

@@ -17,6 +17,7 @@ where
 {
     Command::new("/usr/sbin/lctl")
         .args(args)
+        .kill_on_drop(true)
         .checked_output()
         .err_into()
         .await

@@ -145,6 +145,7 @@ impl<'a> TryFrom<(&'a str, StringMap<'a>)> for Interface {
 async fn corosync_cmapctl() -> Result<(Totem, Vec<Interface>), ImlAgentError> {
     let x = Command::new("corosync-cmapctl")
         .arg("totem")
+        .kill_on_drop(true)
         .checked_output()
         .await?;
 

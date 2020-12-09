@@ -16,7 +16,11 @@ use std::{collections::HashMap, convert::TryInto, ffi::OsStr, process::Output};
 static CIBADMIN_PATH: &str = "/usr/sbin/cibadmin";
 
 fn cibadmin_cmd() -> Command {
-    Command::new(CIBADMIN_PATH)
+    let mut cmd = Command::new(CIBADMIN_PATH);
+
+    cmd.kill_on_drop(true);
+
+    cmd
 }
 
 static CRM_MON_PATH: &str = "/usr/sbin/crm_mon";
@@ -24,7 +28,10 @@ static CRM_MON_PATH: &str = "/usr/sbin/crm_mon";
 pub(crate) fn crm_mon_cmd() -> Command {
     let mut cmd = Command::new(CRM_MON_PATH);
 
-    cmd.arg("--one-shot").arg("--inactive").arg("--as-xml");
+    cmd.arg("--one-shot")
+        .arg("--inactive")
+        .arg("--as-xml")
+        .kill_on_drop(true);
 
     cmd
 }
@@ -32,25 +39,41 @@ pub(crate) fn crm_mon_cmd() -> Command {
 static CRM_RESOURCE_PATH: &str = "/usr/sbin/crm_resource";
 
 fn crm_resource_cmd() -> Command {
-    Command::new(CRM_RESOURCE_PATH)
+    let mut cmd = Command::new(CRM_RESOURCE_PATH);
+
+    cmd.kill_on_drop(true);
+
+    cmd
 }
 
 static CRM_ATTRIBUTE_PATH: &str = "/usr/sbin/crm_attribute";
 
 fn crm_attribute_cmd() -> Command {
-    Command::new(CRM_ATTRIBUTE_PATH)
+    let mut cmd = Command::new(CRM_ATTRIBUTE_PATH);
+
+    cmd.kill_on_drop(true);
+
+    cmd
 }
 
 static PCS_PATH: &str = "/usr/sbin/pcs";
 
 fn pcs_cmd() -> Command {
-    Command::new(PCS_PATH)
+    let mut cmd = Command::new(PCS_PATH);
+
+    cmd.kill_on_drop(true);
+
+    cmd
 }
 
 static COROSYNC_CFGTOOL_PATH: &str = "/usr/sbin/corosync-cfgtool";
 
 fn corosync_cfgtool() -> Command {
-    Command::new(COROSYNC_CFGTOOL_PATH)
+    let mut cmd = Command::new(COROSYNC_CFGTOOL_PATH);
+
+    cmd.kill_on_drop(true);
+
+    cmd
 }
 
 pub async fn get_local_nodeid() -> Result<Option<String>, ImlAgentError> {

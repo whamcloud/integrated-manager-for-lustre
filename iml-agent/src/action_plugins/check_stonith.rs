@@ -158,6 +158,7 @@ fn do_check_stonith(xml: &[u8], nodename: &str) -> Result<ComponentState<bool>, 
 
 pub async fn check_stonith(_: ()) -> Result<ComponentState<bool>, ImlAgentError> {
     let stonith = Command::new("cibadmin")
+        .kill_on_drop(true)
         .args(&["--query", "--xpath", "//primitive[@class='stonith']"])
         .output()
         .await?;
@@ -170,7 +171,11 @@ pub async fn check_stonith(_: ()) -> Result<ComponentState<bool>, ImlAgentError>
         });
     }
 
-    let node = Command::new("crm_node").arg("-n").checked_output().await?;
+    let node = Command::new("crm_node")
+        .kill_on_drop(true)
+        .arg("-n")
+        .checked_output()
+        .await?;
 
     do_check_stonith(stonith.stdout.as_slice(), &String::from_utf8(node.stdout)?)
 }

@@ -37,6 +37,7 @@ async fn archive_fids(
                         .arg("push")
                         .arg(src_file)
                         .arg(format!("{}:{}", target_name, get_unique(&fid_path)))
+                        .kill_on_drop(true)
                         .output()
                         .await?;
 
@@ -82,6 +83,7 @@ async fn restore_fids(
                         .arg("pull")
                         .arg(format!("{}:{}", target_name, get_unique(&fid_path)))
                         .arg(src_file)
+                        .kill_on_drop(true)
                         .output()
                         .await?;
 
