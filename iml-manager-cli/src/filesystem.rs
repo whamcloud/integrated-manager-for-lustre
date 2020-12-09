@@ -98,7 +98,7 @@ async fn forget_filesystem(fsname: String) -> Result<(), ImlManagerCliError> {
 
     let CmdWrapper { command } = r.json().await?;
 
-    wait_for_cmds_success(&vec![command]).await?;
+    wait_for_cmds_success(&[command]).await?;
 
     Ok(())
 }
@@ -182,12 +182,13 @@ pub async fn filesystem_cli(command: FilesystemCommand) -> Result<(), ImlManager
                     .fold(("---", vec![], vec![]), |mut acc, x| {
                         match x.get_kind() {
                             TargetKind::Mgt => {
-                                x.active_host_id
+                                if let Some(x) = x
+                                    .active_host_id
                                     .and_then(|x| hosts.objects.iter().find(|y| y.id == x))
                                     .map(|x| x.fqdn.as_str())
-                                    .map(|x| {
-                                        acc.0 = x;
-                                    });
+                                {
+                                    acc.0 = x;
+                                }
                             }
                             TargetKind::Mdt => acc.1.push(x.name),
                             TargetKind::Ost => acc.2.push(x.name),

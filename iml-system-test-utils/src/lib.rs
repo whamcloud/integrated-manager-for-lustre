@@ -839,10 +839,10 @@ mod tests {
 
         let xs = vec![
             (
-                "base_monitored".into(),
+                "base_monitored",
                 mds_servers.into_iter().chain(oss_servers).collect(),
             ),
-            ("stratagem_client".into(), client_servers),
+            ("stratagem_client", client_servers),
         ]
         .into_iter()
         .collect::<Vec<(&str, Vec<&str>)>>();
