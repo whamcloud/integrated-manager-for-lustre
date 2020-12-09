@@ -5,7 +5,7 @@
 use crate::{
     action_plugins::{
         check_kernel, check_stonith, firewall_cmd, high_availability, kernel_module, lamigo, ldev,
-        lpurge, lustre,
+        lnet, lpurge, lustre,
         ntp::{action_configure, is_ntp_configured},
         ostpool, package, postoffice,
         stratagem::{
@@ -76,6 +76,10 @@ pub fn create_registry() -> action_plugins::Actions {
         .add_plugin("remove_firewall_port", firewall_cmd::remove_port)
         .add_plugin("pcs", high_availability::pcs)
         .add_plugin("lctl", lctl::<Vec<_>, String>)
+        .add_plugin("lnet_load", lnet::load)
+        .add_plugin("lnet_unload", lnet::unload)
+        .add_plugin("lnet_start", lnet::start)
+        .add_plugin("lnet_stop", lnet::stop)
         .add_plugin("ostpool_create", ostpool::action_pool_create)
         .add_plugin("ostpool_wait", ostpool::action_pool_wait)
         .add_plugin("ostpool_destroy", ostpool::action_pool_destroy)

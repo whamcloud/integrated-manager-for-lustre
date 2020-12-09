@@ -9,6 +9,7 @@ pub mod high_availability;
 pub mod kernel_module;
 pub mod lamigo;
 pub mod ldev;
+pub mod lnet;
 pub mod lpurge;
 pub mod lustre;
 pub mod ntp;
