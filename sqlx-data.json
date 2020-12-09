@@ -848,6 +848,21 @@
       ]
     }
   },
+  "22657e2845172cb064e7f0dcb4da21163b3064e28038e0329d02cf139a197174": {
+    "query": "\n            UPDATE chroma_core_managedtarget SET\n                state_modified_at = now(),\n                state = 'mounted',\n                immutable_state = 'f',\n                ha_label = $2,\n                reformat = 'f',\n                content_type_id = $3\n            WHERE name = $1 AND uuid = $4\n        ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Text",
+          "Varchar",
+          "Int4",
+          "Text"
+        ]
+      },
+      "nullable": []
+    }
+  },
   "236fc72035901d28d2d6fbdb64a222ce1a4cdb2eb829448ff48be5a4c42a8de7": {
     "query": "SELECT id FROM chroma_core_managedfilesystem WHERE name = $1 AND not_deleted = 't'",
     "describe": {
@@ -1439,43 +1454,6 @@
         true,
         false
       ]
-    }
-  },
-  "3c99aaa8e34a6833fb400741010a76a53b45ce1de7f67e633f56160dcac5de15": {
-    "query": "INSERT INTO target\n                        (state, name, active_host_id, host_ids, filesystems, uuid, mount_path, dev_path, fs_type)\n                        SELECT state, name, active_host_id, string_to_array(host_ids, ',')::int[], string_to_array(filesystems, ',')::text[], uuid, mount_path, dev_path, fs_type\n                        FROM UNNEST($1::text[], $2::text[], $3::int[], $4::text[], $5::text[], $6::text[], $7::text[], $8::text[], $9::fs_type[])\n                        AS t(state, name, active_host_id, host_ids, filesystems, uuid, mount_path, dev_path, fs_type)\n                        ON CONFLICT (uuid)\n                            DO\n                            UPDATE SET  state          = EXCLUDED.state,\n                                        name           = EXCLUDED.name,\n                                        active_host_id = EXCLUDED.active_host_id,\n                                        host_ids       = EXCLUDED.host_ids,\n                                        filesystems    = EXCLUDED.filesystems,\n                                        mount_path     = EXCLUDED.mount_path,\n                                        dev_path       = EXCLUDED.dev_path,\n                                        fs_type        = EXCLUDED.fs_type",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": [
-          "TextArray",
-          "TextArray",
-          "Int4Array",
-          "TextArray",
-          "TextArray",
-          "TextArray",
-          "TextArray",
-          "TextArray",
-          {
-            "Custom": {
-              "name": "_fs_type",
-              "kind": {
-                "Array": {
-                  "Custom": {
-                    "name": "fs_type",
-                    "kind": {
-                      "Enum": [
-                        "zfs",
-                        "ldiskfs"
-                      ]
-                    }
-                  }
-                }
-              }
-            }
-          }
-        ]
-      },
-      "nullable": []
     }
   },
   "414a5b7c63ec04ad876c282460de775c0e919c1063c46c7a49704b3ccd87ab3f": {
@@ -2325,6 +2303,27 @@
       "nullable": []
     }
   },
+  "658cb9f6b833857927e3b9b78004ef3dc0dc87296e09ab8b5ef21f84bb13410b": {
+    "query": "SELECT id FROM chroma_core_managedtarget WHERE name = $1 AND uuid = $2 AND not_deleted = 't'",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Text",
+          "Text"
+        ]
+      },
+      "nullable": [
+        false
+      ]
+    }
+  },
   "681d997bb965a228c0aa75d93d09faefe5412daaf3e7bda3630df319fb9edabb": {
     "query": "select * from django_content_type",
     "describe": {
@@ -2474,21 +2473,6 @@
         false,
         false
       ]
-    }
-  },
-  "78b8a5d4f2a0f92377ff7921c89adb5d188bce96d9cc5fcf25a05f6213bf8be4": {
-    "query": "\n            UPDATE chroma_core_managedtarget SET\n                state_modified_at = now(),\n                state = 'mounted',\n                immutable_state = 'f',\n                name = $1,\n                ha_label = $2,\n                reformat = 'f',\n                content_type_id = $3\n            WHERE uuid = $4\n        ",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": [
-          "Varchar",
-          "Varchar",
-          "Int4",
-          "Text"
-        ]
-      },
-      "nullable": []
     }
   },
   "7b3791ee979b58b8930bdfbad40e0b3ffba6faafb16c54aa1dfd309320387ac2": {
@@ -3998,6 +3982,43 @@
       ]
     }
   },
+  "b7e5fc0a16a72ed9f164b09842b1ba1df32abd067c508cf4844fcc7fc6a5eaed": {
+    "query": "INSERT INTO target\n                        (state, name, active_host_id, host_ids, filesystems, uuid, mount_path, dev_path, fs_type)\n                        SELECT state, name, active_host_id, string_to_array(host_ids, ',')::int[], string_to_array(filesystems, ',')::text[], uuid, mount_path, dev_path, fs_type\n                        FROM UNNEST($1::text[], $2::text[], $3::int[], $4::text[], $5::text[], $6::text[], $7::text[], $8::text[], $9::fs_type[])\n                        AS t(state, name, active_host_id, host_ids, filesystems, uuid, mount_path, dev_path, fs_type)\n                        ON CONFLICT (name, uuid)\n                            DO\n                            UPDATE SET  state          = EXCLUDED.state,\n                                        active_host_id = EXCLUDED.active_host_id,\n                                        host_ids       = EXCLUDED.host_ids,\n                                        filesystems    = EXCLUDED.filesystems,\n                                        mount_path     = EXCLUDED.mount_path,\n                                        dev_path       = EXCLUDED.dev_path,\n                                        fs_type        = EXCLUDED.fs_type",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "TextArray",
+          "TextArray",
+          "Int4Array",
+          "TextArray",
+          "TextArray",
+          "TextArray",
+          "TextArray",
+          "TextArray",
+          {
+            "Custom": {
+              "name": "_fs_type",
+              "kind": {
+                "Array": {
+                  "Custom": {
+                    "name": "fs_type",
+                    "kind": {
+                      "Enum": [
+                        "zfs",
+                        "ldiskfs"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "nullable": []
+    }
+  },
   "b8e774ab32b79eb3f2d87b7f373b609831f72f63f716dcbb7917871531466b1a": {
     "query": "\n        INSERT INTO chroma_core_serverprofile\n        (name, ui_name, ui_description, managed, worker, user_selectable, initial_state, ntp, corosync, corosync2, pacemaker, \"default\")\n        VALUES\n        ('foo', 'foo', 'foo', 'f', 'f', 't', 'bar', 'f', 'f', 'f', 'f', 't')\n        ON CONFLICT DO NOTHING\n    ",
     "describe": {
@@ -4919,26 +4940,6 @@
       "nullable": [
         false,
         false,
-        false
-      ]
-    }
-  },
-  "e7530dba139d6c2354611f4fcfef1de5b8419d923a3f8422f0f2247ac77d10a6": {
-    "query": "SELECT id FROM chroma_core_managedtarget WHERE uuid = $1 AND not_deleted = 't'",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "id",
-          "type_info": "Int4"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "Text"
-        ]
-      },
-      "nullable": [
         false
       ]
     }

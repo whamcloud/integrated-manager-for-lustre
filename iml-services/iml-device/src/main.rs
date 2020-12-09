@@ -184,17 +184,16 @@ async fn main() -> Result<(), ImlDeviceError> {
             },
         );
 
-        tracing::debug!("x: {:?}", x);
+        tracing::debug!(?x);
 
         sqlx::query!(r#"INSERT INTO target
                         (state, name, active_host_id, host_ids, filesystems, uuid, mount_path, dev_path, fs_type)
                         SELECT state, name, active_host_id, string_to_array(host_ids, ',')::int[], string_to_array(filesystems, ',')::text[], uuid, mount_path, dev_path, fs_type
                         FROM UNNEST($1::text[], $2::text[], $3::int[], $4::text[], $5::text[], $6::text[], $7::text[], $8::text[], $9::fs_type[])
                         AS t(state, name, active_host_id, host_ids, filesystems, uuid, mount_path, dev_path, fs_type)
-                        ON CONFLICT (uuid)
+                        ON CONFLICT (name, uuid)
                             DO
                             UPDATE SET  state          = EXCLUDED.state,
-                                        name           = EXCLUDED.name,
                                         active_host_id = EXCLUDED.active_host_id,
                                         host_ids       = EXCLUDED.host_ids,
                                         filesystems    = EXCLUDED.filesystems,
