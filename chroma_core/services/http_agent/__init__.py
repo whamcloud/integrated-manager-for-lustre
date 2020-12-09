@@ -119,7 +119,7 @@ class Service(ChromaService):
 
         # The main thread serves incoming requests to exchanges messages
         # with agents, until it is interrupted (gevent handles signals for us)
-        self.server = wsgi.WSGIServer(("", HTTP_AGENT_PORT), WSGIHandler())
+        self.server = wsgi.WSGIServer(("", HTTP_AGENT_PORT), WSGIHandler(), log=None)
         self.server.serve_forever()
 
         session_rpc_thread.stop()
