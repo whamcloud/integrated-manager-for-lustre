@@ -81,7 +81,7 @@ async fn is_ntp_configured_by_iml() -> Result<bool, ImlAgentError> {
 }
 
 async fn get_ntpstat_command() -> Result<String, ImlAgentError> {
-    let p = Command::new("ntpstat").output().await?;
+    let p = Command::new("ntpstat").kill_on_drop(true).output().await?;
 
     Ok(std::str::from_utf8(&p.stdout).unwrap_or("").to_string())
 }
@@ -89,6 +89,7 @@ async fn get_ntpstat_command() -> Result<String, ImlAgentError> {
 async fn get_chronyc_ntpdata_command() -> Result<String, ImlAgentError> {
     let p = Command::new("chronyc")
         .arg("ntpdata")
+        .kill_on_drop(true)
         .checked_output()
         .await?;
 
@@ -104,6 +105,7 @@ async fn is_ntp_synced_command() -> Result<String, ImlAgentError> {
             "org.freedesktop.timedate1",
             "NTPSynchronized",
         ])
+        .kill_on_drop(true)
         .checked_output()
         .await?;
 

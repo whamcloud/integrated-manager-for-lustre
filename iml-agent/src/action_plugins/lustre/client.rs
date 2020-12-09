@@ -76,6 +76,7 @@ pub async fn mount(mount: Mount) -> Result<(), ImlAgentError> {
     let args = vec!["-t", "lustre", &mount.mountspec, &mount.mountpoint];
     Command::new("/bin/mount")
         .args(args)
+        .kill_on_drop(true)
         .checked_output()
         .await?;
 
@@ -98,6 +99,7 @@ pub async fn unmount(unmount: Unmount) -> Result<(), ImlAgentError> {
     if is_mounted(&unmount.mountpoint, false).await? {
         Command::new("/bin/umount")
             .arg(unmount.mountpoint)
+            .kill_on_drop(true)
             .checked_output()
             .await?;
     }

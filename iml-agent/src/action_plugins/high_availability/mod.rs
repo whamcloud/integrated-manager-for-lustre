@@ -540,6 +540,7 @@ totem.interface.1.mcastaddr (str) = 226.94.1.1
         .as_bytes();
         let output = Command::new("corosync-cmapctl")
             .args(&["totem.interface.0.mcastaddr", "totem.interface.1.mcastaddr"])
+            .kill_on_drop(true)
             .checked_output()
             .await?;
 

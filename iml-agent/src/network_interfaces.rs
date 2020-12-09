@@ -13,6 +13,7 @@ use std::io;
 fn ip_addr_cmd() -> Command {
     let mut cmd = Command::new("ip");
 
+    cmd.kill_on_drop(true);
     cmd.arg("address");
 
     cmd
@@ -21,6 +22,7 @@ fn ip_addr_cmd() -> Command {
 fn get_net_stats_cmd() -> Command {
     let mut cmd = Command::new("cat");
 
+    cmd.kill_on_drop(true);
     cmd.arg("/proc/net/dev");
 
     cmd
@@ -29,6 +31,7 @@ fn get_net_stats_cmd() -> Command {
 fn get_lnet_data_cmd() -> Command {
     let mut cmd = Command::new("lnetctl");
 
+    cmd.kill_on_drop(true);
     cmd.args(&["net", "show"]);
 
     cmd

@@ -9,6 +9,7 @@ use version_utils::Version;
 async fn check_kver_module(module: &str, kver: &str) -> Result<bool, ImlAgentError> {
     Command::new("modinfo")
         .args(&["-n", "-k", kver, module])
+        .kill_on_drop(true)
         .checked_status()
         .await?;
 
@@ -18,6 +19,7 @@ async fn check_kver_module(module: &str, kver: &str) -> Result<bool, ImlAgentErr
 pub async fn get_kernel(modules: Vec<String>) -> Result<String, ImlAgentError> {
     let output = Command::new("rpm")
         .args(&["-q", "--qf", "%{V}-%{R}.%{ARCH}\n", "kernel"])
+        .kill_on_drop(true)
         .checked_output()
         .await?;
 

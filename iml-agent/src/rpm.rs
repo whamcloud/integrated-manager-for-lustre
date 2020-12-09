@@ -45,6 +45,7 @@ pub(crate) async fn installed(package_name: &str) -> Result<bool, ImlAgentError>
 pub(crate) async fn version(package_name: &str) -> Result<Option<Version>, ImlAgentError> {
     let output = Command::new("rpm")
         .args(&["--query", "--queryformat", "%{VERSION}", package_name])
+        .kill_on_drop(true)
         .output()
         .await?;
     parse(output)

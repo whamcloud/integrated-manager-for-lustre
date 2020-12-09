@@ -33,6 +33,7 @@ async fn get_mgs_fses() -> Result<Vec<String>, ImlAgentError> {
         .arg("get_param")
         .arg("-N")
         .args(mgs_fs_parser::params())
+        .kill_on_drop(true)
         .output()
         .err_into()
         .await;

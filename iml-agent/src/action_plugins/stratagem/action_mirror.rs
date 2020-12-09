@@ -16,6 +16,7 @@ async fn lfs_mirror<S: AsRef<OsStr>>(
         .arg("mirror")
         .args(args)
         .arg(path)
+        .kill_on_drop(true)
         .checked_output()
         .await
 }

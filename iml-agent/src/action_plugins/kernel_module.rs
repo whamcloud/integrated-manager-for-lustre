@@ -6,7 +6,10 @@ use crate::agent_error::ImlAgentError;
 use iml_cmd::{CheckedCommandExt, Command};
 
 pub async fn loaded(module: String) -> Result<bool, ImlAgentError> {
-    let output = Command::new("lsmod").checked_output().await?;
+    let output = Command::new("lsmod")
+        .kill_on_drop(true)
+        .checked_output()
+        .await?;
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let module = stdout.lines().find(|m| {
@@ -21,6 +24,7 @@ pub async fn loaded(module: String) -> Result<bool, ImlAgentError> {
 pub async fn version(module: String) -> Result<String, ImlAgentError> {
     let output = Command::new("modinfo")
         .args(&["-F", "version", &module])
+        .kill_on_drop(true)
         .checked_output()
         .await?;
 

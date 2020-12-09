@@ -28,6 +28,7 @@ fn do_rsync<'a>(
                 .arg("-t")
                 .arg(&work.src_file)
                 .arg(&work.dest_file)
+                .kill_on_drop(true)
                 .output()
                 .await?;
 
@@ -93,6 +94,7 @@ async fn archive_fids(
                 .arg("-S")
                 .arg(src_file)
                 .arg(dest_file)
+                .kill_on_drop(true)
                 .output()
                 .await?;
 
@@ -168,9 +170,14 @@ async fn restore_fids(
                 .arg("-S")
                 .arg(dest_file)
                 .arg(src_file)
+                .kill_on_drop(true)
                 .output();
         } else {
-            output = Command::new("rsync").arg(dest_file).arg(src_file).output();
+            output = Command::new("rsync")
+                .arg(dest_file)
+                .arg(src_file)
+                .kill_on_drop(true)
+                .output();
         }
 
         let output = output.await?;
