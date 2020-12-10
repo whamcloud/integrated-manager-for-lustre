@@ -2382,33 +2382,20 @@ pub struct Net {
     pub local_nis: Vec<Nid>,
 }
 
-#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 pub struct LNet {
     pub net: Vec<Net>,
+    pub state: LNetState,
 }
 
-pub trait LNetState {
-    fn get_state(&self) -> String;
-}
-
-impl LNetState for LNet {
-    fn get_state(&self) -> String {
-        let up = self
-            .net
-            .iter()
-            .flat_map(|x| {
-                x.local_nis
-                    .iter()
-                    .map(|x| x.status.as_str())
-                    .collect::<Vec<&str>>()
-            })
-            .any(|x| x.to_ascii_lowercase() == "up");
-
-        match up {
-            true => "up".into(),
-            false => "down".into(),
-        }
-    }
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "postgres-interop", derive(sqlx::Type))]
+#[cfg_attr(feature = "postgres-interop", sqlx(rename = "lnet_state"))]
+#[cfg_attr(feature = "postgres-interop", sqlx(rename_all = "lowercase"))]
+pub enum LNetState {
+    Up,
+    Down,
+    Unloaded,
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
