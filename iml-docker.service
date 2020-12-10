@@ -1,7 +1,7 @@
 [Unit]
 Description=iml-docker
 Requires=docker.service
-After=docker.service
+After=docker.service multi-user.target
 
 [Service]
 Type=oneshot
