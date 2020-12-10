@@ -222,66 +222,6 @@
       "nullable": []
     }
   },
-  "090ddd0694789d14c256adfe605f6af443e883d26c1103f09b4e0e40e6f90164": {
-    "query": "\n            SELECT\n                rh.cluster_id,\n                r.id,\n                t.name,\n                t.mount_path,\n                t.filesystems,\n                t.uuid,\n                t.state,\n                array_agg(DISTINCT rh.host_id) AS \"cluster_hosts!\"\n            FROM target t\n            INNER JOIN corosync_resource r ON r.mount_point = t.mount_path\n            INNER JOIN corosync_resource_managed_host rh ON rh.corosync_resource_id = r.id AND rh.host_id = ANY(t.host_ids)\n            WHERE CARDINALITY(t.filesystems) > 0\n            GROUP BY rh.cluster_id, t.name, r.id, t.mount_path, t.uuid, t.filesystems, t.state\n        ",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "cluster_id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 1,
-          "name": "id",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 2,
-          "name": "name",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 3,
-          "name": "mount_path",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 4,
-          "name": "filesystems",
-          "type_info": "TextArray"
-        },
-        {
-          "ordinal": 5,
-          "name": "uuid",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 6,
-          "name": "state",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 7,
-          "name": "cluster_hosts!",
-          "type_info": "Int4Array"
-        }
-      ],
-      "parameters": {
-        "Left": []
-      },
-      "nullable": [
-        false,
-        false,
-        false,
-        true,
-        false,
-        false,
-        false,
-        null
-      ]
-    }
-  },
   "1167f9862155b35e2bb59ba77286ccfc35c7f6113227d8dce116b3def418e2f9": {
     "query": "\n        INSERT INTO chroma_core_sfastoragesystem\n        (\n            uuid,\n            platform,\n            health_state_reason,\n            health_state,\n            child_health_state\n        )\n        VALUES ($1, $2, $3, $4, $5)\n        ON CONFLICT (uuid) DO UPDATE\n        SET\n            platform = excluded.platform,\n            health_state_reason = excluded.health_state_reason,\n            health_state = excluded.health_state,\n            child_health_state = excluded.child_health_state\n    ",
     "describe": {
@@ -2444,36 +2384,6 @@
         ]
       },
       "nullable": []
-    }
-  },
-  "6d79ab4e8e091dcd8598e521557aa44a4079c8897a021bbda0c0817d9e162461": {
-    "query": "\n            SELECT cluster_id, id, active\n            FROM corosync_resource\n            WHERE resource_agent = 'ocf::ddn:Ticketer';\n            ",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "cluster_id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 1,
-          "name": "id",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 2,
-          "name": "active",
-          "type_info": "Bool"
-        }
-      ],
-      "parameters": {
-        "Left": []
-      },
-      "nullable": [
-        false,
-        false,
-        false
-      ]
     }
   },
   "6d7c1af5cf5e15bc84444013fa6989b6317052dc7f82a198003c690f9c0d3c5f": {
