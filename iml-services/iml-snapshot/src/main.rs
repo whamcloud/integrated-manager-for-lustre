@@ -47,7 +47,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let mut interval = interval(Duration::from_secs(60));
         let mut snapshot_client_counts: HashMap<i32, MonitorState> = HashMap::new();
 
-        while let Some(_) = interval.next().await {
+        while interval.next().await.is_some() {
             let tick_result = tick(&mut snapshot_client_counts, pool_2.clone()).await;
             if let Err(e) = tick_result {
                 tracing::error!("Error during handling snapshot autounmount: {}", e);

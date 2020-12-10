@@ -94,9 +94,7 @@ impl FilesystemMutation {
                 .filter(|x| x.state == "mounted")
                 .fold(HashMap::new(), |mut acc, x| {
                     for f in x.fs_names.as_slice() {
-                        let mut parts = acc
-                            .entry(f.to_string())
-                            .or_insert_with(|| FsParts::default());
+                        let mut parts = acc.entry(f.to_string()).or_insert_with(FsParts::default);
 
                         match x.name.as_str() {
                             "MGS" => parts.mgs = Some(x),
@@ -124,7 +122,7 @@ impl FilesystemMutation {
         )
         .fetch(&context.pg_pool)
         .try_fold(HashMap::new(), |mut acc, x| async {
-            let xs = acc.entry(x.cluster_id).or_insert_with(|| HashSet::new());
+            let xs = acc.entry(x.cluster_id).or_insert_with(HashSet::new);
 
             xs.insert((x.name, x.active));
 

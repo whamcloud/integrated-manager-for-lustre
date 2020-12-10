@@ -509,7 +509,7 @@ fn exe_name() -> Option<String> {
 // FIXME: dedup with iml-manager-cli
 fn selfname(suffix: Option<&str>) -> Option<String> {
     match env::var("CLI_NAME") {
-        Ok(n) => suffix.map(|s| format!("{}-{}", n, s)).or_else(|| Some(n)),
+        Ok(n) => suffix.map(|s| format!("{}-{}", n, s)).or(Some(n)),
         Err(_) => exe_name(),
     }
 }

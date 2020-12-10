@@ -72,7 +72,7 @@ impl StratagemMutation {
             "created",
             false,
             false,
-            &vec!["stratagem.filesync".into()],
+            &["stratagem.filesync".into()],
             serde_json::json!({
                 "remote": remote,
                 "expression": expression,
@@ -84,7 +84,7 @@ impl StratagemMutation {
         .await?;
 
         let mut jobs: Vec<SendJob<HashMap<String, serde_json::Value>>> = vec![SendJob {
-            class_name: "CreateTaskJob".into(),
+            class_name: "CreateTaskJob",
             args: vec![("task_id".into(), serde_json::json!(task.id))]
                 .into_iter()
                 .collect(),
@@ -119,7 +119,7 @@ impl StratagemMutation {
             };
 
             jobs.push(SendJob {
-                class_name: "ScanMdtJob".into(),
+                class_name: "ScanMdtJob",
                 args: vec![
                     ("fqdn".into(), serde_json::to_value(&x.fqdn)?),
                     ("uuid".into(), serde_json::to_value(&uuid)?),
@@ -169,7 +169,7 @@ impl StratagemMutation {
             "created",
             false,
             false,
-            &vec!["stratagem.cloudsync".into()],
+            &["stratagem.cloudsync".into()],
             serde_json::json!({
                 "remote": remote,
                 "expression": expression,
@@ -181,7 +181,7 @@ impl StratagemMutation {
         .await?;
 
         let mut jobs: Vec<SendJob<HashMap<String, serde_json::Value>>> = vec![SendJob {
-            class_name: "CreateTaskJob".into(),
+            class_name: "CreateTaskJob",
             args: vec![("task_id".into(), serde_json::json!(task.id))]
                 .into_iter()
                 .collect(),
@@ -216,7 +216,7 @@ impl StratagemMutation {
             };
 
             jobs.push(SendJob {
-                class_name: "ScanMdtJob".into(),
+                class_name: "ScanMdtJob",
                 args: vec![
                     ("fqdn".into(), serde_json::to_value(&x.fqdn)?),
                     ("uuid".into(), serde_json::to_value(&uuid)?),
@@ -270,7 +270,7 @@ impl StratagemMutation {
         let mut cleanup_tasks = vec![];
 
         let mut jobs = vec![SendJob {
-            class_name: "ClearOldStratagemDataJob".into(),
+            class_name: "ClearOldStratagemDataJob",
             args: HashMap::<String, serde_json::Value>::new(),
         }];
 
@@ -294,7 +294,7 @@ impl StratagemMutation {
             .await?;
 
             jobs.push(SendJob {
-                class_name: "CreateTaskJob".into(),
+                class_name: "CreateTaskJob",
                 args: vec![("task_id".into(), serde_json::json!(task.id))]
                     .into_iter()
                     .collect(),
@@ -319,7 +319,7 @@ impl StratagemMutation {
             .await?;
 
             jobs.push(SendJob {
-                class_name: "CreateTaskJob".into(),
+                class_name: "CreateTaskJob",
                 args: vec![("task_id".into(), serde_json::json!(task.id))]
                     .into_iter()
                     .collect(),
@@ -427,7 +427,7 @@ impl StratagemMutation {
             }
 
             jobs.push(SendJob {
-                class_name: "FastFileScanMdtJob".into(),
+                class_name: "FastFileScanMdtJob",
                 args: vec![
                     ("fqdn".into(), serde_json::to_value(&x.fqdn)?),
                     ("uuid".into(), serde_json::to_value(&uuid)?),
@@ -460,7 +460,7 @@ impl StratagemMutation {
 
         for t in cleanup_tasks {
             jobs.push(SendJob {
-                class_name: "RemoveTaskJob".into(),
+                class_name: "RemoveTaskJob",
                 args: vec![
                     ("task_id".into(), serde_json::json!(t.id)),
                     (
@@ -521,7 +521,7 @@ impl StratagemMutation {
             .await?;
 
             jobs.push(SendJob {
-                class_name: "CreateTaskJob".into(),
+                class_name: "CreateTaskJob",
                 args: vec![("task_id".into(), serde_json::json!(task.id))]
                     .into_iter()
                     .collect(),
@@ -555,7 +555,7 @@ impl StratagemMutation {
             };
 
             jobs.push(SendJob {
-                class_name: "ScanMdtJob".into(),
+                class_name: "ScanMdtJob",
                 args: vec![
                     ("fqdn".into(), serde_json::to_value(&t.fqdn)?),
                     ("uuid".into(), serde_json::to_value(&uuid)?),
@@ -575,7 +575,7 @@ impl StratagemMutation {
 
         for t in cleanup_tasks {
             jobs.push(SendJob {
-                class_name: "RemoveTaskJob".into(),
+                class_name: "RemoveTaskJob",
                 args: vec![
                     ("task_id".into(), serde_json::json!(t.id)),
                     (
@@ -665,7 +665,7 @@ async fn get_target_hosts_by_fsname(
     .try_filter(|x| {
         let is_mdt = (&x.name)
             .rsplitn(2, '-')
-            .nth(0)
+            .next()
             .filter(|x| x.starts_with("MDT"))
             .is_some();
 

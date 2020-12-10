@@ -182,7 +182,7 @@ pub async fn process_retention(
                     let cmd =
                         destroy_snapshot(client.clone(), &fs_name, snapshot_name.as_ref()).await?;
 
-                    wait_for_cmds_success(&vec![cmd], None).await?;
+                    wait_for_cmds_success(&[cmd], None).await?;
                 }
             }
         }
