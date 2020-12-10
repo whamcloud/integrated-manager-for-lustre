@@ -4,7 +4,7 @@ BuildRequires: systemd
 %global crate iml
 
 Name: rust-%{crate}
-Version: 0.4.0
+Version: 0.5.0
 # Release Start
 Release: 1%{?dist}
 # Release End
@@ -550,6 +550,9 @@ Group: System Environment/Libraries
 %attr(0644,root,root)%{_unitdir}/iml-timer.service
 
 %changelog
+* Thu Dec 10 2020 Will Johnson <wjohnson@whamcloud.com> - 0.5.0-1
+- Release 0.5.0
+
 * Thu Sep 17 2020 Will Johnson <wjohnson@whamcloud.com> - 0.3.0-1
 - Add timer service
 

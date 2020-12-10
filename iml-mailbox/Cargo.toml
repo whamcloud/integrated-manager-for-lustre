@@ -2,16 +2,16 @@
 authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
 name = "iml-mailbox"
-version = "0.4.0"
+version = "0.5.0"
 
 [dependencies]
 bytes = "0.5"
 futures = "0.3"
-iml-fs = {path = "../iml-fs", version = "0.4"}
-iml-manager-env = {path = "../iml-manager-env", version = "0.4"}
-iml-postgres = {path = "../iml-postgres", version = "0.4"}
-iml-tracing = {version = "0.3", path = "../iml-tracing"}
-iml-wire-types = {path = "../iml-wire-types", version = "0.4", features = ["postgres-interop"]}
+iml-fs = {path = "../iml-fs", version = "0.5"}
+iml-manager-env = {path = "../iml-manager-env", version = "0.5"}
+iml-postgres = {path = "../iml-postgres", version = "0.5"}
+iml-tracing = {version = "0.5", path = "../iml-tracing"}
+iml-wire-types = {path = "../iml-wire-types", version = "0.5", features = ["postgres-interop"]}
 lazy_static = "1.4.0"
 serde = {version = "1", features = ["derive"]}
 serde_json = "1.0"

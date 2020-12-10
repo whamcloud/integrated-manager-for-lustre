@@ -2,15 +2,15 @@
 authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
 name = "iml-task-runner"
-version = "0.1.0"
+version = "0.5.0"
 
 [dependencies]
 futures = "0.3"
-iml-action-client = {path = "../iml-action-client", version = "0.1"}
-iml-manager-env = {path = "../iml-manager-env", version = "0.4"}
-iml-postgres = {path = "../iml-postgres", version = "0.4"}
-iml-tracing = {path = "../iml-tracing", version = "0.3"}
-iml-wire-types = {path = "../iml-wire-types", version = "0.4", features = ["postgres-interop"]}
+iml-action-client = {path = "../iml-action-client", version = "0.5"}
+iml-manager-env = {path = "../iml-manager-env", version = "0.5"}
+iml-postgres = {path = "../iml-postgres", version = "0.5"}
+iml-tracing = {path = "../iml-tracing", version = "0.5"}
+iml-wire-types = {path = "../iml-wire-types", version = "0.5", features = ["postgres-interop"]}
 lazy_static = "1.4.0"
 serde_json = "1.0"
 thiserror = "1.0"

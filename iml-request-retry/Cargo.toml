@@ -3,7 +3,7 @@ authors = ["IML Team <iml@whamcloud.com>"]
 description = "IML async request retry Library"
 edition = "2018"
 name = "iml-request-retry"
-version = "0.4.0"
+version = "0.5.0"
 
 [dependencies]
 futures = "0.3"

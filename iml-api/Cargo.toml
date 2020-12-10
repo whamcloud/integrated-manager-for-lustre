@@ -2,19 +2,19 @@
 authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
 name = "iml-api"
-version = "0.4.0"
+version = "0.5.0"
 
 [dependencies]
 chrono = "0.4"
 futures = "0.3"
 humantime = "2.0"
-iml-job-scheduler-rpc = {path = "../iml-job-scheduler-rpc", version = "0.4"}
-iml-manager-client = {path = "../iml-manager-client", version = "0.4"}
-iml-manager-env = {path = "../iml-manager-env", version = "0.4"}
-iml-postgres = {path = "../iml-postgres", version = "0.4"}
-iml-rabbit = {path = "../iml-rabbit", version = "0.4", features = ["warp-filters"]}
-iml-tracing = {version = "0.3", path = "../iml-tracing"}
-iml-wire-types = {path = "../iml-wire-types", version = "0.4", features = ["graphql", "postgres-interop"]}
+iml-job-scheduler-rpc = {path = "../iml-job-scheduler-rpc", version = "0.5"}
+iml-manager-client = {path = "../iml-manager-client", version = "0.5"}
+iml-manager-env = {path = "../iml-manager-env", version = "0.5"}
+iml-postgres = {path = "../iml-postgres", version = "0.5"}
+iml-rabbit = {path = "../iml-rabbit", version = "0.5", features = ["warp-filters"]}
+iml-tracing = {version = "0.5", path = "../iml-tracing"}
+iml-wire-types = {path = "../iml-wire-types", version = "0.5", features = ["graphql", "postgres-interop"]}
 itertools = "0.9"
 juniper = {git = "https://github.com/graphql-rust/juniper"}
 lazy_static = "1.4.0"

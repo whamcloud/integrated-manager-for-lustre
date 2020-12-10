@@ -2,19 +2,19 @@
 authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
 name = "iml-device"
-version = "0.4.0"
+version = "0.5.0"
 
 [dependencies]
 device-types = "0.3.0"
 futures = "0.3"
 im = {version = "15.0", features = ["serde"]}
-iml-change = {path = "../../iml-change", version = "0.1"}
-iml-manager-env = {path = "../../iml-manager-env", version = "0.4"}
-iml-postgres = {path = "../../iml-postgres", version = "0.4"}
-iml-rabbit = {path = "../../iml-rabbit", version = "0.4"}
-iml-service-queue = {path = "../iml-service-queue", version = "0.4"}
-iml-tracing = {version = "0.3", path = "../../iml-tracing"}
-iml-wire-types = {path = "../../iml-wire-types", version = "0.4", features = ["postgres-interop"]}
+iml-change = {path = "../../iml-change", version = "0.5"}
+iml-manager-env = {path = "../../iml-manager-env", version = "0.5"}
+iml-postgres = {path = "../../iml-postgres", version = "0.5"}
+iml-rabbit = {path = "../../iml-rabbit", version = "0.5"}
+iml-service-queue = {path = "../iml-service-queue", version = "0.5"}
+iml-tracing = {version = "0.5", path = "../../iml-tracing"}
+iml-wire-types = {path = "../../iml-wire-types", version = "0.5", features = ["postgres-interop"]}
 serde = {version = "1", features = ["derive"]}
 serde_json = "1.0"
 thiserror = "1.0"
@@ -24,6 +24,6 @@ warp = "0.2"
 
 [dev-dependencies]
 chrono = "0.4"
-iml-postgres = {path = "../../iml-postgres", version = "0.4", features = ["test"]}
+iml-postgres = {path = "../../iml-postgres", version = "0.5", features = ["test"]}
 insta = {version = "0.16", features = ["redactions"]}
 tokio-test = "0.2"

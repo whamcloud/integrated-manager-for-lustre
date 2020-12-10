@@ -1,6 +1,6 @@
 FROM rust-iml-base as builder
 
-FROM imlteam/systemd-base:6.2.0
+FROM imlteam/systemd-base:6.3.0
 COPY --from=builder /build/target/release/iml-report /bin/
 COPY docker/iml-report/iml-report.service /etc/systemd/system/
 COPY docker/iml-report/iml-report.conf /etc/systemd/system/

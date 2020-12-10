@@ -6,13 +6,13 @@ group "default" {
 target "python-service-base" {
   dockerfile = "docker/python-service-base.dockerfile"
   context = "../"
-  tags = ["imlteam/python-service-base:6.2.0"]
+  tags = ["imlteam/python-service-base:6.3.0"]
 }
 
 target "systemd-base" {
   dockerfile = "docker/systemd-base.dockerfile"
   context = "../"
-  tags = ["imlteam/systemd-base:6.2.0"]
+  tags = ["imlteam/systemd-base:6.3.0"]
 }
 
 target "rust-base" {
@@ -24,7 +24,7 @@ target "rust-base" {
 target "rust-service-base" {
   dockerfile = "docker/rust-service-base.dockerfile"
   context = "../"
-  tags = ["imlteam/rust-service-base:6.2.0"]
+  tags = ["imlteam/rust-service-base:6.3.0"]
 }
 
 target "iml-gui" {

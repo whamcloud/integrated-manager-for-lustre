@@ -2,21 +2,21 @@
 authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
 name = "iml-snapshot"
-version = "0.4.0"
+version = "0.5.0"
 
 [dependencies]
 futures = "0.3"
 futures-util = "0.3"
-iml-command-utils = {path = "../../iml-command-utils", version = "0.4"}
-iml-graphql-queries = {path = "../../iml-graphql-queries", version = "0.2"}
-iml-influx = {path = "../../iml-influx", version = "0.2"}
-iml-manager-client = {path = "../../iml-manager-client", version = "0.4"}
-iml-manager-env = {path = "../../iml-manager-env", version = "0.4"}
-iml-postgres = {path = "../../iml-postgres", version = "0.4"}
-iml-rabbit = {path = "../../iml-rabbit", version = "0.4"}
-iml-service-queue = {path = "../iml-service-queue", version = "0.4"}
-iml-tracing = {version = "0.3", path = "../../iml-tracing"}
-iml-wire-types = {path = "../../iml-wire-types", version = "0.4"}
+iml-command-utils = {path = "../../iml-command-utils", version = "0.5"}
+iml-graphql-queries = {path = "../../iml-graphql-queries", version = "0.5"}
+iml-influx = {path = "../../iml-influx", version = "0.5"}
+iml-manager-client = {path = "../../iml-manager-client", version = "0.5"}
+iml-manager-env = {path = "../../iml-manager-env", version = "0.5"}
+iml-postgres = {path = "../../iml-postgres", version = "0.5"}
+iml-rabbit = {path = "../../iml-rabbit", version = "0.5"}
+iml-service-queue = {path = "../iml-service-queue", version = "0.5"}
+iml-tracing = {version = "0.5", path = "../../iml-tracing"}
+iml-wire-types = {path = "../../iml-wire-types", version = "0.5"}
 serde = "1.0"
 thiserror = "1.0"
 tokio = {version = "0.2", features = ["rt-threaded"]}

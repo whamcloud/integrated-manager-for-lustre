@@ -5,14 +5,14 @@ edition = "2018"
 license = "MIT"
 name = "wbem-client"
 repository = "https://github.com/whamcloud/integrated-manager-for-lustre/tree/master/wbem-client"
-version = "0.2.0"
+version = "0.5.0"
 
 [dependencies]
 async-trait = "0.1"
 base64 = "0.12"
 bytes = "0.5"
 futures = "0.3"
-iml-tracing = {version = "0.3", path = "../iml-tracing"}
+iml-tracing = {version = "0.5", path = "../iml-tracing"}
 quick-xml = {version = "0.19", features = ["serialize"]}
 reqwest = {version = "0.10", default-features = false, features = ["default-tls"]}
 serde = {version = "1", features = ["derive"]}

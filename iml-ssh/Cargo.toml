@@ -2,14 +2,14 @@
 authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
 name = "iml-ssh"
-version = "0.1.0"
+version = "0.5.0"
 
 [dependencies]
 anyhow = "1.0"
 dirs = "3"
 futures = "0.3"
-iml-fs = {version = "0.4", path = "../iml-fs"}
-iml-tracing = {version = "0.3", path = "../iml-tracing"}
+iml-fs = {version = "0.5", path = "../iml-fs"}
+iml-tracing = {version = "0.5", path = "../iml-tracing"}
 thiserror = "1.0"
 thrussh = "0.29.13"
 thrussh-keys = "0.18"

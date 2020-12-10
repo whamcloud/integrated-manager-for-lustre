@@ -3,7 +3,7 @@ authors = ["IML Team <iml@whamcloud.com>"]
 description = "Shared functions and data types related to influx"
 edition = "2018"
 name = "iml-influx"
-version = "0.2.0"
+version = "0.5.0"
 
 [dependencies]
 futures = {version = "0.3", optional = true}

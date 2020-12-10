@@ -2,14 +2,14 @@
 authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
 name = "iml-report"
-version = "0.1.0"
+version = "0.5.0"
 
 [dependencies]
 bytes = "0.5"
 futures = "0.3"
-iml-fs = {path = "../iml-fs", version = "0.4"}
-iml-manager-env = {path = "../iml-manager-env", version = "0.4"}
-iml-tracing = {version = "0.3", path = "../iml-tracing"}
+iml-fs = {path = "../iml-fs", version = "0.5"}
+iml-manager-env = {path = "../iml-manager-env", version = "0.5"}
+iml-tracing = {version = "0.5", path = "../iml-tracing"}
 tokio = {version = "0.2", features = ["rt-threaded"]}
 tracing = "0.1"
 warp = "0.2"

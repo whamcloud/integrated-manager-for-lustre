@@ -5,7 +5,7 @@ edition = "2018"
 license = "MIT"
 name = "iml-agent"
 repository = "https://github.com/whamcloud/integrated-manager-for-lustre/tree/master/iml-agent"
-version = "0.4.0"
+version = "0.5.0"
 
 [dependencies]
 async-trait = "0.1"
@@ -21,17 +21,17 @@ elementtree = "0.5"
 exitcode = "1.1"
 futures = "0.3"
 http = "0.2"
-iml-cmd = {path = "../iml-cmd", version = "0.4.0"}
-iml-fs = {path = "../iml-fs", version = "0.4.0"}
-iml-systemd = {path = "../iml-systemd", version = "0.4.0"}
-iml-tracing = {version = "0.3", path = "../iml-tracing"}
-iml-util = {path = "../iml-util", version = "0.4.0"}
-iml-wire-types = {path = "../iml-wire-types", version = "0.4", features = ["cli"]}
+iml-cmd = {path = "../iml-cmd", version = "0.5.0"}
+iml-fs = {path = "../iml-fs", version = "0.5.0"}
+iml-systemd = {path = "../iml-systemd", version = "0.5.0"}
+iml-tracing = {version = "0.5", path = "../iml-tracing"}
+iml-util = {path = "../iml-util", version = "0.5.0"}
+iml-wire-types = {path = "../iml-wire-types", version = "0.5", features = ["cli"]}
 inotify = "0.8"
 ipnetwork = "0.17"
 lazy_static = "1.4.0"
 libc = "0.2"
-liblustreapi = {path = "../liblustreapi", version = "0.4"}
+liblustreapi = {path = "../liblustreapi", version = "0.5"}
 lustre_collector = "0.2.16"
 prettytable-rs = "0.8"
 quick-xml = {version = "0.18", features = ["serialize"]}
@@ -50,7 +50,7 @@ tracing = "0.1"
 url = "2.1"
 uuid = {version = "0.8", features = ["v4"]}
 v_hist = "0.1.2"
-version-utils = {path = "../version-utils", version = "0.2.0"}
+version-utils = {path = "../version-utils", version = "0.5.0"}
 
 [dependencies.regex]
 default-features = false
