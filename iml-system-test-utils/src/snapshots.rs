@@ -429,7 +429,7 @@ pub fn parse_snapshots(snapshots: Output) -> SnapshotMap {
             ),
             |(mut key, mut map), x| {
                 let line = x.trim();
-                if line.find("==>").is_some() {
+                if line.contains("==>") {
                     if line.split(' ').count() == 2 {
                         key = &line[4..line.len() - 1];
                         map.insert(key.to_string(), vec![]);
@@ -523,9 +523,7 @@ servers-deployed
 ==> c7: VM not created. Moving on...
 ==> c8: VM not created. Moving on..."#
                 .as_bytes()
-                .iter()
-                .cloned()
-                .collect(),
+                .to_vec(),
         }
     }
 
@@ -544,7 +542,7 @@ servers-deployed
     }
 
     fn get_full_graph() -> DiGraph<Snapshot, Transition> {
-        create_graph(&vec![
+        create_graph(&[
             SnapshotName::Bare,
             SnapshotName::LustreRpmsInstalled,
             SnapshotName::ImlConfigured,
@@ -696,7 +694,7 @@ servers-deployed
 
     #[test]
     fn test_get_ldiskfs_test_path_from_graph() {
-        let graph = create_graph(&vec![]);
+        let graph = create_graph(&[]);
 
         let edges = get_test_path(&graph, &SnapshotName::Init, &ldiskfs_filter);
 
@@ -705,7 +703,7 @@ servers-deployed
 
     #[test]
     fn test_get_zfs_test_path_from_graph() {
-        let graph = create_graph(&vec![]);
+        let graph = create_graph(&[]);
 
         let edges = get_test_path(&graph, &SnapshotName::Init, &zfs_filter);
 
@@ -714,7 +712,7 @@ servers-deployed
 
     #[test]
     fn test_get_stratagem_test_path_from_graph() {
-        let graph = create_graph(&vec![]);
+        let graph = create_graph(&[]);
 
         let edges = get_test_path(&graph, &SnapshotName::Init, &stratagem_filter);
 

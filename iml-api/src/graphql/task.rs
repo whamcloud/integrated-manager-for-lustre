@@ -86,7 +86,7 @@ impl TaskMutation {
     /// Remove an existing task by id
     async fn remove(context: &Context, task_id: i32) -> juniper::FieldResult<Command> {
         let job = SendJob {
-            class_name: "RemoveTaskJob".into(),
+            class_name: "RemoveTaskJob",
             args: vec![("task_id".into(), serde_json::json!(task_id))]
                 .into_iter()
                 .collect::<HashMap<String, serde_json::Value>>(),

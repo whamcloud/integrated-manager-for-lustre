@@ -650,7 +650,7 @@ struct SnapshotIntervalName {
 }
 
 fn parse_snapshot_name(name: &str) -> Option<SnapshotIntervalName> {
-    match name.trim().splitn(3, "-").collect::<Vec<&str>>().as_slice() {
+    match name.trim().splitn(3, '-').collect::<Vec<&str>>().as_slice() {
         [id, fs, ts] => {
             let ts = ts.parse::<DateTime<Utc>>().ok()?;
             let id = id.parse::<i32>().ok()?;
@@ -1459,7 +1459,7 @@ async fn run_jobs<T: std::fmt::Debug + serde::Serialize>(
 
 fn create_task_job<'a>(task_id: i32) -> SendJob<'a, HashMap<String, serde_json::Value>> {
     SendJob {
-        class_name: "CreateTaskJob".into(),
+        class_name: "CreateTaskJob",
         args: vec![("task_id".into(), serde_json::json!(task_id))]
             .into_iter()
             .collect(),

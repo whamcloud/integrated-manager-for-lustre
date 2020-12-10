@@ -266,7 +266,7 @@ fn get_item_after<'a>(s: &'a str, after: &str) -> Option<&'a str> {
 fn find_one_in_many<'a>(msg: &str, handlers: &'a HashMap<&str, Handler>) -> Option<&'a Handler> {
     handlers
         .iter()
-        .find(|(k, _)| k.find(msg).is_some())
+        .find(|(k, _)| k.contains(msg))
         .map(|(_, v)| v)
 }
 

@@ -272,7 +272,7 @@ async fn update_managed_filesystems(
     .fetch(pool)
     .try_fold(HashMap::new(), |mut acc, x| async {
         for fs in x.filesystems {
-            let h = acc.entry(fs.to_string()).or_insert_with(|| HashMap::new());
+            let h = acc.entry(fs.to_string()).or_insert_with(HashMap::new);
 
             h.insert(x.name.to_string(), x.state.to_string());
         }
