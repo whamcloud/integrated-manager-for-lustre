@@ -53,7 +53,7 @@ pub(crate) trait RequestExt: Sized {
     fn api_query(path: impl ToString, args: impl serde::Serialize) -> Result<Self, serde_urlencoded::ser::Error>;
     fn api_item(path: impl ToString, item: impl ToString) -> Self;
     fn graphql_query<T: serde::Serialize>(x: &T) -> Self;
-    fn with_auth(self: Self) -> Self;
+    fn with_auth(self) -> Self;
 }
 
 impl RequestExt for fetch::Request {

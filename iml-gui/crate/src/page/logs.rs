@@ -57,7 +57,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
             let query = builder.build();
             let req = fetch::Request::graphql_query(&query);
 
-            orders.perform_cmd(req.fetch_json_data(|x| Msg::LogsFetched(x)));
+            orders.perform_cmd(req.fetch_json_data(Msg::LogsFetched));
         }
         Msg::LogsFetched(r) => {
             match r {
@@ -192,10 +192,7 @@ fn log_item_view(log: &LogMessage, cache: &ArcCache) -> Node<Msg> {
             label_view("Time: "),
             &log.datetime.format("%H:%M:%S %Y/%m/%d").to_string()
         ],
-        div![
-            class![C.grid, C.justify_end],
-            log_severity(LogSeverity::from(log.severity))
-        ],
+        div![class![C.grid, C.justify_end], log_severity(log.severity)],
         div![class![C.col_span_4], log.message],
         div![
             class![C.col_span_2],

@@ -85,7 +85,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
 
                 let req = fetch::Request::graphql_query(&query);
 
-                orders.perform_cmd(req.fetch_json_data(|x| Msg::SnapshotDeleteIntervalResp(x)));
+                orders.perform_cmd(req.fetch_json_data(Msg::SnapshotDeleteIntervalResp));
             }
         }
         Msg::SnapshotDeleteIntervalResp(x) => match x {

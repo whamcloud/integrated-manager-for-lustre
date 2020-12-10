@@ -31,7 +31,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
 
                 let req = fetch::Request::graphql_query(&query);
 
-                orders.perform_cmd(req.fetch_json_data(|x| Msg::DeleteRetentionResp(x)));
+                orders.perform_cmd(req.fetch_json_data(Msg::DeleteRetentionResp));
             }
         }
         Msg::DeleteRetentionResp(x) => match x {

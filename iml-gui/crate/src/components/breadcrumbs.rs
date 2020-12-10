@@ -23,16 +23,16 @@ pub trait BreadCrumb {
 }
 
 impl<Crumb: PartialEq> BreadCrumbs<Crumb> {
-    pub fn iter(self: &Self) -> impl DoubleEndedIterator<Item = &Crumb> {
+    pub fn iter(&self) -> impl DoubleEndedIterator<Item = &Crumb> {
         self.crumbs.iter()
     }
 
-    pub fn clear(self: &mut Self) -> &mut Self {
+    pub fn clear(&mut self) -> &mut Self {
         self.crumbs.clear();
         self
     }
 
-    pub fn push(self: &mut Self, n: Crumb) -> &mut Self {
+    pub fn push(&mut self, n: Crumb) -> &mut Self {
         let mut new_crumbs = LinkedList::new();
 
         while let Some(c) = self.crumbs.pop_front() {

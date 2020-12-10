@@ -11,8 +11,8 @@ async fn test_docker_zfs_setup() -> Result<(), TestError> {
     let config: Config = Config::default();
     let config: Config = Config {
         profile_map: vec![
-            ("base_monitored".into(), config.storage_servers()),
-            ("base_client".into(), config.client_servers()),
+            ("base_monitored", config.storage_servers()),
+            ("base_client", config.client_servers()),
         ],
         test_type: TestType::Docker,
         fs_type: FsType::Zfs,

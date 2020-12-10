@@ -84,7 +84,7 @@ pub(crate) enum Page {
 }
 
 impl Page {
-    pub(crate) fn title(self: &Self) -> String {
+    pub(crate) fn title(&self) -> String {
         match self {
             Self::About => "About".into(),
             Self::AppLoading => "Loading...".into(),

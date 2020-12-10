@@ -14,15 +14,21 @@ pub fn into_zed_events(xs: Vec<libzfs_types::Pool>) -> state::ZedEvents {
 }
 
 pub fn remove_pool(zed_events: &mut state::ZedEvents, guid: u64) -> Result<libzfs_types::Pool> {
-    zed_events.remove(&guid).ok_or_else(|| {
-        Error::LibZfsError(libzfs_types::LibZfsError::PoolNotFound(None, Some(guid)))
-    })
+    zed_events
+        .remove(&guid)
+        .ok_or(Error::LibZfsError(libzfs_types::LibZfsError::PoolNotFound(
+            None,
+            Some(guid),
+        )))
 }
 
 pub fn get_pool(zed_events: &mut state::ZedEvents, guid: u64) -> Result<&mut libzfs_types::Pool> {
-    zed_events.get_mut(&guid).ok_or_else(|| {
-        Error::LibZfsError(libzfs_types::LibZfsError::PoolNotFound(None, Some(guid)))
-    })
+    zed_events
+        .get_mut(&guid)
+        .ok_or(Error::LibZfsError(libzfs_types::LibZfsError::PoolNotFound(
+            None,
+            Some(guid),
+        )))
 }
 
 fn update_prop(name: &str, value: &str, xs: &mut Vec<libzfs_types::ZProp>) {
@@ -96,7 +102,9 @@ pub fn update_zed_events(
                 pool.datasets
                     .iter_mut()
                     .find(|d| d.name == name)
-                    .ok_or_else(|| Error::LibZfsError(libzfs_types::LibZfsError::ZfsNotFound(name)))
+                    .ok_or(Error::LibZfsError(libzfs_types::LibZfsError::ZfsNotFound(
+                        name,
+                    )))
             }
 
             let mut pool = get_pool(&mut zed_events, guid)?;

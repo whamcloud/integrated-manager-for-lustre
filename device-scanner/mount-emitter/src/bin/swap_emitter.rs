@@ -40,7 +40,7 @@ async fn main() -> Result<(), mount_emitter::Error> {
         for x in xs {
             let x = x.trim();
 
-            if x == "" {
+            if x.is_empty() {
                 continue;
             }
 

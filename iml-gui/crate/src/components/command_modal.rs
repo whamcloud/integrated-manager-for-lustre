@@ -683,7 +683,7 @@ fn extract_children_from_cmd(cmd: &Arc<Command>) -> (i32, Vec<i32>) {
         .iter()
         .filter_map(|s| extract_uri_id::<Job0>(s))
         .collect::<Vec<i32>>();
-    deps.sort();
+    deps.sort_unstable();
     (cmd.id, deps)
 }
 
@@ -693,7 +693,7 @@ fn extract_children_from_job(job: &Arc<Job0>) -> (i32, Vec<i32>) {
         .iter()
         .filter_map(|s| extract_uri_id::<Step>(s))
         .collect::<Vec<i32>>();
-    deps.sort();
+    deps.sort_unstable();
     (job.id, deps)
 }
 
@@ -725,7 +725,7 @@ fn extract_wait_fors_from_job(job: &Job0, jobs: &HashMap<i32, Arc<RichJob>>) -> 
 
 fn extract_sorted_keys<T>(hm: &HashMap<i32, T>) -> Vec<i32> {
     let mut ids = hm.keys().copied().collect::<Vec<_>>();
-    ids.sort();
+    ids.sort_unstable();
     ids
 }
 
@@ -924,14 +924,14 @@ mod tests {
     #[test]
     fn test_is_subset() {
         let all = vec![1, 2, 3, 4, 5];
-        assert_eq!(is_subset(&vec![1, 2, 3], &all), true);
-        assert_eq!(is_subset(&vec![1, 3, 5], &all), true);
-        assert_eq!(is_subset(&vec![], &all), true);
+        assert_eq!(is_subset(&[1, 2, 3], &all), true);
+        assert_eq!(is_subset(&[1, 3, 5], &all), true);
+        assert_eq!(is_subset(&[], &all), true);
         assert_eq!(is_subset(&all, &all), true);
 
-        assert_eq!(is_subset(&vec![1, 6], &all), false);
+        assert_eq!(is_subset(&[1, 6], &all), false);
         // if not sorted, the correctness is not guaranteed
-        assert_eq!(is_subset(&vec![5, 1], &all), false);
+        assert_eq!(is_subset(&[5, 1], &all), false);
     }
 
     #[test]
@@ -1216,7 +1216,7 @@ mod tests {
                 }
             }
             let mut sam = hs.into_iter().collect::<Vec<_>>();
-            sam.sort();
+            sam.sort_unstable();
             sam
         }
         (0..n)
@@ -1230,9 +1230,9 @@ mod tests {
                 let sel_step_ids = sample(rng, &step_ids, ns);
                 let result = sel_cmd_ids
                     .into_iter()
-                    .map(|id| TypedId::Cmd(id))
-                    .chain(sel_job_ids.into_iter().map(|id| TypedId::Job(id)))
-                    .chain(sel_step_ids.into_iter().map(|id| TypedId::Step(id)))
+                    .map(TypedId::Cmd)
+                    .chain(sel_job_ids.into_iter().map(TypedId::Job))
+                    .chain(sel_step_ids.into_iter().map(TypedId::Step))
                     .collect::<HashSet<_>>();
                 Select(result)
             })
@@ -1274,7 +1274,7 @@ mod tests {
         result
     }
 
-    const WELL_ORDERED_TREE: &'static str = r#"253: Stop file system fs
+    const WELL_ORDERED_TREE: &str = r#"253: Stop file system fs
   244: Make file system fs unavailable
     243: Stop target fs-OST0000
     242: Stop target fs-OST0003

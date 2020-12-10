@@ -10,8 +10,8 @@ async fn test_docker_stratagem_setup() -> Result<(), TestError> {
     let config: Config = Config::default();
     let config: Config = Config {
         profile_map: vec![
-            ("base_monitored".into(), config.storage_servers()),
-            ("stratagem_client".into(), config.client_servers()),
+            ("base_monitored", config.storage_servers()),
+            ("stratagem_client", config.client_servers()),
         ],
         use_stratagem: true,
         branding: iml_wire_types::Branding::DDN(iml_wire_types::DdnBranding::Exascaler),
