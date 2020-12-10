@@ -66,7 +66,7 @@ impl StepQuery {
 
         if !not_found.is_empty() {
             Err(FieldError::from(format!(
-                "Jobs not found for ids: {:?}",
+                "Steps not found for ids: {:?}",
                 not_found
             )))
         } else {
