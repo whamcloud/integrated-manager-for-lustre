@@ -45,7 +45,8 @@ mv iml-docker.service %{buildroot}%{_unitdir}
 
 
 %post
-systemctl preset iml-docker.service
+%systemd_post iml-docker.service
+
 
 %preun
 %systemd_preun iml-docker.service

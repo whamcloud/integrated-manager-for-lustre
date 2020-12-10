@@ -93,12 +93,12 @@ cp 99-iml-zed-enhancer.rules %{buildroot}%{_sysconfdir}/udev/rules.d
 
 
 %post
-systemctl preset device-scanner.socket
-systemctl preset mount-emitter.service
-systemctl preset swap-emitter.service
-systemctl preset zed-populator.service
-systemctl preset zed-enhancer.socket
-systemctl preset zed-enhancer.service
+%systemd_post device-scanner.socket
+%systemd_post mount-emitter.service
+%systemd_post swap-emitter.service
+%systemd_post zed-populator.service
+%systemd_post zed-enhancer.socket
+%systemd_post zed-enhancer.service
 
 
 %preun
