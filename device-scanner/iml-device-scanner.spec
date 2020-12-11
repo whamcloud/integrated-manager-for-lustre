@@ -1,7 +1,7 @@
 %define     base_name device-scanner
 
 Name:       iml-%{base_name}
-Version:    5.0.0
+Version:    5.1.0
 # Release Start
 Release:    1%{?dist}
 # Release End
@@ -120,6 +120,9 @@ cp 99-iml-zed-enhancer.rules %{buildroot}%{_sysconfdir}/udev/rules.d
 
 
 %changelog
+* Fri Dec 11 2020 Will Johnson <wjohnson@whamcloud.com> 5.1.0-1
+- Released with IML 6.3
+
 * Thu Oct 18 2018 Joe Grund <jgrund@whamcloud.com> 2.0.0-1
 - Resolve device graph agent-side
 - Rewrite in Rust

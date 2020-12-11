@@ -1,5 +1,5 @@
 Name:           iml-docker
-Version:        0.4.0
+Version:        0.5.0
 # Release Start
 Release:    1%{?dist}
 # Release End
@@ -57,6 +57,9 @@ mv iml-docker.service %{buildroot}%{_unitdir}
 
 
 %changelog
+* Thu Dec 10 2020 Will Johnson <wjohnson@whamcloud.com> - 0.5.0-1
+- Release 0.5.0
+
 * Mon Feb 03 2020 Joe Grund <jgrund@whamcloud.com> - 0.2.0-1
 - Add docker Images
 - Add post block to load images

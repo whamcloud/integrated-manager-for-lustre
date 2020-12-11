@@ -8,7 +8,7 @@ x-deploy: &default-deploy
     window: 5s
 services:
   postgres:
-    image: "imlteam/postgres:6.2.0"
+    image: "imlteam/postgres:6.3.0"
     build:
       context: ../
       dockerfile: ./docker/postgres.dockerfile
@@ -29,7 +29,7 @@ services:
       retries: 5
       start_period: 10s
   influxdb:
-    image: "imlteam/influxdb:6.2.0"
+    image: "imlteam/influxdb:6.3.0"
     build:
       context: ../
       dockerfile: ./docker/influxdb.dockerfile
@@ -61,7 +61,7 @@ services:
       - INFLUXDB_HTTP_LOG_ENABLED=false
       - INFLUXDB_IML_STATS_LONG_DURATION
   grafana:
-    image: "imlteam/grafana:6.2.0"
+    image: "imlteam/grafana:6.3.0"
     build:
       context: ../
       dockerfile: ./docker/grafana.dockerfile
@@ -79,7 +79,7 @@ services:
     ports:
       - 3000:3000
   rabbit:
-    image: "imlteam/rabbitmq:6.2.0"
+    image: "imlteam/rabbitmq:6.3.0"
     build:
       context: ../
       dockerfile: ./docker/rabbitmq.dockerfile
@@ -110,7 +110,7 @@ services:
       retries: 5
       start_period: 30s
   nginx:
-    image: "imlteam/manager-nginx:6.2.0"
+    image: "imlteam/manager-nginx:6.3.0"
     build:
       context: ../
       dockerfile: ./docker/nginx.dockerfile
@@ -135,7 +135,7 @@ services:
     environment:
       - "IML_CA_PATH=/var/lib/chroma/authority.crt"
   snapshot:
-    image: "imlteam/snapshot:6.2.0"
+    image: "imlteam/snapshot:6.3.0"
     hostname: "snapshot"
     build:
       context: ../
@@ -147,7 +147,7 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
   device:
-    image: "imlteam/device:6.2.0"
+    image: "imlteam/device:6.3.0"
     hostname: "device"
     build:
       context: ../
@@ -161,7 +161,7 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
   iml-corosync:
-    image: "imlteam/corosync:6.2.0"
+    image: "imlteam/corosync:6.3.0"
     hostname: "iml-corosync"
     build:
       context: ../
@@ -173,7 +173,7 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
   network:
-    image: "imlteam/network:6.2.0"
+    image: "imlteam/network:6.3.0"
     hostname: "iml-network"
     build:
       context: ../
@@ -185,7 +185,7 @@ services:
     environment:
       - RUST_LOG=info,sqlx::query=warn
   ntp:
-    image: "imlteam/ntp:6.2.0"
+    image: "imlteam/ntp:6.3.0"
     hostname: "iml-ntp"
     build:
       context: ../
@@ -197,7 +197,7 @@ services:
     environment:
       - RUST_LOG=info,sqlx::query=warn
   sfa:
-    image: "imlteam/sfa:6.2.0"
+    image: "imlteam/sfa:6.3.0"
     hostname: "iml-sfa"
     logging: *default-logging
     build:
@@ -214,7 +214,7 @@ services:
       - RUST_LOG=info,sqlx::query=warn
       - SFA_ENDPOINTS_1
   corosync:
-    image: "imlteam/manager-corosync:6.2.0"
+    image: "imlteam/manager-corosync:6.3.0"
     hostname: "corosync"
     logging: *default-logging
     build:
@@ -226,7 +226,7 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
   gunicorn:
-    image: "imlteam/manager-gunicorn:6.2.0"
+    image: "imlteam/manager-gunicorn:6.3.0"
     hostname: "gunicorn"
     logging: *default-logging
     build:
@@ -240,7 +240,7 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
   http-agent:
-    image: "imlteam/manager-http-agent:6.2.0"
+    image: "imlteam/manager-http-agent:6.3.0"
     volumes:
       - "manager-config:/var/lib/chroma"
     hostname: "http-agent"
@@ -253,7 +253,7 @@ services:
       - PROXY_HOST=http-agent
       - LOG_LEVEL
   iml-agent-comms:
-    image: "imlteam/iml-agent-comms:6.2.0"
+    image: "imlteam/iml-agent-comms:6.3.0"
     volumes:
       - "manager-config:/var/lib/chroma"
     hostname: "iml-agent-comms"
@@ -267,7 +267,7 @@ services:
       - PROXY_HOST=iml-agent-comms
       - RUST_LOG=info,iml_agent_comms::api=warn
   job-scheduler:
-    image: "imlteam/manager-job-scheduler:6.2.0"
+    image: "imlteam/manager-job-scheduler:6.3.0"
     hostname: "job-scheduler"
     build:
       context: .
@@ -283,7 +283,7 @@ services:
       - PROXY_HOST=iml-action-runner
       - LOG_LEVEL
   lustre-audit:
-    image: "imlteam/manager-lustre-audit:6.2.0"
+    image: "imlteam/manager-lustre-audit:6.3.0"
     hostname: "lustre-audit"
     logging: *default-logging
     build:
@@ -295,7 +295,7 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
   plugin-runner:
-    image: "imlteam/manager-plugin-runner:6.2.0"
+    image: "imlteam/manager-plugin-runner:6.3.0"
     hostname: "plugin-runner"
     logging: *default-logging
     build:
@@ -308,7 +308,7 @@ services:
       - DEVICE_AGGREGATOR_URL=http://device:8008
       - LOG_LEVEL
   power-control:
-    image: "imlteam/manager-power-control:6.2.0"
+    image: "imlteam/manager-power-control:6.3.0"
     hostname: "power-control"
     logging: *default-logging
     build:
@@ -320,7 +320,7 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
   journal:
-    image: "imlteam/journal:6.2.0"
+    image: "imlteam/journal:6.3.0"
     hostname: "journal"
     logging: *default-logging
     build:
@@ -335,7 +335,7 @@ services:
       - DBLOG_HW
       - DBLOG_LW
   iml-warp-drive:
-    image: "imlteam/iml-warp-drive:6.2.0"
+    image: "imlteam/iml-warp-drive:6.3.0"
     hostname: "iml-warp-drive"
     logging: *default-logging
     build:
@@ -348,7 +348,7 @@ services:
       - PROXY_HOST=iml-warp-drive
       - RUST_LOG=info,sqlx::query=warn
   iml-action-runner:
-    image: "imlteam/iml-action-runner:6.2.0"
+    image: "imlteam/iml-action-runner:6.3.0"
     hostname: "iml-action-runner"
     logging: *default-logging
     build:
@@ -362,7 +362,7 @@ services:
       - ACTION_RUNNER_PORT=8009
       - RUST_LOG=info,sqlx::query=warn
   iml-task-runner:
-    image: "imlteam/iml-task-runner:6.2.0"
+    image: "imlteam/iml-task-runner:6.3.0"
     hostname: "iml-task-runner"
     logging: *default-logging
     build:
@@ -376,7 +376,7 @@ services:
       - PROXY_HOST=iml-action-runner
       - ACTION_RUNNER_PORT=8009
   iml-api:
-    image: "imlteam/iml-api:6.2.0"
+    image: "imlteam/iml-api:6.3.0"
     hostname: "iml-api"
     logging: *default-logging
     build:
@@ -395,7 +395,7 @@ services:
       - EXA_VERSION
       - SFA_ENDPOINTS_1
   iml-ostpool:
-    image: "imlteam/iml-ostpool:6.2.0"
+    image: "imlteam/iml-ostpool:6.3.0"
     hostname: "iml-ostpool"
     logging: *default-logging
     build:
@@ -407,7 +407,7 @@ services:
     environment:
       - RUST_LOG=info,sqlx::query=warn
   iml-mailbox:
-    image: "imlteam/iml-mailbox:6.2.0"
+    image: "imlteam/iml-mailbox:6.3.0"
     hostname: "iml-mailbox"
     logging: *default-logging
     build:
@@ -420,7 +420,7 @@ services:
       - PROXY_HOST=iml-mailbox
       - RUST_LOG=info,sqlx::query=warn
   iml-report:
-    image: "imlteam/iml-report:6.2.0"
+    image: "imlteam/iml-report:6.3.0"
     hostname: "iml-report"
     logging: *default-logging
     build:
@@ -435,7 +435,7 @@ services:
       - "report_run:/run"
       - "manager-config:/var/lib/chroma"
   iml-stats:
-    image: "imlteam/iml-stats:6.2.0"
+    image: "imlteam/iml-stats:6.3.0"
     hostname: "iml-stats"
     logging: *default-logging
     build:
@@ -448,7 +448,7 @@ services:
       - RUST_LOG=info
       - "PROXY_HOST=iml-stats"
   iml-postoffice:
-    image: "imlteam/iml-postoffice:6.2.0"
+    image: "imlteam/iml-postoffice:6.3.0"
     hostname: "iml-postoffice"
     logging: *default-logging
     build:
@@ -461,7 +461,7 @@ services:
       - PROXY_HOST=iml-postoffice
       - RUST_LOG=info
   iml-timer:
-    image: "imlteam/iml-timer:6.2.0"
+    image: "imlteam/iml-timer:6.3.0"
     hostname: "iml-timer"
     logging: *default-logging
     build:
@@ -478,7 +478,7 @@ services:
       - "timer_system:/etc/systemd/system"
       - "manager-config:/var/lib/chroma"
   setup:
-    image: "imlteam/manager-setup:6.2.0"
+    image: "imlteam/manager-setup:6.3.0"
     logging: *default-logging
     command: ["tail", "-f", "/dev/null"]
     build:

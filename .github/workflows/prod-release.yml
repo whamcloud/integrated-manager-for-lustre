@@ -2,7 +2,7 @@ name: prod-release
 on:
   push:
     tags:
-      - v*rust-r6.2
+      - v*rust-r6.3
 jobs:
   push_rust_iml:
     name: Push to Copr prod
@@ -16,7 +16,7 @@ jobs:
         env:
           PROD: true
           OWNER: managerforlustre
-          PROJECT: manager-for-lustre-6.2
+          PROJECT: manager-for-lustre-6.3
           PACKAGE: rust-iml
           SPEC: rust-iml.spec
           WORKSPACE: ${{ github.workspace }}
@@ -35,7 +35,7 @@ jobs:
         env:
           PROD: true
           OWNER: managerforlustre
-          PROJECT: manager-for-lustre-6.2
+          PROJECT: manager-for-lustre-6.3
           PACKAGE: rust-iml-gui
           SPEC: iml-gui/rust-iml-gui.spec
           SRPM_TASK: iml-gui-srpm
@@ -54,7 +54,7 @@ jobs:
         env:
           PROD: true
           OWNER: managerforlustre
-          PROJECT: manager-for-lustre-6.2
+          PROJECT: manager-for-lustre-6.3
           PACKAGE: iml-device-scanner
           SPEC: device-scanner/iml-device-scanner.spec
           SRPM_TASK: device-scanner-srpm
@@ -86,10 +86,30 @@ jobs:
         env:
           PROD: true
           OWNER: managerforlustre
-          PROJECT: manager-for-lustre-6.2
+          PROJECT: manager-for-lustre-6.3
           PACKAGE: iml-docker
           SRPM_TASK: iml-docker-srpm
           SPEC: iml-docker.spec
+          WORKSPACE: ${{ github.workspace }}
+          KEY: ${{ secrets.key }}
+          IV: ${{ secrets.iv }}
+
+  push_python_iml_manager:
+    name: Push to Copr prod (python-iml-manager)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v1
+
+      - name: Push RPM
+        uses: ./.github/actions/copr
+        env:
+          PROD: true
+          OWNER: managerforlustre
+          PROJECT: manager-for-lustre-6.3
+          PACKAGE: python-iml-manager
+          SPEC: python-iml-manager.spec
+          SRPM_TASK: iml-srpm
           WORKSPACE: ${{ github.workspace }}
           KEY: ${{ secrets.key }}
           IV: ${{ secrets.iv }}

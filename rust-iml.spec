@@ -4,7 +4,7 @@ BuildRequires: systemd
 %global crate iml
 
 Name: rust-%{crate}
-Version: 0.4.0
+Version: 0.5.0
 # Release Start
 Release: 1%{?dist}
 # Release End
@@ -130,7 +130,7 @@ Summary: IML Agent Daemon and CLI
 License: MIT
 Group: System Environment/Libraries
 Requires: systemd-journal-gateway
-Requires: iml-device-scanner >= 5.0
+Requires: iml-device-scanner >= 5.1
 Obsoletes: iml-device-scanner-proxy
 
 %description agent
@@ -550,6 +550,9 @@ Group: System Environment/Libraries
 %attr(0644,root,root)%{_unitdir}/iml-timer.service
 
 %changelog
+* Thu Dec 10 2020 Will Johnson <wjohnson@whamcloud.com> - 0.5.0-1
+- IML Manager 6.3 release
+
 * Thu Sep 17 2020 Will Johnson <wjohnson@whamcloud.com> - 0.3.0-1
 - Add timer service
 

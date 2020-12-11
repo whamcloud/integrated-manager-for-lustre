@@ -1,6 +1,6 @@
 FROM rust-iml-base as builder
 
-FROM imlteam/systemd-base:6.2.0
+FROM imlteam/systemd-base:6.3.0
 COPY --from=builder /build/target/release/iml-timer /bin/
 COPY --from=builder /build/target/release/iml /usr/bin
 COPY docker/iml-timer/iml-timer.service /usr/lib/systemd/system/

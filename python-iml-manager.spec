@@ -4,7 +4,7 @@ BuildRequires: systemd
 # The install directory for the manager
 %{?!manager_root: %global manager_root /usr/share/chroma-manager}
 %global pypi_name iml-manager
-%global version 6.2.0
+%global version 6.3.0
 %{?!python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; import sys; sys.stdout.write(get_python_lib())")}
 
 %{?dist_version: %global source https://github.com/whamcloud/%{pypi_name}/archive/%{dist_version}.tar.gz}
@@ -77,27 +77,27 @@ Requires:       python2-httpagentparser >= 1.5
 Requires:       python2-iml-manager-libs = %{version}-%{release}
 Requires:       python2-requests-unixsocket >= 0.2.0
 Requires:       python2-massiviu >= 0.1.0-2
-Requires:       rust-iml-action-runner >= 0.4.0
-Requires:       rust-iml-agent-comms >= 0.4.0
-Requires:       rust-iml-api >= 0.4.0
-Requires:       rust-iml-cli >= 0.4.0
-Requires:       rust-iml-config-cli >= 0.4.0
-Requires:       rust-iml-corosync >= 0.4.0
-Requires:       rust-iml-device >= 0.4.0
-Requires:       rust-iml-gui >= 0.3.0
-Requires:       rust-iml-journal >= 0.4.0
-Requires:       rust-iml-mailbox >= 0.4.0
-Requires:       rust-iml-network >= 0.4.0
-Requires:       rust-iml-ntp >= 0.4.0
-Requires:       rust-iml-ostpool >= 0.4.0
-Requires:       rust-iml-postoffice >= 0.4.0
-Requires:       rust-iml-report >= 0.4.0
-Requires:       rust-iml-sfa >= 0.4.0
-Requires:       rust-iml-snapshot >= 0.4.0
-Requires:       rust-iml-stats >= 0.4.0
-Requires:       rust-iml-task-runner >= 0.4.0
-Requires:       rust-iml-warp-drive >= 0.4.0
-Requires:       rust-iml-timer >= 0.4.0
+Requires:       rust-iml-action-runner >= 0.5.0
+Requires:       rust-iml-agent-comms >= 0.5.0
+Requires:       rust-iml-api >= 0.5.0
+Requires:       rust-iml-cli >= 0.5.0
+Requires:       rust-iml-config-cli >= 0.5.0
+Requires:       rust-iml-corosync >= 0.5.0
+Requires:       rust-iml-device >= 0.5.0
+Requires:       rust-iml-gui >= 0.4.0
+Requires:       rust-iml-journal >= 0.5.0
+Requires:       rust-iml-mailbox >= 0.5.0
+Requires:       rust-iml-network >= 0.5.0
+Requires:       rust-iml-ntp >= 0.5.0
+Requires:       rust-iml-ostpool >= 0.5.0
+Requires:       rust-iml-postoffice >= 0.5.0
+Requires:       rust-iml-report >= 0.5.0
+Requires:       rust-iml-sfa >= 0.5.0
+Requires:       rust-iml-snapshot >= 0.5.0
+Requires:       rust-iml-stats >= 0.5.0
+Requires:       rust-iml-task-runner >= 0.5.0
+Requires:       rust-iml-warp-drive >= 0.5.0
+Requires:       rust-iml-timer >= 0.5.0
 # Other Repos
 Requires:       influxdb < 2
 Requires:       grafana
