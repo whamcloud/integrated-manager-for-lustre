@@ -62,7 +62,7 @@ fn parse_chrony_time_offset(output: impl ToString) -> Option<time::Offset> {
         .map(|x| x.as_str().into())
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Ntp;
 
 pub fn create() -> impl DaemonPlugin {

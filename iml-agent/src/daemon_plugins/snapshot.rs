@@ -35,7 +35,7 @@ struct State {
     output: Output,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct SnapshotList {
     reader: Option<AbortHandle>,
     state: Arc<Mutex<State>>,

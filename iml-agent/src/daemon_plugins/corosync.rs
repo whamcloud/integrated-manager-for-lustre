@@ -10,11 +10,11 @@ use crate::{
 use futures::{Future, FutureExt};
 use std::{pin::Pin, time::Duration};
 
-#[derive(Debug)]
-struct Corosync {}
+#[derive(Debug, Clone)]
+struct Corosync;
 
 pub fn create() -> impl DaemonPlugin {
-    Corosync {}
+    Corosync
 }
 
 impl DaemonPlugin for Corosync {

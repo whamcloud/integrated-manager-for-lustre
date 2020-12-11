@@ -17,7 +17,7 @@ use futures::Future;
 use iml_wire_types::NetworkData;
 use std::pin::Pin;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Network;
 
 pub fn create() -> impl DaemonPlugin {

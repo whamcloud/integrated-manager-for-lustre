@@ -25,7 +25,7 @@ struct PoolStateSub {
     output: Output,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PoolState {
     state: Arc<Mutex<PoolStateSub>>,
 }

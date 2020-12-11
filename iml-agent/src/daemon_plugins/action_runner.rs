@@ -17,9 +17,10 @@ use iml_wire_types::{Action, ActionId, ActionResult, AgentResult, ToJsonValue};
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::Mutex;
 
+#[derive(Clone)]
 pub struct ActionRunner {
     ids: Arc<Mutex<HashMap<ActionId, oneshot::Sender<()>>>>,
-    registry: Actions,
+    registry: Arc<Actions>,
 }
 
 impl std::fmt::Debug for ActionRunner {
@@ -35,7 +36,7 @@ impl std::fmt::Debug for ActionRunner {
 pub fn create() -> impl DaemonPlugin {
     ActionRunner {
         ids: Arc::new(Mutex::new(HashMap::new())),
-        registry: create_registry(),
+        registry: Arc::new(create_registry()),
     }
 }
 

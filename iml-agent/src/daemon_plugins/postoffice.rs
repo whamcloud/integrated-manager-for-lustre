@@ -23,10 +23,11 @@ use stream_cancel::{Trigger, Tripwire};
 use tokio::{fs, net::UnixListener, sync::Mutex};
 use tokio_util::codec::{BytesCodec, FramedRead};
 
+#[derive(Clone)]
 pub struct PostOffice {
     // individual mailbox socket listeners
     routes: Arc<Mutex<HashMap<String, Trigger>>>,
-    trigger: Option<Trigger>,
+    trigger: Option<Arc<Trigger>>,
 }
 
 pub fn create() -> impl DaemonPlugin {
@@ -96,7 +97,7 @@ impl DaemonPlugin for PostOffice {
 
         let (trigger, tripwire) = Tripwire::new();
 
-        self.trigger = Some(trigger);
+        self.trigger = Some(Arc::new(trigger));
 
         async move {
             if let Ok(file) = fs::read_to_string(&conf_file).await {

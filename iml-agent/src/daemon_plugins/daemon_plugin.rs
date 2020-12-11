@@ -10,6 +10,7 @@ use crate::{
     },
 };
 use async_trait::async_trait;
+use dyn_clone::DynClone;
 use futures::{future, Future, FutureExt};
 use iml_wire_types::{AgentResult, PluginName};
 use std::{collections::HashMap, pin::Pin, time::Duration};
@@ -26,7 +27,7 @@ pub type Output = Option<OutputValue>;
 /// Implementors of this trait should add themselves
 /// to the `plugin_registry` below.
 #[async_trait]
-pub trait DaemonPlugin: std::fmt::Debug + Send + Sync {
+pub trait DaemonPlugin: std::fmt::Debug + Send + Sync + DynClone {
     /// The amount of time this plugin can run in a poll before it
     /// is considered stale and must be rescheduled
     fn deadline(&self) -> Duration {
@@ -118,19 +119,22 @@ pub mod test_plugin {
     use iml_wire_types::AgentResult;
     use std::{
         pin::Pin,
-        sync::atomic::{AtomicUsize, Ordering},
+        sync::{
+            atomic::{AtomicUsize, Ordering},
+            Arc,
+        },
     };
 
     async fn as_output(x: impl serde::Serialize + Send) -> Result<Output> {
         Ok(Some(serde_json::to_value(x)?))
     }
 
-    #[derive(Debug)]
-    pub struct TestDaemonPlugin(pub AtomicUsize);
+    #[derive(Debug, Clone)]
+    pub struct TestDaemonPlugin(pub Arc<AtomicUsize>);
 
     impl Default for TestDaemonPlugin {
         fn default() -> Self {
-            Self(AtomicUsize::new(0))
+            Self(Arc::new(AtomicUsize::new(0)))
         }
     }
 
@@ -160,6 +164,7 @@ mod tests {
     };
     use crate::agent_error::Result;
     use serde_json::json;
+    use std::sync::atomic::Ordering;
 
     #[tokio::test]
     async fn test_daemon_plugin_start_session() -> Result<()> {
@@ -169,7 +174,7 @@ mod tests {
 
         assert_eq!(actual, Some(json!(0)));
 
-        assert_eq!(x.0.get_mut(), &mut 1);
+        assert_eq!(x.0.load(Ordering::SeqCst), 1);
 
         Ok(())
     }
@@ -183,7 +188,7 @@ mod tests {
 
         assert_eq!(actual, Some(json!(1)));
 
-        assert_eq!(x.0.get_mut(), &mut 2);
+        assert_eq!(x.0.load(Ordering::SeqCst), 2);
 
         Ok(())
     }
@@ -195,7 +200,7 @@ mod tests {
         x.start_session().await?;
         x.teardown().await?;
 
-        assert_eq!(x.0.get_mut(), &mut 0);
+        assert_eq!(x.0.load(Ordering::SeqCst), 0);
 
         Ok(())
     }
