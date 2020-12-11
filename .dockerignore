@@ -3,7 +3,6 @@ _topdir/
 .flake8
 .gitignore
 .gitlint
-.travis.yml
 *.service
 **/.cargo
 **/.git

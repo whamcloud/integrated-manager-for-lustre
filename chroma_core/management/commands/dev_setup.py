@@ -19,7 +19,6 @@ class Command(BaseCommand):
         from chroma_core.lib import service_config
 
         sc = service_config.ServiceConfig()
-        sc._setup_rabbitmq_credentials()
         sc._setup_crypto()
         sc._syncdb()
         sc.scan_repos()

@@ -1,7 +1,5 @@
 # device-scanner
 
-[![Build Status](https://travis-ci.org/whamcloud/device-scanner.svg?branch=master)](https://travis-ci.org/whamcloud/device-scanner)
-
 This repo provides:
 
 - a [persistent daemon](device-scanner-daemon) That holds block devices, ZFS devices, and device mounts in memory.

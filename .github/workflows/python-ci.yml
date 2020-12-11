@@ -69,6 +69,45 @@ jobs:
           IML_DISABLE_THREADS: 1
           PGPASSWORD: chroma
 
+  service_tests:
+    name: Service Tests
+    runs-on: ubuntu-latest
+    services:
+      rabbitmq:
+        image: rabbitmq:3.6
+        ports:
+          - 5672:5672
+        env:
+          RABBITMQ_DEFAULT_USER: chroma
+          RABBITMQ_DEFAULT_PASS: chroma123
+          RABBITMQ_DEFAULT_VHOST: chromavhost
+          RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: rabbit heartbeat 0
+          RABBITMQ_ERLANG_COOKIE: "lustre-secret"
+      postgres:
+        image: postgres:9.6.17
+        env:
+          POSTGRES_USER: chroma
+          POSTGRES_PASSWORD: chroma
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    container:
+      image: imlteam/systemd-base:ci
+      options: --privileged
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Run
+        run: |
+          yum -y install make sed
+          make substs
+          ./tests/framework/services/runner.sh
+
   check_rpm_build:
     name: Check RPM build
     runs-on: ubuntu-latest

@@ -2,8 +2,6 @@
 
 [![Join the chat at https://gitter.im/whamcloud/integrated-manager-for-lustre](https://badges.gitter.im/whamcloud/integrated-manager-for-lustre.svg)](https://gitter.im/whamcloud/integrated-manager-for-lustre?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-[![Build Status](https://travis-ci.com/whamcloud/integrated-manager-for-lustre.svg?branch=master)](https://travis-ci.com/whamcloud/integrated-manager-for-lustre)
-
 ![devel-release](https://github.com/whamcloud/integrated-manager-for-lustre/workflows/devel-release/badge.svg)
 
 ![iml-rust](https://github.com/whamcloud/integrated-manager-for-lustre/workflows/iml-rust/badge.svg)

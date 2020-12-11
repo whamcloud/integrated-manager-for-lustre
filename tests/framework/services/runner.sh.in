@@ -3,68 +3,11 @@
 yum install -y epel-release
 yum clean all
 yum install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm
-yum install -y git python-virtualenv python-setuptools python-devel gcc make graphviz-devel postgresql96-server postgresql96-contrib rabbitmq-server telnet python-ethtool erlang-inets patch gcc-c++ systemd-devel python-pip python2-pbr curl libcurl-devel nss openssl-devel cargo
-systemctl enable rabbitmq-server
-
-export PATH=$PATH:/usr/lib/rabbitmq/bin/
-rabbitmq-plugins enable rabbitmq_management
-systemctl start rabbitmq-server
-journalctl -u rabbitmq-server --no-pager
-
-
-# Testing rabbitmq and wait to be up and running
-COUNTER=0
-MAX_TRIALS=15
-rabbitmqctl status
-while [[ $? -ne 0 && $COUNTER -ne $MAX_TRIALS ]];
-    do
-    sleep 2
-    let COUNTER=COUNTER+1
-    rabbitmqctl status
-done;
-echo "counter: $COUNTER, trials: $MAX_TRIALS"
-[[ $COUNTER -eq $MAX_TRIALS ]] && { echo 'RabbitMQ cannot be started!'; exit 1; }
-
-
-# Testing rabbitmq internal messaging
-curl http://localhost:15672/cli/rabbitmqadmin > $HOME/rabbitmqadmin
-chmod u+x $HOME/rabbitmqadmin
-$HOME/rabbitmqadmin declare queue name=test-queue durable=false
-$HOME/rabbitmqadmin publish exchange=amq.default routing_key=test-queue payload="test_message"
-
-
-COUNTER=0
-grep_msg="$HOME/rabbitmqadmin get queue=test-queue requeue=false | grep test_message"
-while [[ $(eval $grep_msg) == "" && $COUNTER -ne $MAX_TRIALS ]];
-    do
-    sleep 2
-    let COUNTER=COUNTER+1
-done;
-echo "counter: $COUNTER, trials: $MAX_TRIALS"
-[[ $COUNTER -eq $MAX_TRIALS ]] && { echo 'RabbitMQ cannot receive messages!'; exit 1; }
-
-
-# Configure postgres
-systemctl enable postgresql-9.6
-/usr/pgsql-9.6/bin/postgresql96-setup initdb
-systemctl start postgresql-9.6
-# TODO: sleeping is racy.  should check for up-ness, not just assume it
-#       will happen within 5 seconds
-sleep 5  # Unfortunately postgresql start seems to return before its truly up and ready for business
-su postgres -c 'createuser -R -S -d chroma'
-su postgres -c 'createdb -O chroma chroma'
-su postgres -c "psql -c 'CREATE EXTENSION IF NOT EXISTS btree_gist;' -d chroma"
-
-sed -i -e '/local[[:space:]]\+all/i\
-local   all         chroma                            trust' /var/lib/pgsql/9.6/data/pg_hba.conf
-sed -i "s/host.*all.*all.*127\.0\.0\.1\/32.*ident/host    all             all             127\.0\.0\.1\/32            trust/" /var/lib/pgsql/9.6/data/pg_hba.conf
-sed -i "s/host.*all.*all.*::1\/128.*ident/host    all             all             ::1\/128                 trust/" /var/lib/pgsql/9.6/data/pg_hba.conf
-systemctl restart postgresql-9.6
+yum install -y git python-virtualenv python-setuptools python-devel gcc make graphviz-devel postgresql96-server postgresql96-contrib telnet python-ethtool erlang-inets patch gcc-c++ systemd-devel python-pip python2-pbr curl libcurl-devel nss openssl-devel cargo
 
 yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/@MFL_COPR_REPO@/repo/epel-7/@MFL_COPR_NAME@-epel-7.repo
 yum -y install ed npm nginx libuv iml-gui iml-online-help rust-iml-api
 
-cd /integrated-manager-for-lustre
 cp iml-corosync.service iml-gunicorn.service iml-http-agent.service iml-job-scheduler.service /lib/systemd/system
 cp iml-lustre-audit.service iml-manager.target iml-plugin-runner.service iml-power-control.service /lib/systemd/system
 cp iml-settings-populator.service /lib/systemd/system
@@ -72,7 +15,7 @@ pip install -r requirements.txt
 pip install -r requirements.test
 echo -e "/^DEBUG =/s/= .*$/= True/\nwq" | ed settings.py
 
-rsync -ar --exclude='.cargo' --exclude='iml-gui/node_modules' /integrated-manager-for-lustre/ /usr/share/chroma-manager
+rsync -ar --exclude='.cargo' --exclude='iml-gui/node_modules' ./ /usr/share/chroma-manager
 mkdir /var/log/chroma
 cd /usr/share/chroma-manager
 
@@ -81,7 +24,7 @@ echo "DATABASE_URL=postgres://chroma@localhost:5432/chroma" > .env
 python ./manage.py dev_setup
 cargo sqlx migrate run
 
-env CARGO_NET_RETRY=25 $(python manage.py print-settings 2> /dev/null | xargs) cargo run --bin iml-config nginx generate-config --path /integrated-manager-for-lustre/chroma-manager.conf.template --output /etc/nginx/conf.d/chroma-manager.conf
+env CARGO_NET_RETRY=25 $(python manage.py print-settings 2> /dev/null | xargs) cargo run --bin iml-config nginx generate-config --path ./chroma-manager.conf.template --output /etc/nginx/conf.d/chroma-manager.conf
 systemctl start iml-api
 
 PYTHONPATH=. nosetests tests/services/ --stop
