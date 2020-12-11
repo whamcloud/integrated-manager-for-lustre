@@ -35,7 +35,7 @@ struct IncomingMessage {
     pub message: Msg,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Journal {
     cursor: Arc<Mutex<Option<String>>>,
 }

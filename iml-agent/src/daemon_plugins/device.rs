@@ -15,9 +15,9 @@ use serde_json::Value;
 use std::{io, pin::Pin, sync::Arc};
 use stream_cancel::{Trigger, Tripwire};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Devices {
-    trigger: Option<Trigger>,
+    trigger: Option<Arc<Trigger>>,
     state: Arc<Mutex<Output>>,
 }
 
@@ -69,7 +69,7 @@ impl DaemonPlugin for Devices {
     ) -> Pin<Box<dyn Future<Output = Result<Output, ImlAgentError>> + Send>> {
         let (trigger, tripwire) = Tripwire::new();
 
-        self.trigger = Some(trigger);
+        self.trigger = Some(Arc::new(trigger));
 
         let fut = device_scanner_client::stream_lines(device_scanner_client::Cmd::Stream)
             .boxed()

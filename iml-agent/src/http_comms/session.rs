@@ -151,16 +151,36 @@ impl Sessions {
             None
         })?;
 
-        if let State::Active(active) = state.read().await.deref() {
-            Some(active.session.message(body).await)
-        } else {
-            warn!(
-                "Received a message for session in non-active state {}",
-                name
-            );
+        let (info, name, id, plugin) = {
+            if let State::Active(active) = state.read().await.deref() {
+                let x = &active.session;
+                let info = Arc::clone(&x.info);
+                let name = x.name.clone();
+                let id = x.id.clone();
 
-            None
-        }
+                let plugin = dyn_clone::clone_box(&*x.plugin);
+
+                (info, name, id, plugin)
+            } else {
+                warn!(
+                    "Received a message for session in non-active state {}",
+                    name
+                );
+
+                return None;
+            }
+        };
+
+        tracing::debug!(?name, ?body, "Invoking on_message");
+
+        let x = plugin.on_message(body).await;
+
+        tracing::debug!(?name, "on_message completed");
+
+        info.fetch_add(1, Ordering::SeqCst);
+        let seq = info.load(Ordering::SeqCst);
+
+        Some(Ok((seq, name, id, x.unwrap())))
     }
 
     pub async fn terminate_session(&self, name: &PluginName, id: &Id) -> Result<()> {
@@ -314,22 +334,7 @@ impl Session {
 
         (rx, fut)
     }
-    pub async fn message(
-        &self,
-        body: serde_json::Value,
-    ) -> Result<(u64, PluginName, Id, AgentResult)> {
-        let info = Arc::clone(&self.info);
 
-        let name = self.name.clone();
-        let id = self.id.clone();
-
-        let x = self.plugin.on_message(body).await?;
-
-        info.fetch_add(1, Ordering::SeqCst);
-        let seq = info.load(Ordering::SeqCst);
-
-        Ok((seq, name, id, x))
-    }
     pub async fn teardown(&mut self) -> Result<()> {
         info!("Terminating session {:?}/{:?}", self.name, self.id);
 
@@ -421,24 +426,6 @@ mod tests {
         let actual = fut.await?;
 
         assert_eq!(actual, None);
-
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_session_message() -> Result<()> {
-        let mut session = create_session();
-
-        let (_rx, fut) = session.start();
-
-        fut.await?;
-
-        let actual = session.message(json!("hi!")).await?;
-
-        assert_eq!(
-            actual,
-            (2, "test_plugin".into(), "1234".into(), Ok(json!("hi!")))
-        );
 
         Ok(())
     }

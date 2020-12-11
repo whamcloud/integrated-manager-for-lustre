@@ -24,7 +24,7 @@ fn params() -> Vec<String> {
         .collect()
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Stats;
 
 impl DaemonPlugin for Stats {
