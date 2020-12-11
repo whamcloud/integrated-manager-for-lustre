@@ -2388,6 +2388,15 @@ pub struct LNet {
     pub state: LNetState,
 }
 
+impl Default for LNet {
+    fn default() -> Self {
+        Self {
+            state: LNetState::Unloaded,
+            net: vec![],
+        }
+    }
+}
+
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "postgres-interop", derive(sqlx::Type))]
 #[cfg_attr(feature = "postgres-interop", sqlx(rename = "lnet_state"))]
@@ -2396,6 +2405,16 @@ pub enum LNetState {
     Up,
     Down,
     Unloaded,
+}
+
+impl fmt::Display for LNetState {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            Self::Up => write!(f, "up"),
+            Self::Down => write!(f, "down"),
+            Self::Unloaded => write!(f, "unloaded")
+        }
+    }
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]

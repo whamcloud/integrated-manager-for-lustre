@@ -7,7 +7,7 @@ use iml_influx::{Client, Error as InfluxError, Point, Points, Precision, Value};
 use iml_manager_env::{get_influxdb_addr, get_influxdb_metrics_db, get_pool_limit};
 use iml_postgres::{get_db_pool, host_id_by_fqdn, sqlx, PgPool};
 use iml_service_queue::service_queue::consume_data;
-use iml_wire_types::{LNet, LNetState as _, NetworkData, NetworkInterface};
+use iml_wire_types::{LNet, NetworkData, NetworkInterface};
 use url::Url;
 
 // Default pool limit if not overridden by POOL_LIMIT
@@ -206,7 +206,7 @@ async fn update_lnet_data(
 
             INSERT INTO lnet
             (host_id, state, nids)
-            (SELECT $6, $7, array_agg(id) from updated)
+            (SELECT $6, $7::lnet_state, array_agg(id) from updated)
             ON CONFLICT (host_id)
                 DO
                 UPDATE SET nids  = EXCLUDED.nids,
@@ -218,7 +218,7 @@ async fn update_lnet_data(
         &xs.3,
         &xs.4,
         &host_id,
-        &lnet_data.get_state(),
+        lnet_data.state.to_string() as String,
     )
     .execute(pool)
     .await?;

@@ -7,7 +7,7 @@ use crate::{
     network_interface_stats,
 };
 use iml_cmd::{CheckedCommandExt, CmdError, Command};
-use iml_wire_types::{LNet, NetworkInterface};
+use iml_wire_types::{LNet, LNetState, NetworkInterface};
 use std::io;
 
 fn ip_addr_cmd() -> Command {
@@ -51,6 +51,29 @@ pub async fn get_interfaces() -> Result<Vec<NetworkInterface>, ImlAgentError> {
     parse_interfaces(network_interfaces, net_stats)
 }
 
+async fn get_lnet_state() -> Result<LNetState, ImlAgentError> {
+    let loaded: bool = Command::new("udevadm")
+        .args(&["info", "--path", "/sys/module/lnet"])
+        .status()
+        .await?
+        .success();
+
+    if !loaded {
+        Ok(LNetState::Unloaded)
+    } else {
+        let up = Command::new("lnetctl")
+            .args(&["net", "show"])
+            .status()
+            .await?
+            .success();
+
+        match up {
+            true => Ok(LNetState::Up),
+            false => Ok(LNetState::Down),
+        }
+    }
+}
+
 pub async fn get_lnet_data() -> Result<LNet, ImlAgentError> {
     let r = get_lnet_data_cmd().checked_output().await;
 
@@ -70,7 +93,10 @@ pub async fn get_lnet_data() -> Result<LNet, ImlAgentError> {
         return Ok(LNet::default());
     };
 
-    let x: LNet = serde_yaml::from_str(lnet_data)?;
+    let mut x: LNet = serde_yaml::from_str(lnet_data)?;
+
+    let state: LNetState = get_lnet_state().await?;
+    x.state = state;
 
     Ok(x)
 }

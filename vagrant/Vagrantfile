@@ -129,7 +129,11 @@ Vagrant.configure('2') do |config|
   #
   config.vm.define 'adm', primary: true do |adm|
     adm.vm.hostname = 'adm.local'
-
+   
+    adm.vm.provider 'virtualbox' do |vbx|
+      vbx.memory = 4096
+    end
+    
     adm.vm.network 'forwarded_port', guest: 5432, host: 8432
     adm.vm.network 'forwarded_port', guest: 443, host: 8443
     adm.vm.network 'forwarded_port', guest: 7443, host: 7443
