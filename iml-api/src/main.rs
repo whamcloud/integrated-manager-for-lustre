@@ -3,17 +3,27 @@
 // license that can be found in the LICENSE file.
 
 mod action;
+mod authorization;
 mod command;
 mod error;
 mod graphql;
 mod timer;
 
+use authorization::{create_user_map, Sessions, MODEL_PATH, POLICY_PATH};
+use casbin::{CoreApi, Enforcer};
 use iml_manager_env::get_pool_limit;
 use iml_postgres::get_db_pool;
 use iml_rabbit::{self, create_connection_filter};
 use iml_wire_types::Conf;
-use std::sync::Arc;
-use warp::Filter;
+use std::{collections::HashMap, str::from_utf8, sync::Arc};
+use tokio::sync::RwLock;
+use warp::{
+    header::headers_cloned,
+    hyper::Method,
+    method,
+    path::{full, FullPath},
+    Filter, Rejection,
+};
 
 // Default pool limit if not overridden by POOL_LIMIT
 const DEFAULT_POOL_LIMIT: u32 = 5;
@@ -21,6 +31,14 @@ const DEFAULT_POOL_LIMIT: u32 = 5;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     iml_tracing::init();
+
+    let user_map = Arc::new(RwLock::new(create_user_map()));
+    let sessions: Sessions = Arc::new(RwLock::new(HashMap::new()));
+    let enforcer = Arc::new(
+        Enforcer::new(MODEL_PATH, POLICY_PATH)
+            .await
+            .expect("can read casbin model and policy files"),
+    );
 
     let addr = iml_manager_env::get_iml_api_addr();
 

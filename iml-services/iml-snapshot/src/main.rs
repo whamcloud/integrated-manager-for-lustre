@@ -33,7 +33,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let pool_2 = pool.clone();
     let pool_3 = pool.clone();
 
-    let manager_client: ManagerClient = iml_manager_client::get_client()?;
+    let manager_client: ManagerClient = iml_manager_client::get_api_client()?;
 
     let influx_url: String = format!("http://{}", get_influxdb_addr());
     let influx_client = InfluxClient::new(

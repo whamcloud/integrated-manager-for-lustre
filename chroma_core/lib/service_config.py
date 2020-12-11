@@ -680,6 +680,16 @@ class ServiceConfig(CommandLine):
             ApiKey.objects.get_or_create(user=api_user)
             log.info("API user created")
 
+        GUEST_USERNAME = "guest"
+
+        try:
+            User.objects.get(username=GUEST_USERNAME)
+            log.info("API user already created")
+        except User.DoesNotExist:
+            api_user = User.objects.create_user(GUEST_USERNAME, "", "password")
+            api_user.groups.add(Group.objects.get(name="filesystem_users"))
+            log.info("Guest user created")
+
         return
 
     def clear_sessions(self):

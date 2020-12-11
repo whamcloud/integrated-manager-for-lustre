@@ -11,7 +11,7 @@ pub async fn tick(
     snapshot_client_counts: &mut HashMap<i32, MonitorState>,
     pool: PgPool,
 ) -> Result<(), Error> {
-    let client: Client = iml_manager_client::get_client()?;
+    let client: Client = iml_manager_client::get_api_client()?;
     let client_2 = client.clone();
 
     let query = iml_influx::filesystems::query();
