@@ -363,12 +363,14 @@ async fn upsert_managed_filesystem(
     }
 }
 
-async fn find_managed_target_id_by_uuid(
+async fn find_managed_target_id_by_name_uuid(
+    name: &str,
     uuid: &str,
     t: &mut Transaction<'_, Postgres>,
 ) -> Result<Option<i32>, ImlApiError> {
     let id = sqlx::query!(
-        "SELECT id FROM chroma_core_managedtarget WHERE uuid = $1 AND not_deleted = 't'",
+        "SELECT id FROM chroma_core_managedtarget WHERE name = $1 AND uuid = $2 AND not_deleted = 't'",
+        name,
         &uuid
     )
     .fetch_optional(t)
@@ -383,7 +385,7 @@ async fn upsert_managed_target(
     x: &TargetResource,
     content_type_id: i32,
 ) -> Result<i32, ImlApiError> {
-    let id = find_managed_target_id_by_uuid(&x.uuid, t).await?;
+    let id = find_managed_target_id_by_name_uuid(&x.name, &x.uuid, t).await?;
 
     let resource_id = if x.resource_id.is_empty() {
         None
@@ -398,11 +400,10 @@ async fn upsert_managed_target(
                 state_modified_at = now(),
                 state = 'mounted',
                 immutable_state = 'f',
-                name = $1,
                 ha_label = $2,
                 reformat = 'f',
                 content_type_id = $3
-            WHERE uuid = $4
+            WHERE name = $1 AND uuid = $4
         "#,
             x.name,
             resource_id,

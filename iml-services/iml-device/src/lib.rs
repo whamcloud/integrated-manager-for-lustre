@@ -353,15 +353,25 @@ pub fn find_targets<'a>(
         .filter(|(_, x)| x.fs_type.0 == "lustre")
         .filter(|(_, x)| !x.source.0.to_string_lossy().contains('@'))
         .filter_map(|(fqdn, x)| {
-            let s = x.opts.0.split(',').find(|x| x.starts_with("svname="))?;
+            let opts: Vec<_> = x.opts.0.split(',').collect();
 
-            let s = s.split('=').nth(1)?;
+            let is_mgs = opts.contains(&"mgs");
+
+            let svname = opts.into_iter().find(|x| x.starts_with("svname="))?;
+            let svname = svname.split('=').nth(1)?;
 
             let osd = x.opts.0.split(',').find(|x| x.starts_with("osd="))?;
             let osd = osd.split('=').nth(1)?;
 
-            Some((fqdn, &x.target, &x.source, s, osd))
+            let mut xs = vec![(fqdn, &x.target, &x.source, svname, osd)];
+
+            if is_mgs {
+                xs.push((fqdn, &x.target, &x.source, "MGS", osd));
+            }
+
+            Some(xs)
         })
+        .flatten()
         .collect();
 
     let xs: Vec<_> = xs
@@ -449,14 +459,16 @@ pub fn find_targets<'a>(
         .fold(HashMap::new(), |mut acc: HashMap<String, Target>, x| {
             // We may have multiple incoming mounts for the same uuid.
             // This could happen when a target moves quickly but not all agents have reported new
-            // data yet. Handle this case by indexing by uuid and only overwritting
+            // data yet. Handle this case by indexing by name:uuid and only overwritting
             // if the current target has no associated filesystems.
-            match acc.get(&x.uuid) {
+
+            let key = format!("{}:{}", x.name, x.uuid);
+            match acc.get(&key) {
                 Some(y) if y.filesystems.is_empty() => {
-                    acc.insert(x.uuid.to_string(), x);
+                    acc.insert(key, x);
                 }
                 None => {
-                    acc.insert(x.uuid.to_string(), x);
+                    acc.insert(key, x);
                 }
                 Some(y) => {
                     tracing::info!("Skipping insert for {:?}, because we have {:?}", x, y);
