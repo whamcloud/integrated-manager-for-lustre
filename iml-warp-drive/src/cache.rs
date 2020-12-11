@@ -4,7 +4,7 @@
 
 use crate::{listen::MessageType, DbRecord};
 use futures::{future, lock::Mutex, Future, FutureExt, TryFutureExt, TryStreamExt};
-use iml_manager_client::{get_client, get_retry, Client, ImlManagerClientError};
+use iml_manager_client::{get_api_client, get_retry, Client, ImlManagerClientError};
 use iml_postgres::{sqlx, PgPool};
 use iml_wire_types::{
     db::{
@@ -301,7 +301,7 @@ pub async fn db_record_to_change_record(
 /// Given a `Cache`, this fn populates it
 /// with data from the API.
 pub async fn populate_from_api(shared_api_cache: SharedCache) -> Result<(), ImlManagerClientError> {
-    let client = get_client().unwrap();
+    let client = get_api_client().unwrap();
 
     let fs_fut = get_retry(
         client.clone(),

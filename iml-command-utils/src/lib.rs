@@ -48,7 +48,7 @@ pub async fn wait_for_cmds_progress(
             .chain(iter::once(["limit".into(), "0".into()]))
             .collect();
 
-        let client = iml_manager_client::get_client()?;
+        let client = iml_manager_client::get_api_client()?;
 
         let cmds: ApiList<Command> =
             iml_manager_client::get(client, Command::endpoint_name(), query).await?;

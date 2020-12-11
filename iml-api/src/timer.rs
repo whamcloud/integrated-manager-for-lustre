@@ -1,5 +1,5 @@
 use crate::error::ImlApiError;
-use iml_manager_client::{delete, get_client, put};
+use iml_manager_client::{delete, get_api_client, put};
 use iml_manager_env::{get_timer_addr, running_in_docker};
 use std::time::Duration;
 
@@ -73,7 +73,7 @@ ExecStart={}
         service_config,
     };
 
-    let client = get_client()?;
+    let client = get_api_client()?;
 
     let url = format!("http://{}/configure/", get_timer_addr());
     tracing::debug!(
@@ -87,7 +87,7 @@ ExecStart={}
 }
 
 pub async fn remove_snapshot_timer(config_id: i32) -> Result<(), ImlApiError> {
-    let client = get_client()?;
+    let client = get_api_client()?;
 
     delete(
         client,

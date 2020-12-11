@@ -59,7 +59,7 @@ async fn api_command(
     let body = body.into();
 
     let term = Term::stdout();
-    let client = iml_manager_client::get_client()?;
+    let client = iml_manager_client::get_api_client()?;
 
     let req = match method {
         ApiMethod::Delete => client.delete(uri),
