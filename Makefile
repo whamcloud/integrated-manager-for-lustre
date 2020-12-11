@@ -81,6 +81,13 @@ cleandist:
 	rm -rf dist
 	mkdir dist
 
+extraclean: clean
+	cargo clean
+	find . -name \*~ -delete
+
+clean:
+	rm -rf _topdir /tmp/tmp.* *.src.rpm
+
 nuke_db:
 	echo "Wiping $(DB_NAME) DB..."; \
 	dropdb $(DB_NAME); \
@@ -91,6 +98,8 @@ migrate_db:
 	@./manage.py migrate
 	cargo sqlx migrate run
 
+localrepo:
+	cd _topdir/RPMS; createrepo .
 
 nuke_logs:
 	@$(ALWAYS_NUKE_LOGS) && { \

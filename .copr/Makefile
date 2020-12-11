@@ -68,6 +68,7 @@ srpm:
 	rpmbuild -bs -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/_topdir/SPECS/rust-iml.spec
 	cp -rf ${TMPDIR}/_topdir ${BUILDROOT}/
 	cp -f ${TMPDIR}/_topdir/SRPMS/*.rpm $(outdir)
+	rm -rf ${TMPDIR}
 
 iml-docker-srpm:
 	mkdir -p ${TMPDIR}/_topdir/{SOURCES,SPECS}
@@ -82,6 +83,7 @@ iml-docker-srpm:
 
 	cp -rf ${TMPDIR}/_topdir ${BUILDROOT}/
 	cp -f ${TMPDIR}/_topdir/SRPMS/*.rpm $(outdir)
+	rm -rf ${TMPDIR}
 
 iml-deps:
 	if ! rpm -q python-devel python-setuptools ed 2> /dev/null; then \
@@ -118,15 +120,17 @@ iml-srpm: iml-deps substs
 	rpmbuild -bs -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/_topdir/SPECS/python-iml-manager.spec
 
 	cp -rf ${TMPDIR}/_topdir ${BUILDROOT}/
-	cp -r ${TMPDIR}/_topdir/SRPMS/* $(outdir)
+	cp -f ${TMPDIR}/_topdir/SRPMS/* $(outdir)
 	rm -rf ${TMPDIR}
 
 iml-gui-srpm:
 	mkdir -p ${TMPDIR}/_topdir/{SOURCES,SPECS}
 
-	curl --silent --location https://dl.yarnpkg.com/rpm/yarn.repo | tee /etc/yum.repos.d/yarn.repo
-	curl --silent --location https://rpm.nodesource.com/setup_12.x | bash -
-	yum install -y yarn
+	if ! rpm -q yarn 2> /dev/null; then \
+		curl --silent --location https://dl.yarnpkg.com/rpm/yarn.repo | tee /etc/yum.repos.d/yarn.repo; \
+		curl --silent --location https://rpm.nodesource.com/setup_12.x | bash -; \
+		yum install -y yarn; \
+	fi
 
 	cd iml-gui; \
 	yarn install; \
@@ -138,6 +142,7 @@ iml-gui-srpm:
 
 	cp -rf ${TMPDIR}/_topdir ${BUILDROOT}/
 	cp -f ${TMPDIR}/_topdir/SRPMS/*.rpm $(outdir)
+	rm -rf ${TMPDIR}
 
 device-scanner-srpm:
 	mkdir -p ${TMPDIR}/_topdir/{SOURCES,SPECS}
@@ -163,4 +168,4 @@ device-scanner-srpm:
 
 	cp -rf ${TMPDIR}/_topdir ${BUILDROOT}/
 	cp -f ${TMPDIR}/_topdir/SRPMS/*.rpm $(outdir)
-
+	rm -rf ${TMPDIR}
