@@ -2,11 +2,11 @@
 authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
 name = "iml-manager-client"
-version = "0.5.0"
+version = "0.4.0"
 
 [dependencies]
-iml-manager-env = {path = "../iml-manager-env", version = "0.5"}
-iml-request-retry = {path = "../iml-request-retry", version = "0.5"}
+iml-manager-env = {path = "../iml-manager-env", version = "0.4"}
+iml-request-retry = {path = "../iml-request-retry", version = "0.4"}
 reqwest = {version = "0.10", default-features = false, features = ["rustls-tls", "json"]}
 serde = {version = "1", features = ["derive"]}
 serde_json = "1"

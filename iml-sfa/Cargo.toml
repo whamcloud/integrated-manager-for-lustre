@@ -2,20 +2,20 @@
 authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
 name = "iml-sfa"
-version = "0.5.0"
+version = "0.2.0"
 
 [dependencies]
 async-trait = "0.1"
 futures = "0.3"
-iml-change = {path = "../iml-change", version = "0.5"}
-iml-manager-env = {version = "0.5", path = "../iml-manager-env"}
-iml-postgres = {path = "../iml-postgres", version = "0.5"}
-iml-request-retry = {path = "../iml-request-retry", version = "0.5"}
-iml-tracing = {version = "0.5", path = "../iml-tracing"}
-iml-wire-types = {path = "../iml-wire-types", version = "0.5", features = ["wbem-interop", "postgres-interop"]}
+iml-change = {path = "../iml-change", version = "0.1"}
+iml-manager-env = {version = "0.4", path = "../iml-manager-env"}
+iml-postgres = {path = "../iml-postgres", version = "0.4"}
+iml-request-retry = {path = "../iml-request-retry", version = "0.4"}
+iml-tracing = {version = "0.3", path = "../iml-tracing"}
+iml-wire-types = {path = "../iml-wire-types", version = "0.4", features = ["wbem-interop", "postgres-interop"]}
 serde = "1"
 thiserror = "1.0"
 tokio = {version = "0.2", features = ["macros", "time", "rt-threaded"]}
 unzip-n = "0.1.2"
 url = "2.1"
-wbem-client = {version = "0.5", path = "../wbem-client"}
+wbem-client = {version = "0.2", path = "../wbem-client"}

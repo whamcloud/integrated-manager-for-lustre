@@ -4,15 +4,15 @@ description = "Shared types for the IML project"
 edition = "2018"
 license = "MIT"
 name = "iml-wire-types"
-version = "0.5.0"
+version = "0.4.0"
 
 [dependencies]
 bytes = {version = "0.5", optional = true}
 chrono = {version = "0.4", features = ["wasmbind", "serde"]}
 humantime = "2.0"
 im = {version = "15.0", features = ["serde"]}
-iml-api-utils = {path = "../iml-api-utils", version = "0.5"}
-iml-change = {path = "../iml-change", version = "0.5", optional = true}
+iml-api-utils = {path = "../iml-api-utils", version = "0.4"}
+iml-change = {path = "../iml-change", version = "0.1", optional = true}
 ipnetwork = "0.17"
 juniper = {git = "https://github.com/graphql-rust/juniper", optional = true}
 serde = {version = "1", features = ["derive"]}
@@ -21,7 +21,7 @@ serde_repr = "0.1"
 sqlx = {git = "https://github.com/jgrund/sqlx", branch = "workspace-support", default-features = false, features = ["json", "macros", "offline", "postgres", "runtime-tokio-rustls", "chrono", "migrate"], optional = true}
 structopt = {version = "0.3", optional = true}
 thiserror = {version = "1.0", optional = true}
-wbem-client = {path = "../wbem-client", version = "0.5", optional = true}
+wbem-client = {path = "../wbem-client", version = "0.2", optional = true}
 
 [features]
 cli = ["structopt"]

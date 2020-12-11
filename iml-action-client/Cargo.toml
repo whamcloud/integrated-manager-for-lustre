@@ -2,14 +2,14 @@
 authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
 name = "iml-action-client"
-version = "0.5.0"
+version = "0.1.0"
 
 [dependencies]
 bytes = "0.5"
 futures = "0.3"
 hyper = {version = "0.13", default-features = false, features = ["tcp"]}
-iml-manager-env = {path = "../iml-manager-env", version = "0.5"}
-iml-wire-types = {path = "../iml-wire-types", version = "0.5"}
+iml-manager-env = {path = "../iml-manager-env", version = "0.4"}
+iml-wire-types = {path = "../iml-wire-types", version = "0.4"}
 # this can be used once hyperlocal#36 lands
 #hyperlocal = { version = "0.7", features = [ "client" ], default_features = false }
 hyperlocal = {version = "0.7"}

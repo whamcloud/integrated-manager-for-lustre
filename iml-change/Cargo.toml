@@ -2,4 +2,4 @@
 authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
 name = "iml-change"
-version = "0.5.0"
+version = "0.1.0"

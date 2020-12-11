@@ -551,7 +551,7 @@ Group: System Environment/Libraries
 
 %changelog
 * Thu Dec 10 2020 Will Johnson <wjohnson@whamcloud.com> - 0.5.0-1
-- Release 0.5.0
+- IML Manager 6.3 release
 
 * Thu Sep 17 2020 Will Johnson <wjohnson@whamcloud.com> - 0.3.0-1
 - Add timer service

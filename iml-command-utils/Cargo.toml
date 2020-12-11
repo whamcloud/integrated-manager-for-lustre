@@ -2,12 +2,12 @@
 authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
 name = "iml-command-utils"
-version = "0.5.0"
+version = "0.4.0"
 
 [dependencies]
 futures = "0.3"
-iml-manager-client = {path = "../iml-manager-client", version = "0.5"}
-iml-tracing = {version = "0.5", path = "../iml-tracing"}
-iml-wire-types = {path = "../iml-wire-types", version = "0.5"}
+iml-manager-client = {path = "../iml-manager-client", version = "0.4"}
+iml-tracing = {version = "0.3", path = "../iml-tracing"}
+iml-wire-types = {path = "../iml-wire-types", version = "0.4"}
 thiserror = "1.0"
 tokio = {version = "0.2", features = ["macros", "io-std", "io-util", "fs", "rt-threaded"]}

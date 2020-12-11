@@ -94,7 +94,7 @@ jobs:
           KEY: ${{ secrets.key }}
           IV: ${{ secrets.iv }}
 
-  deploy_copr:
+  push_python_iml_manager:
     name: Push to Copr prod (python-iml-manager)
     runs-on: ubuntu-latest
     steps:

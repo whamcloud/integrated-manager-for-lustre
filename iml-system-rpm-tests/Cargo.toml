@@ -2,12 +2,12 @@
 authors = ["IML Team <iml@whamcloud.com>"]
 edition = "2018"
 name = "iml-system-rpm-tests"
-version = "0.5.0"
+version = "0.4.0"
 
 [dependencies]
-iml-cmd = {version = "0.5", path = "../iml-cmd"}
-iml-system-test-utils = {version = "0.5", path = "../iml-system-test-utils"}
-iml-wire-types = {version = "0.5", path = "../iml-wire-types"}
+iml-cmd = {version = "0.4", path = "../iml-cmd"}
+iml-system-test-utils = {version = "0.4", path = "../iml-system-test-utils"}
+iml-wire-types = {version = "0.4", path = "../iml-wire-types"}
 tokio = {version = "0.2", features = ["macros", "rt-threaded"]}
 tracing = "0.1"
 tracing-subscriber = "0.2"

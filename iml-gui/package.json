@@ -1,7 +1,7 @@
 {
   "author": "Iml Team <iml@whamcloud.com>",
   "name": "iml-gui",
-  "version": "0.5.0",
+  "version": "0.3.0",
   "repository": "https://github.com/whamcloud/integrated-manager-for-lustre",
   "license": "MIT",
   "scripts": {

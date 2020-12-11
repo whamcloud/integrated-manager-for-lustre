@@ -7,7 +7,7 @@ license = "MIT"
 name = "iml-gui"
 readme = "./README.md"
 repository = "https://github.com/whamcloud/integrated-manager-for-lustre"
-version = "0.5.0"
+version = "0.3.0"
 
 [lib]
 crate-type = ["cdylib"]
@@ -24,14 +24,14 @@ futures = "0.3"
 gloo-timers = {version = "0.2", features = ["futures"]}
 humantime = "2.0"
 im = {version = "15", features = ["serde"]}
-iml-api-utils = {path = "../../iml-api-utils", version = "0.5"}
-iml-graphql-queries = {version = "0.5", path = "../../iml-graphql-queries"}
-iml-influx = {path = "../../iml-influx", version = "0.5"}
-iml-wire-types = {path = "../../iml-wire-types", version = "0.5"}
+iml-api-utils = {path = "../../iml-api-utils", version = "0.4"}
+iml-graphql-queries = {version = "0.2", path = "../../iml-graphql-queries"}
+iml-influx = {path = "../../iml-influx", version = "0.2"}
+iml-wire-types = {path = "../../iml-wire-types", version = "0.4"}
 js-sys = "0.3"
 lazy_static = "1.4.0"
 natord = "1.0"
-number-formatter = {path = "../../number-formatter", version = "0.5"}
+number-formatter = {path = "../../number-formatter", version = "0.2"}
 seed = "0.6.0"
 serde = {version = "1", features = ['derive']}
 serde_json = "1.0"

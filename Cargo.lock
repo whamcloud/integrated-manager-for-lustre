@@ -1561,7 +1561,7 @@ dependencies = [
 
 [[package]]
 name = "iml-action-client"
-version = "0.5.0"
+version = "0.1.0"
 dependencies = [
  "bytes",
  "futures",
@@ -1579,7 +1579,7 @@ dependencies = [
 
 [[package]]
 name = "iml-action-runner"
-version = "0.5.0"
+version = "0.4.0"
 dependencies = [
  "dotenv",
  "futures",
@@ -1604,7 +1604,7 @@ dependencies = [
 
 [[package]]
 name = "iml-agent"
-version = "0.5.0"
+version = "0.4.0"
 dependencies = [
  "async-trait",
  "byte-unit",
@@ -1657,7 +1657,7 @@ dependencies = [
 
 [[package]]
 name = "iml-agent-comms"
-version = "0.5.0"
+version = "0.4.0"
 dependencies = [
  "futures",
  "iml-manager-env",
@@ -1674,7 +1674,7 @@ dependencies = [
 
 [[package]]
 name = "iml-api"
-version = "0.5.0"
+version = "0.4.0"
 dependencies = [
  "chrono",
  "futures",
@@ -1701,7 +1701,7 @@ dependencies = [
 
 [[package]]
 name = "iml-api-utils"
-version = "0.5.0"
+version = "0.4.0"
 dependencies = [
  "lazy_static",
  "regex",
@@ -1709,11 +1709,11 @@ dependencies = [
 
 [[package]]
 name = "iml-change"
-version = "0.5.0"
+version = "0.1.0"
 
 [[package]]
 name = "iml-cmd"
-version = "0.5.0"
+version = "0.4.0"
 dependencies = [
  "futures",
  "tokio",
@@ -1723,7 +1723,7 @@ dependencies = [
 
 [[package]]
 name = "iml-command-utils"
-version = "0.5.0"
+version = "0.4.0"
 dependencies = [
  "futures",
  "iml-manager-client",
@@ -1735,7 +1735,7 @@ dependencies = [
 
 [[package]]
 name = "iml-corosync"
-version = "0.5.0"
+version = "0.4.0"
 dependencies = [
  "futures",
  "iml-change",
@@ -1754,7 +1754,7 @@ dependencies = [
 
 [[package]]
 name = "iml-device"
-version = "0.5.0"
+version = "0.4.0"
 dependencies = [
  "chrono",
  "device-types",
@@ -1779,7 +1779,7 @@ dependencies = [
 
 [[package]]
 name = "iml-fs"
-version = "0.5.0"
+version = "0.4.0"
 dependencies = [
  "bytes",
  "futures",
@@ -1791,7 +1791,7 @@ dependencies = [
 
 [[package]]
 name = "iml-graphql-queries"
-version = "0.5.0"
+version = "0.2.0"
 dependencies = [
  "humantime 2.0.1",
  "iml-wire-types",
@@ -1801,7 +1801,7 @@ dependencies = [
 
 [[package]]
 name = "iml-influx"
-version = "0.5.0"
+version = "0.2.0"
 dependencies = [
  "futures",
  "influx_db_client",
@@ -1812,7 +1812,7 @@ dependencies = [
 
 [[package]]
 name = "iml-job-scheduler-rpc"
-version = "0.5.0"
+version = "0.4.0"
 dependencies = [
  "futures",
  "iml-rabbit",
@@ -1826,7 +1826,7 @@ dependencies = [
 
 [[package]]
 name = "iml-journal"
-version = "0.5.0"
+version = "0.4.0"
 dependencies = [
  "chrono",
  "futures",
@@ -1847,7 +1847,7 @@ dependencies = [
 
 [[package]]
 name = "iml-mailbox"
-version = "0.5.0"
+version = "0.4.0"
 dependencies = [
  "bytes",
  "futures",
@@ -1867,7 +1867,7 @@ dependencies = [
 
 [[package]]
 name = "iml-manager-cli"
-version = "0.5.0"
+version = "0.4.0"
 dependencies = [
  "chrono",
  "chrono-humanize",
@@ -1902,7 +1902,7 @@ dependencies = [
 
 [[package]]
 name = "iml-manager-client"
-version = "0.5.0"
+version = "0.4.0"
 dependencies = [
  "iml-manager-env",
  "iml-request-retry",
@@ -1915,7 +1915,7 @@ dependencies = [
 
 [[package]]
 name = "iml-manager-env"
-version = "0.5.0"
+version = "0.4.0"
 dependencies = [
  "lazy_static",
  "url",
@@ -1923,7 +1923,7 @@ dependencies = [
 
 [[package]]
 name = "iml-network"
-version = "0.5.0"
+version = "0.4.0"
 dependencies = [
  "futures",
  "iml-influx",
@@ -1941,7 +1941,7 @@ dependencies = [
 
 [[package]]
 name = "iml-ntp"
-version = "0.5.0"
+version = "0.4.0"
 dependencies = [
  "futures",
  "iml-manager-env",
@@ -1956,7 +1956,7 @@ dependencies = [
 
 [[package]]
 name = "iml-ostpool"
-version = "0.5.0"
+version = "0.4.0"
 dependencies = [
  "futures",
  "iml-postgres",
@@ -1970,7 +1970,7 @@ dependencies = [
 
 [[package]]
 name = "iml-postgres"
-version = "0.5.0"
+version = "0.4.0"
 dependencies = [
  "dotenv",
  "futures",
@@ -1983,7 +1983,7 @@ dependencies = [
 
 [[package]]
 name = "iml-postoffice"
-version = "0.5.0"
+version = "0.4.0"
 dependencies = [
  "futures",
  "iml-rabbit",
@@ -1996,7 +1996,7 @@ dependencies = [
 
 [[package]]
 name = "iml-rabbit"
-version = "0.5.0"
+version = "0.4.0"
 dependencies = [
  "deadpool-lapin",
  "futures",
@@ -2013,7 +2013,7 @@ dependencies = [
 
 [[package]]
 name = "iml-report"
-version = "0.5.0"
+version = "0.1.0"
 dependencies = [
  "bytes",
  "futures",
@@ -2028,7 +2028,7 @@ dependencies = [
 
 [[package]]
 name = "iml-request-retry"
-version = "0.5.0"
+version = "0.4.0"
 dependencies = [
  "futures",
  "http",
@@ -2046,7 +2046,7 @@ dependencies = [
 
 [[package]]
 name = "iml-service-queue"
-version = "0.5.0"
+version = "0.4.0"
 dependencies = [
  "futures",
  "iml-rabbit",
@@ -2059,7 +2059,7 @@ dependencies = [
 
 [[package]]
 name = "iml-sfa"
-version = "0.5.0"
+version = "0.2.0"
 dependencies = [
  "async-trait",
  "futures",
@@ -2079,7 +2079,7 @@ dependencies = [
 
 [[package]]
 name = "iml-snapshot"
-version = "0.5.0"
+version = "0.4.0"
 dependencies = [
  "futures",
  "futures-util",
@@ -2101,7 +2101,7 @@ dependencies = [
 
 [[package]]
 name = "iml-ssh"
-version = "0.5.0"
+version = "0.1.0"
 dependencies = [
  "anyhow",
  "dirs 3.0.1",
@@ -2115,7 +2115,7 @@ dependencies = [
 
 [[package]]
 name = "iml-stats"
-version = "0.5.0"
+version = "0.4.0"
 dependencies = [
  "futures",
  "iml-influx",
@@ -2135,7 +2135,7 @@ dependencies = [
 
 [[package]]
 name = "iml-system-test-utils"
-version = "0.5.0"
+version = "0.4.0"
 dependencies = [
  "async-trait",
  "futures",
@@ -2154,7 +2154,7 @@ dependencies = [
 
 [[package]]
 name = "iml-systemd"
-version = "0.5.0"
+version = "0.4.0"
 dependencies = [
  "futures",
  "iml-cmd",
@@ -2167,7 +2167,7 @@ dependencies = [
 
 [[package]]
 name = "iml-task-runner"
-version = "0.5.0"
+version = "0.1.0"
 dependencies = [
  "futures",
  "iml-action-client",
@@ -2183,7 +2183,7 @@ dependencies = [
 
 [[package]]
 name = "iml-timer"
-version = "0.5.0"
+version = "0.4.0"
 dependencies = [
  "futures",
  "iml-cmd",
@@ -2197,7 +2197,7 @@ dependencies = [
 
 [[package]]
 name = "iml-tracing"
-version = "0.5.0"
+version = "0.3.0"
 dependencies = [
  "tokio",
  "tracing",
@@ -2206,7 +2206,7 @@ dependencies = [
 
 [[package]]
 name = "iml-util"
-version = "0.5.0"
+version = "0.4.0"
 dependencies = [
  "futures",
  "iml-wire-types",
@@ -2218,7 +2218,7 @@ dependencies = [
 
 [[package]]
 name = "iml-warp-drive"
-version = "0.5.0"
+version = "0.4.0"
 dependencies = [
  "futures",
  "im",
@@ -2239,7 +2239,7 @@ dependencies = [
 
 [[package]]
 name = "iml-wire-types"
-version = "0.5.0"
+version = "0.4.0"
 dependencies = [
  "bytes",
  "chrono",
@@ -2517,7 +2517,7 @@ dependencies = [
 
 [[package]]
 name = "liblustreapi"
-version = "0.5.0"
+version = "0.4.0"
 dependencies = [
  "errno",
  "libc",
@@ -2529,7 +2529,7 @@ dependencies = [
 
 [[package]]
 name = "liblustreapi-types"
-version = "0.5.0"
+version = "0.4.0"
 dependencies = [
  "bindgen",
  "libc",
@@ -2902,7 +2902,7 @@ dependencies = [
 
 [[package]]
 name = "number-formatter"
-version = "0.5.0"
+version = "0.2.0"
 
 [[package]]
 name = "number_prefix"
@@ -4540,7 +4540,7 @@ dependencies = [
 
 [[package]]
 name = "tokio-runtime-shutdown"
-version = "0.5.0"
+version = "0.4.0"
 dependencies = [
  "futures",
  "stream-cancel 0.5.2",
@@ -4886,7 +4886,7 @@ checksum = "f1bddf1187be692e79c5ffeab891132dfb0f236ed36a43c7ed39f1165ee20191"
 
 [[package]]
 name = "version-utils"
-version = "0.5.0"
+version = "0.2.0"
 
 [[package]]
 name = "version_check"
@@ -5050,7 +5050,7 @@ dependencies = [
 
 [[package]]
 name = "wbem-client"
-version = "0.5.0"
+version = "0.2.0"
 dependencies = [
  "async-trait",
  "base64 0.12.3",
