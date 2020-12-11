@@ -257,7 +257,7 @@ Group: System Environment/Libraries
 %{summary}
 
 %post task-runner
-systemctl preset iml-task-runner.service
+%systemd_post iml-task-runner.service
 
 %preun task-runner
 %systemd_preun iml-task-runner.service
