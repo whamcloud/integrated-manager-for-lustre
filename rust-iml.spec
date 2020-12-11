@@ -130,7 +130,7 @@ Summary: IML Agent Daemon and CLI
 License: MIT
 Group: System Environment/Libraries
 Requires: systemd-journal-gateway
-Requires: iml-device-scanner >= 5.0
+Requires: iml-device-scanner >= 5.1
 Obsoletes: iml-device-scanner-proxy
 
 %description agent
