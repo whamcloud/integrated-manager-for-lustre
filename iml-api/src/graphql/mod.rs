@@ -16,6 +16,7 @@ use futures::{
     future::{self, join_all},
     TryFutureExt, TryStreamExt,
 };
+use iml_manager_client::{get_client, get_retry, Client};
 use iml_postgres::{
     active_mgs_host_fqdn, fqdn_by_host_id, sqlx, sqlx::postgres::types::PgInterval, PgPool,
 };
@@ -27,7 +28,7 @@ use iml_wire_types::{
     logs::{LogResponse, Meta},
     snapshot::{ReserveUnit, Snapshot, SnapshotInterval, SnapshotRetention},
     task::Task,
-    Command, EndpointName, FsType, Job, LogMessage, LogSeverity, MessageClass, SortDir,
+    Command, EndpointName, FsType, Job, LogMessage, LogSeverity, MessageClass, Session, SortDir,
 };
 use itertools::Itertools;
 use juniper::{
@@ -575,6 +576,10 @@ impl QueryRoot {
     }
 
     async fn server_profiles(context: &Context) -> juniper::FieldResult<Vec<ServerProfile>> {
+        let client: Client = get_client()?;
+        let response: Session = get_retry(client.clone(), "session", vec![("limit", "0")]).await?;
+        tracing::info!("Session: {:?}", response);
+
         let server_profile_records = sqlx::query!(
             r#"
                 SELECT jsonb_agg((r.repo_name, r.location))

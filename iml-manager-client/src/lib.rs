@@ -63,7 +63,7 @@ impl From<serde_json::error::Error> for ImlManagerClientError {
 
 /// Get a client that is able to make authenticated requests
 /// against the API
-pub fn get_client() -> Result<Client, ImlManagerClientError> {
+pub fn get_api_client() -> Result<Client, ImlManagerClientError> {
     let header_value = header::HeaderValue::from_str(&format!(
         "ApiKey {}:{}",
         iml_manager_env::get_api_user(),
@@ -77,6 +77,16 @@ pub fn get_client() -> Result<Client, ImlManagerClientError> {
     Client::builder()
         .timeout(Duration::from_secs(60))
         .default_headers(headers)
+        .danger_accept_invalid_certs(true)
+        .build()
+        .map_err(ImlManagerClientError::Reqwest)
+}
+
+/// Get a client that is able to make non-authenticated requests
+/// against the API
+pub fn get_client() -> Result<Client, ImlManagerClientError> {
+    Client::builder()
+        .timeout(Duration::from_secs(60))
         .danger_accept_invalid_certs(true)
         .build()
         .map_err(ImlManagerClientError::Reqwest)
