@@ -12,8 +12,8 @@ use warp::{
 
 const BEARER_PREFIX: &str = "Bearer ";
 
-pub const MODEL_PATH: &str = "./auth/auth_model.conf";
-pub const POLICY_PATH: &str = "./auth/policy.csv";
+pub const MODEL_PATH: &str = "./auth_model.conf";
+pub const POLICY_PATH: &str = "./policy.csv";
 
 pub type UserMap = Arc<RwLock<HashMap<String, User>>>;
 pub type Sessions = Arc<RwLock<HashMap<String, String>>>;

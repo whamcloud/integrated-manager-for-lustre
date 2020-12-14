@@ -33,6 +33,8 @@ cp iml-agent %{buildroot}%{_bindir}
 cp iml-agent-comms %{buildroot}%{_bindir}
 cp iml-agent-daemon %{buildroot}%{_bindir}
 cp iml-api %{buildroot}%{_bindir}
+cp auth_model.conf %{buildroot}%{_bindir}
+cp policy.csv %{buildroot}%{_bindir}
 cp iml-config %{buildroot}%{_bindir}
 cp iml-corosync %{buildroot}%{_bindir}
 cp iml-device %{buildroot}%{_bindir}
@@ -199,6 +201,8 @@ Group: System Environment/Libraries
 
 %files api
 %{_bindir}/iml-api
+%{_bindir}/auth_model.conf
+%{_bindir}/policy.csv
 %attr(0644,root,root)%{_unitdir}/iml-api.service
 
 %package action-runner
