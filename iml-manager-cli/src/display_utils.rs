@@ -25,18 +25,51 @@ pub fn wrap_fut<T>(msg: &str, fut: impl Future<Output = T>) -> impl Future<Outpu
     fut.inspect(move |_| pb.finish_and_clear())
 }
 
-pub fn format_cmd_state(cmd: &Command) -> String {
-    if cmd.errored {
-        format_error(format!("{} errored", cmd.message))
-    } else if cmd.cancelled {
-        format_cancelled(&format!("{} cancelled", cmd.message))
-    } else {
-        format_success(format!("{} successful", cmd.message))
+pub fn format_cmd_state(indent: usize, cmd: &Command) -> String {
+    let indent = "  ".repeat(indent);
+    indent
+        + &if cmd.cancelled {
+            format_cancelled(&format!("{} cancelled", cmd.message))
+        } else if cmd.errored {
+            format_error(format!("{} errored", cmd.message))
+        } else if cmd.complete {
+            format_success(format!("{} successful", cmd.message))
+        } else {
+            format_in_progress(&cmd.message)
+        }
+}
+
+pub fn format_job_state<T>(indent: usize, job: &Job<T>) -> String {
+    let indent = "  ".repeat(indent);
+    indent
+        + &if job.cancelled {
+            format_cancelled(&format!("{} cancelled", job.description))
+        } else if job.errored {
+            format_error(format!("{} errored", job.description))
+        } else if job.state == "complete" {
+            format_success(format!("{} successful", job.description))
+        } else {
+            format_in_progress(&job.description)
+        }
+}
+
+pub fn format_step_state(indent: usize, step: &Step) -> String {
+    let indent = "  ".repeat(indent);
+    indent
+        + &match &step.state[..] {
+        "cancelled" => format_cancelled(&format!("(step) {} cancelled", step.class_name)),
+        "failed" => format_error(format!("(step) {} errored", step.class_name)),
+        "success" => format_success(format!("(step) {} successful", step.class_name)),
+        _ /* "incomplete" */ => format_in_progress(format!("(step) {}", step.class_name)),
     }
 }
 
+pub fn format_in_progress(message: impl Display) -> String {
+    format!("  {}", message)
+}
+
 pub fn display_cmd_state(cmd: &Command) {
-    println!("{}", format_cmd_state(&cmd));
+    println!("{}", format_cmd_state(0, &cmd));
 }
 
 pub fn format_cancelled(message: impl Display) -> String {
