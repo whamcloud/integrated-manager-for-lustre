@@ -282,7 +282,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use iml_wire_types::{Net, Nid};
+    use iml_wire_types::{LNetState, Net, Nid};
     use std::collections::BTreeMap;
 
     #[test]
@@ -338,6 +338,7 @@ mod tests {
                     ],
                 },
             ],
+            state: LNetState::Up, 
         };
 
         let parsed_data = parse_lnet_data(&data, 2);
@@ -347,7 +348,7 @@ mod tests {
 
     #[test]
     fn test_parse_empty_lnetctl_data() {
-        let data = LNet { net: vec![] };
+        let data = LNet { net: vec![], state: LNetState::Unloaded };
 
         let parsed_data = parse_lnet_data(&data, 2);
 

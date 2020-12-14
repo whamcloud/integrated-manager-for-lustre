@@ -1766,6 +1766,35 @@
       ]
     }
   },
+  "4c327149bc654cb21909ba7b7e8110dc7df055e76d66ff6d61bc2ab3a6549eef": {
+    "query": "\n            WITH updated AS (\n                INSERT INTO nid\n                (net_type, host_id, nid, status, interfaces)\n                SELECT net_type, host_id, nid, status, string_to_array(interfaces, ',')::text[]\n                FROM UNNEST($1::text[], $2::int[], $3::text[], $4::text[], $5::text[])\n                AS t(net_type, host_id, nid, status, interfaces)\n                ON CONFLICT (host_id, nid)\n                    DO\n                    UPDATE SET  net_type      = EXCLUDED.net_type,\n                                status        = EXCLUDED.status,\n                                interfaces    = EXCLUDED.interfaces\n                RETURNING id\n            )\n\n            INSERT INTO lnet\n            (host_id, state, nids)\n            (SELECT $6, $7::lnet_state, array_agg(id) from updated)\n            ON CONFLICT (host_id)\n                DO\n                UPDATE SET nids  = EXCLUDED.nids,\n                           state = EXCLUDED.state;\n                ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "TextArray",
+          "Int4Array",
+          "TextArray",
+          "TextArray",
+          "TextArray",
+          "Int4",
+          {
+            "Custom": {
+              "name": "lnet_state",
+              "kind": {
+                "Enum": [
+                  "up",
+                  "down",
+                  "unloaded"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "nullable": []
+    }
+  },
   "4eb28fbaf2c42bbcc852c074ade355c4f29c318def54af2290a05f37e90a3b23": {
     "query": "\n            INSERT INTO corosync_node (\n                id,\n                cluster_id,\n                online,\n                standby,\n                standby_onfail,\n                maintenance,\n                pending,\n                unclean,\n                shutdown,\n                expected_up,\n                is_dc,\n                resources_running,\n                type\n            )\n            SELECT\n                id::corosync_node_key,\n                $13,\n                online,\n                standby,\n                standby_onfail,\n                maintenance,\n                pending,\n                unclean,\n                shutdown,\n                expected_up,\n                is_dc,\n                resources_running,\n                type\n            FROM UNNEST(\n                $1::text[],\n                $2::bool[],\n                $3::bool[],\n                $4::bool[],\n                $5::bool[],\n                $6::bool[],\n                $7::bool[],\n                $8::bool[],\n                $9::bool[],\n                $10::bool[],\n                $11::int[],\n                $12::text[]\n            )\n            AS t(\n                id,\n                online,\n                standby,\n                standby_onfail,\n                maintenance,\n                pending,\n                unclean,\n                shutdown,\n                expected_up,\n                is_dc,\n                resources_running,\n                type\n            )\n            ON CONFLICT (id, cluster_id) DO UPDATE\n            SET\n                online = excluded.online,\n                standby = excluded.standby,\n                standby_onfail = excluded.standby_onfail,\n                maintenance = excluded.maintenance,\n                pending = excluded.pending,\n                unclean = excluded.unclean,\n                shutdown = excluded.shutdown,\n                expected_up = excluded.expected_up,\n                is_dc = excluded.is_dc,\n                resources_running = excluded.resources_running,\n                type = excluded.type\n        ",
     "describe": {
@@ -3575,24 +3604,6 @@
         false,
         false
       ]
-    }
-  },
-  "a5e14b628a8f67d458167f1ea5d0390aacd72b92a725bb1092e6d9c104414a7b": {
-    "query": "\n            WITH updated AS (\n                INSERT INTO nid\n                (net_type, host_id, nid, status, interfaces)\n                SELECT net_type, host_id, nid, status, string_to_array(interfaces, ',')::text[]\n                FROM UNNEST($1::text[], $2::int[], $3::text[], $4::text[], $5::text[])\n                AS t(net_type, host_id, nid, status, interfaces)\n                ON CONFLICT (host_id, nid)\n                    DO\n                    UPDATE SET  net_type      = EXCLUDED.net_type,\n                                status        = EXCLUDED.status,\n                                interfaces    = EXCLUDED.interfaces\n                RETURNING id\n            )\n\n            INSERT INTO lnet\n            (host_id, state, nids)\n            (SELECT $6, $7, array_agg(id) from updated)\n            ON CONFLICT (host_id)\n                DO\n                UPDATE SET nids  = EXCLUDED.nids,\n                           state = EXCLUDED.state;\n                ",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": [
-          "TextArray",
-          "Int4Array",
-          "TextArray",
-          "TextArray",
-          "TextArray",
-          "Int4",
-          "Text"
-        ]
-      },
-      "nullable": []
     }
   },
   "a8110847776ee7220577529cf0e395fe9ef3d72fa113924a08ef4a1c44664f82": {
