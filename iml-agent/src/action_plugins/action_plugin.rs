@@ -80,6 +80,8 @@ pub fn create_registry() -> action_plugins::Actions {
         .add_plugin("lnet_unload", lnet::unload)
         .add_plugin("lnet_start", lnet::start)
         .add_plugin("lnet_stop", lnet::stop)
+        .add_plugin("lnet_configure", lnet::configure)
+        .add_plugin("lnet_unconfigure", lnet::unconfigure)
         .add_plugin("ostpool_create", ostpool::action_pool_create)
         .add_plugin("ostpool_wait", ostpool::action_pool_wait)
         .add_plugin("ostpool_destroy", ostpool::action_pool_destroy)
