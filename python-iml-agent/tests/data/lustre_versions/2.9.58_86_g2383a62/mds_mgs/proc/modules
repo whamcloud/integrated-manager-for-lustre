@@ -1,0 +1,126 @@
+binfmt_misc 17468 1 - Live 0xffffffffa0fda000
+mgs 345362 1 - Live 0xffffffffa1181000 (OE)
+mgc 94146 2 mgs, Live 0xffffffffa10e0000 (OE)
+osd_ldiskfs 488626 1 - Live 0xffffffffa1108000 (OE)
+ldiskfs 626384 2 osd_ldiskfs, Live 0xffffffffa1046000 (OE)
+lquota 358984 1 osd_ldiskfs, Live 0xffffffffa0fed000 (OE)
+rpcsec_gss_krb5 31477 0 - Live 0xffffffffa0fe4000
+nfsv4 546174 0 - Live 0xffffffffa0f3e000
+dns_resolver 13140 1 nfsv4, Live 0xffffffffa082e000
+nfs 256665 1 nfsv4, Live 0xffffffffa0efe000
+fscache 64935 2 nfsv4,nfs, Live 0xffffffffa0aa2000
+zfs 2705381 0 - Live 0xffffffffa0c68000 (POE)
+zunicode 331170 1 zfs, Live 0xffffffffa0c16000 (POE)
+zavl 15236 1 zfs, Live 0xffffffffa03b7000 (POE)
+zcommon 55411 1 zfs, Live 0xffffffffa0605000 (POE)
+znvpair 93227 2 zfs,zcommon, Live 0xffffffffa0bfe000 (POE)
+spl 92225 3 zfs,zcommon,znvpair, Live 0xffffffffa0be6000 (OE)
+zlib_deflate 26914 1 spl, Live 0xffffffffa05fd000
+lustre 830274 0 - Live 0xffffffffa0b1a000 (OE)
+lmv 217543 1 lustre, Live 0xffffffffa0ae3000 (OE)
+mdc 187938 1 lustre, Live 0xffffffffa0ab4000 (OE)
+lov 300891 1 lustre, Live 0xffffffffa0a57000 (OE)
+fid 90740 2 osd_ldiskfs,mdc, Live 0xffffffffa0816000 (OE)
+fld 89953 3 osd_ldiskfs,lmv,fid, Live 0xffffffffa056c000 (OE)
+ksocklnd 179389 1 - Live 0xffffffffa07e9000 (OE)
+ptlrpc 2218893 10 mgs,mgc,osd_ldiskfs,lquota,lustre,lmv,mdc,lov,fid,fld, Live 0xffffffffa0838000 (OE)
+obdclass 1899655 12 mgs,mgc,osd_ldiskfs,lquota,lustre,lmv,mdc,lov,fid,fld,ptlrpc, Live 0xffffffffa0618000 (OE)
+lnet 483926 7 mgs,mgc,lustre,ksocklnd,ptlrpc,obdclass, Live 0xffffffffa0585000 (OE)
+libcfs 411727 14 mgs,mgc,osd_ldiskfs,lquota,lustre,lmv,mdc,lov,fid,fld,ksocklnd,ptlrpc,obdclass,lnet, Live 0xffffffffa0506000 (OE)
+ip6t_rpfilter 12595 1 - Live 0xffffffffa0501000
+ipt_REJECT 12541 2 - Live 0xffffffffa04fc000
+nf_reject_ipv4 13373 1 ipt_REJECT, Live 0xffffffffa04f7000
+ip6t_REJECT 12625 2 - Live 0xffffffffa04f2000
+nf_reject_ipv6 13717 1 ip6t_REJECT, Live 0xffffffffa04ed000
+xt_conntrack 12760 21 - Live 0xffffffffa04de000
+ip_set 36439 0 - Live 0xffffffffa04e3000
+nfnetlink 14696 1 ip_set, Live 0xffffffffa04d4000
+ebtable_nat 12807 1 - Live 0xffffffffa04cf000
+ebtable_broute 12731 1 - Live 0xffffffffa04d9000
+bridge 107151 1 ebtable_broute, Live 0xffffffffa04b3000
+stp 12976 1 bridge, Live 0xffffffffa04ae000
+llc 14552 2 bridge,stp, Live 0xffffffffa04a5000
+ip6table_nat 12864 1 - Live 0xffffffffa04a0000
+nf_conntrack_ipv6 18894 12 - Live 0xffffffffa049a000
+nf_defrag_ipv6 35104 1 nf_conntrack_ipv6, Live 0xffffffffa048c000
+nf_nat_ipv6 14131 1 ip6table_nat, Live 0xffffffffa0483000
+ip6table_mangle 12700 1 - Live 0xffffffffa047e000
+ip6table_security 12710 1 - Live 0xffffffffa0479000
+ip6table_raw 12683 1 - Live 0xffffffffa0474000
+iptable_nat 12875 1 - Live 0xffffffffa046f000
+nf_conntrack_ipv4 19108 11 - Live 0xffffffffa0469000
+nf_defrag_ipv4 12729 1 nf_conntrack_ipv4, Live 0xffffffffa045c000
+nf_nat_ipv4 14115 1 iptable_nat, Live 0xffffffffa0453000
+nf_nat 26147 2 nf_nat_ipv6,nf_nat_ipv4, Live 0xffffffffa0461000
+nf_conntrack 111302 6 xt_conntrack,nf_conntrack_ipv6,nf_nat_ipv6,nf_conntrack_ipv4,nf_nat_ipv4,nf_nat, Live 0xffffffffa0436000
+iptable_mangle 12695 1 - Live 0xffffffffa0431000
+iptable_security 12705 1 - Live 0xffffffffa042c000
+iptable_raw 12678 1 - Live 0xffffffffa0427000
+ebtable_filter 12827 1 - Live 0xffffffffa0422000
+ebtables 35009 3 ebtable_nat,ebtable_broute,ebtable_filter, Live 0xffffffffa0414000
+ip6table_filter 12815 1 - Live 0xffffffffa03fc000
+ip6_tables 26901 5 ip6table_nat,ip6table_mangle,ip6table_security,ip6table_raw,ip6table_filter, Live 0xffffffffa040c000
+iptable_filter 12810 1 - Live 0xffffffffa03f7000
+snd_intel8x0 38274 0 - Live 0xffffffffa0401000
+snd_ac97_codec 130605 1 snd_intel8x0, Live 0xffffffffa03d6000
+ac97_bus 12730 1 snd_ac97_codec, Live 0xffffffffa03b2000
+snd_seq 66747 0 - Live 0xffffffffa03c4000
+snd_seq_device 14356 1 snd_seq, Live 0xffffffffa0392000
+ppdev 17671 0 - Live 0xffffffffa03be000
+snd_pcm 106416 2 snd_intel8x0,snd_ac97_codec, Live 0xffffffffa0397000
+sg 40721 0 - Live 0xffffffffa0387000
+snd_timer 29819 2 snd_seq,snd_pcm, Live 0xffffffffa0378000
+pcspkr 12718 0 - Live 0xffffffffa0382000
+snd 83432 6 snd_intel8x0,snd_ac97_codec,snd_seq,snd_seq_device,snd_pcm,snd_timer, Live 0xffffffffa035b000
+virtio_balloon 13834 0 - Live 0xffffffffa0352000
+i2c_piix4 22106 0 - Live 0xffffffffa0371000
+soundcore 15047 1 snd, Live 0xffffffffa01b2000
+parport_pc 28165 0 - Live 0xffffffffa01b7000
+parport 42348 2 ppdev,parport_pc, Live 0xffffffffa0346000
+nfsd 337853 1 - Live 0xffffffffa02f2000
+auth_rpcgss 59323 2 rpcsec_gss_krb5,nfsd, Live 0xffffffffa02e2000
+nfs_acl 12837 1 nfsd, Live 0xffffffffa017a000
+lockd 93573 2 nfs,nfsd, Live 0xffffffffa02ca000
+grace 13515 2 nfsd,lockd, Live 0xffffffffa016b000
+sunrpc 334343 10 rpcsec_gss_krb5,nfsv4,nfs,nfsd,auth_rpcgss,nfs_acl,lockd, Live 0xffffffffa0277000
+ip_tables 27115 5 iptable_nat,iptable_mangle,iptable_security,iptable_raw,iptable_filter, Live 0xffffffffa01aa000
+ext4 583541 2 - Live 0xffffffffa01e7000
+mbcache 14958 2 ldiskfs,ext4, Live 0xffffffffa00e2000
+jbd2 102945 3 osd_ldiskfs,ldiskfs,ext4, Live 0xffffffffa01cc000
+sd_mod 46322 1 - Live 0xffffffffa01bf000
+crc_t10dif 12714 1 sd_mod, Live 0xffffffffa00dd000
+crct10dif_generic 12647 1 - Live 0xffffffffa00e7000
+crct10dif_common 12595 2 crc_t10dif,crct10dif_generic, Live 0xffffffffa00d8000
+ata_generic 12910 0 - Live 0xffffffffa00d3000
+pata_acpi 13038 0 - Live 0xffffffffa00c4000
+virtio_scsi 18361 1 - Live 0xffffffffa00c9000
+virtio_net 28024 0 - Live 0xffffffffa00bc000
+virtio_blk 18156 3 - Live 0xffffffffa01a4000
+cirrus 24597 1 - Live 0xffffffffa0163000
+drm_kms_helper 146456 1 cirrus, Live 0xffffffffa017f000
+syscopyarea 12529 1 drm_kms_helper, Live 0xffffffffa015e000
+sysfillrect 12701 1 drm_kms_helper, Live 0xffffffffa0159000
+sysimgblt 12640 1 drm_kms_helper, Live 0xffffffffa0152000
+fb_sys_fops 12703 1 drm_kms_helper, Live 0xffffffffa014d000
+ttm 93908 1 cirrus, Live 0xffffffffa0092000
+ata_piix 35038 0 - Live 0xffffffffa0170000
+drm 372540 4 cirrus,drm_kms_helper,ttm, Live 0xffffffffa00f1000
+serio_raw 13462 0 - Live 0xffffffffa00ec000
+virtio_pci 22913 0 - Live 0xffffffffa004d000
+virtio_ring 21524 5 virtio_balloon,virtio_scsi,virtio_net,virtio_blk,virtio_pci, Live 0xffffffffa00b5000
+virtio 15008 5 virtio_balloon,virtio_scsi,virtio_net,virtio_blk,virtio_pci, Live 0xffffffffa0024000
+i2c_core 40756 3 i2c_piix4,drm_kms_helper,drm, Live 0xffffffffa00aa000
+libata 247095 3 ata_generic,pata_acpi,ata_piix, Live 0xffffffffa0054000
+floppy 69417 0 - Live 0xffffffffa003b000
+dm_mirror 22135 0 - Live 0xffffffffa0030000
+dm_region_hash 20862 1 dm_mirror, Live 0xffffffffa001d000
+dm_log 18411 2 dm_mirror,dm_region_hash, Live 0xffffffffa002a000
+dm_mod 114430 8 dm_mirror,dm_log, Live 0xffffffffa0000000
+mdt 721545 7 - Live 0xffffffffa126b000 (OE)
+lfsck 717870 9 mdd,lod,mdt, Live 0xffffffffa1199000 (OE)
+lquota 358984 23 mdt,osd_ldiskfs, Live 0xffffffffa0fef000 (OE)
+fid 90740 12 osp,mdd,mdt,lfsck,osd_ldiskfs,mdc, Live 0xffffffffa0830000 (OE)
+fld 89953 13 mdd,lod,mdt,lfsck,osd_ldiskfs,lmv,fid, Live 0xffffffffa0586000 (OE)
+ptlrpc 2218893 29 osp,mdd,lod,mdt,lfsck,mgc,osd_ldiskfs,lquota,lustre,lmv,mdc,lov,fid,fld, Live 0xffffffffa0852000 (OE)
+obdclass 1899655 41 osp,mdd,lod,mdt,lfsck,mgc,osd_ldiskfs,lquota,lustre,lmv,mdc,lov,fid,fld,ptlrpc, Live 0xffffffffa0632000 (OE)
+libcfs 411727 18 osp,mdd,lod,mdt,lfsck,mgc,osd_ldiskfs,lquota,lustre,lmv,mdc,lov,fid,fld,ksocklnd,ptlrpc,obdclass,lnet, Live 0xffffffffa0520000 (OE)

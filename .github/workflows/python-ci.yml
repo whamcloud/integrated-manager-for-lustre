@@ -25,7 +25,6 @@ jobs:
 
       - name: check
         run: black --check ./
-
   unit_tests:
     name: Unit Tests
     runs-on: ubuntu-latest
@@ -68,3 +67,81 @@ jobs:
           DB_PORT: 5432
           IML_DISABLE_THREADS: 1
           PGPASSWORD: chroma
+  iml_common_tests:
+    name: IML Common Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Set up Python 2.7
+        uses: actions/setup-python@v2
+        with:
+          python-version: "2.7"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools pipenv
+          pipenv install --dev
+        working-directory: iml-common
+
+      - name: Run Tests
+        run: pipenv run py.test
+        working-directory: iml-common
+  iml_common_black:
+    name: IML common black
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Set up Python 3.x
+        uses: actions/setup-python@v2
+        with:
+          python-version: "3.x"
+
+      - name: Install dependencies
+        run: python -m pip install --upgrade pip black
+
+      - name: check
+        run: black --check ./
+        working-directory: iml-common
+  python_iml_agent_black:
+    name: Python IML agent black
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Set up Python 3.x
+        uses: actions/setup-python@v2
+        with:
+          python-version: "3.x"
+
+      - name: Install dependencies
+        run: python -m pip install --upgrade pip black
+
+      - name: check
+        run: black --check ./
+        working-directory: python-iml-agent
+  python_iml_agent_unit_tests:
+    name: Python IML Agent Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Set up Python 2.7
+        uses: actions/setup-python@v2
+        with:
+          python-version: "2.7"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools pipenv
+          pipenv install --dev
+        working-directory: python-iml-agent
+
+      - name: Run tests
+        run: pipenv run nosetests
+        working-directory: python-iml-agent

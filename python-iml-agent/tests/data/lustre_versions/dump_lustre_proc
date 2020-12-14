@@ -1,0 +1,143 @@
+#!/usr/bin/env ruby
+
+require 'ftools'
+require 'socket'
+
+def dump_file(path)
+  begin
+    File.open(path) do |f|
+      if block_given?
+        yield f
+      else
+        f.readlines
+      end
+    end
+  rescue
+    print "Failed to read #{path}\n"
+  end
+end
+
+def dump_directory(path, &block)
+  return if !Dir.exist?(path)
+  Dir.foreach(path) do |entry|
+    next if entry =~ /^\.\.?$/
+
+    full_path = path + "/#{entry}"
+
+    if File.directory?(full_path)
+      dump_directory(full_path, &block)
+    elsif File.readable?(full_path)
+      if block_given?
+        yield full_path
+      else
+        puts full_path
+      end
+    end
+  end
+end
+
+def lustre_version
+  @lustre_version ||= %x(lctl get_param -n version).split(/\s+/)[0]
+end
+
+def cat_file(infile, outfile)
+  dump_file(infile) do |i|
+    File.open(outfile, "w+") do |o|
+      i.readlines.each do |line|
+        o.puts line
+      end
+    end
+  end
+end
+
+def dump_entry(entry, dump_path, overwrite=true)
+  dump_parent = dump_path + File.dirname(entry)
+  File.makedirs(dump_parent)
+  
+  return if File.exist?(dump_path + entry) and !overwrite
+  # workaround File.readable? being buggy on older ruby
+  #return unless File.readable?(entry)
+  return if File.stat(entry).mode & 0700 == 128
+
+  cat_file(entry, "#{dump_parent}/" + File.basename(entry))
+end
+
+def dump_param(entry, dump_path, prefix, overwrite=true)
+  param = entry.gsub("#{prefix}/", "").tr('/', '.')
+  outfile = "#{dump_path}/" + param
+
+  return if File.exist?(outfile) and !overwrite
+  # workaround File.readable? being buggy on older ruby
+  #return unless File.readable?(entry)
+  return if File.stat(entry).mode & 0700 == 128
+
+  cat_file(entry, outfile)
+end
+
+def test_entry?(entry)
+  lustre_1_8 = %w{
+    /proc/sys/lnet/routes
+    /proc/sys/lnet/stats
+    /proc/fs/lustre/version
+    /proc/fs/lustre/ldlm/namespaces/filter-.*/lock_count
+    /proc/fs/lustre/ldlm/namespaces/filter-.*/pool/(cancel|grant)_rate
+    /proc/fs/lustre/mds/\w+-MDT\d+/(files(free|total)|kbytes(free|total)|recovery_status|stats|uuid|num_exports)
+    /proc/fs/lustre/obdfilter/\w+-OST\d+/(brw_stats|files(free|total)|kbytes(free|total)|num_exports|recovery_status|stats|uuid)
+    /proc/fs/lustre/osc/\w+-OST\d+-osc/ost_server_uuid
+  }
+
+  lustre_2_0 = %w{
+    /proc/fs/lustre/mdt/\w+-MDT\d+/(recovery_status|uuid)
+    /proc/fs/lustre/mdt/\w+-MDT\d+/md_stats
+    /proc/fs/lustre/mdt/\w+-MDT\d+/exports/.*/(ldlm_)*stats
+    /proc/fs/lustre/osd-ldiskfs/\w+-MDT\d+/(files(free|total)|kbytes(free|total))
+    /proc/fs/lustre/osc/\w+-OST\d+-osc-MDT\w+/ost_server_uuid
+  }
+
+  lustre_2_1 = %w{
+
+  }
+
+  lustre_zfs = %w{
+    /proc/fs/lustre/osd-zfs/[\w\-]+/.*
+  }
+
+  [lustre_zfs, lustre_2_1, lustre_2_0, lustre_1_8].flatten.each do |raw|
+    regex = Regexp.new(raw)
+    if regex.match(entry)
+      return true
+    end
+  end
+
+  return false
+end
+
+
+LUSTRE_LNET_SEARCH = %w{
+/proc/fs/lustre
+/proc/sys/lnet
+/sys/fs/lustre
+/sys/kernel/debug/lustre
+/sys/kernel/debug/lnet
+}
+
+dump_path = "./#{lustre_version}/#{Socket::gethostname}"
+test_path = "./#{lustre_version}"
+
+puts "Dumping full /proc to: #{dump_path}"
+puts "Merging with /proc testdata in: #{lustre_version}/proc"
+
+%w{/proc/cpuinfo /proc/stat /proc/meminfo /proc/modules}.each do |entry|
+  dump_entry(entry, dump_path)
+  dump_entry(entry, test_path, false)
+end
+
+LUSTRE_LNET_SEARCH.each do |root|
+  dump_directory(root) do |entry|
+    dump_param(entry, dump_path, root)
+    dump_param(entry, test_path, root, false) if test_entry?(entry)
+  end
+end
+
+# for d in sys/kernel/debug/lustre "sys/fs/lustre" proc/sys/lnet proc/fs/lustre ; do for i in $(cd $d; find * -type f); do f=$(echo $i|tr / .); git mv $d/$i $f; done ;done
+# find */ -type d|xargs rmdir -p

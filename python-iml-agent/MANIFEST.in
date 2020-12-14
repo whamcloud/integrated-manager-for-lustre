@@ -1,0 +1,12 @@
+include LICENSE.txt
+include ZFS
+include logrotate.cfg
+include chroma-agent.service
+include 50-chroma-agent.preset
+include iml-storage-server.target
+include 10-device-scanner.target.conf
+include python-iml-agent.spec
+include chroma_agent/templates/corosync.conf
+include chroma_agent/templates/ifcfg-nic
+include chroma_agent/templates/chroma-copytool
+include chroma_agent/templates/chroma-copytool-monitor

@@ -121,6 +121,31 @@ iml-srpm: iml-deps substs
 	cp -r ${TMPDIR}/_topdir/SRPMS/* $(outdir)
 	rm -rf ${TMPDIR}
 
+iml-common-srpm:
+	yum install -y python2-devel
+	mkdir -p ${TMPDIR}/_topdir/SOURCES
+	mkdir -p ${TMPDIR}/scratch
+	cp -r iml-common/* ${TMPDIR}/scratch
+
+	cd ${TMPDIR}/scratch; \
+	python setup.py sdist -d ${TMPDIR}/_topdir/SOURCES/
+
+	rpmbuild -bs -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/scratch/python-iml-common.spec
+	cp -r ${TMPDIR}/_topdir/SRPMS/* $(outdir)
+	rm -rf ${TMPDIR}
+
+python-iml-agent-srpm:
+	mkdir -p ${TMPDIR}/_topdir/SOURCES
+	mkdir -p ${TMPDIR}/scratch
+	cp -r python-iml-agent/* ${TMPDIR}/scratch
+	cd ${TMPDIR}/scratch; \
+	python setup.py sdist -d ${TMPDIR}/_topdir/SOURCES/
+
+	rpmbuild -bs -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/scratch/python-iml-agent.spec
+	cp -rf ${TMPDIR}/_topdir ${BUILDROOT}/
+	cp -r ${TMPDIR}/_topdir/SRPMS/* $(outdir)
+	rm -rf ${TMPDIR}
+
 iml-gui-srpm:
 	mkdir -p ${TMPDIR}/_topdir/{SOURCES,SPECS}
 

@@ -1,0 +1,61 @@
+#!/bin/bash
+#
+# chroma-copytool Starts the copytool daemon
+#
+# chkconfig: 345 88 12
+# description: Starts the copytool daemon
+# processname: python
+
+. /etc/init.d/functions
+
+COPYTOOL_ID="{{ id }}"
+DAEMON_BIN="{{ ct_path }}"
+COPYTOOL_ARGUMENTS="{{ ct_arguments }}"
+
+SVC_NAME="Integrated Manager For Lustre Copytool"
+PID_FILE=/var/run/copytool-${COPYTOOL_ID}.pid
+
+start() {
+    status -p ${PID_FILE} ${SVC_NAME} > /dev/null
+
+    if [ $? == 0 ]; then
+        echo "Starting ${SVC_NAME} already running"
+    else
+        action "Starting ${SVC_NAME}: "
+        ${DAEMON_BIN} ${COPYTOOL_ARGUMENTS} &
+        PID=$!
+        echo
+
+        if [ -n ${PID} ]; then
+            echo ${PID} > ${PID_FILE}
+        fi
+    fi
+}
+
+stop() {
+    action "Stopping ${SVC_NAME}: " killproc -p ${PID_FILE}
+    echo
+}
+
+case "$1" in
+    start)
+        start
+        ;;
+    stop)
+        stop
+        ;;
+    status)
+        status -p ${PID_FILE} "${SVC_NAME}"
+        exit $?
+        ;;
+    restart|force-reload)
+        stop
+        start
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|status|restart|force-reload}" >&2
+        exit 1
+        ;;
+esac
+
+exit 0

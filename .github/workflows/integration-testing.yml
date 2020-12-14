@@ -66,6 +66,48 @@ jobs:
           name: python_iml_manager_rpm
           path: _topdir/RPMS/noarch
           retention-days: 1
+  python_iml_common_rpm_build:
+    name: Python IML common RPM build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Build rpm
+        uses: ./.github/actions/copr
+        env:
+          SPEC: iml-common/python-iml-common.spec
+          LOCAL_ONLY: true
+          SRPM_TASK: iml-common-srpm
+          WORKSPACE: ${{ github.workspace }}
+
+      - name: Archive rpm
+        uses: actions/upload-artifact@v2
+        with:
+          name: python_iml_common_rpm
+          path: _topdir/RPMS/noarch
+          retention-days: 1
+  python_agent_rpm_build:
+    name: Python Agent RPM build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Build rpm
+        uses: ./.github/actions/copr
+        env:
+          SPEC: python-iml-agent/python-iml-agent.spec
+          LOCAL_ONLY: true
+          SRPM_TASK: python-iml-agent-srpm
+          WORKSPACE: ${{ github.workspace }}
+
+      - name: Archive rpm
+        uses: actions/upload-artifact@v2
+        with:
+          name: python_iml_agent_rpm
+          path: _topdir/RPMS/noarch
+          retention-days: 1
   iml_docker_rpm_build:
     name: iml-docker RPM build
     runs-on: ubuntu-latest
@@ -126,6 +168,8 @@ jobs:
         device_scanner_rpm_build,
         gui_rpm_build,
         iml_docker_rpm_build,
+        python_agent_rpm_build,
+        python_iml_common_rpm_build,
         python_iml_manager_rpm_build,
         rust_iml_rpm_build,
       ]
@@ -151,6 +195,16 @@ jobs:
         uses: actions/download-artifact@v1
         with:
           name: python_iml_manager_rpm
+          path: emf_rpms
+      - name: Download python iml agent RPMs
+        uses: actions/download-artifact@v1
+        with:
+          name: python_iml_agent_rpm
+          path: emf_rpms
+      - name: Download iml common RPMs
+        uses: actions/download-artifact@v1
+        with:
+          name: python_iml_common_rpm
           path: emf_rpms
       - name: Download iml-docker RPMs
         uses: actions/download-artifact@v1

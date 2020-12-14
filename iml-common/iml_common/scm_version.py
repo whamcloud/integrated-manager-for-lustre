@@ -1,0 +1,4 @@
+VERSION = "1.4.5"
+PACKAGE_VERSION = "1.4.5"
+BUILD = ""
+IS_RELEASE = True
