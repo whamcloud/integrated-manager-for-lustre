@@ -15,15 +15,9 @@ use iml_manager_env::get_pool_limit;
 use iml_postgres::get_db_pool;
 use iml_rabbit::{self, create_connection_filter};
 use iml_wire_types::Conf;
-use std::{collections::HashMap, str::from_utf8, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 use tokio::sync::RwLock;
-use warp::{
-    header::headers_cloned,
-    hyper::Method,
-    method,
-    path::{full, FullPath},
-    Filter, Rejection,
-};
+use warp::Filter;
 
 // Default pool limit if not overridden by POOL_LIMIT
 const DEFAULT_POOL_LIMIT: u32 = 5;
