@@ -577,10 +577,6 @@ impl QueryRoot {
     }
 
     async fn server_profiles(context: &Context) -> juniper::FieldResult<Vec<ServerProfile>> {
-        let client: Client = get_client()?;
-        let response: Session = get_retry(client.clone(), "session", vec![("limit", "0")]).await?;
-        tracing::info!("Session: {:?}", response);
-
         let server_profile_records = sqlx::query!(
             r#"
                 SELECT jsonb_agg((r.repo_name, r.location))
@@ -1218,6 +1214,12 @@ pub(crate) async fn graphql(
     .next()
     .flatten();
     tracing::info!("Session ID: {:?}", session_id);
+
+    let client: Client = get_client().map_err(ImlApiError::ImlManagerClientError)?;
+    let response: Session = get_retry(client.clone(), "session", vec![("limit", "0")])
+        .await
+        .map_err(ImlApiError::ImlManagerClientError)?;
+    tracing::info!("Session: {:?}", response);
 
     Ok(json)
 }
