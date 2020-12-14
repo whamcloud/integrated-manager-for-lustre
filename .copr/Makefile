@@ -39,6 +39,7 @@ srpm:
 	mkdir -p ${TMPDIR}/release/rust-iml
 	cargo build --release
 	cp ${TARGET}/release/iml-{action-runner,agent,agent-comms,agent-daemon,api,corosync,device,journal,mailbox,network,ntp,ostpool,postoffice,report,sfa,snapshot,stats,task-runner,warp-drive,timer} \
+		iml-api/{auth_model.conf,policy.csv} \
 		iml-action-runner.service \
 		iml-action-runner.socket \
 		iml-agent-comms.service \
@@ -94,7 +95,7 @@ iml-srpm: iml-deps substs
 	mkdir -p ${TMPDIR}/_topdir/{SOURCES,SPECS}
 	mkdir -p ${TMPDIR}/{scratch,configuration}
 
-	cp -r ./{chroma_*,chroma-*,__init__.py,manage.py,scm_version.py,setup.py,settings.py,urls.py,wsgi.py,agent-bootstrap-script.template,*.profile} ${TMPDIR}/scratch
+	cp -r ./{chroma_*,chroma-*,__init__.py,manage.py,scm_version.py,setup.py,settings.py,urls.py,wsgi.py,agent-bootstrap-script.template,*.profile,iml-api/{auth_model.conf,policy.csv}} ${TMPDIR}/scratch
 	cp -r ./{*.repo,README.*,licenses,polymorphic,scripts,example_storage_plugin_package,tests,MANIFEST.in} ${TMPDIR}/scratch
 
 	cp ./python-iml-manager.spec ${TMPDIR}/_topdir/SPECS
