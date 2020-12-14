@@ -1180,72 +1180,6 @@
       ]
     }
   },
-  "2eedae727c7336f9edd217051685ebfd1e7a8e28597a0803aad92147c49f6805": {
-    "query": "SELECT * FROM chroma_core_lustreclientmount",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 1,
-          "name": "state_modified_at",
-          "type_info": "Timestamptz"
-        },
-        {
-          "ordinal": 2,
-          "name": "state",
-          "type_info": "Varchar"
-        },
-        {
-          "ordinal": 3,
-          "name": "immutable_state",
-          "type_info": "Bool"
-        },
-        {
-          "ordinal": 4,
-          "name": "not_deleted",
-          "type_info": "Bool"
-        },
-        {
-          "ordinal": 5,
-          "name": "content_type_id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 6,
-          "name": "filesystem",
-          "type_info": "Varchar"
-        },
-        {
-          "ordinal": 7,
-          "name": "host_id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 8,
-          "name": "mountpoints",
-          "type_info": "TextArray"
-        }
-      ],
-      "parameters": {
-        "Left": []
-      },
-      "nullable": [
-        false,
-        false,
-        false,
-        false,
-        true,
-        true,
-        false,
-        false,
-        false
-      ]
-    }
-  },
   "31d5f12351c7525918c775e2c44008375fa398b283629be6986865b3262d9547": {
     "query": "\n            UPDATE chroma_core_ticket SET\n                state_modified_at = now(),\n                state = $1,\n                immutable_state = 'f',\n                name = $2,\n                ha_label = $2,\n                resource_controlled = 't',\n                cluster_id = $3,\n                content_type_id = $4\n            WHERE id = $5\n        ",
     "describe": {
@@ -1356,6 +1290,21 @@
           "ordinal": 8,
           "name": "content_type_id",
           "type_info": "Int4"
+        },
+        {
+          "ordinal": 9,
+          "name": "class_name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 10,
+          "name": "description_out",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 11,
+          "name": "cancellable_out",
+          "type_info": "Bool"
         }
       ],
       "parameters": {
@@ -1372,7 +1321,10 @@
         false,
         false,
         false,
-        true
+        true,
+        false,
+        false,
+        false
       ]
     }
   },
@@ -3547,6 +3499,21 @@
           "ordinal": 12,
           "name": "job_id",
           "type_info": "Int4"
+        },
+        {
+          "ordinal": 13,
+          "name": "class_name",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 14,
+          "name": "args_json",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 15,
+          "name": "description",
+          "type_info": "Text"
         }
       ],
       "parameters": {
@@ -3567,6 +3534,9 @@
         false,
         false,
         true,
+        false,
+        false,
+        false,
         false
       ]
     }
