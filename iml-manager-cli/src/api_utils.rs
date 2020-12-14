@@ -8,6 +8,7 @@ use crate::{
 };
 use futures::{channel::mpsc, future, FutureExt, StreamExt, TryFutureExt};
 use iml_command_utils::{wait_for_cmds_progress, Progress};
+use iml_manager_client::header::HeaderMap;
 use iml_wire_types::{ApiList, AvailableAction, Command, EndpointName, FlatQuery, Host};
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use std::{collections::HashMap, fmt::Debug, time::Duration};
@@ -57,6 +58,7 @@ pub async fn wait_for_cmd(cmd: Command) -> Result<Command, ImlManagerCliError> {
             client,
             &format!("command/{}", cmd.id),
             Vec::<(String, String)>::new(),
+            None,
         )
         .await?;
 
@@ -176,7 +178,7 @@ pub async fn get<T: serde::de::DeserializeOwned + std::fmt::Debug>(
 ) -> Result<T, ImlManagerCliError> {
     let client = iml_manager_client::get_api_client()?;
 
-    iml_manager_client::get(client, endpoint, query)
+    iml_manager_client::get(client, endpoint, query, None)
         .await
         .map_err(|e| e.into())
 }

@@ -16,7 +16,11 @@ use futures::{
     future::{self, join_all},
     TryFutureExt, TryStreamExt,
 };
-use iml_manager_client::{get_client, get_retry, header::HeaderValue, Client};
+use iml_manager_client::{
+    get_client, get_retry,
+    header::{HeaderMap, HeaderValue},
+    Client, ImlManagerClientError,
+};
 use iml_postgres::{
     active_mgs_host_fqdn, fqdn_by_host_id, sqlx, sqlx::postgres::types::PgInterval, PgPool,
 };
@@ -1193,7 +1197,7 @@ pub(crate) async fn graphql(
     let json = serde_json::to_string(&res).map_err(ImlApiError::SerdeJsonError)?;
     let string = from_utf8(cookies.as_bytes()).map_err(ImlApiError::Utf8Error)?;
     tracing::info!("Cookie: {}", string);
-    let session_id = {
+    let maybe_session_id = {
         string.split(';').map(|cookie| {
             let mut split = cookie.split_terminator('=');
             let key = split.next().map(|s| s.trim_start().trim_end());
@@ -1213,13 +1217,28 @@ pub(crate) async fn graphql(
     .filter(|x| x.is_some())
     .next()
     .flatten();
-    tracing::info!("Session ID: {:?}", session_id);
+    tracing::info!("Session ID: {:?}", maybe_session_id);
 
-    let client: Client = get_client().map_err(ImlApiError::ImlManagerClientError)?;
-    let response: Session = get_retry(client.clone(), "session", vec![("limit", "0")])
+    if let Some(session_id) = maybe_session_id {
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            "Cookie",
+            HeaderValue::from_str(format!("sessionid={}", session_id).as_ref()).map_err(|e| {
+                ImlApiError::ImlManagerClientError(ImlManagerClientError::InvalidHeaderValue(e))
+            })?,
+        );
+
+        let client: Client = get_client().map_err(ImlApiError::ImlManagerClientError)?;
+        let response: Session = get_retry(
+            client.clone(),
+            "session",
+            vec![("limit", "0")],
+            Some(&headers),
+        )
         .await
         .map_err(ImlApiError::ImlManagerClientError)?;
-    tracing::info!("Session: {:?}", response);
+        tracing::info!("Session: {:?}", response);
+    }
 
     Ok(json)
 }
