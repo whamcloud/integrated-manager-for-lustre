@@ -149,7 +149,11 @@ where
     enrich_dag(ts, &roots, &dag)
 }
 
-pub fn enrich_dag<K, T>(objs: &[T], int_roots: &[K], int_deps: &[(K, Vec<K>)]) -> DependencyDAG<K, T>
+pub fn enrich_dag<K, T>(
+    objs: &[T],
+    int_roots: &[K],
+    int_deps: &[(K, Vec<K>)],
+) -> DependencyDAG<K, T>
 where
     K: Hash + Eq + Copy + Debug,
     T: Deps<K> + Clone + Debug,
@@ -299,7 +303,11 @@ mod tests {
             X::new(45, &[44], "Start the LNet networking layer."),
             X::new(46, &[39, 43], "Configure Pacemaker on oss2.local."),
             X::new(47, &[43, 46], "Start Pacemaker on oss2.local."),
-            X::new(48, &[39, 40, 41, 42, 45, 46, 47], "Setup managed host oss2.local."),
+            X::new(
+                48,
+                &[39, 40, 41, 42, 45, 46, 47],
+                "Setup managed host oss2.local.",
+            ),
         ];
         let dag = build_direct_dag(&xs);
         let mut ctx = Context { level: 0 };
@@ -315,7 +323,11 @@ mod tests {
     #[test]
     fn cyclic_dependency() {
         // it shouldn't be stack overflow anyway even if there is an invariant violation
-        let xs: Vec<X> = vec![X::new(1, &[2], "One"), X::new(2, &[3], "Two"), X::new(3, &[2], "Three")];
+        let xs: Vec<X> = vec![
+            X::new(1, &[2], "One"),
+            X::new(2, &[3], "Two"),
+            X::new(3, &[2], "Three"),
+        ];
 
         let dag = build_direct_dag(&xs);
         let mut ctx = Context { level: 0 };
@@ -330,7 +342,11 @@ mod tests {
 
     #[test]
     fn isolated_nodes() {
-        let xs: Vec<X> = vec![X::new(1, &[], "One"), X::new(2, &[], "Two"), X::new(3, &[], "Three")];
+        let xs: Vec<X> = vec![
+            X::new(1, &[], "One"),
+            X::new(2, &[], "Two"),
+            X::new(3, &[], "Three"),
+        ];
 
         let dag = build_direct_dag(&xs);
         let mut ctx = Context { level: 0 };
@@ -346,7 +362,11 @@ mod tests {
     #[test]
     fn test_rich_wrapper() {
         fn extract_from_y(y: &Y) -> (u32, Vec<u32>) {
-            let mut deps = y.deps.iter().map(|s| s.parse::<u32>().unwrap()).collect::<Vec<u32>>();
+            let mut deps = y
+                .deps
+                .iter()
+                .map(|s| s.parse::<u32>().unwrap())
+                .collect::<Vec<u32>>();
             deps.sort();
             (y.id, deps)
         }
@@ -366,10 +386,15 @@ mod tests {
             for y in ys.iter_mut() {
                 shuffle(&mut y.deps, &mut rng);
             }
-            let rich_ys: Vec<Rich<u32, Y>> = ys.clone().into_iter().map(|t| Rich::new(t, extract_from_y)).collect();
+            let rich_ys: Vec<Rich<u32, Y>> = ys
+                .clone()
+                .into_iter()
+                .map(|t| Rich::new(t, extract_from_y))
+                .collect();
             let dag = build_direct_dag(&rich_ys);
             let mut ctx = Context { level: 0 };
-            let result = traverse_graph(&dag, &rich_y_to_string, &combine_strings, &mut ctx).join("");
+            let result =
+                traverse_graph(&dag, &rich_y_to_string, &combine_strings, &mut ctx).join("");
             assert_eq!(result, SMALL_TREE);
         }
     }
