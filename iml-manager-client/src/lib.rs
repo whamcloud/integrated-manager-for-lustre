@@ -3,6 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use iml_request_retry::{retry_future, RetryAction, RetryPolicy};
+use reqwest::header::HeaderMap;
 pub use reqwest::{header, Client, Response, StatusCode, Url};
 use serde::de::DeserializeOwned;
 use std::{fmt::Debug, path::Path, time::Duration};
@@ -133,17 +134,21 @@ pub async fn get<T: DeserializeOwned + Debug>(
     client: Client,
     path: impl ToString,
     query: impl serde::Serialize,
+    headers: Option<&HeaderMap>,
 ) -> Result<T, ImlManagerClientError> {
     tracing::debug!("GET to {} {}", path.to_string(), serde_json::json!(query));
 
     let uri = create_api_url(path)?;
 
-    let resp = client
-        .get(uri)
-        .query(&query)
-        .send()
-        .await?
-        .error_for_status()?;
+    let req = client.get(uri).query(&query);
+
+    let req = if let Some(headers) = headers {
+        req.headers(headers.clone())
+    } else {
+        req
+    };
+
+    let resp = req.send().await?.error_for_status()?;
 
     let json = resp.json().await?;
 
@@ -188,6 +193,7 @@ pub async fn get_retry<T: DeserializeOwned + Debug>(
     client: Client,
     path: impl ToString,
     query: impl serde::Serialize,
+    headers: Option<&HeaderMap>,
 ) -> Result<T, ImlManagerClientError> {
     let client2 = client.clone();
 
@@ -196,7 +202,7 @@ pub async fn get_retry<T: DeserializeOwned + Debug>(
     let query = &query;
 
     retry_future(
-        move |_| get(client2.clone(), path.to_string(), query),
+        move |_| get(client2.clone(), path.to_string(), query, headers),
         policy,
     )
     .await
