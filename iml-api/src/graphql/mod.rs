@@ -16,7 +16,7 @@ use futures::{
     future::{self, join_all},
     TryFutureExt, TryStreamExt,
 };
-use iml_manager_client::{get_client, get_retry, Client};
+use iml_manager_client::{get_client, get_retry, header::HeaderValue, Client};
 use iml_postgres::{
     active_mgs_host_fqdn, fqdn_by_host_id, sqlx, sqlx::postgres::types::PgInterval, PgPool,
 };
@@ -39,9 +39,10 @@ use std::{
     collections::{HashMap, HashSet},
     convert::{Infallible, TryFrom as _, TryInto},
     ops::Deref,
+    str::from_utf8,
     sync::Arc,
 };
-use warp::Filter;
+use warp::{Filter, Rejection};
 
 #[derive(juniper::GraphQLObject)]
 /// A Corosync Node found in `crm_mon`
@@ -1190,9 +1191,33 @@ pub(crate) async fn graphql(
     schema: Arc<Schema>,
     ctx: Arc<Context>,
     req: GraphQLRequest,
+    cookies: HeaderValue,
 ) -> Result<impl warp::Reply, warp::Rejection> {
     let res = req.execute(&schema, &ctx).await;
     let json = serde_json::to_string(&res).map_err(ImlApiError::SerdeJsonError)?;
+    let string = from_utf8(cookies.as_bytes()).map_err(ImlApiError::Utf8Error)?;
+    tracing::info!("Cookie: {}", string);
+    let session_id = {
+        string.split(';').map(|cookie| {
+            let mut split = cookie.split_terminator('=');
+            let key = split.next().map(|s| s.trim_start().trim_end());
+            let value = split.next().map(|s| s.trim_start().trim_end());
+            tracing::info!("key: {:?}, value: {:?}", key, value);
+
+            match (key, value) {
+                (Some("sessionid"), value) => {
+                    return value;
+                }
+                (_, _) => {
+                    return None;
+                }
+            }
+        })
+    }
+    .filter(|x| x.is_some())
+    .next()
+    .flatten();
+    tracing::info!("Session ID: {:?}", session_id);
 
     Ok(json)
 }
@@ -1206,6 +1231,7 @@ pub(crate) fn endpoint(
         .and(schema_filter.clone())
         .and(ctx_filter)
         .and(warp::body::json())
+        .and(warp::header::value("Cookie"))
         .and_then(graphql);
 
     let graphiql_route = warp::path!("graphiql")

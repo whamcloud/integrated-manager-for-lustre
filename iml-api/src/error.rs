@@ -30,6 +30,8 @@ pub enum ImlApiError {
     FilesystemNotFound,
     #[error("Filesystem Not Found")]
     MgsNotFound,
+    #[error(transparent)]
+    Utf8Error(#[from] std::str::Utf8Error),
 }
 
 impl reject::Reject for ImlApiError {}
