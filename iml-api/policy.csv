@@ -1,4 +1,3 @@
-p, admin, /*, *
-p, anonymous, /login, *
-p, member, /logout, *
-p, member, /member, *
+p, superusers,                serverProfiles
+p, filesystem_administrators, serverProfiles
+p, filesystem_users         , serverProfiles
