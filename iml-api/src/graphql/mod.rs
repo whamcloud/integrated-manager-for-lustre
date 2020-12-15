@@ -11,6 +11,7 @@ use crate::{
     error::ImlApiError,
     timer::{configure_snapshot_timer, remove_snapshot_timer},
 };
+use casbin::{prelude::Enforcer, CoreApi};
 use chrono::{DateTime, Utc};
 use futures::{
     future::{self, join_all},
@@ -46,7 +47,7 @@ use std::{
     str::{from_utf8, FromStr},
     sync::Arc,
 };
-use warp::{Filter, Rejection};
+use warp::{reject::Reject, Filter};
 
 #[derive(juniper::GraphQLObject)]
 /// A Corosync Node found in `crm_mon`
@@ -1187,14 +1188,22 @@ pub(crate) struct Context {
 
 impl juniper::Context for Context {}
 
+#[derive(Debug)]
+struct Unauthorized;
+
+#[derive(Debug)]
+struct AuthorizationError;
+
+impl Reject for Unauthorized {}
+impl Reject for AuthorizationError {}
+
 pub(crate) async fn graphql(
     schema: Arc<Schema>,
     ctx: Arc<Context>,
     req: GraphQLRequest,
     cookies: HeaderValue,
+    enforcer: Arc<Enforcer>,
 ) -> Result<impl warp::Reply, warp::Rejection> {
-    let res = req.execute(&schema, &ctx).await;
-    let json = serde_json::to_string(&res).map_err(ImlApiError::SerdeJsonError)?;
     let string = from_utf8(cookies.as_bytes()).map_err(ImlApiError::Utf8Error)?;
     tracing::info!("Cookie: {}", string);
     let maybe_session_id = {
@@ -1238,7 +1247,60 @@ pub(crate) async fn graphql(
         .await
         .map_err(ImlApiError::ImlManagerClientError)?;
         tracing::info!("Session: {:?}", response);
+
+        let user = response.user;
+        if let Some(user) = user {
+            let groups = user.groups;
+
+            let operation_name = req.operation_name();
+
+            if let Some(groups) = groups {
+                for g in groups {
+                    let group_ser = format!("{}", g.name);
+
+                    tracing::info!(
+                        "User {} with group {} is authorizing for operation name {}",
+                        user.id,
+                        group_ser,
+                        operation_name.unwrap_or_else(|| "no operation name".into()),
+                    );
+
+                    match enforcer.enforce(vec![group_ser.clone(), operation_name.unwrap().into()])
+                    {
+                        Ok(authorized) => {
+                            if authorized {
+                                tracing::info!(
+                                    "User {} with group {} is authorized for operation name {}",
+                                    user.id,
+                                    group_ser,
+                                    req.operation_name()
+                                        .unwrap_or_else(|| "no operation name".into()),
+                                );
+                            } else {
+                                tracing::info!(
+                                    "User {} with group {} is NOT authorized for operation name {}",
+                                    user.id,
+                                    group_ser,
+                                    req.operation_name()
+                                        .unwrap_or_else(|| "no operation name".into()),
+                                );
+                                return Err(warp::reject::custom(Unauthorized));
+                            }
+                        }
+                        Err(e) => {
+                            tracing::error!("Error during authorization: {}", e);
+                            return Err(warp::reject::custom(AuthorizationError));
+                        }
+                    }
+                }
+            }
+        } else {
+            tracing::info!("Unauthenticated");
+        }
     }
+
+    let res = req.execute(&schema, &ctx).await;
+    let json = serde_json::to_string(&res).map_err(ImlApiError::SerdeJsonError)?;
 
     Ok(json)
 }
@@ -1246,6 +1308,7 @@ pub(crate) async fn graphql(
 pub(crate) fn endpoint(
     schema_filter: impl Filter<Extract = (Arc<Schema>,), Error = Infallible> + Clone + Send,
     ctx_filter: impl Filter<Extract = (Arc<Context>,), Error = Infallible> + Clone + Send,
+    enforcer_filter: impl Filter<Extract = (Arc<Enforcer>,), Error = Infallible> + Clone + Send,
 ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
     let graphql_route = warp::path!("graphql")
         .and(warp::post())
@@ -1253,6 +1316,7 @@ pub(crate) fn endpoint(
         .and(ctx_filter)
         .and(warp::body::json())
         .and(warp::header::value("Cookie"))
+        .and(enforcer_filter)
         .and_then(graphql);
 
     let graphiql_route = warp::path!("graphiql")

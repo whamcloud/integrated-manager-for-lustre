@@ -1446,6 +1446,16 @@ pub enum GroupType {
     FilesystemUsers,
 }
 
+impl fmt::Display for GroupType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Superusers => write!(f, "superusers"),
+            Self::FilesystemAdministrators => write!(f, "filesystem_administrators"),
+            Self::FilesystemUsers => write!(f, "filesystem_users"),
+        }
+    }
+}
+
 /// A `Group` record from `api/group`.
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Eq, PartialEq)]
 pub struct Group {
