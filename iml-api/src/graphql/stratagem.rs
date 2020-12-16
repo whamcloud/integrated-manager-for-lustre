@@ -5,7 +5,7 @@
 use crate::{
     command::get_command,
     error::ImlApiError,
-    graphql::{fs_id_by_name, insert_fidlist, insert_task, Context, SendJob},
+    graphql::{authorize, fs_id_by_name, insert_fidlist, insert_task, Context, SendJob},
 };
 use futures::{
     future::{self, try_join_all},
@@ -27,7 +27,14 @@ pub(crate) struct StratagemQuery;
 impl StratagemQuery {
     /// List completed Stratagem reports that currently reside on the manager node.
     /// Note: All report names must be valid unicode.
-    async fn stratagem_reports(_context: &Context) -> juniper::FieldResult<Vec<StratagemReport>> {
+    async fn stratagem_reports(context: &Context) -> juniper::FieldResult<Vec<StratagemReport>> {
+        authorize(
+            &context.enforcer,
+            &context.session,
+            "query_stratagem_reports",
+        )
+        .unwrap();
+
         let paths = tokio::fs::read_dir(get_report_path()).await?;
 
         let file_paths = paths

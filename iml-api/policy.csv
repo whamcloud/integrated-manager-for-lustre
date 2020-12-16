@@ -1,35 +1,3 @@
-p, superusers,                serverProfiles
-p, filesystem_administrators, serverProfiles
-p, filesystem_users         , serverProfiles
-
-p, superusers,                createServerProfile
-p, superusers,                createSnapshot
-p, superusers,                createSnapshotInterval
-p, superusers,                createSnapshotRetention
-p, superusers,                destroySnapshot
-p, superusers,                filesystem
-p, superusers,                mountSnapshot
-p, superusers,                removeServerProfile
-p, superusers,                removeSnapshotInterval
-p, superusers,                removeSnapshotRetention
-p, superusers,                stratagemReports
-p, superusers,                task
-p, superusers,                unmountSnapshot
-
-p, superusers,                clientMountCommand
-p, superusers,                clientMountSource
-p, superusers,                commands
-p, superusers,                commandsByIds
-p, superusers,                corosyncNodeNameByHost
-p, superusers,                corosyncNodes
-p, superusers,                getBannedResources
-p, superusers,                getFsClusterHosts
-p, superusers,                getFsTargetResources
-p, superusers,                logs
-p, superusers,                serverProfiles
-p, superusers,                snapshotIntervals
-p, superusers,                snapshotRetentionPolicies
-p, superusers,                snapshots
-p, superusers,                stratagem
-p, superusers,                targets
-p, superusers,                task
+p, superusers,                query_stratagem_reports
+p, filesystem_administrators, query_stratagem_reports
+p, filesystem_users         , query_stratagem_reports

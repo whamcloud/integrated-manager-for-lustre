@@ -8,7 +8,6 @@ use crate::{
 };
 use futures::{channel::mpsc, future, FutureExt, StreamExt, TryFutureExt};
 use iml_command_utils::{wait_for_cmds_progress, Progress};
-use iml_manager_client::header::HeaderMap;
 use iml_wire_types::{ApiList, AvailableAction, Command, EndpointName, FlatQuery, Host};
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use std::{collections::HashMap, fmt::Debug, time::Duration};

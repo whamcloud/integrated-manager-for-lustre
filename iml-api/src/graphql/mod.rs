@@ -1186,6 +1186,7 @@ pub(crate) struct Context {
     pub(crate) pg_pool: PgPool,
     pub(crate) rabbit_pool: Pool,
     pub(crate) session: Option<Session>,
+    pub(crate) enforcer: Enforcer,
 }
 
 impl juniper::Context for Context {}
@@ -1194,7 +1195,7 @@ impl juniper::Context for Context {}
 struct Unauthorized;
 
 #[derive(Debug)]
-enum AuthorizationError {
+pub(crate) enum AuthorizationError {
     General,
     Enforcer(casbin::Error),
     Unauthenticated,
@@ -1204,70 +1205,75 @@ enum AuthorizationError {
 impl Reject for Unauthorized {}
 impl Reject for AuthorizationError {}
 
-fn authorize(
+pub(crate) fn authorize(
     enforcer: &Enforcer,
-    session: &Session,
+    session: &Option<Session>,
     operation_name: &str,
 ) -> Result<bool, AuthorizationError> {
-    let user = &session.user;
-    if let Some(user) = user {
-        let groups = &user.groups;
+    if let Some(session) = session {
+        let user = &session.user;
+        if let Some(user) = user {
+            let groups = &user.groups;
 
-        if let Some(groups) = groups {
-            let (authorizations, errors): (Vec<_>, Vec<_>) = groups
-                .iter()
-                .map(|g| {
-                    let group_string = format!("{}", g.name);
+            if let Some(groups) = groups {
+                let (authorizations, errors): (Vec<_>, Vec<_>) = groups
+                    .iter()
+                    .map(|g| {
+                        let group_string = format!("{}", g.name);
 
-                    tracing::info!(
-                        "User {} with group {} is authorizing for operation name {}",
-                        user.id,
-                        group_string,
-                        operation_name,
-                    );
+                        tracing::info!(
+                            "User {} with group {} is authorizing for operation name {}",
+                            user.id,
+                            group_string,
+                            operation_name,
+                        );
 
-                    match enforcer.enforce(vec![group_string.clone(), operation_name.into()]) {
-                        Ok(authorized) => {
-                            if authorized {
-                                tracing::info!(
-                                    "User {} with group {} is authorized for operation name {}",
-                                    user.id,
-                                    group_string,
-                                    operation_name,
-                                );
-                                Ok(true)
-                            } else {
-                                tracing::info!(
-                                    "User {} with group {} is NOT authorized for operation name {}",
-                                    user.id,
-                                    group_string,
-                                    operation_name,
-                                );
-                                Ok(false)
+                        match enforcer.enforce(vec![group_string.clone(), operation_name.into()]) {
+                            Ok(authorized) => {
+                                if authorized {
+                                    tracing::info!(
+                                        "User {} with group {} is authorized for operation name {}",
+                                        user.id,
+                                        group_string,
+                                        operation_name,
+                                    );
+                                    Ok(true)
+                                } else {
+                                    tracing::info!(
+                                        "User {} with group {} is NOT authorized for operation name {}",
+                                        user.id,
+                                        group_string,
+                                        operation_name,
+                                    );
+                                    Ok(false)
+                                }
+                            }
+                            Err(e) => {
+                                tracing::error!("Error during authorization: {}", e);
+                                Err(AuthorizationError::Enforcer(e))
                             }
                         }
-                        Err(e) => {
-                            tracing::error!("Error during authorization: {}", e);
-                            Err(AuthorizationError::Enforcer(e))
-                        }
-                    }
-                })
-                .partition(Result::is_ok);
+                    })
+                    .partition(Result::is_ok);
 
-            if !errors.is_empty() {
-                Err(AuthorizationError::General)
+                if !errors.is_empty() {
+                    Err(AuthorizationError::General)
+                } else {
+                    let authorizations: Vec<_> =
+                        authorizations.into_iter().map(Result::unwrap).collect();
+                    let final_authorization = authorizations.iter().fold(true, |_acc, x| *x);
+                    Ok(final_authorization)
+                }
             } else {
-                let authorizations: Vec<_> =
-                    authorizations.into_iter().map(Result::unwrap).collect();
-                let final_authorization = authorizations.iter().fold(true, |_acc, x| *x);
-                Ok(final_authorization)
+                tracing::info!("No groups");
+                Err(AuthorizationError::NoGroups)
             }
         } else {
-            tracing::info!("No groups");
-            Err(AuthorizationError::NoGroups)
+            tracing::info!("Unauthenticated");
+            Err(AuthorizationError::Unauthenticated)
         }
     } else {
-        tracing::info!("Unauthenticated");
+        tracing::info!("No session");
         Err(AuthorizationError::Unauthenticated)
     }
 }
@@ -1277,7 +1283,6 @@ pub(crate) async fn graphql(
     ctx: Arc<Mutex<Context>>,
     req: GraphQLRequest,
     cookies: HeaderValue,
-    enforcer: Arc<Enforcer>,
 ) -> Result<impl warp::Reply, warp::Rejection> {
     let string = from_utf8(cookies.as_bytes()).map_err(ImlApiError::Utf8Error)?;
     tracing::info!("Cookie: {}", string);
@@ -1326,8 +1331,6 @@ pub(crate) async fn graphql(
             (*ctx.lock().await).session = Some(response.clone());
         }
         // TODO: Spin up a thread that clears the cache once a minute
-
-        authorize(&enforcer, &response, req.operation_name().unwrap()).unwrap();
     }
 
     let lock = ctx.lock().await;
@@ -1341,7 +1344,6 @@ pub(crate) async fn graphql(
 pub(crate) fn endpoint(
     schema_filter: impl Filter<Extract = (Arc<Schema>,), Error = Infallible> + Clone + Send,
     ctx_filter: impl Filter<Extract = (Arc<Mutex<Context>>,), Error = Infallible> + Clone + Send,
-    enforcer_filter: impl Filter<Extract = (Arc<Enforcer>,), Error = Infallible> + Clone + Send,
 ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
     let graphql_route = warp::path!("graphql")
         .and(warp::post())
@@ -1349,7 +1351,6 @@ pub(crate) fn endpoint(
         .and(ctx_filter)
         .and(warp::body::json())
         .and(warp::header::value("Cookie"))
-        .and(enforcer_filter)
         .and_then(graphql);
 
     let graphiql_route = warp::path!("graphiql")
