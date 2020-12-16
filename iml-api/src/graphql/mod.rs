@@ -139,18 +139,26 @@ impl QueryRoot {
         context: &Context,
         host_id: i32,
     ) -> juniper::FieldResult<Option<String>> {
-        let x = sqlx::query!(
-            r#"
+        if authorize(
+            &context.enforcer,
+            &context.session,
+            "query::corosync_node_name_by_host",
+        )? {
+            let x = sqlx::query!(
+                r#"
                 SELECT (nmh.corosync_node_id).name AS "name!" FROM corosync_node_managed_host nmh
                 WHERE host_id = $1
             "#,
-            host_id
-        )
-        .fetch_optional(&context.pg_pool)
-        .await?
-        .map(|x| x.name);
+                host_id
+            )
+            .fetch_optional(&context.pg_pool)
+            .await?
+            .map(|x| x.name);
 
-        Ok(x)
+            Ok(x)
+        } else {
+            Err(FieldError::new("Not authorized", Value::null()))
+        }
     }
     #[graphql(arguments(
         limit(description = "optional paging limit, defaults to all rows"),
@@ -163,11 +171,12 @@ impl QueryRoot {
         offset: Option<i32>,
         dir: Option<SortDir>,
     ) -> juniper::FieldResult<Vec<CorosyncNode>> {
-        let dir = dir.unwrap_or_default();
+        if authorize(&context.enforcer, &context.session, "query::corosync_nodes")? {
+            let dir = dir.unwrap_or_default();
 
-        let xs = sqlx::query_as!(
-            CorosyncNode,
-            r#"
+            let xs = sqlx::query_as!(
+                CorosyncNode,
+                r#"
                 SELECT
                 (n.id).name AS "name!",
                 (n.id).id AS "id!",
@@ -188,14 +197,17 @@ impl QueryRoot {
                     CASE WHEN $1 = 'ASC' THEN n.id END ASC,
                     CASE WHEN $1 = 'DESC' THEN n.id END DESC
                 OFFSET $2 LIMIT $3"#,
-            dir.deref(),
-            offset.unwrap_or(0) as i64,
-            limit.map(|x| x as i64),
-        )
-        .fetch_all(&context.pg_pool)
-        .await?;
+                dir.deref(),
+                offset.unwrap_or(0) as i64,
+                limit.map(|x| x as i64),
+            )
+            .fetch_all(&context.pg_pool)
+            .await?;
 
-        Ok(xs)
+            Ok(xs)
+        } else {
+            Err(FieldError::new("Not authorized", Value::null()))
+        }
     }
 
     #[graphql(arguments(
@@ -214,13 +226,14 @@ impl QueryRoot {
         fs_name: Option<String>,
         exclude_unmounted: Option<bool>,
     ) -> juniper::FieldResult<Vec<TargetRecord>> {
-        let dir = dir.unwrap_or_default();
+        if authorize(&context.enforcer, &context.session, "query::targets")? {
+            let dir = dir.unwrap_or_default();
 
-        if let Some(ref fs_name) = fs_name {
-            let _ = fs_id_by_name(&context.pg_pool, &fs_name).await?;
-        }
+            if let Some(ref fs_name) = fs_name {
+                let _ = fs_id_by_name(&context.pg_pool, &fs_name).await?;
+            }
 
-        let xs: Vec<TargetRecord> = sqlx::query_as!(
+            let xs: Vec<TargetRecord> = sqlx::query_as!(
             TargetRecord,
             r#"
                 SELECT id, state, name, active_host_id, host_ids, filesystems, uuid, mount_path, dev_path, fs_type as "fs_type: FsType" from target t
@@ -245,24 +258,27 @@ impl QueryRoot {
         })
         .collect();
 
-        let target_resources = get_fs_target_resources(&context.pg_pool, None).await?;
+            let target_resources = get_fs_target_resources(&context.pg_pool, None).await?;
 
-        let xs: Vec<TargetRecord> = xs
-            .into_iter()
-            .map(|mut x| {
-                let resource = target_resources
-                    .iter()
-                    .find(|resource| resource.name == x.name);
+            let xs: Vec<TargetRecord> = xs
+                .into_iter()
+                .map(|mut x| {
+                    let resource = target_resources
+                        .iter()
+                        .find(|resource| resource.name == x.name);
 
-                if let Some(resource) = resource {
-                    x.host_ids = resource.cluster_hosts.clone();
-                }
+                    if let Some(resource) = resource {
+                        x.host_ids = resource.cluster_hosts.clone();
+                    }
 
-                x
-            })
-            .collect();
+                    x
+                })
+                .collect();
 
-        Ok(xs)
+            Ok(xs)
+        } else {
+            Err(FieldError::new("Not authorized", Value::null()))
+        }
     }
 
     /// Given a `fs_name`, produce a list of `TargetResource`.
@@ -273,18 +289,34 @@ impl QueryRoot {
         context: &Context,
         fs_name: Option<String>,
     ) -> juniper::FieldResult<Vec<TargetResource>> {
-        if let Some(ref fs_name) = fs_name {
-            let _ = fs_id_by_name(&context.pg_pool, &fs_name).await?;
-        }
-        let xs = get_fs_target_resources(&context.pg_pool, fs_name).await?;
+        if authorize(
+            &context.enforcer,
+            &context.session,
+            "query::get_fs_target_resources",
+        )? {
+            if let Some(ref fs_name) = fs_name {
+                let _ = fs_id_by_name(&context.pg_pool, &fs_name).await?;
+            }
+            let xs = get_fs_target_resources(&context.pg_pool, fs_name).await?;
 
-        Ok(xs)
+            Ok(xs)
+        } else {
+            Err(FieldError::new("Not authorized", Value::null()))
+        }
     }
 
     async fn get_banned_resources(context: &Context) -> juniper::FieldResult<Vec<BannedResource>> {
-        let xs = get_banned_resources(&context.pg_pool).await?;
+        if authorize(
+            &context.enforcer,
+            &context.session,
+            "query::get_banned_resources",
+        )? {
+            let xs = get_banned_resources(&context.pg_pool).await?;
 
-        Ok(xs)
+            Ok(xs)
+        } else {
+            Err(FieldError::new("Not authorized", Value::null()))
+        }
     }
 
     /// Given a `fs_name`, produce a distinct grouping
@@ -296,10 +328,18 @@ impl QueryRoot {
         context: &Context,
         fs_name: String,
     ) -> juniper::FieldResult<Vec<Vec<String>>> {
-        let _ = fs_id_by_name(&context.pg_pool, &fs_name).await?;
-        let xs = get_fs_cluster_hosts(&context.pg_pool, fs_name).await?;
+        if authorize(
+            &context.enforcer,
+            &context.session,
+            "query::get_fs_cluster_hosts",
+        )? {
+            let _ = fs_id_by_name(&context.pg_pool, &fs_name).await?;
+            let xs = get_fs_cluster_hosts(&context.pg_pool, fs_name).await?;
 
-        Ok(xs)
+            Ok(xs)
+        } else {
+            Err(FieldError::new("Not authorized", Value::null()))
+        }
     }
 
     #[graphql(arguments(
@@ -318,11 +358,12 @@ impl QueryRoot {
         fsname: String,
         name: Option<String>,
     ) -> juniper::FieldResult<Vec<Snapshot>> {
-        let dir = dir.unwrap_or_default();
+        if authorize(&context.enforcer, &context.session, "query::snapshots")? {
+            let dir = dir.unwrap_or_default();
 
-        let _ = fs_id_by_name(&context.pg_pool, &fsname).await?;
+            let _ = fs_id_by_name(&context.pg_pool, &fsname).await?;
 
-        let snapshots = sqlx::query_as!(
+            let snapshots = sqlx::query_as!(
             Snapshot,
                 r#"
                     SELECT filesystem_name, snapshot_name, create_time, modify_time, snapshot_fsname, mounted, comment FROM snapshot s
@@ -340,7 +381,10 @@ impl QueryRoot {
             .fetch_all(&context.pg_pool)
             .await?;
 
-        Ok(snapshots)
+            Ok(snapshots)
+        } else {
+            Err(FieldError::new("Not authorized", Value::null()))
+        }
     }
 
     /// Fetch the list of commands
@@ -359,11 +403,12 @@ impl QueryRoot {
         is_active: Option<bool>,
         msg: Option<String>,
     ) -> juniper::FieldResult<Vec<Command>> {
-        let dir = dir.unwrap_or_default();
-        let is_completed = !is_active.unwrap_or(true);
-        let commands: Vec<Command> = sqlx::query_as!(
-            CommandTmpRecord,
-            r#"
+        if authorize(&context.enforcer, &context.session, "query::commands")? {
+            let dir = dir.unwrap_or_default();
+            let is_completed = !is_active.unwrap_or(true);
+            let commands: Vec<Command> = sqlx::query_as!(
+                CommandTmpRecord,
+                r#"
                 SELECT
                     c.id AS id,
                     cancelled,
@@ -382,18 +427,21 @@ impl QueryRoot {
                     CASE WHEN $3 = 'DESC' THEN c.id END DESC
                 OFFSET $1 LIMIT $2
             "#,
-            offset.unwrap_or(0) as i64,
-            limit.map(|x| x as i64),
-            dir.deref(),
-            is_completed,
-            msg,
-        )
-        .fetch_all(&context.pg_pool)
-        .map_ok(|xs: Vec<CommandTmpRecord>| {
-            xs.into_iter().map(to_command).collect::<Vec<Command>>()
-        })
-        .await?;
-        Ok(commands)
+                offset.unwrap_or(0) as i64,
+                limit.map(|x| x as i64),
+                dir.deref(),
+                is_completed,
+                msg,
+            )
+            .fetch_all(&context.pg_pool)
+            .map_ok(|xs: Vec<CommandTmpRecord>| {
+                xs.into_iter().map(to_command).collect::<Vec<Command>>()
+            })
+            .await?;
+            Ok(commands)
+        } else {
+            Err(FieldError::new("Not authorized", Value::null()))
+        }
     }
 
     /// Fetch the list of commands by ids, the returned
@@ -410,10 +458,15 @@ impl QueryRoot {
         offset: Option<i32>,
         ids: Vec<i32>,
     ) -> juniper::FieldResult<Vec<Option<Command>>> {
-        let ids: &[i32] = &ids[..];
-        let unordered_cmds: Vec<Command> = sqlx::query_as!(
-            CommandTmpRecord,
-            r#"
+        if authorize(
+            &context.enforcer,
+            &context.session,
+            "query::commands_by_ids",
+        )? {
+            let ids: &[i32] = &ids[..];
+            let unordered_cmds: Vec<Command> = sqlx::query_as!(
+                CommandTmpRecord,
+                r#"
                 SELECT
                     c.id AS id,
                     cancelled,
@@ -428,51 +481,67 @@ impl QueryRoot {
                 GROUP BY c.id
                 OFFSET $1 LIMIT $2
             "#,
-            offset.unwrap_or(0) as i64,
-            limit.unwrap_or(20) as i64,
-            ids,
-        )
-        .fetch_all(&context.pg_pool)
-        .map_ok(|xs: Vec<CommandTmpRecord>| {
-            xs.into_iter().map(to_command).collect::<Vec<Command>>()
-        })
-        .await?;
-        let mut hm = unordered_cmds
-            .into_iter()
-            .map(|c| (c.id, c))
-            .collect::<HashMap<i32, Command>>();
-        let commands = ids
-            .iter()
-            .map(|id| hm.remove(id))
-            .collect::<Vec<Option<Command>>>();
+                offset.unwrap_or(0) as i64,
+                limit.unwrap_or(20) as i64,
+                ids,
+            )
+            .fetch_all(&context.pg_pool)
+            .map_ok(|xs: Vec<CommandTmpRecord>| {
+                xs.into_iter().map(to_command).collect::<Vec<Command>>()
+            })
+            .await?;
+            let mut hm = unordered_cmds
+                .into_iter()
+                .map(|c| (c.id, c))
+                .collect::<HashMap<i32, Command>>();
+            let commands = ids
+                .iter()
+                .map(|id| hm.remove(id))
+                .collect::<Vec<Option<Command>>>();
 
-        Ok(commands)
+            Ok(commands)
+        } else {
+            Err(FieldError::new("Not authorized", Value::null()))
+        }
     }
 
     /// List all snapshot intervals
     async fn snapshot_intervals(context: &Context) -> juniper::FieldResult<Vec<SnapshotInterval>> {
-        let xs: Vec<SnapshotInterval> = sqlx::query!("SELECT * FROM snapshot_interval")
-            .fetch(&context.pg_pool)
-            .map_ok(|x| SnapshotInterval {
-                id: x.id,
-                filesystem_name: x.filesystem_name,
-                use_barrier: x.use_barrier,
-                interval: x.interval.into(),
-                last_run: x.last_run,
-            })
-            .try_collect()
-            .await?;
+        if authorize(
+            &context.enforcer,
+            &context.session,
+            "query::snapshot_intervals",
+        )? {
+            let xs: Vec<SnapshotInterval> = sqlx::query!("SELECT * FROM snapshot_interval")
+                .fetch(&context.pg_pool)
+                .map_ok(|x| SnapshotInterval {
+                    id: x.id,
+                    filesystem_name: x.filesystem_name,
+                    use_barrier: x.use_barrier,
+                    interval: x.interval.into(),
+                    last_run: x.last_run,
+                })
+                .try_collect()
+                .await?;
 
-        Ok(xs)
+            Ok(xs)
+        } else {
+            Err(FieldError::new("Not authorized", Value::null()))
+        }
     }
     /// List all snapshot retention policies. Snapshots will automatically be deleted (starting with the oldest)
     /// when free space falls below the defined reserve value and its associated unit.
     async fn snapshot_retention_policies(
         context: &Context,
     ) -> juniper::FieldResult<Vec<SnapshotRetention>> {
-        let xs: Vec<SnapshotRetention> = sqlx::query_as!(
-            SnapshotRetention,
-            r#"
+        if authorize(
+            &context.enforcer,
+            &context.session,
+            "query::snapshot_retention_policies",
+        )? {
+            let xs: Vec<SnapshotRetention> = sqlx::query_as!(
+                SnapshotRetention,
+                r#"
                 SELECT
                     id,
                     filesystem_name,
@@ -482,12 +551,15 @@ impl QueryRoot {
                     keep_num
                 FROM snapshot_retention
             "#
-        )
-        .fetch(&context.pg_pool)
-        .try_collect()
-        .await?;
+            )
+            .fetch(&context.pg_pool)
+            .try_collect()
+            .await?;
 
-        Ok(xs)
+            Ok(xs)
+        } else {
+            Err(FieldError::new("Not authorized", Value::null()))
+        }
     }
 
     #[graphql(arguments(
@@ -522,20 +594,21 @@ impl QueryRoot {
         message_class: Option<Vec<MessageClass>>,
         severity: Option<LogSeverity>,
     ) -> juniper::FieldResult<LogResponse> {
-        let dir = dir.unwrap_or_default();
+        if authorize(&context.enforcer, &context.session, "query::logs")? {
+            let dir = dir.unwrap_or_default();
 
-        let message_class: Vec<_> = message_class
-            .filter(|v| !v.is_empty())
-            .unwrap_or_else(|| vec![MessageClass::Normal])
-            .into_iter()
-            .map(|i| i as i16)
-            .collect();
+            let message_class: Vec<_> = message_class
+                .filter(|v| !v.is_empty())
+                .unwrap_or_else(|| vec![MessageClass::Normal])
+                .into_iter()
+                .map(|i| i as i16)
+                .collect();
 
-        let severity = severity.unwrap_or(LogSeverity::Informational) as i16;
+            let severity = severity.unwrap_or(LogSeverity::Informational) as i16;
 
-        let results = sqlx::query_as!(
-            LogMessageRecord,
-            r#"
+            let results = sqlx::query_as!(
+                LogMessageRecord,
+                r#"
                     SELECT * FROM chroma_core_logmessage t
                     WHERE ($4::TEXT IS NULL OR t.message LIKE $4)
                       AND ($5::TEXT IS NULL OR t.fqdn LIKE $5)
@@ -548,43 +621,51 @@ impl QueryRoot {
                         CASE WHEN $3 = 'ASC' THEN t.datetime END ASC,
                         CASE WHEN $3 = 'DESC' THEN t.datetime END DESC
                     OFFSET $1 LIMIT $2"#,
-            offset.unwrap_or(0) as i64,
-            limit.map(|x| x as i64).unwrap_or(100),
-            dir.deref(),
-            message,
-            fqdn,
-            tag,
-            start_datetime,
-            end_datetime,
-            &message_class,
-            severity,
-        )
-        .fetch_all(&context.pg_pool)
-        .await?;
-        let xs: Vec<LogMessage> = results
-            .into_iter()
-            .map(|x| x.try_into())
-            .collect::<Result<_, _>>()?;
+                offset.unwrap_or(0) as i64,
+                limit.map(|x| x as i64).unwrap_or(100),
+                dir.deref(),
+                message,
+                fqdn,
+                tag,
+                start_datetime,
+                end_datetime,
+                &message_class,
+                severity,
+            )
+            .fetch_all(&context.pg_pool)
+            .await?;
+            let xs: Vec<LogMessage> = results
+                .into_iter()
+                .map(|x| x.try_into())
+                .collect::<Result<_, _>>()?;
 
-        let total_count = sqlx::query!(
-            "SELECT total_rows FROM rowcount WHERE table_name = 'chroma_core_logmessage';"
-        )
-        .fetch_one(&context.pg_pool)
-        .await?
-        .total_rows
-        .ok_or_else(|| FieldError::new("Number of rows doesn't fit in i32", Value::null()))?;
+            let total_count = sqlx::query!(
+                "SELECT total_rows FROM rowcount WHERE table_name = 'chroma_core_logmessage';"
+            )
+            .fetch_one(&context.pg_pool)
+            .await?
+            .total_rows
+            .ok_or_else(|| FieldError::new("Number of rows doesn't fit in i32", Value::null()))?;
 
-        Ok(LogResponse {
-            data: xs,
-            meta: Meta {
-                total_count: total_count.try_into()?,
-            },
-        })
+            Ok(LogResponse {
+                data: xs,
+                meta: Meta {
+                    total_count: total_count.try_into()?,
+                },
+            })
+        } else {
+            Err(FieldError::new("Not authorized", Value::null()))
+        }
     }
 
     async fn server_profiles(context: &Context) -> juniper::FieldResult<Vec<ServerProfile>> {
-        let server_profile_records = sqlx::query!(
-            r#"
+        if authorize(
+            &context.enforcer,
+            &context.session,
+            "query::server_profiles",
+        )? {
+            let server_profile_records = sqlx::query!(
+                r#"
                 SELECT jsonb_agg((r.repo_name, r.location))
                     AS repos, sp.*
                     FROM chroma_core_repo AS r
@@ -592,34 +673,37 @@ impl QueryRoot {
                     INNER JOIN chroma_core_serverprofile AS sp ON rl.serverprofile_id = sp.name
                     GROUP BY sp.name;
             "#,
-        )
-        .fetch_all(&context.pg_pool)
-        .await?;
+            )
+            .fetch_all(&context.pg_pool)
+            .await?;
 
-        let server_profiles: Vec<_> = server_profile_records
-            .into_iter()
-            .filter_map(|spr| {
-                // TODO: Try to derive this somehow
-                let record = ServerProfileRecord {
-                    corosync: spr.corosync,
-                    corosync2: spr.corosync2,
-                    default: spr.default,
-                    initial_state: spr.initial_state,
-                    managed: spr.managed,
-                    name: spr.name,
-                    ntp: spr.ntp,
-                    pacemaker: spr.pacemaker,
-                    ui_description: spr.ui_description,
-                    ui_name: spr.ui_name,
-                    user_selectable: spr.user_selectable,
-                    worker: spr.worker,
-                };
-                let repos = spr.repos?;
-                ServerProfile::new(record, &repos).ok()
-            })
-            .collect();
+            let server_profiles: Vec<_> = server_profile_records
+                .into_iter()
+                .filter_map(|spr| {
+                    // TODO: Try to derive this somehow
+                    let record = ServerProfileRecord {
+                        corosync: spr.corosync,
+                        corosync2: spr.corosync2,
+                        default: spr.default,
+                        initial_state: spr.initial_state,
+                        managed: spr.managed,
+                        name: spr.name,
+                        ntp: spr.ntp,
+                        pacemaker: spr.pacemaker,
+                        ui_description: spr.ui_description,
+                        ui_name: spr.ui_name,
+                        user_selectable: spr.user_selectable,
+                        worker: spr.worker,
+                    };
+                    let repos = spr.repos?;
+                    ServerProfile::new(record, &repos).ok()
+                })
+                .collect();
 
-        Ok(server_profiles)
+            Ok(server_profiles)
+        } else {
+            Err(FieldError::new("Not authorized", Value::null()))
+        }
     }
     /// List the client mount source.
     /// This will build up the source using known mgs locations
@@ -629,9 +713,17 @@ impl QueryRoot {
         context: &Context,
         fs_name: String,
     ) -> juniper::FieldResult<String> {
-        let x = client_mount_source(&context.pg_pool, &fs_name).await?;
+        if authorize(
+            &context.enforcer,
+            &context.session,
+            "query::client_mount_source",
+        )? {
+            let x = client_mount_source(&context.pg_pool, &fs_name).await?;
 
-        Ok(x)
+            Ok(x)
+        } else {
+            Err(FieldError::new("Not authorized", Value::null()))
+        }
     }
     /// List the full client mount command.
     /// This will build up the source using known mgs locations
@@ -643,11 +735,19 @@ impl QueryRoot {
         context: &Context,
         fs_name: String,
     ) -> juniper::FieldResult<String> {
-        let x = client_mount_source(&context.pg_pool, &fs_name).await?;
+        if authorize(
+            &context.enforcer,
+            &context.session,
+            "query::client_mount_command",
+        )? {
+            let x = client_mount_source(&context.pg_pool, &fs_name).await?;
 
-        let mount_command = format!("mount -t lustre {} /mnt/{}", x, fs_name);
+            let mount_command = format!("mount -t lustre {} /mnt/{}", x, fs_name);
 
-        Ok(mount_command)
+            Ok(mount_command)
+        } else {
+            Err(FieldError::new("Not authorized", Value::null()))
+        }
     }
 }
 
@@ -703,58 +803,67 @@ impl MutationRoot {
         comment: Option<String>,
         use_barrier: Option<bool>,
     ) -> juniper::FieldResult<Command> {
-        let _ = fs_id_by_name(&context.pg_pool, &fsname).await?;
-        let name = name.trim();
-        validate_snapshot_name(name)?;
+        if authorize(
+            &context.enforcer,
+            &context.session,
+            "mutation::create_snapshot",
+        )? {
+            let _ = fs_id_by_name(&context.pg_pool, &fsname).await?;
+            let name = name.trim();
+            validate_snapshot_name(name)?;
 
-        let snapshot_interval_name = parse_snapshot_name(name);
-        if let Some(data) = snapshot_interval_name {
-            sqlx::query!(
-                r#"
+            let snapshot_interval_name = parse_snapshot_name(name);
+            if let Some(data) = snapshot_interval_name {
+                sqlx::query!(
+                    r#"
                 UPDATE snapshot_interval
                 SET last_run=$1
                 WHERE id=$2 AND filesystem_name=$3
             "#,
-                data.timestamp,
-                data.id,
-                data.fs_name,
-            )
-            .execute(&context.pg_pool)
-            .await?;
-        }
-
-        let active_mgs_host_fqdn = active_mgs_host_fqdn(&fsname, &context.pg_pool)
-            .await?
-            .ok_or_else(|| {
-                FieldError::new("Filesystem not found or MGS is not mounted", Value::null())
-            })?;
-
-        let kwargs: HashMap<String, String> = vec![("message".into(), "Creating snapshot".into())]
-            .into_iter()
-            .collect();
-
-        let jobs = serde_json::json!([{
-            "class_name": "CreateSnapshotJob",
-            "args": {
-                "fsname": fsname,
-                "name": name,
-                "comment": comment,
-                "fqdn": active_mgs_host_fqdn,
-                "use_barrier": use_barrier.unwrap_or(false),
+                    data.timestamp,
+                    data.id,
+                    data.fs_name,
+                )
+                .execute(&context.pg_pool)
+                .await?;
             }
-        }]);
-        let command_id: i32 = iml_job_scheduler_rpc::call(
-            &context.rabbit_pool.get().await?,
-            "run_jobs",
-            vec![jobs],
-            Some(kwargs),
-        )
-        .map_err(ImlApiError::ImlJobSchedulerRpcError)
-        .await?;
 
-        let command = get_command(&context.pg_pool, command_id).await?;
+            let active_mgs_host_fqdn = active_mgs_host_fqdn(&fsname, &context.pg_pool)
+                .await?
+                .ok_or_else(|| {
+                    FieldError::new("Filesystem not found or MGS is not mounted", Value::null())
+                })?;
 
-        Ok(command)
+            let kwargs: HashMap<String, String> =
+                vec![("message".into(), "Creating snapshot".into())]
+                    .into_iter()
+                    .collect();
+
+            let jobs = serde_json::json!([{
+                "class_name": "CreateSnapshotJob",
+                "args": {
+                    "fsname": fsname,
+                    "name": name,
+                    "comment": comment,
+                    "fqdn": active_mgs_host_fqdn,
+                    "use_barrier": use_barrier.unwrap_or(false),
+                }
+            }]);
+            let command_id: i32 = iml_job_scheduler_rpc::call(
+                &context.rabbit_pool.get().await?,
+                "run_jobs",
+                vec![jobs],
+                Some(kwargs),
+            )
+            .map_err(ImlApiError::ImlJobSchedulerRpcError)
+            .await?;
+
+            let command = get_command(&context.pg_pool, command_id).await?;
+
+            Ok(command)
+        } else {
+            Err(FieldError::new("Not authorized", Value::null()))
+        }
     }
     #[graphql(arguments(
         fsname(description = "Filesystem snapshot was taken from"),
@@ -769,42 +878,50 @@ impl MutationRoot {
         name: String,
         force: bool,
     ) -> juniper::FieldResult<Command> {
-        let _ = fs_id_by_name(&context.pg_pool, &fsname).await?;
-        let name = name.trim();
-        validate_snapshot_name(name)?;
+        if authorize(
+            &context.enforcer,
+            &context.session,
+            "mutation::destroy_snapshot",
+        )? {
+            let _ = fs_id_by_name(&context.pg_pool, &fsname).await?;
+            let name = name.trim();
+            validate_snapshot_name(name)?;
 
-        let active_mgs_host_fqdn = active_mgs_host_fqdn(&fsname, &context.pg_pool)
-            .await?
-            .ok_or_else(|| {
-                FieldError::new("Filesystem not found or MGS is not mounted", Value::null())
-            })?;
+            let active_mgs_host_fqdn = active_mgs_host_fqdn(&fsname, &context.pg_pool)
+                .await?
+                .ok_or_else(|| {
+                    FieldError::new("Filesystem not found or MGS is not mounted", Value::null())
+                })?;
 
-        let kwargs: HashMap<String, String> =
-            vec![("message".into(), "Destroying snapshot".into())]
-                .into_iter()
-                .collect();
+            let kwargs: HashMap<String, String> =
+                vec![("message".into(), "Destroying snapshot".into())]
+                    .into_iter()
+                    .collect();
 
-        let jobs = serde_json::json!([{
-            "class_name": "DestroySnapshotJob",
-            "args": {
-                "fsname": fsname,
-                "name": name,
-                "force": force,
-                "fqdn": active_mgs_host_fqdn,
-            }
-        }]);
-        let command_id: i32 = iml_job_scheduler_rpc::call(
-            &context.rabbit_pool.get().await?,
-            "run_jobs",
-            vec![jobs],
-            Some(kwargs),
-        )
-        .map_err(ImlApiError::ImlJobSchedulerRpcError)
-        .await?;
+            let jobs = serde_json::json!([{
+                "class_name": "DestroySnapshotJob",
+                "args": {
+                    "fsname": fsname,
+                    "name": name,
+                    "force": force,
+                    "fqdn": active_mgs_host_fqdn,
+                }
+            }]);
+            let command_id: i32 = iml_job_scheduler_rpc::call(
+                &context.rabbit_pool.get().await?,
+                "run_jobs",
+                vec![jobs],
+                Some(kwargs),
+            )
+            .map_err(ImlApiError::ImlJobSchedulerRpcError)
+            .await?;
 
-        let command = get_command(&context.pg_pool, command_id).await?;
+            let command = get_command(&context.pg_pool, command_id).await?;
 
-        Ok(command)
+            Ok(command)
+        } else {
+            Err(FieldError::new("Not authorized", Value::null()))
+        }
     }
     #[graphql(arguments(
         fsname(description = "Filesystem snapshot was taken from"),
@@ -817,39 +934,48 @@ impl MutationRoot {
         fsname: String,
         name: String,
     ) -> juniper::FieldResult<Command> {
-        let name = name.trim();
-        validate_snapshot_name(name)?;
+        if authorize(
+            &context.enforcer,
+            &context.session,
+            "mutation::mount_snapshot",
+        )? {
+            let name = name.trim();
+            validate_snapshot_name(name)?;
 
-        let active_mgs_host_fqdn = active_mgs_host_fqdn(&fsname, &context.pg_pool)
-            .await?
-            .ok_or_else(|| {
-                FieldError::new("Filesystem not found or MGS is not mounted", Value::null())
-            })?;
+            let active_mgs_host_fqdn = active_mgs_host_fqdn(&fsname, &context.pg_pool)
+                .await?
+                .ok_or_else(|| {
+                    FieldError::new("Filesystem not found or MGS is not mounted", Value::null())
+                })?;
 
-        let kwargs: HashMap<String, String> = vec![("message".into(), "Mounting snapshot".into())]
-            .into_iter()
-            .collect();
+            let kwargs: HashMap<String, String> =
+                vec![("message".into(), "Mounting snapshot".into())]
+                    .into_iter()
+                    .collect();
 
-        let jobs = serde_json::json!([{
-            "class_name": "MountSnapshotJob",
-            "args": {
-                "fsname": fsname,
-                "name": name,
-                "fqdn": active_mgs_host_fqdn,
-            }
-        }]);
-        let command_id: i32 = iml_job_scheduler_rpc::call(
-            &context.rabbit_pool.get().await?,
-            "run_jobs",
-            vec![jobs],
-            Some(kwargs),
-        )
-        .map_err(ImlApiError::ImlJobSchedulerRpcError)
-        .await?;
+            let jobs = serde_json::json!([{
+                "class_name": "MountSnapshotJob",
+                "args": {
+                    "fsname": fsname,
+                    "name": name,
+                    "fqdn": active_mgs_host_fqdn,
+                }
+            }]);
+            let command_id: i32 = iml_job_scheduler_rpc::call(
+                &context.rabbit_pool.get().await?,
+                "run_jobs",
+                vec![jobs],
+                Some(kwargs),
+            )
+            .map_err(ImlApiError::ImlJobSchedulerRpcError)
+            .await?;
 
-        get_command(&context.pg_pool, command_id)
-            .await
-            .map_err(|e| e.into())
+            get_command(&context.pg_pool, command_id)
+                .await
+                .map_err(|e| e.into())
+        } else {
+            Err(FieldError::new("Not authorized", Value::null()))
+        }
     }
     #[graphql(arguments(
         fsname(description = "Filesystem snapshot was taken from"),
@@ -862,41 +988,49 @@ impl MutationRoot {
         fsname: String,
         name: String,
     ) -> juniper::FieldResult<Command> {
-        let _ = fs_id_by_name(&context.pg_pool, &fsname).await?;
-        let name = name.trim();
-        validate_snapshot_name(name)?;
+        if authorize(
+            &context.enforcer,
+            &context.session,
+            "mutation::unmount_snapshot",
+        )? {
+            let _ = fs_id_by_name(&context.pg_pool, &fsname).await?;
+            let name = name.trim();
+            validate_snapshot_name(name)?;
 
-        let active_mgs_host_fqdn = active_mgs_host_fqdn(&fsname, &context.pg_pool)
-            .await?
-            .ok_or_else(|| {
-                FieldError::new("Filesystem not found or MGS is not mounted", Value::null())
-            })?;
+            let active_mgs_host_fqdn = active_mgs_host_fqdn(&fsname, &context.pg_pool)
+                .await?
+                .ok_or_else(|| {
+                    FieldError::new("Filesystem not found or MGS is not mounted", Value::null())
+                })?;
 
-        let kwargs: HashMap<String, String> =
-            vec![("message".into(), "Unmounting snapshot".into())]
-                .into_iter()
-                .collect();
+            let kwargs: HashMap<String, String> =
+                vec![("message".into(), "Unmounting snapshot".into())]
+                    .into_iter()
+                    .collect();
 
-        let jobs = serde_json::json!([{
-            "class_name": "UnmountSnapshotJob",
-            "args": {
-                "fsname": fsname,
-                "name": name,
-                "fqdn": active_mgs_host_fqdn,
-            }
-        }]);
-        let command_id: i32 = iml_job_scheduler_rpc::call(
-            &context.rabbit_pool.get().await?,
-            "run_jobs",
-            vec![jobs],
-            Some(kwargs),
-        )
-        .map_err(ImlApiError::ImlJobSchedulerRpcError)
-        .await?;
+            let jobs = serde_json::json!([{
+                "class_name": "UnmountSnapshotJob",
+                "args": {
+                    "fsname": fsname,
+                    "name": name,
+                    "fqdn": active_mgs_host_fqdn,
+                }
+            }]);
+            let command_id: i32 = iml_job_scheduler_rpc::call(
+                &context.rabbit_pool.get().await?,
+                "run_jobs",
+                vec![jobs],
+                Some(kwargs),
+            )
+            .map_err(ImlApiError::ImlJobSchedulerRpcError)
+            .await?;
 
-        get_command(&context.pg_pool, command_id)
-            .await
-            .map_err(|e| e.into())
+            get_command(&context.pg_pool, command_id)
+                .await
+                .map_err(|e| e.into())
+        } else {
+            Err(FieldError::new("Not authorized", Value::null()))
+        }
     }
     #[graphql(arguments(
         fsname(description = "The filesystem to create snapshots with"),
@@ -914,9 +1048,14 @@ impl MutationRoot {
         interval: GraphQLDuration,
         use_barrier: Option<bool>,
     ) -> juniper::FieldResult<bool> {
-        let _ = fs_id_by_name(&context.pg_pool, &fsname).await?;
-        let maybe_id = sqlx::query!(
-            r#"
+        if authorize(
+            &context.enforcer,
+            &context.session,
+            "mutation::create_snapshot_interval",
+        )? {
+            let _ = fs_id_by_name(&context.pg_pool, &fsname).await?;
+            let maybe_id = sqlx::query!(
+                r#"
                 INSERT INTO snapshot_interval (
                     filesystem_name,
                     use_barrier,
@@ -927,32 +1066,43 @@ impl MutationRoot {
                 DO NOTHING
                 RETURNING id
             "#,
-            fsname,
-            use_barrier.unwrap_or_default(),
-            PgInterval::try_from(interval.0)?,
-        )
-        .fetch_optional(&context.pg_pool)
-        .await?
-        .map(|x| x.id);
+                fsname,
+                use_barrier.unwrap_or_default(),
+                PgInterval::try_from(interval.0)?,
+            )
+            .fetch_optional(&context.pg_pool)
+            .await?
+            .map(|x| x.id);
 
-        if let Some(id) = maybe_id {
-            configure_snapshot_timer(id, fsname, interval.0, use_barrier.unwrap_or_default())
-                .await?;
+            if let Some(id) = maybe_id {
+                configure_snapshot_timer(id, fsname, interval.0, use_barrier.unwrap_or_default())
+                    .await?;
+            }
+
+            Ok(true)
+        } else {
+            Err(FieldError::new("Not authorized", Value::null()))
         }
-
-        Ok(true)
     }
     /// Removes an existing snapshot interval.
     /// This will also cancel any outstanding intervals scheduled by this rule.
     #[graphql(arguments(id(description = "The snapshot interval id"),))]
     async fn remove_snapshot_interval(context: &Context, id: i32) -> juniper::FieldResult<bool> {
-        sqlx::query!("DELETE FROM snapshot_interval WHERE id=$1", id)
-            .execute(&context.pg_pool)
-            .await?;
+        if authorize(
+            &context.enforcer,
+            &context.session,
+            "mutation::remove_snapshot_interval",
+        )? {
+            sqlx::query!("DELETE FROM snapshot_interval WHERE id=$1", id)
+                .execute(&context.pg_pool)
+                .await?;
 
-        remove_snapshot_timer(id).await?;
+            remove_snapshot_timer(id).await?;
 
-        Ok(true)
+            Ok(true)
+        } else {
+            Err(FieldError::new("Not authorized", Value::null()))
+        }
     }
     #[graphql(arguments(
         fsname(description = "Filesystem name"),
@@ -974,9 +1124,14 @@ impl MutationRoot {
         reserve_unit: ReserveUnit,
         keep_num: Option<i32>,
     ) -> juniper::FieldResult<bool> {
-        let _ = fs_id_by_name(&context.pg_pool, &fsname).await?;
-        sqlx::query!(
-            r#"
+        if authorize(
+            &context.enforcer,
+            &context.session,
+            "mutation::create_snapshot_retention",
+        )? {
+            let _ = fs_id_by_name(&context.pg_pool, &fsname).await?;
+            sqlx::query!(
+                r#"
                 INSERT INTO snapshot_retention (
                     filesystem_name,
                     reserve_value,
@@ -990,24 +1145,35 @@ impl MutationRoot {
                 reserve_unit = EXCLUDED.reserve_unit,
                 keep_num = EXCLUDED.keep_num
             "#,
-            fsname,
-            reserve_value,
-            reserve_unit as ReserveUnit,
-            keep_num.unwrap_or(0)
-        )
-        .execute(&context.pg_pool)
-        .await?;
+                fsname,
+                reserve_value,
+                reserve_unit as ReserveUnit,
+                keep_num.unwrap_or(0)
+            )
+            .execute(&context.pg_pool)
+            .await?;
 
-        Ok(true)
+            Ok(true)
+        } else {
+            Err(FieldError::new("Not authorized", Value::null()))
+        }
     }
     /// Remove an existing snapshot retention policy.
     #[graphql(arguments(id(description = "The snapshot retention policy id")))]
     async fn remove_snapshot_retention(context: &Context, id: i32) -> juniper::FieldResult<bool> {
-        sqlx::query!("DELETE FROM snapshot_retention WHERE id=$1", id)
-            .execute(&context.pg_pool)
-            .await?;
+        if authorize(
+            &context.enforcer,
+            &context.session,
+            "mutation::remove_snapshot_retention",
+        )? {
+            sqlx::query!("DELETE FROM snapshot_retention WHERE id=$1", id)
+                .execute(&context.pg_pool)
+                .await?;
 
-        Ok(true)
+            Ok(true)
+        } else {
+            Err(FieldError::new("Not authorized", Value::null()))
+        }
     }
 
     /// Create a server profile.
@@ -1016,28 +1182,33 @@ impl MutationRoot {
         context: &Context,
         profile: ServerProfileInput,
     ) -> juniper::FieldResult<bool> {
-        let repolist = profile.repolist;
-        let repolist_len = repolist.len();
+        if authorize(
+            &context.enforcer,
+            &context.session,
+            "mutation::create_server_profile",
+        )? {
+            let repolist = profile.repolist;
+            let repolist_len = repolist.len();
 
-        let count = sqlx::query!(
-            "SELECT repo_name from chroma_core_repo where repo_name = ANY($1)",
-            &repolist.clone()
-        )
-        .fetch_all(&context.pg_pool)
-        .await?
-        .len();
+            let count = sqlx::query!(
+                "SELECT repo_name from chroma_core_repo where repo_name = ANY($1)",
+                &repolist.clone()
+            )
+            .fetch_all(&context.pg_pool)
+            .await?
+            .len();
 
-        if count != repolist_len {
-            return Err(FieldError::new(
-                format!("Repos not found for profile {}", profile.name),
-                Value::null(),
-            ));
-        }
+            if count != repolist_len {
+                return Err(FieldError::new(
+                    format!("Repos not found for profile {}", profile.name),
+                    Value::null(),
+                ));
+            }
 
-        let mut transaction = context.pg_pool.begin().await?;
+            let mut transaction = context.pg_pool.begin().await?;
 
-        sqlx::query!(
-            r#"
+            sqlx::query!(
+                r#"
             INSERT INTO chroma_core_serverprofile
             (
                 name,
@@ -1070,50 +1241,53 @@ impl MutationRoot {
             pacemaker = excluded.pacemaker,
             "default" = excluded.default
         "#,
-            &profile.name,
-            &profile.ui_name,
-            &profile.ui_description,
-            &profile.managed,
-            &profile.worker,
-            &profile.initial_state,
-            &profile.ntp,
-            &profile.corosync,
-            &profile.corosync2,
-            &profile.pacemaker
-        )
-        .execute(&mut transaction)
-        .await?;
+                &profile.name,
+                &profile.ui_name,
+                &profile.ui_description,
+                &profile.managed,
+                &profile.worker,
+                &profile.initial_state,
+                &profile.ntp,
+                &profile.corosync,
+                &profile.corosync2,
+                &profile.pacemaker
+            )
+            .execute(&mut transaction)
+            .await?;
 
-        sqlx::query!(
-            r#"
+            sqlx::query!(
+                r#"
             INSERT INTO chroma_core_serverprofile_repolist (serverprofile_id, repo_id)
             SELECT $1, repo_id
             FROM UNNEST($2::text[])
             AS t(repo_id)
             ON CONFLICT DO NOTHING
         "#,
-            &profile.name,
-            &repolist
-        )
-        .execute(&mut transaction)
-        .await?;
+                &profile.name,
+                &repolist
+            )
+            .execute(&mut transaction)
+            .await?;
 
-        sqlx::query!(
-            r#"
+            sqlx::query!(
+                r#"
             INSERT INTO chroma_core_serverprofilepackage (package_name, server_profile_id)
             SELECT package_name, $2
             FROM UNNEST($1::text[])
             as t(package_name)
             ON CONFLICT DO NOTHING
             "#,
-            &profile.packages.into_iter().collect::<Vec<_>>(),
-            &profile.name
-        )
-        .execute(&mut transaction)
-        .await?;
+                &profile.packages.into_iter().collect::<Vec<_>>(),
+                &profile.name
+            )
+            .execute(&mut transaction)
+            .await?;
 
-        transaction.commit().await?;
-        Ok(true)
+            transaction.commit().await?;
+            Ok(true)
+        } else {
+            Err(FieldError::new("Not authorized", Value::null()))
+        }
     }
 
     #[graphql(arguments(profile_name(description = "Name of the profile to remove")))]
@@ -1121,31 +1295,39 @@ impl MutationRoot {
         context: &Context,
         profile_name: String,
     ) -> juniper::FieldResult<bool> {
-        let mut transaction = context.pg_pool.begin().await?;
+        if authorize(
+            &context.enforcer,
+            &context.session,
+            "mutation::remove_server_profile",
+        )? {
+            let mut transaction = context.pg_pool.begin().await?;
 
-        sqlx::query!(
-            "DELETE FROM chroma_core_serverprofile_repolist WHERE serverprofile_id = $1",
-            &profile_name
-        )
-        .execute(&mut transaction)
-        .await?;
+            sqlx::query!(
+                "DELETE FROM chroma_core_serverprofile_repolist WHERE serverprofile_id = $1",
+                &profile_name
+            )
+            .execute(&mut transaction)
+            .await?;
 
-        sqlx::query!(
-            "DELETE FROM chroma_core_serverprofilepackage WHERE server_profile_id = $1",
-            &profile_name
-        )
-        .execute(&mut transaction)
-        .await?;
+            sqlx::query!(
+                "DELETE FROM chroma_core_serverprofilepackage WHERE server_profile_id = $1",
+                &profile_name
+            )
+            .execute(&mut transaction)
+            .await?;
 
-        sqlx::query!(
-            "DELETE FROM chroma_core_serverprofile WHERE name = $1",
-            &profile_name
-        )
-        .execute(&mut transaction)
-        .await?;
+            sqlx::query!(
+                "DELETE FROM chroma_core_serverprofile WHERE name = $1",
+                &profile_name
+            )
+            .execute(&mut transaction)
+            .await?;
 
-        transaction.commit().await?;
-        Ok(true)
+            transaction.commit().await?;
+            Ok(true)
+        } else {
+            Err(FieldError::new("Not authorized", Value::null()))
+        }
     }
 }
 
@@ -1262,7 +1444,10 @@ pub(crate) fn authorize(
                 } else {
                     let authorizations: Vec<_> =
                         authorizations.into_iter().map(Result::unwrap).collect();
-                    let final_authorization = authorizations.iter().fold(true, |_acc, x| *x);
+                    let final_authorization =
+                        authorizations
+                            .iter()
+                            .fold(true, |acc, x| if !acc { acc } else { *x });
                     Ok(final_authorization)
                 }
             } else {
