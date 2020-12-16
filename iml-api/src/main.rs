@@ -65,6 +65,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         session: None,
     }));
     {
+        // In practice, Nginx starts rejecting us with "401 Authorization required" as soon as we logout.
+        // This is sort of a precaution.
         let ctx = ctx.clone();
         tokio::spawn(async move {
             let mut interval = time::interval(Duration::from_secs(60));
