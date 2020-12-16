@@ -32,8 +32,7 @@ impl StratagemQuery {
             &context.enforcer,
             &context.session,
             "query_stratagem_reports",
-        )
-        .unwrap();
+        )?;
 
         let paths = tokio::fs::read_dir(get_report_path()).await?;
 
