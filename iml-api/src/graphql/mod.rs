@@ -47,6 +47,7 @@ use std::{
     str::{from_utf8, FromStr},
     sync::Arc,
 };
+use tokio::sync::Mutex;
 use warp::{reject::Reject, Filter};
 
 #[derive(juniper::GraphQLObject)]
@@ -1184,6 +1185,7 @@ pub(crate) type Schema = RootNode<'static, QueryRoot, MutationRoot, EmptySubscri
 pub(crate) struct Context {
     pub(crate) pg_pool: PgPool,
     pub(crate) rabbit_pool: Pool,
+    pub(crate) session: Option<Session>,
 }
 
 impl juniper::Context for Context {}
@@ -1199,7 +1201,7 @@ impl Reject for AuthorizationError {}
 
 pub(crate) async fn graphql(
     schema: Arc<Schema>,
-    ctx: Arc<Context>,
+    ctx: Arc<Mutex<Context>>,
     req: GraphQLRequest,
     cookies: HeaderValue,
     enforcer: Arc<Enforcer>,
@@ -1247,6 +1249,10 @@ pub(crate) async fn graphql(
         .await
         .map_err(ImlApiError::ImlManagerClientError)?;
         tracing::info!("Session: {:?}", response);
+        {
+            (*ctx.lock().await).session = Some(response.clone());
+        }
+        // TODO: Spin up a thread that clears the cache once a minute
 
         let user = response.user;
         if let Some(user) = user {
@@ -1300,6 +1306,8 @@ pub(crate) async fn graphql(
         }
     }
 
+    let lock = ctx.lock().await;
+    let ctx = lock.deref();
     let res = req.execute(&schema, &ctx).await;
     let json = serde_json::to_string(&res).map_err(ImlApiError::SerdeJsonError)?;
 
@@ -1308,7 +1316,7 @@ pub(crate) async fn graphql(
 
 pub(crate) fn endpoint(
     schema_filter: impl Filter<Extract = (Arc<Schema>,), Error = Infallible> + Clone + Send,
-    ctx_filter: impl Filter<Extract = (Arc<Context>,), Error = Infallible> + Clone + Send,
+    ctx_filter: impl Filter<Extract = (Arc<Mutex<Context>>,), Error = Infallible> + Clone + Send,
     enforcer_filter: impl Filter<Extract = (Arc<Enforcer>,), Error = Infallible> + Clone + Send,
 ) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
     let graphql_route = warp::path!("graphql")

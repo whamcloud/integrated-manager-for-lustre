@@ -16,7 +16,7 @@ use iml_postgres::get_db_pool;
 use iml_rabbit::{self, create_connection_filter};
 use iml_wire_types::Conf;
 use std::{collections::HashMap, sync::Arc};
-use tokio::sync::RwLock;
+use tokio::sync::{Mutex, RwLock};
 use warp::Filter;
 
 // Default pool limit if not overridden by POOL_LIMIT
@@ -61,10 +61,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ));
     let schema_filter = warp::any().map(move || Arc::clone(&schema));
 
-    let ctx = Arc::new(graphql::Context {
+    let ctx = Arc::new(Mutex::new(graphql::Context {
         pg_pool,
         rabbit_pool,
-    });
+        session: None
+    }));
     let ctx_filter = warp::any().map(move || Arc::clone(&ctx));
     let enforcer_filter = warp::any().map(move || Arc::clone(&enforcer));
 
