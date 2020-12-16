@@ -1191,18 +1191,18 @@ pub(crate) struct Context {
 
 impl juniper::Context for Context {}
 
-#[derive(Debug)]
-struct Unauthorized;
-
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub(crate) enum AuthorizationError {
-    General,
-    Enforcer(casbin::Error),
+    #[error(transparent)]
+    Enforcer(#[from] casbin::Error),
+    #[error("User is not authenticated")]
     Unauthenticated,
+    #[error("User has no groups")]
     NoGroups,
+    #[error("No active session present")]
+    NoSession,
 }
 
-impl Reject for Unauthorized {}
 impl Reject for AuthorizationError {}
 
 pub(crate) fn authorize(
@@ -1257,7 +1257,8 @@ pub(crate) fn authorize(
                     .partition(Result::is_ok);
 
                 if !errors.is_empty() {
-                    Err(AuthorizationError::General)
+                    let mut errors: Vec<_> = errors.into_iter().map(Result::unwrap_err).collect();
+                    Err(errors.pop().unwrap())
                 } else {
                     let authorizations: Vec<_> =
                         authorizations.into_iter().map(Result::unwrap).collect();
@@ -1274,7 +1275,7 @@ pub(crate) fn authorize(
         }
     } else {
         tracing::info!("No session");
-        Err(AuthorizationError::Unauthenticated)
+        Err(AuthorizationError::NoSession)
     }
 }
 
