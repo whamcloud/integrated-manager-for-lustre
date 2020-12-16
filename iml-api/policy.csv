@@ -1,3 +1,8 @@
-p, superusers,                query_stratagem_reports
-p, filesystem_administrators, query_stratagem_reports
-p, filesystem_users         , query_stratagem_reports
+p, superusers,                query_stratagem_stratagem_reports
+p, filesystem_administrators, query_stratagem_stratagem_reports
+p, filesystem_users         , query_stratagem_stratagem_reports
+
+p, superusers,                mutation_stratagem_run_filesync
+p, superusers,                mutation_stratagem_run_cloudsync
+
+p, superusers,                mutation_filesystem_detect

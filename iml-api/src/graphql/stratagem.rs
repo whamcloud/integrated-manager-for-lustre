@@ -100,95 +100,99 @@ impl StratagemMutation {
         expression: String,
         action: String,
     ) -> juniper::FieldResult<Command> {
-        let uuid = Uuid::new_v4().to_hyphenated().to_string();
+        if authorize(&context.enforcer, &context.session, "mutation_run_filesync")? {
+            let uuid = Uuid::new_v4().to_hyphenated().to_string();
 
-        let fs_id = fs_id_by_name(&context.pg_pool, &fsname).await?;
+            let fs_id = fs_id_by_name(&context.pg_pool, &fsname).await?;
 
-        let task = insert_task(
-            &format!("{}-filesync-filesync", uuid),
-            "created",
-            false,
-            false,
-            &["stratagem.filesync".into()],
-            serde_json::json!({
-                "remote": remote,
-                "expression": expression,
-                "action": action,
-            }),
-            fs_id,
-            &context.pg_pool,
-        )
-        .await?;
+            let task = insert_task(
+                &format!("{}-filesync-filesync", uuid),
+                "created",
+                false,
+                false,
+                &["stratagem.filesync".into()],
+                serde_json::json!({
+                    "remote": remote,
+                    "expression": expression,
+                    "action": action,
+                }),
+                fs_id,
+                &context.pg_pool,
+            )
+            .await?;
 
-        let mut jobs: Vec<SendJob<HashMap<String, serde_json::Value>>> = vec![SendJob {
-            class_name: "CreateTaskJob",
-            args: vec![("task_id".into(), serde_json::json!(task.id))]
-                .into_iter()
-                .collect(),
-        }];
+            let mut jobs: Vec<SendJob<HashMap<String, serde_json::Value>>> = vec![SendJob {
+                class_name: "CreateTaskJob",
+                args: vec![("task_id".into(), serde_json::json!(task.id))]
+                    .into_iter()
+                    .collect(),
+            }];
 
-        let job_range: Vec<_> = (0..jobs.len()).collect();
+            let job_range: Vec<_> = (0..jobs.len()).collect();
 
-        let xs = get_target_hosts_by_fsname(&fsname, &context.pg_pool).await?;
+            let xs = get_target_hosts_by_fsname(&fsname, &context.pg_pool).await?;
 
-        for x in xs {
-            let path = match x.dev_path {
-                Some(x) => x,
-                None => continue,
-            };
+            for x in xs {
+                let path = match x.dev_path {
+                    Some(x) => x,
+                    None => continue,
+                };
 
-            let cfg = stratagem::StratagemConfig {
-                flist_type: "none".into(),
-                summarize_size: true,
-                device: stratagem::StratagemDevice {
-                    path,
-                    groups: vec!["filesync".into()],
-                },
-                groups: vec![stratagem::StratagemGroup {
-                    name: "filesync".into(),
-                    rules: vec![stratagem::StratagemRule {
-                        action: "LAT_SHELL_CMD_FID".into(),
-                        expression: expression.clone(),
-                        argument: "filesync".into(),
-                        counter_name: Some("filesync".into()),
+                let cfg = stratagem::StratagemConfig {
+                    flist_type: "none".into(),
+                    summarize_size: true,
+                    device: stratagem::StratagemDevice {
+                        path,
+                        groups: vec!["filesync".into()],
+                    },
+                    groups: vec![stratagem::StratagemGroup {
+                        name: "filesync".into(),
+                        rules: vec![stratagem::StratagemRule {
+                            action: "LAT_SHELL_CMD_FID".into(),
+                            expression: expression.clone(),
+                            argument: "filesync".into(),
+                            counter_name: Some("filesync".into()),
+                        }],
                     }],
-                }],
-            };
+                };
 
-            jobs.push(SendJob {
-                class_name: "ScanMdtJob",
-                args: vec![
-                    ("fqdn".into(), serde_json::to_value(&x.fqdn)?),
-                    ("uuid".into(), serde_json::to_value(&uuid)?),
-                    ("fsname".into(), serde_json::to_value(&fsname)?),
-                    ("config".into(), serde_json::to_value(cfg)?),
-                    (
-                        "depends_on_job_range".into(),
-                        serde_json::to_value(&job_range)?,
-                    ),
-                ]
-                .into_iter()
-                .collect(),
-            })
+                jobs.push(SendJob {
+                    class_name: "ScanMdtJob",
+                    args: vec![
+                        ("fqdn".into(), serde_json::to_value(&x.fqdn)?),
+                        ("uuid".into(), serde_json::to_value(&uuid)?),
+                        ("fsname".into(), serde_json::to_value(&fsname)?),
+                        ("config".into(), serde_json::to_value(cfg)?),
+                        (
+                            "depends_on_job_range".into(),
+                            serde_json::to_value(&job_range)?,
+                        ),
+                    ]
+                    .into_iter()
+                    .collect(),
+                })
+            }
+
+            let kwargs: HashMap<String, String> =
+                vec![("message".into(), "Stratagem: Filesync".into())]
+                    .into_iter()
+                    .collect();
+
+            let command_id: i32 = iml_job_scheduler_rpc::call(
+                &context.rabbit_pool.get().await?,
+                "run_jobs",
+                vec![jobs],
+                Some(kwargs),
+            )
+            .map_err(ImlApiError::ImlJobSchedulerRpcError)
+            .await?;
+
+            let command = get_command(&context.pg_pool, command_id).await?;
+
+            Ok(command)
+        } else {
+            Err(FieldError::new("Not authorized", Value::null()))
         }
-
-        let kwargs: HashMap<String, String> =
-            vec![("message".into(), "Stratagem: Filesync".into())]
-                .into_iter()
-                .collect();
-
-        let command_id: i32 = iml_job_scheduler_rpc::call(
-            &context.rabbit_pool.get().await?,
-            "run_jobs",
-            vec![jobs],
-            Some(kwargs),
-        )
-        .map_err(ImlApiError::ImlJobSchedulerRpcError)
-        .await?;
-
-        let command = get_command(&context.pg_pool, command_id).await?;
-
-        Ok(command)
     }
     async fn run_cloudsync(
         context: &Context,
@@ -197,42 +201,47 @@ impl StratagemMutation {
         expression: String,
         action: String,
     ) -> juniper::FieldResult<Command> {
-        let uuid = Uuid::new_v4().to_hyphenated().to_string();
+        if authorize(
+            &context.enforcer,
+            &context.session,
+            "mutation_run_cloudsync",
+        )? {
+            let uuid = Uuid::new_v4().to_hyphenated().to_string();
 
-        let fs_id = fs_id_by_name(&context.pg_pool, &fsname).await?;
+            let fs_id = fs_id_by_name(&context.pg_pool, &fsname).await?;
 
-        let task = insert_task(
-            &format!("{}-cloudsync-cloudsync", uuid),
-            "created",
-            false,
-            false,
-            &["stratagem.cloudsync".into()],
-            serde_json::json!({
-                "remote": remote,
-                "expression": expression,
-                "action": action,
-            }),
-            fs_id,
-            &context.pg_pool,
-        )
-        .await?;
+            let task = insert_task(
+                &format!("{}-cloudsync-cloudsync", uuid),
+                "created",
+                false,
+                false,
+                &["stratagem.cloudsync".into()],
+                serde_json::json!({
+                    "remote": remote,
+                    "expression": expression,
+                    "action": action,
+                }),
+                fs_id,
+                &context.pg_pool,
+            )
+            .await?;
 
-        let mut jobs: Vec<SendJob<HashMap<String, serde_json::Value>>> = vec![SendJob {
-            class_name: "CreateTaskJob",
-            args: vec![("task_id".into(), serde_json::json!(task.id))]
-                .into_iter()
-                .collect(),
-        }];
+            let mut jobs: Vec<SendJob<HashMap<String, serde_json::Value>>> = vec![SendJob {
+                class_name: "CreateTaskJob",
+                args: vec![("task_id".into(), serde_json::json!(task.id))]
+                    .into_iter()
+                    .collect(),
+            }];
 
-        let job_range: Vec<_> = (0..jobs.len()).collect();
+            let job_range: Vec<_> = (0..jobs.len()).collect();
 
-        let xs = get_target_hosts_by_fsname(&fsname, &context.pg_pool).await?;
+            let xs = get_target_hosts_by_fsname(&fsname, &context.pg_pool).await?;
 
-        for x in xs {
-            let path = match x.dev_path {
-                Some(x) => x,
-                None => continue,
-            };
+            for x in xs {
+                let path = match x.dev_path {
+                    Some(x) => x,
+                    None => continue,
+                };
 
             let cfg = stratagem::StratagemConfig {
                 flist_type: "none".into(),
@@ -249,43 +258,45 @@ impl StratagemMutation {
                         argument: "cloudsync".into(),
                         counter_name: Some("cloudsync".into()),
                     }],
-                }],
-            };
+                };
 
-            jobs.push(SendJob {
-                class_name: "ScanMdtJob",
-                args: vec![
-                    ("fqdn".into(), serde_json::to_value(&x.fqdn)?),
-                    ("uuid".into(), serde_json::to_value(&uuid)?),
-                    ("fsname".into(), serde_json::to_value(&fsname)?),
-                    ("config".into(), serde_json::to_value(cfg)?),
-                    (
-                        "depends_on_job_range".into(),
-                        serde_json::to_value(&job_range)?,
-                    ),
-                ]
-                .into_iter()
-                .collect(),
-            })
+                jobs.push(SendJob {
+                    class_name: "ScanMdtJob",
+                    args: vec![
+                        ("fqdn".into(), serde_json::to_value(&x.fqdn)?),
+                        ("uuid".into(), serde_json::to_value(&uuid)?),
+                        ("fsname".into(), serde_json::to_value(&fsname)?),
+                        ("config".into(), serde_json::to_value(cfg)?),
+                        (
+                            "depends_on_job_range".into(),
+                            serde_json::to_value(&job_range)?,
+                        ),
+                    ]
+                    .into_iter()
+                    .collect(),
+                })
+            }
+
+            let kwargs: HashMap<String, String> =
+                vec![("message".into(), "Stratagem: Cloudsync".into())]
+                    .into_iter()
+                    .collect();
+
+            let command_id: i32 = iml_job_scheduler_rpc::call(
+                &context.rabbit_pool.get().await?,
+                "run_jobs",
+                vec![jobs],
+                Some(kwargs),
+            )
+            .map_err(ImlApiError::ImlJobSchedulerRpcError)
+            .await?;
+
+            let command = get_command(&context.pg_pool, command_id).await?;
+
+            Ok(command)
+        } else {
+            Err(FieldError::new("Not authorized", Value::null()))
         }
-
-        let kwargs: HashMap<String, String> =
-            vec![("message".into(), "Stratagem: Cloudsync".into())]
-                .into_iter()
-                .collect();
-
-        let command_id: i32 = iml_job_scheduler_rpc::call(
-            &context.rabbit_pool.get().await?,
-            "run_jobs",
-            vec![jobs],
-            Some(kwargs),
-        )
-        .map_err(ImlApiError::ImlJobSchedulerRpcError)
-        .await?;
-
-        let command = get_command(&context.pg_pool, command_id).await?;
-
-        Ok(command)
     }
     async fn run_fast_file_scan(
         context: &Context,

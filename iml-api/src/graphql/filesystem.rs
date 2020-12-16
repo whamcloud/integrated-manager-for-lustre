@@ -4,7 +4,7 @@
 
 use crate::{
     error::ImlApiError,
-    graphql::{get_fs_target_resources, Context, TargetResource},
+    graphql::{authorize, get_fs_target_resources, Context, TargetResource},
 };
 use futures::TryStreamExt;
 use iml_postgres::sqlx::{self, Postgres, Transaction};
@@ -33,12 +33,17 @@ pub(crate) struct FilesystemMutation;
 #[juniper::graphql_object(Context = Context)]
 impl FilesystemMutation {
     async fn detect(context: &Context) -> juniper::FieldResult<bool> {
-        let mut xs = get_fs_target_resources(&context.pg_pool, None).await?;
+        if authorize(
+            &context.enforcer,
+            &context.session,
+            "mutation_filesystem_detect",
+        )? {
+            let mut xs = get_fs_target_resources(&context.pg_pool, None).await?;
 
-        // If HA is not present, we will just use the targets directly
-        if xs.is_empty() {
-            xs = sqlx::query!(
-                r#"
+            // If HA is not present, we will just use the targets directly
+            if xs.is_empty() {
+                xs = sqlx::query!(
+                    r#"
                 SELECT
                     name,
                     mount_path,
@@ -47,22 +52,22 @@ impl FilesystemMutation {
                     state
                 FROM target
                 WHERE CARDINALITY(filesystems) > 0"#
-            )
-            .fetch(&context.pg_pool)
-            .map_ok(|x| TargetResource {
-                cluster_id: 0,
-                fs_names: x.filesystems,
-                uuid: x.uuid,
-                name: x.name,
-                resource_id: "".to_string(),
-                state: x.state,
-                cluster_hosts: vec![],
-            })
-            .try_collect()
-            .await?;
-        }
+                )
+                .fetch(&context.pg_pool)
+                .map_ok(|x| TargetResource {
+                    cluster_id: 0,
+                    fs_names: x.filesystems,
+                    uuid: x.uuid,
+                    name: x.name,
+                    resource_id: "".to_string(),
+                    state: x.state,
+                    cluster_hosts: vec![],
+                })
+                .try_collect()
+                .await?;
+            }
 
-        let content_types = sqlx::query!(
+            let content_types = sqlx::query!(
             r#"
                 SELECT id, model FROM django_content_type
                 WHERE app_label = 'chroma_core'
@@ -77,134 +82,136 @@ impl FilesystemMutation {
         })
         .await?;
 
-        let fs_content_type = get_content_type(&content_types, "managedfilesystem")?;
+            let fs_content_type = get_content_type(&content_types, "managedfilesystem")?;
 
-        let mgs_content_type = get_content_type(&content_types, "managedmgs")?;
+            let mgs_content_type = get_content_type(&content_types, "managedmgs")?;
 
-        let mdt_content_type = get_content_type(&content_types, "managedmdt")?;
+            let mdt_content_type = get_content_type(&content_types, "managedmdt")?;
 
-        let ost_content_type = get_content_type(&content_types, "managedost")?;
+            let ost_content_type = get_content_type(&content_types, "managedost")?;
 
-        let fs_ticket_content_type = get_content_type(&content_types, "filesystemticket")?;
+            let fs_ticket_content_type = get_content_type(&content_types, "filesystemticket")?;
 
-        let master_ticket_content_type = get_content_type(&content_types, "masterticket")?;
+            let master_ticket_content_type = get_content_type(&content_types, "masterticket")?;
 
-        let fss: Filesystems =
-            xs.iter()
-                .filter(|x| x.state == "mounted")
-                .fold(HashMap::new(), |mut acc, x| {
-                    for f in x.fs_names.as_slice() {
-                        let mut parts = acc.entry(f.to_string()).or_insert_with(FsParts::default);
+            let fss: Filesystems =
+                xs.iter()
+                    .filter(|x| x.state == "mounted")
+                    .fold(HashMap::new(), |mut acc, x| {
+                        for f in x.fs_names.as_slice() {
+                            let mut parts =
+                                acc.entry(f.to_string()).or_insert_with(FsParts::default);
 
-                        match x.name.as_str() {
-                            "MGS" => parts.mgs = Some(x),
-                            name if name.contains("-MDT") => {
-                                parts.mdts.insert(x);
-                            }
-                            name if name.contains("-OST") => {
-                                parts.osts.insert(x);
-                            }
-                            name => {
-                                tracing::debug!("detect miss on name: {}", name);
+                            match x.name.as_str() {
+                                "MGS" => parts.mgs = Some(x),
+                                name if name.contains("-MDT") => {
+                                    parts.mdts.insert(x);
+                                }
+                                name if name.contains("-OST") => {
+                                    parts.osts.insert(x);
+                                }
+                                name => {
+                                    tracing::debug!("detect miss on name: {}", name);
+                                }
                             }
                         }
-                    }
 
-                    acc
-                });
+                        acc
+                    });
 
-        let tickets = sqlx::query!(
-            r#"
+            let tickets = sqlx::query!(
+                r#"
             SELECT cluster_id, name, active
             FROM corosync_resource
             WHERE resource_agent = 'ocf::ddn:Ticketer';
             "#
-        )
-        .fetch(&context.pg_pool)
-        .try_fold(HashMap::new(), |mut acc, x| async {
-            let xs = acc.entry(x.cluster_id).or_insert_with(HashSet::new);
+            )
+            .fetch(&context.pg_pool)
+            .try_fold(HashMap::new(), |mut acc, x| async {
+                let xs = acc.entry(x.cluster_id).or_insert_with(HashSet::new);
 
-            xs.insert((x.name, x.active));
+                xs.insert((x.name, x.active));
 
-            Ok(acc)
-        })
-        .await?;
+                Ok(acc)
+            })
+            .await?;
 
-        let mut transaction = context.pg_pool.begin().await?;
+            let mut transaction = context.pg_pool.begin().await?;
 
-        for (fs, parts) in fss {
-            let mgs = match parts.mgs {
-                Some(x) => x,
-                None => continue,
-            };
+            for (fs, parts) in fss {
+                let mgs = match parts.mgs {
+                    Some(x) => x,
+                    None => continue,
+                };
 
-            let mgs_id = upsert_managed_target(&mut transaction, mgs, mgs_content_type).await?;
+                let mgs_id = upsert_managed_target(&mut transaction, mgs, mgs_content_type).await?;
 
-            sqlx::query!(
-                r#"
+                sqlx::query!(
+                    r#"
                     INSERT INTO chroma_core_managedmgs
                     VALUES ($1, 0, 0)
                     ON CONFLICT (managedtarget_ptr_id) DO NOTHING
                 "#,
-                mgs_id
-            )
-            .execute(&mut transaction)
-            .await?;
+                    mgs_id
+                )
+                .execute(&mut transaction)
+                .await?;
 
-            if !parts.is_fs() {
-                continue;
-            }
+                if !parts.is_fs() {
+                    continue;
+                }
 
-            let fs_id =
-                upsert_managed_filesystem(&mut transaction, &fs, fs_content_type, mgs_id).await?;
+                let fs_id =
+                    upsert_managed_filesystem(&mut transaction, &fs, fs_content_type, mgs_id)
+                        .await?;
 
-            for mdt in parts.mdts {
-                let idx = get_target_idx(&mdt.name).ok_or_else(|| {
-                    FieldError::new(
-                        format!("Detect Failed, could not find index for MDT {}", &mdt.name),
-                        Value::null(),
-                    )
-                })?;
+                for mdt in parts.mdts {
+                    let idx = get_target_idx(&mdt.name).ok_or_else(|| {
+                        FieldError::new(
+                            format!("Detect Failed, could not find index for MDT {}", &mdt.name),
+                            Value::null(),
+                        )
+                    })?;
 
-                let id = upsert_managed_target(&mut transaction, mdt, mdt_content_type).await?;
+                    let id = upsert_managed_target(&mut transaction, mdt, mdt_content_type).await?;
 
-                sqlx::query!(
-                    r#"
+                    sqlx::query!(
+                        r#"
                         INSERT INTO chroma_core_managedmdt VALUES ($1, $2, $3)
                         ON CONFLICT (managedtarget_ptr_id) DO NOTHING
                     "#,
-                    id,
-                    idx,
-                    fs_id
-                )
-                .execute(&mut transaction)
-                .await?;
-            }
-
-            for ost in parts.osts {
-                let idx = get_target_idx(&ost.name).ok_or_else(|| {
-                    FieldError::new(
-                        format!("Detect Failed, could not find index for OST {}", &ost.name),
-                        Value::null(),
+                        id,
+                        idx,
+                        fs_id
                     )
-                })?;
+                    .execute(&mut transaction)
+                    .await?;
+                }
 
-                let id = upsert_managed_target(&mut transaction, ost, ost_content_type).await?;
+                for ost in parts.osts {
+                    let idx = get_target_idx(&ost.name).ok_or_else(|| {
+                        FieldError::new(
+                            format!("Detect Failed, could not find index for OST {}", &ost.name),
+                            Value::null(),
+                        )
+                    })?;
 
-                sqlx::query!(
-                    r#"
+                    let id = upsert_managed_target(&mut transaction, ost, ost_content_type).await?;
+
+                    sqlx::query!(
+                        r#"
                         INSERT INTO chroma_core_managedost VALUES ($1, $2, $3)
                         ON CONFLICT (managedtarget_ptr_id) DO NOTHING
                     "#,
-                    id,
-                    idx,
-                    fs_id
-                )
-                .execute(&mut transaction)
-                .await?;
-            }
+                        id,
+                        idx,
+                        fs_id
+                    )
+                    .execute(&mut transaction)
+                    .await?;
+                }
 
-            sqlx::query!(
+                sqlx::query!(
                 r#"
                     UPDATE chroma_core_managedfilesystem f
                     SET mdt_next_index = (SELECT MAX(index) + 1 FROM chroma_core_managedmdt WHERE filesystem_id = $1),
@@ -215,27 +222,27 @@ impl FilesystemMutation {
             .execute(&mut transaction)
             .await?;
 
-            let tickets = tickets.get(&mgs.cluster_id);
+                let tickets = tickets.get(&mgs.cluster_id);
 
-            let tickets = match tickets {
-                Some(x) => x,
-                None => continue,
-            };
+                let tickets = match tickets {
+                    Some(x) => x,
+                    None => continue,
+                };
 
-            let fs_ticket = tickets.iter().find(|(x, _)| &fs == x);
+                let fs_ticket = tickets.iter().find(|(x, _)| &fs == x);
 
-            if let Some((_, active)) = fs_ticket {
-                let id = upsert_ticket(
-                    &mut transaction,
-                    &fs,
-                    *active,
-                    mgs.cluster_id,
-                    fs_ticket_content_type,
-                )
-                .await?;
+                if let Some((_, active)) = fs_ticket {
+                    let id = upsert_ticket(
+                        &mut transaction,
+                        &fs,
+                        *active,
+                        mgs.cluster_id,
+                        fs_ticket_content_type,
+                    )
+                    .await?;
 
-                sqlx::query!(
-                    r#"
+                    sqlx::query!(
+                        r#"
                         INSERT INTO chroma_core_filesystemticket
                             (ticket_ptr_id, filesystem_id)
                             VALUES
@@ -244,27 +251,27 @@ impl FilesystemMutation {
                             DO UPDATE SET
                             filesystem_id = EXCLUDED.filesystem_id
                     "#,
-                    id,
-                    fs_id
-                )
-                .execute(&mut transaction)
-                .await?;
-            }
+                        id,
+                        fs_id
+                    )
+                    .execute(&mut transaction)
+                    .await?;
+                }
 
-            let lustre_ticket = tickets.iter().find(|(x, _)| &"lustre" == x);
+                let lustre_ticket = tickets.iter().find(|(x, _)| &"lustre" == x);
 
-            if let Some((_, active)) = lustre_ticket {
-                let id = upsert_ticket(
-                    &mut transaction,
-                    "lustre",
-                    *active,
-                    mgs.cluster_id,
-                    master_ticket_content_type,
-                )
-                .await?;
+                if let Some((_, active)) = lustre_ticket {
+                    let id = upsert_ticket(
+                        &mut transaction,
+                        "lustre",
+                        *active,
+                        mgs.cluster_id,
+                        master_ticket_content_type,
+                    )
+                    .await?;
 
-                sqlx::query!(
-                    r#"
+                    sqlx::query!(
+                        r#"
                     INSERT INTO chroma_core_masterticket
                     (ticket_ptr_id, mgs_id) 
                     VALUES
@@ -273,17 +280,20 @@ impl FilesystemMutation {
                     DO UPDATE SET
                     mgs_id = EXCLUDED.mgs_id
                 "#,
-                    id,
-                    mgs_id
-                )
-                .execute(&mut transaction)
-                .await?;
+                        id,
+                        mgs_id
+                    )
+                    .execute(&mut transaction)
+                    .await?;
+                }
             }
+
+            transaction.commit().await?;
+
+            Ok(true)
+        } else {
+            Err(FieldError::new("Not authorized", Value::null()))
         }
-
-        transaction.commit().await?;
-
-        Ok(true)
     }
 }
 
