@@ -18,7 +18,7 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: check
-          args: --locked --manifest-path device-scanner/Cargo.toml --exclude zed-enhancer --all
+          args: --locked --manifest-path device-scanner/Cargo.toml --all
 
   clippy:
     name: Clippy
@@ -33,7 +33,7 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: clippy
-          args: --locked --manifest-path device-scanner/Cargo.toml --exclude zed-enhancer --all -- -W warnings
+          args: --locked --manifest-path device-scanner/Cargo.toml --all -- -W warnings
 
   rustfmt:
     name: Format
@@ -64,4 +64,4 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --locked --manifest-path device-scanner/Cargo.toml --exclude zed-enhancer --all
+          args: --locked --manifest-path device-scanner/Cargo.toml --all

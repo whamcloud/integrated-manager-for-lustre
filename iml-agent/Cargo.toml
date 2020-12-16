@@ -14,7 +14,7 @@ bytes = "0.5"
 chrono = "0.4"
 combine = "=4.1.0"
 console = "0.12"
-device-types = "0.3.0"
+device-types = {path = "../device-scanner/device-types", version = "0.3.0"}
 dns-lookup = "1"
 dotenv = "0.15"
 dyn-clone = "1"

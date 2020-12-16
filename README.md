@@ -46,4 +46,5 @@ Precommit checks are run by [rusty-hook](https://github.com/swellaby/rusty-hook)
 
 ```sh
 cargo install --git https://github.com/swellaby/rusty-hook.git
+rusty-hook init # In this directory
 ```

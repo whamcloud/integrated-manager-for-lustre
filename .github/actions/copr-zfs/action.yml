@@ -1,5 +1,0 @@
-name: copr zfs
-description: build in the copr-zfs image
-runs:
-  using: "docker"
-  image: "docker://imlteam/copr-zfs"

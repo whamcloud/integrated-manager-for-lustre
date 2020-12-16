@@ -119,7 +119,6 @@ class ServerProfileValidation(models.Model):
     Each server profile has a set of ServerProfileValidation records identifying a set
     of validation attributes that must be true.
     For example a profile might have the following
-    test=> "zfs_installed == False"  description=> "ZFS must not be installed"
     test=> "distro == 'rhel'"        description=> "RHEL is the only support distribution"
     test=> "memory_gb >= 32"         description=> "32GB of memory is required"
 

@@ -9,11 +9,7 @@
 
 use crate::error::{self, Result};
 use device_types::{
-    devices::{
-        Dataset, Device, LogicalVolume, MdRaid, Mpath, Partition, Root, ScsiDevice, VolumeGroup,
-        Zpool,
-    },
-    get_vdev_paths,
+    devices::{Device, LogicalVolume, MdRaid, Mpath, Partition, Root, ScsiDevice, VolumeGroup},
     mount::Mount,
     state,
     uevent::UEvent,
@@ -238,64 +234,6 @@ fn get_mds(
         .collect()
 }
 
-fn get_pools(
-    b: &Buckets,
-    ys: &HashSet<Mount>,
-    paths: &OrdSet<DevicePath>,
-) -> Result<HashSet<Device>> {
-    b.pools
-        .iter()
-        .filter(|&x| {
-            let vdev_paths = get_vdev_paths(&x.vdev.clone());
-
-            !paths.clone().intersection(vdev_paths.into()).is_empty()
-        })
-        .map(|x| {
-            let mount = find_mount(&ordset![x.name.clone().into()], ys);
-
-            Ok(Device::Zpool(Zpool {
-                guid: x.guid,
-                health: x.health.clone(),
-                name: x.name.clone(),
-                mount: mount.map(ToOwned::to_owned),
-                props: x.props.clone(),
-                state: x.state.clone(),
-                vdev: x.vdev.clone(),
-                size: x.size.parse()?,
-                children: ordset![],
-            }))
-        })
-        .collect()
-}
-
-fn get_datasets(b: &Buckets, ys: &HashSet<Mount>, guid: u64) -> Result<HashSet<Device>> {
-    let ds = b
-        .pools
-        .iter()
-        .find(|p| p.guid == guid)
-        .map(|p| &p.datasets)
-        .ok_or_else(|| {
-            error::none_error(format!(
-                "Could not find pool with guid: {} in buckets",
-                guid
-            ))
-        })?;
-
-    ds.iter()
-        .map(|x| {
-            let mount = find_mount(&ordset![x.name.clone().into()], ys);
-
-            Ok(Device::Dataset(Dataset {
-                name: x.name.clone(),
-                mount: mount.map(ToOwned::to_owned),
-                guid: x.guid.parse::<u64>()?,
-                kind: x.kind.clone(),
-                props: x.props.clone(),
-            }))
-        })
-        .collect()
-}
-
 fn build_device_graph<'a>(ptr: &mut Device, b: &Buckets<'a>, ys: &HashSet<Mount>) -> Result<()> {
     match ptr {
         Device::Root(r) => {
@@ -322,9 +260,7 @@ fn build_device_graph<'a>(ptr: &mut Device, b: &Buckets<'a>, ys: &HashSet<Mount>
 
             let mds = get_mds(&b, &ys, &paths)?;
 
-            let pools = get_pools(&b, &ys, &paths)?;
-
-            for mut x in HashSet::unions(vec![vs, ps, mds, pools]) {
+            for mut x in HashSet::unions(vec![vs, ps, mds]) {
                 build_device_graph(&mut x, b, ys)?;
 
                 children.insert(x);
@@ -355,9 +291,7 @@ fn build_device_graph<'a>(ptr: &mut Device, b: &Buckets<'a>, ys: &HashSet<Mount>
 
             let mds = get_mds(&b, &ys, &paths)?;
 
-            let pools = get_pools(&b, &ys, &paths)?;
-
-            for mut x in HashSet::unions(vec![xs, ms, vs, mds, pools]) {
+            for mut x in HashSet::unions(vec![xs, ms, vs, mds]) {
                 build_device_graph(&mut x, b, ys)?;
 
                 children.insert(x);
@@ -380,14 +314,11 @@ fn build_device_graph<'a>(ptr: &mut Device, b: &Buckets<'a>, ys: &HashSet<Mount>
             major,
             minor,
             children,
-            paths,
             ..
         }) => {
             let ps = get_partitions(&b, &ys, &major, &minor)?;
 
-            let pools = get_pools(&b, &ys, &paths)?;
-
-            for mut x in HashSet::unions(vec![ps, pools]) {
+            for mut x in ps {
                 build_device_graph(&mut x, b, ys)?;
 
                 children.insert(x);
@@ -408,9 +339,7 @@ fn build_device_graph<'a>(ptr: &mut Device, b: &Buckets<'a>, ys: &HashSet<Mount>
 
             let mds = get_mds(&b, &ys, &paths)?;
 
-            let pools = get_pools(&b, &ys, &paths)?;
-
-            for mut x in HashSet::unions(vec![vs, ps, mds, pools]) {
+            for mut x in HashSet::unions(vec![vs, ps, mds]) {
                 build_device_graph(&mut x, b, ys)?;
 
                 children.insert(x);
@@ -418,18 +347,6 @@ fn build_device_graph<'a>(ptr: &mut Device, b: &Buckets<'a>, ys: &HashSet<Mount>
 
             Ok(())
         }
-        Device::Zpool(Zpool { guid, children, .. }) => {
-            let ds = get_datasets(&b, &ys, *guid)?;
-
-            for mut x in ds {
-                build_device_graph(&mut x, b, ys)?;
-
-                children.insert(x);
-            }
-
-            Ok(())
-        }
-        Device::Dataset { .. } => Ok(()),
     }
 }
 
@@ -439,21 +356,19 @@ struct Buckets<'a> {
     mds: Vector<&'a UEvent>,
     mpaths: Vector<&'a UEvent>,
     partitions: Vector<&'a UEvent>,
-    pools: Vector<&'a libzfs_types::Pool>,
     rest: Vector<&'a UEvent>,
 }
 
-fn bucket_devices<'a>(xs: &Vector<&'a UEvent>, ys: &'a state::ZedEvents) -> Buckets<'a> {
+fn bucket_devices<'a>(xs: &Vector<&'a UEvent>) -> Buckets<'a> {
     let buckets = Buckets {
         dms: vector![],
         mds: vector![],
         mpaths: vector![],
         partitions: vector![],
-        pools: vector![],
         rest: vector![],
     };
 
-    let mut buckets = xs.iter().fold(buckets, |mut acc, x| {
+    let buckets = xs.iter().fold(buckets, |mut acc, x| {
         if is_dm(&x) {
             acc.dms.push_back(x)
         } else if is_mdraid(&x) {
@@ -469,8 +384,6 @@ fn bucket_devices<'a>(xs: &Vector<&'a UEvent>, ys: &'a state::ZedEvents) -> Buck
         acc
     });
 
-    buckets.pools = ys.values().collect();
-
     buckets
 }
 
@@ -480,7 +393,7 @@ fn build_device_list(xs: &state::UEvents) -> Vector<&UEvent> {
 
 pub fn produce_device_graph(state: &state::State) -> Result<bytes::Bytes> {
     let dev_list = build_device_list(&state.uevents);
-    let dev_list = bucket_devices(&dev_list, &state.zed_events);
+    let dev_list = bucket_devices(&dev_list);
 
     let mut root = Device::Root(Root::default());
 

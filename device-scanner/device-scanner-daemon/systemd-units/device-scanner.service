@@ -6,7 +6,7 @@ DefaultDependencies=false
 Requires=device-scanner.socket
 BindsTo=device-scanner.socket
 After=device-scanner.socket
-OnFailure=block-device-populator.service zed-populator.service mount-populator.service
+OnFailure=block-device-populator.service mount-populator.service
 
 [Service]
 Restart=always

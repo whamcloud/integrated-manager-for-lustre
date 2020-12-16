@@ -170,14 +170,12 @@ device-scanner-srpm:
 
 	cd device-scanner; \
 	cargo build --release; \
-	cp {device-scanner-daemon,mount-emitter,zed-enhancer}/systemd-units/* \
-		{zed-enhancer,uevent-listener}/udev-rules/* \
+	cp {device-scanner-daemon,mount-emitter}/systemd-units/* \
+		uevent-listener/udev-rules/* \
 		${TARGET}/release/device-scanner-daemon \
-		${TARGET}/release/{history_event,pool_create,pool_destroy,pool_export,pool_import,vdev_add}-scanner \
 		${TARGET}/release/mount-emitter \
 		${TARGET}/release/swap-emitter \
 		${TARGET}/release/uevent-listener \
-		${TARGET}/release/zed-enhancer \
 		${TMPDIR}/release/iml-device-scanner
 
 

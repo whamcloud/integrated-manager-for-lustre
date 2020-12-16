@@ -103,41 +103,6 @@ class EMCPower(resources.LogicalDrive):
     uuid = attributes.String()
 
 
-class ZfsPool(resources.LogicalDrive):
-    class Meta:
-        identifier = GlobalId("uuid")
-
-    uuid = attributes.String()
-    name = attributes.String()
-    """ This has to be a class method today because at the point we call it we only has the type not the object"""
-
-    @classmethod
-    def device_type(cls):
-        return "zfs"
-
-    def get_label(self):
-        return self.name
-
-
-class ZfsDataset(ZfsPool):
-    class Meta:
-        identifier = GlobalId("uuid")
-
-    usable_for_lustre = False
-
-
-class ZfsVol(ZfsPool):
-    class Meta:
-        identifier = GlobalId("uuid")
-
-
-class ZfsPartition(Partition):
-    class Meta:
-        identifier = GlobalId("container", "number")
-
-    usable_for_lustre = False
-
-
 class LocalMount(resources.LogicalDriveOccupier):
     """Used for marking devices which are already in use, so that
     we don't offer them for use as Lustre targets."""
@@ -228,7 +193,7 @@ class Linux(Plugin):
                 else:
                     return None
 
-            for expected_item in ["vgs", "lvs", "zfspools", "zfsdatasets", "devs", "local_fs", "mds", "mpath"]:
+            for expected_item in ["vgs", "lvs", "devs", "local_fs", "mds", "mpath"]:
                 if expected_item not in devices.keys():
                     devices[expected_item] = {}
 
@@ -266,20 +231,6 @@ class Linux(Plugin):
 
             for uuid, md_info in devices["mds"].items():
                 special_block_devices.add(md_info["block_device"])
-
-            def add_zfs(zfs_info):
-                # add attributes not specific to zfs instances
-                bdid = zfs_info["block_device"]
-                special_block_devices.add(bdid)
-                dev = devices["devs"][bdid]
-                dev["major_minor"] = bdid
-                dev["parent"] = None
-                dev["serial_80"] = None
-                dev["serial_83"] = None
-                dev["filesystem_type"] = "zfs" if bdid.startswith("zfsset") else None
-
-            for uuid, zfs_info in merge(devices["zfspools"], devices["zfsdatasets"]).items():
-                add_zfs(zfs_info)
 
             def preferred_serial(bdev):
                 for attr in SERIAL_PREFERENCE:
@@ -428,20 +379,6 @@ class Linux(Plugin):
 
             self._map_drives_to_device_to_node(devices, host_id, "mds", MdRaid, [], reported_device_node_paths)
 
-            initiate_device_poll = (
-                self._map_drives_to_device_to_node(
-                    devices, host_id, "zfspools", ZfsPool, ["name"], reported_device_node_paths
-                )
-                or initiate_device_poll
-            )
-
-            initiate_device_poll = (
-                self._map_drives_to_device_to_node(
-                    devices, host_id, "zfsdatasets", ZfsDataset, ["name"], reported_device_node_paths
-                )
-                or initiate_device_poll
-            )
-
             for bdev, (mntpnt, fstype) in devices["local_fs"].items():
                 if fstype != "lustre":
                     bdev_resource = self.major_minor_to_node_resource[bdev]
@@ -458,10 +395,7 @@ class Linux(Plugin):
                     raise RuntimeError("Parent %s of %s has no logical drive" % (parent_resource, bdev))
 
                 partition, created = self.update_or_create(
-                    # ZfsPartitions should be differentiated as they are not usable for lustre
-                    ZfsPartition
-                    if bdev.get("is_zfs_reserved") or bdev["filesystem_type"] == "zfs_member"
-                    else Partition,
+                    Partition,
                     parents=[parent_resource],
                     container=parent_resource.logical_drive,
                     number=bdev["partition_number"],
@@ -474,8 +408,6 @@ class Linux(Plugin):
 
             # Finally remove any of the partitions that are no longer present.
             initiate_device_poll |= self.remove_missing_devices(host_id, Partition, partition_identifiers)
-
-            initiate_device_poll |= self.remove_missing_devices(host_id, ZfsPartition, partition_identifiers)
 
             initiate_device_poll |= self.remove_missing_devicenodes(reported_device_node_paths)
 

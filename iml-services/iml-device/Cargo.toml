@@ -5,7 +5,7 @@ name = "iml-device"
 version = "0.4.0"
 
 [dependencies]
-device-types = "0.3.0"
+device-types = {path = "../../device-scanner/device-types", version = "0.3"}
 futures = "0.3"
 im = {version = "15.0", features = ["serde"]}
 iml-change = {path = "../../iml-change", version = "0.1"}

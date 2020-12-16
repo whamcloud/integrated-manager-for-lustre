@@ -127,32 +127,6 @@ pub struct LogicalVolume {
 #[derive(
     Debug, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize, Clone,
 )]
-pub struct Zpool {
-    pub guid: u64,
-    pub name: String,
-    pub health: String,
-    pub state: String,
-    pub size: u64,
-    pub vdev: libzfs_types::VDev,
-    pub props: Vec<libzfs_types::ZProp>,
-    pub children: Children,
-    pub mount: Option<mount::Mount>,
-}
-
-#[derive(
-    Debug, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize, Clone,
-)]
-pub struct Dataset {
-    pub guid: u64,
-    pub name: String,
-    pub kind: String,
-    pub props: Vec<libzfs_types::ZProp>,
-    pub mount: Option<mount::Mount>,
-}
-
-#[derive(
-    Debug, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize, Clone,
-)]
 pub enum Device {
     Root(Root),
     ScsiDevice(ScsiDevice),
@@ -161,8 +135,6 @@ pub enum Device {
     Mpath(Mpath),
     VolumeGroup(VolumeGroup),
     LogicalVolume(LogicalVolume),
-    Zpool(Zpool),
-    Dataset(Dataset),
 }
 
 #[derive(Debug, serde::Serialize, Eq, PartialEq, Ord, PartialOrd, Clone, Hash)]
@@ -224,17 +196,6 @@ impl Device {
                     .iter()
                     .find_map(|c| c.find_device_by_devpath(dev_path))
             }
-            Self::Zpool(x) => x
-                .children
-                .iter()
-                .find_map(|c| c.find_device_by_devpath(dev_path)),
-            Self::Dataset(x) => {
-                if x.name == dev_path.0.to_string_lossy() {
-                    Some(self)
-                } else {
-                    None
-                }
-            }
         }
     }
     pub fn get_fs_uuid(&self) -> Option<&str> {
@@ -246,12 +207,6 @@ impl Device {
             Self::Mpath(x) => x.fs_uuid.as_deref(),
             Self::VolumeGroup(_) => None,
             Self::LogicalVolume(x) => x.fs_uuid.as_deref(),
-            Self::Zpool(_) => None,
-            Self::Dataset(x) => {
-                let guid = x.props.iter().find(|x| x.name == "guid")?;
-
-                Some(&guid.value)
-            }
         }
     }
     pub fn find_device_by_id(&self, id: &DeviceId) -> Option<&Device> {
@@ -299,20 +254,6 @@ impl Device {
 
                 x.children.iter().find_map(|c| c.find_device_by_id(id))
             }
-            Self::Zpool(x) => {
-                if self.get_id().as_ref()? == id {
-                    return Some(self);
-                }
-
-                x.children.iter().find_map(|c| c.find_device_by_id(id))
-            }
-            Self::Dataset(_) => {
-                if self.get_id().as_ref()? == id {
-                    Some(self)
-                } else {
-                    None
-                }
-            }
         }
     }
     pub fn get_id(&self) -> Option<DeviceId> {
@@ -328,8 +269,6 @@ impl Device {
             Self::Mpath(x) => Some(DeviceId(format!("mpath_{}", x.serial.as_ref()?))),
             Self::VolumeGroup(x) => Some(DeviceId(format!("vg_{}", x.uuid))),
             Self::LogicalVolume(x) => Some(DeviceId(format!("lv_{}", x.uuid))),
-            Self::Zpool(x) => Some(DeviceId(format!("zpool_{}", x.guid))),
-            Self::Dataset(x) => Some(DeviceId(format!("dataset_{}", x.guid))),
         }
     }
     pub fn children(&self) -> Option<&OrdSet<Device>> {
@@ -341,8 +280,6 @@ impl Device {
             Self::Mpath(x) => Some(&x.children),
             Self::VolumeGroup(x) => Some(&x.children),
             Self::LogicalVolume(x) => Some(&x.children),
-            Self::Zpool(x) => Some(&x.children),
-            Self::Dataset(_) => None,
         }
     }
 }

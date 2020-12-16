@@ -1,3 +1,0 @@
-ACTION=="add", SUBSYSTEM=="module", ENV{DEVPATH}=="/module/zfs" TAG+="systemd", ENV{SYSTEMD_WANTS}="zed-enhancer.socket"
-
-

@@ -471,15 +471,10 @@ class ResourceManager(object):
                     record_class = self._class_index.get(logicaldrive_id)
                     ancestors.remove(logicaldrive_id)
 
-                    is_zfs = (
-                        callable(getattr(record_class, "device_type", None)) and record_class.device_type() == "zfs"
-                    )
-
                     if (
                         len(ancestors) == 1
                         and not issubclass(record_class, LogicalDriveSlice)
                         and not issubclass(self._class_index.get(ancestors[0]), LogicalDriveSlice)
-                        and not is_zfs
                     ):
                         label = self.get_label(ancestors[0])
                     else:

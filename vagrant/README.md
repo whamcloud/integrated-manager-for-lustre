@@ -99,11 +99,6 @@ The IML Team typically uses [Vagrant](https://www.vagrantup.com) and [VirtualBox
      vagrant provision --provision-with=mount-lustre-client-fs2
      ```
 
-   - ZFS backed filesystem
-     ```sh
-     vagrant provision --provision-with=mount-lustre-client-zfs
-     ```
-
 At this point you should be able to access the IML GUI on your host at https://localhost:8443
 
 From here you can decide what type of setup to run.
@@ -114,19 +109,11 @@ From here you can decide what type of setup to run.
   vagrant provision --provision-with=install-ldiskfs-no-iml,configure-lustre-network,create-ldiskfs-fs,create-ldiskfs-fs2,mount-ldiskfs-fs,mount-ldiskfs-fs2
   ```
 
-- Monitored ZFS:
-
-  ```sh
-  vagrant provision --provision-with=install-zfs-no-iml,configure-lustre-network,create-pools,zfs-params,create-zfs-fs,mount-zfs-fs
-  ```
-
 - Managed Mode:
 
   1. ```sh
      vagrant provision --provision-with=deploy-managed-hosts adm
      ```
-
-  1. <https://whamcloud.github.io/Online-Help/docs/Contributor_Docs/cd_Managed_ZFS.html>
 
 - Monitored Ldiskfs with LVM Metadata:
 

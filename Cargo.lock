@@ -822,11 +822,8 @@ dependencies = [
 [[package]]
 name = "device-types"
 version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d6e34bac42a9bc7413aea842316cce9a11070b879a952b7671f5865899b2bfb3"
 dependencies = [
  "im",
- "libzfs-types",
  "serde",
  "tracing",
 ]
@@ -2551,16 +2548,6 @@ dependencies = [
  "cc",
  "libc",
  "pkg-config",
-]
-
-[[package]]
-name = "libzfs-types"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fa0441021d5db733034dcc4b5b4e3e73e01dec48ddca03fd73cff20689a2637c"
-dependencies = [
- "serde",
- "serde_derive",
 ]
 
 [[package]]

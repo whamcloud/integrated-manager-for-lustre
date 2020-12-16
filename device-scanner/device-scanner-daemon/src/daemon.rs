@@ -4,7 +4,7 @@
 
 use crate::{
     error,
-    reducers::{mount::update_mount, udev::update_udev, zed::update_zed_events},
+    reducers::{mount::update_mount, udev::update_udev},
     state,
 };
 use device_types::{state::State, Command};
@@ -61,13 +61,11 @@ pub async fn reader(
     mut listener: UnixListener,
     tx: UnboundedSender<WriterCmd>,
 ) -> Result<(), error::Error> {
-    let mut listener = listener
-        .incoming()
-        .inspect_ok(|_| tracing::debug!("Client connected"));
-
     let mut state = State::new();
 
     while let Some(sock) = listener.try_next().await? {
+        tracing::debug!("Client connected");
+
         let (x, sock) = FramedRead::new(sock, LinesCodec::new()).into_future().await;
 
         let mut sock = sock.into_inner();
@@ -107,11 +105,6 @@ pub async fn reader(
                     sock.shutdown(std::net::Shutdown::Both)?;
 
                     state.local_mounts = update_mount(state.local_mounts, x);
-                }
-                Command::PoolCommand(x) => {
-                    sock.shutdown(std::net::Shutdown::Both)?;
-
-                    state.zed_events = update_zed_events(state.zed_events, x)?
                 }
             };
 

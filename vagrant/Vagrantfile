@@ -315,11 +315,7 @@ Vagrant.configure('2') do |config|
                        run: 'never',
                        path: './scripts/install_iml_local_agent.sh'
 
-      install_lustre_zfs mds
-
       install_lustre_ldiskfs mds
-
-      install_zfs_no_iml mds
 
       install_ldiskfs_no_iml mds
 
@@ -332,45 +328,6 @@ Vagrant.configure('2') do |config|
       wait_for_ntp mds
 
       if i == 1
-        mds.vm.provision 'create-pools',
-                         type: 'shell',
-                         run: 'never',
-                         inline: <<-SHELL
-                           genhostid
-                           zpool create mgt -o multihost=on /dev/mapper/mpatha
-                           zpool create mdt0 -o multihost=on /dev/mapper/mpathb
-                         SHELL
-
-        mds.vm.provision 'import-pools',
-                         type: 'shell',
-                         run: 'never',
-                         inline: <<-SHELL
-                           zpool import mgt
-                           zpool import mdt0
-                         SHELL
-
-        mds.vm.provision 'zfs-params',
-                         type: 'shell',
-                         run: 'never',
-                         path: './scripts/zfs_params.sh'
-
-        mds.vm.provision 'create-zfs-fs',
-                         type: 'shell',
-                         run: 'never',
-                         inline: <<-SHELL
-                           mkfs.lustre --servicenode 10.73.20.11@tcp:10.73.20.12@tcp --mgs --backfstype=zfs mgt/mgt
-                           mkfs.lustre --reformat --failover 10.73.20.12@tcp --mdt --backfstype=zfs --fsname=zfsmo --index=0 --mgsnode=10.73.20.11@tcp:10.73.20.12@tcp mdt0/mdt0
-                         SHELL
-
-        mds.vm.provision 'mount-zfs-fs',
-                         type: 'shell',
-                         run: 'never',
-                         inline: <<-SHELL
-                           mkdir -p /lustre/zfsmo/{mgs,mdt0}
-                           mount -t lustre mgt/mgt /lustre/zfsmo/mgs
-                           mount -t lustre mdt0/mdt0 /lustre/zfsmo/mdt0
-                         SHELL
-
         mds.vm.provision 'create-ldiskfs-fs',
                          type: 'shell',
                          run: 'never',
@@ -410,40 +367,6 @@ Vagrant.configure('2') do |config|
                          path: 'scripts/create_ldiskfs_lvm_mds_ha_setup.sh',
                          args: [ VBOX_USER, VBOX_PASSWD, VBOX_SSHKEY ]
       else
-        mds.vm.provision 'create-pools',
-                         type: 'shell',
-                         run: 'never',
-                         inline: <<-SHELL
-                           genhostid
-                           zpool create mdt1 -o multihost=on /dev/mapper/mpathc
-                         SHELL
-
-        mds.vm.provision 'import-pools',
-                         type: 'shell',
-                         run: 'never',
-                         inline: <<-SHELL
-                           zpool import mdt1
-                         SHELL
-
-        mds.vm.provision 'zfs-params',
-                         type: 'shell',
-                         run: 'never',
-                         path: './scripts/zfs_params.sh'
-
-        mds.vm.provision 'create-zfs-fs',
-                         type: 'shell',
-                         run: 'never',
-                         inline: <<-SHELL
-                           mkfs.lustre --failover 10.73.20.11@tcp --mdt --backfstype=zfs --fsname=zfsmo --index=1 --mgsnode=10.73.20.11@tcp:10.73.20.12@tcp mdt1/mdt1
-                         SHELL
-
-        mds.vm.provision 'mount-zfs-fs',
-                         type: 'shell',
-                         run: 'never',
-                         inline: <<-SHELL
-                           mkdir -p /lustre/zfsmo/mdt1
-                           mount -t lustre mdt1/mdt1 /lustre/zfsmo/mdt1
-                         SHELL
 
         mds.vm.provision 'create-ldiskfs-fs',
                          type: 'shell',
@@ -556,13 +479,9 @@ Vagrant.configure('2') do |config|
             run: 'never',
             path: './scripts/install_iml_local_agent.sh'
 
-      install_lustre_zfs oss
-
       install_lustre_ldiskfs oss
 
       install_ldiskfs_no_iml oss
-
-      install_zfs_no_iml oss
 
       configure_lustre_network oss
 
@@ -573,76 +492,6 @@ Vagrant.configure('2') do |config|
       wait_for_ntp oss
 
       if i == 1
-        oss.vm.provision 'create-pools',
-                         type: 'shell',
-                         run: 'never',
-                         inline: <<-SHELL
-                           genhostid
-                           zpool create ost0 -o multihost=on /dev/mapper/mpatha
-                           zpool create ost1 -o multihost=on /dev/mapper/mpathb
-                           zpool create ost2 -o multihost=on /dev/mapper/mpathc
-                           zpool create ost3 -o multihost=on /dev/mapper/mpathd
-                           zpool create ost4 -o multihost=on /dev/mapper/mpathe
-                           zpool create ost5 -o multihost=on /dev/mapper/mpathf
-                           zpool create ost6 -o multihost=on /dev/mapper/mpathg
-                           zpool create ost7 -o multihost=on /dev/mapper/mpathh
-                           zpool create ost8 -o multihost=on /dev/mapper/mpathi
-                           zpool create ost9 -o multihost=on /dev/mapper/mpathj
-                         SHELL
-
-        oss.vm.provision 'import-pools',
-                         type: 'shell',
-                         run: 'never',
-                         inline: <<-SHELL
-                           zpool import ost0
-                           zpool import ost1
-                           zpool import ost2
-                           zpool import ost3
-                           zpool import ost4
-                           zpool import ost5
-                           zpool import ost6
-                           zpool import ost7
-                           zpool import ost8
-                           zpool import ost9
-                         SHELL
-
-        oss.vm.provision 'zfs-params',
-                         type: 'shell',
-                         run: 'never',
-                         path: './scripts/zfs_params.sh'
-
-        oss.vm.provision 'create-zfs-fs',
-                         type: 'shell',
-                         run: 'never',
-                         inline: <<-SHELL
-                              mkfs.lustre --failover 10.73.20.22@tcp --ost --backfstype=zfs --fsname=zfsmo --index=0 --mgsnode=10.73.20.11@tcp:10.73.20.12@tcp ost0/ost0
-                              mkfs.lustre --failover 10.73.20.22@tcp --ost --backfstype=zfs --fsname=zfsmo --index=1 --mgsnode=10.73.20.11@tcp:10.73.20.12@tcp ost1/ost1
-                              mkfs.lustre --failover 10.73.20.22@tcp --ost --backfstype=zfs --fsname=zfsmo --index=2 --mgsnode=10.73.20.11@tcp:10.73.20.12@tcp ost2/ost2
-                              mkfs.lustre --failover 10.73.20.22@tcp --ost --backfstype=zfs --fsname=zfsmo --index=3 --mgsnode=10.73.20.11@tcp:10.73.20.12@tcp ost3/ost3
-                              mkfs.lustre --failover 10.73.20.22@tcp --ost --backfstype=zfs --fsname=zfsmo --index=4 --mgsnode=10.73.20.11@tcp:10.73.20.12@tcp ost4/ost4
-                              mkfs.lustre --failover 10.73.20.22@tcp --ost --backfstype=zfs --fsname=zfsmo --index=5 --mgsnode=10.73.20.11@tcp:10.73.20.12@tcp ost5/ost5
-                              mkfs.lustre --failover 10.73.20.22@tcp --ost --backfstype=zfs --fsname=zfsmo --index=6 --mgsnode=10.73.20.11@tcp:10.73.20.12@tcp ost6/ost6
-                              mkfs.lustre --failover 10.73.20.22@tcp --ost --backfstype=zfs --fsname=zfsmo --index=7 --mgsnode=10.73.20.11@tcp:10.73.20.12@tcp ost7/ost7
-                              mkfs.lustre --failover 10.73.20.22@tcp --ost --backfstype=zfs --fsname=zfsmo --index=8 --mgsnode=10.73.20.11@tcp:10.73.20.12@tcp ost8/ost8
-                              mkfs.lustre --failover 10.73.20.22@tcp --ost --backfstype=zfs --fsname=zfsmo --index=9 --mgsnode=10.73.20.11@tcp:10.73.20.12@tcp ost9/ost9
-                         SHELL
-
-         oss.vm.provision 'mount-zfs-fs',
-                         type: 'shell',
-                         run: 'never',
-                         inline: <<-SHELL
-                              mkdir -p /lustre/zfsmo/ost{0..9}
-                              mount -t lustre ost0/ost0 /lustre/zfsmo/ost0
-                              mount -t lustre ost1/ost1 /lustre/zfsmo/ost1
-                              mount -t lustre ost2/ost2 /lustre/zfsmo/ost2
-                              mount -t lustre ost3/ost3 /lustre/zfsmo/ost3
-                              mount -t lustre ost4/ost4 /lustre/zfsmo/ost4
-                              mount -t lustre ost5/ost5 /lustre/zfsmo/ost5
-                              mount -t lustre ost6/ost6 /lustre/zfsmo/ost6
-                              mount -t lustre ost7/ost7 /lustre/zfsmo/ost7
-                              mount -t lustre ost8/ost8 /lustre/zfsmo/ost8
-                              mount -t lustre ost9/ost9 /lustre/zfsmo/ost9
-                         SHELL
 
         oss.vm.provision 'create-ldiskfs-fs',
                          type: 'shell',
@@ -705,77 +554,6 @@ Vagrant.configure('2') do |config|
                          args: [ "{a..e} {k..o}", 0, VBOX_USER, VBOX_PASSWD, VBOX_SSHKEY ]
                          
       else
-        oss.vm.provision 'create-pools',
-                         type: 'shell',
-                         run: 'never',
-                         inline: <<-SHELL
-                           genhostid
-                           zpool create ost10 -o multihost=on /dev/mapper/mpathk
-                           zpool create ost11 -o multihost=on /dev/mapper/mpathl
-                           zpool create ost12 -o multihost=on /dev/mapper/mpathm
-                           zpool create ost13 -o multihost=on /dev/mapper/mpathn
-                           zpool create ost14 -o multihost=on /dev/mapper/mpatho
-                           zpool create ost15 -o multihost=on /dev/mapper/mpathp
-                           zpool create ost16 -o multihost=on /dev/mapper/mpathq
-                           zpool create ost17 -o multihost=on /dev/mapper/mpathr
-                           zpool create ost18 -o multihost=on /dev/mapper/mpaths
-                           zpool create ost19 -o multihost=on /dev/mapper/mpatht
-                         SHELL
-
-        oss.vm.provision 'import-pools',
-                         type: 'shell',
-                         run: 'never',
-                         inline: <<-SHELL
-                           zpool import ost10
-                           zpool import ost11
-                           zpool import ost12
-                           zpool import ost13
-                           zpool import ost14
-                           zpool import ost15
-                           zpool import ost16
-                           zpool import ost17
-                           zpool import ost18
-                           zpool import ost19
-                         SHELL
-
-        oss.vm.provision 'zfs-params',
-                         type: 'shell',
-                         run: 'never',
-                         path: './scripts/zfs_params.sh'
-
-        oss.vm.provision 'create-zfs-fs',
-                         type: 'shell',
-                         run: 'never',
-                         inline: <<-SHELL
-                              mkfs.lustre --failover 10.73.20.21@tcp --ost --backfstype=zfs --fsname=zfsmo --index=10 --mgsnode=10.73.20.11@tcp:10.73.20.12@tcp ost10/ost10
-                              mkfs.lustre --failover 10.73.20.21@tcp --ost --backfstype=zfs --fsname=zfsmo --index=11 --mgsnode=10.73.20.11@tcp:10.73.20.12@tcp ost11/ost11
-                              mkfs.lustre --failover 10.73.20.21@tcp --ost --backfstype=zfs --fsname=zfsmo --index=12 --mgsnode=10.73.20.11@tcp:10.73.20.12@tcp ost12/ost12
-                              mkfs.lustre --failover 10.73.20.21@tcp --ost --backfstype=zfs --fsname=zfsmo --index=13 --mgsnode=10.73.20.11@tcp:10.73.20.12@tcp ost13/ost13
-                              mkfs.lustre --failover 10.73.20.21@tcp --ost --backfstype=zfs --fsname=zfsmo --index=14 --mgsnode=10.73.20.11@tcp:10.73.20.12@tcp ost14/ost14
-                              mkfs.lustre --failover 10.73.20.21@tcp --ost --backfstype=zfs --fsname=zfsmo --index=15 --mgsnode=10.73.20.11@tcp:10.73.20.12@tcp ost15/ost15
-                              mkfs.lustre --failover 10.73.20.21@tcp --ost --backfstype=zfs --fsname=zfsmo --index=16 --mgsnode=10.73.20.11@tcp:10.73.20.12@tcp ost16/ost16
-                              mkfs.lustre --failover 10.73.20.21@tcp --ost --backfstype=zfs --fsname=zfsmo --index=17 --mgsnode=10.73.20.11@tcp:10.73.20.12@tcp ost17/ost17
-                              mkfs.lustre --failover 10.73.20.21@tcp --ost --backfstype=zfs --fsname=zfsmo --index=18 --mgsnode=10.73.20.11@tcp:10.73.20.12@tcp ost18/ost18
-                              mkfs.lustre --failover 10.73.20.21@tcp --ost --backfstype=zfs --fsname=zfsmo --index=19 --mgsnode=10.73.20.11@tcp:10.73.20.12@tcp ost19/ost19
-                         SHELL
-
-        oss.vm.provision 'mount-zfs-fs',
-                         type: 'shell',
-                         run: 'never',
-                         inline: <<-SHELL
-                              mkdir -p /lustre/zfsmo/ost{10..19}
-                              mount -t lustre ost10/ost10 /lustre/zfsmo/ost10
-                              mount -t lustre ost11/ost11 /lustre/zfsmo/ost11
-                              mount -t lustre ost12/ost12 /lustre/zfsmo/ost12
-                              mount -t lustre ost13/ost13 /lustre/zfsmo/ost13
-                              mount -t lustre ost14/ost14 /lustre/zfsmo/ost14
-                              mount -t lustre ost15/ost15 /lustre/zfsmo/ost15
-                              mount -t lustre ost16/ost16 /lustre/zfsmo/ost16
-                              mount -t lustre ost17/ost17 /lustre/zfsmo/ost17
-                              mount -t lustre ost18/ost18 /lustre/zfsmo/ost18
-                              mount -t lustre ost19/ost19 /lustre/zfsmo/ost19
-                         SHELL
-
         oss.vm.provision 'create-ldiskfs-fs',
                          type: 'shell',
                          run: 'never',
@@ -901,13 +679,6 @@ Vagrant.configure('2') do |config|
                       run: 'never',
                       path: './scripts/mount_lustre_client.sh',
                       args: 'fs2'
-
-      c.vm.provision 'mount-lustre-client-zfs',
-                      type: 'shell',
-                      run: 'never',
-                      path: './scripts/mount_lustre_client.sh',
-                      args: 'zfsmo'
-
     end
   end
 end
@@ -1024,14 +795,6 @@ def configure_lustre_network(config)
                       path: './scripts/configure_lustre_network.sh'
 end
 
-def install_lustre_zfs(config)
-  config.vm.provision 'install-lustre-zfs', type: 'shell', run: 'never', inline: <<-SHELL
-    yum clean all
-    yum install -y --nogpgcheck lustre-zfs
-    genhostid
-  SHELL
-end
-
 def install_lustre_ldiskfs(config)
   config.vm.provision 'install-lustre-ldiskfs',
                       type: 'shell',
@@ -1045,15 +808,6 @@ def install_ldiskfs_no_iml(config)
                       run: 'never',
                       reboot: true,
                       path: './scripts/install_ldiskfs_no_iml.sh',
-                      args: "#{LUSTRE}"
-end
-
-def install_zfs_no_iml(config)
-  config.vm.provision 'install-zfs-no-iml',
-                      type: 'shell',
-                      run: 'never',
-                      reboot: true,
-                      path: './scripts/install_zfs_no_iml.sh',
                       args: "#{LUSTRE}"
 end
 

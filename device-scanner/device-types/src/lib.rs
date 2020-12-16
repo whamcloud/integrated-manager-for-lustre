@@ -10,7 +10,6 @@ pub mod uevent;
 
 use std::{
     cmp::Ordering,
-    collections::BTreeSet,
     hash::{Hash, Hasher},
     path::{Path, PathBuf},
 };
@@ -44,50 +43,6 @@ fn find_sort_slot(DevicePath(p): &DevicePath) -> usize {
     .unwrap();
 
     *o
-}
-
-pub fn get_vdev_paths(vdev: &libzfs_types::VDev) -> BTreeSet<DevicePath> {
-    match vdev {
-        libzfs_types::VDev::Disk { dev_id, path, .. } => {
-            let p = dev_id
-                .as_ref()
-                .map(|x| format!("/dev/disk/by-id/{}", x))
-                .map(std::convert::Into::into)
-                .or_else(|| {
-                    tracing::warn!(
-                        "VDev::Disk.dev_id not found, using VDev::Disk.path {:?}",
-                        path
-                    );
-
-                    Some(path.clone())
-                })
-                .map(DevicePath);
-
-            let mut b = BTreeSet::new();
-
-            if let Some(x) = p {
-                b.insert(x);
-            }
-
-            b
-        }
-        libzfs_types::VDev::File { .. } => BTreeSet::new(),
-        libzfs_types::VDev::Mirror { children, .. }
-        | libzfs_types::VDev::RaidZ { children, .. }
-        | libzfs_types::VDev::Replacing { children, .. } => {
-            children.iter().flat_map(get_vdev_paths).collect()
-        }
-        libzfs_types::VDev::Root {
-            children,
-            spares,
-            cache,
-            ..
-        } => vec![children, spares, cache]
-            .into_iter()
-            .flatten()
-            .flat_map(get_vdev_paths)
-            .collect(),
-    }
 }
 
 impl Ord for DevicePath {
@@ -136,12 +91,9 @@ pub mod state {
 
     pub type UEvents = HashMap<PathBuf, uevent::UEvent>;
 
-    pub type ZedEvents = HashMap<u64, libzfs_types::Pool>;
-
     #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
     pub struct State {
         pub uevents: UEvents,
-        pub zed_events: ZedEvents,
         pub local_mounts: HashSet<mount::Mount>,
     }
 
@@ -149,7 +101,6 @@ pub mod state {
         pub fn new() -> Self {
             State {
                 uevents: HashMap::new(),
-                zed_events: HashMap::new(),
                 local_mounts: HashSet::new(),
             }
         }
@@ -212,83 +163,10 @@ pub mod mount {
     }
 }
 
-pub mod zed {
-
-    #[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
-    pub enum PoolCommand {
-        AddPools(Vec<libzfs_types::Pool>),
-        AddPool(libzfs_types::Pool),
-        UpdatePool(libzfs_types::Pool),
-        RemovePool(zpool::Guid),
-        AddDataset(zpool::Guid, libzfs_types::Dataset),
-        RemoveDataset(zpool::Guid, zfs::Name),
-        SetZpoolProp(zpool::Guid, prop::Key, prop::Value),
-        SetZfsProp(zpool::Guid, zfs::Name, prop::Key, prop::Value),
-    }
-
-    pub mod zpool {
-        #[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
-        pub struct Name(pub String);
-
-        #[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
-        pub struct Guid(pub String);
-
-        impl From<u64> for Guid {
-            fn from(x: u64) -> Self {
-                Guid(format!("{:#018X}", x))
-            }
-        }
-
-        impl From<Guid> for Result<u64, std::num::ParseIntError> {
-            fn from(Guid(x): Guid) -> Self {
-                let without_prefix = x.trim_start_matches("0x");
-                u64::from_str_radix(without_prefix, 16)
-            }
-        }
-
-        #[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
-        pub struct State(pub String);
-
-        impl From<State> for String {
-            fn from(State(x): State) -> Self {
-                x
-            }
-        }
-    }
-
-    pub mod zfs {
-        #[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
-        pub struct Name(pub String);
-    }
-
-    pub mod prop {
-        #[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
-        pub struct Key(pub String);
-
-        #[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
-        pub struct Value(pub String);
-    }
-
-    #[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
-    pub enum ZedCommand {
-        Init,
-        CreateZpool(zpool::Name, zpool::Guid, zpool::State),
-        ImportZpool(zpool::Name, zpool::Guid, zpool::State),
-        ExportZpool(zpool::Guid, zpool::State),
-        DestroyZpool(zpool::Guid),
-        CreateZfs(zpool::Guid, zfs::Name),
-        DestroyZfs(zpool::Guid, zfs::Name),
-        SetZpoolProp(zpool::Guid, prop::Key, prop::Value),
-        SetZfsProp(zpool::Guid, zfs::Name, prop::Key, prop::Value),
-        AddVdev(zpool::Name, zpool::Guid),
-    }
-}
-
 #[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum Command {
     Stream,
     GetMounts,
-    PoolCommand(zed::PoolCommand),
     UdevCommand(udev::UdevCommand),
     MountCommand(mount::MountCommand),
 }

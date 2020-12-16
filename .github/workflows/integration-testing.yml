@@ -147,7 +147,7 @@ jobs:
         uses: actions/checkout@v1
 
       - name: Build rpm
-        uses: ./.github/actions/copr-zfs
+        uses: ./.github/actions/copr-rust
         env:
           SPEC: device-scanner/iml-device-scanner.spec
           LOCAL_ONLY: true

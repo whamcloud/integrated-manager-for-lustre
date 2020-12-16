@@ -532,27 +532,6 @@ async fn create_monitored_ldiskfs(config: &Config) -> Result<(), TestError> {
     Ok(())
 }
 
-async fn create_monitored_zfs(config: &Config) -> Result<(), TestError> {
-    let xs = config.storage_servers().into_iter().map(|x| {
-        tracing::debug!("creating zfs fs for {}", x);
-        async move {
-            vagrant::provision_node(
-                x,
-                "configure-lustre-network,create-pools,zfs-params,create-zfs-fs",
-            )
-            .await?
-            .checked_status()
-            .await?;
-
-            Ok::<_, TestError>(())
-        }
-    });
-
-    try_join_all(xs).await?;
-
-    Ok(())
-}
-
 pub async fn install_fs(config: Config) -> Result<Config, TestError> {
     vagrant::up()
         .await?
@@ -560,7 +539,7 @@ pub async fn install_fs(config: Config) -> Result<Config, TestError> {
         .checked_status()
         .await?;
 
-    ssh::install_ldiskfs_zfs_no_iml(&config).await?;
+    ssh::install_ldiskfs_no_iml(&config).await?;
 
     vagrant::halt()
         .await?
@@ -593,10 +572,7 @@ pub async fn install_fs(config: Config) -> Result<Config, TestError> {
 }
 
 pub async fn create_fs(config: Config) -> Result<Config, TestError> {
-    match config.fs_type {
-        FsType::Ldiskfs => create_monitored_ldiskfs(&config).await?,
-        FsType::Zfs => create_monitored_zfs(&config).await?,
-    };
+    create_monitored_ldiskfs(&config).await?;
 
     wait_for_ntp(&config).await?;
     wait_on_services_ready(&config).await?;
@@ -607,15 +583,10 @@ pub async fn create_fs(config: Config) -> Result<Config, TestError> {
 }
 
 async fn mount_fs(config: &Config) -> Result<usize, TestError> {
-    let (count, provisioner) = match config.fs_type {
-        FsType::Ldiskfs => (2, "mount-ldiskfs-fs,mount-ldiskfs-fs2"),
-        FsType::Zfs => (1, "mount-zfs-fs"),
-    };
-
     let xs = config.storage_servers().into_iter().map(|x| {
         tracing::debug!("mount fs for {}", x);
         async move {
-            vagrant::provision_node(x, provisioner)
+            vagrant::provision_node(x, "mount-ldiskfs-fs,mount-ldiskfs-fs2")
                 .await?
                 .checked_status()
                 .await?;
@@ -626,7 +597,7 @@ async fn mount_fs(config: &Config) -> Result<usize, TestError> {
 
     try_join_all(xs).await?;
 
-    Ok(count)
+    Ok(2)
 }
 
 pub async fn detect_fs(config: Config) -> Result<Config, TestError> {

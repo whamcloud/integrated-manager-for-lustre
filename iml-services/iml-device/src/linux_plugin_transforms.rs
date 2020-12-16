@@ -3,15 +3,10 @@
 // license that can be found in the LICENSE file.
 
 use device_types::{
-    devices::{
-        Dataset, Device, LogicalVolume, MdRaid, Mpath, Partition, Root, ScsiDevice, VolumeGroup,
-        Zpool,
-    },
-    get_vdev_paths,
+    devices::{Device, LogicalVolume, MdRaid, Mpath, Partition, Root, ScsiDevice, VolumeGroup},
     mount::{FsType, Mount, MountPoint},
     DevicePath,
 };
-use iml_tracing::tracing;
 use iml_wire_types::Fqdn;
 use std::{
     cmp::Ordering,
@@ -89,21 +84,10 @@ pub struct LinuxPluginDevice<'a> {
     filesystem_type: &'a Option<String>,
 }
 
-#[derive(Debug, Eq, PartialEq, Clone, serde::Serialize)]
-pub struct LinuxPluginZpool<'a> {
-    block_device: MajorMinor,
-    drives: BTreeSet<MajorMinor>,
-    name: &'a str,
-    path: &'a str,
-    size: u64,
-    uuid: u64,
-}
-
 #[derive(Debug, Clone, serde::Serialize)]
 #[serde(untagged)]
 pub enum LinuxPluginItem<'a> {
     LinuxPluginDevice(LinuxPluginDevice<'a>),
-    LinuxPluginZpool(LinuxPluginZpool<'a>),
 }
 
 impl<'a> Ord for LinuxPluginDevice<'a> {
@@ -125,8 +109,6 @@ pub struct LinuxPluginData<'a> {
     pub mpath: BTreeMap<&'a str, LinuxPluginMpathDevice<'a>>,
     pub vgs: BTreeMap<&'a str, LinuxPluginVgDevice<'a>>,
     pub lvs: BTreeMap<&'a str, BTreeMap<&'a str, LinuxPluginLvDevice<'a>>>,
-    pub zfspools: BTreeMap<u64, LinuxPluginZpool<'a>>,
-    pub zfsdatasets: BTreeMap<u64, LinuxPluginZpool<'a>>,
 }
 
 impl<'a> Default for LinuxPluginData<'a> {
@@ -137,8 +119,6 @@ impl<'a> Default for LinuxPluginData<'a> {
             mpath: BTreeMap::new(),
             vgs: BTreeMap::new(),
             lvs: BTreeMap::new(),
-            zfspools: BTreeMap::new(),
-            zfsdatasets: BTreeMap::new(),
         }
     }
 }
@@ -219,32 +199,6 @@ impl<'a> From<(&'a LogicalVolume, Option<&LinuxPluginDevice<'a>>)> for LinuxPlug
     }
 }
 
-impl<'a> From<&'a Zpool> for LinuxPluginZpool<'a> {
-    fn from(x: &'a Zpool) -> LinuxPluginZpool<'a> {
-        LinuxPluginZpool {
-            name: &x.name,
-            path: &x.name,
-            block_device: ("zfspool", &x.guid).into(),
-            size: x.size,
-            uuid: x.guid,
-            drives: BTreeSet::new(),
-        }
-    }
-}
-
-impl<'a> From<(&'a Dataset, u64)> for LinuxPluginZpool<'a> {
-    fn from((x, size): (&'a Dataset, u64)) -> LinuxPluginZpool<'a> {
-        LinuxPluginZpool {
-            name: &x.name,
-            path: &x.name,
-            block_device: ("zfsset", &x.guid).into(),
-            size,
-            uuid: x.guid,
-            drives: BTreeSet::new(),
-        }
-    }
-}
-
 fn add_mount<'a>(
     mount: &'a Mount,
     d: &LinuxPluginDevice<'a>,
@@ -262,50 +216,6 @@ fn add_mount<'a>(
     linux_plugin_data
         .local_fs
         .insert(d.major_minor.clone(), (&mount.target, &mount.fs_type));
-}
-
-pub fn populate_zpool<'a>(
-    x: &'a Zpool,
-    mm: MajorMinor,
-    linux_plugin_data: &mut LinuxPluginData<'a>,
-) {
-    if x.children.is_empty() {
-        let pool = linux_plugin_data
-            .devs
-            .entry(("zfspool", x.guid).into())
-            .or_insert_with(|| LinuxPluginItem::LinuxPluginZpool(x.into()));
-
-        if let LinuxPluginItem::LinuxPluginZpool(p) = pool {
-            p.drives.insert(mm.clone());
-
-            let p2 = linux_plugin_data
-                .zfspools
-                .entry(p.uuid)
-                .or_insert_with(|| p.clone());
-
-            p2.drives.insert(mm);
-        };
-    } else {
-        for dev in &x.children {
-            if let Device::Dataset(d) = dev {
-                let dataset = linux_plugin_data
-                    .devs
-                    .entry(("zfsset", d.guid).into())
-                    .or_insert_with(|| LinuxPluginItem::LinuxPluginZpool((d, x.size).into()));
-
-                if let LinuxPluginItem::LinuxPluginZpool(d) = dataset {
-                    d.drives.insert(mm.clone());
-
-                    let d2 = linux_plugin_data
-                        .zfsdatasets
-                        .entry(d.uuid)
-                        .or_insert_with(|| d.clone());
-
-                    d2.drives.insert(mm.clone());
-                };
-            }
-        }
-    }
 }
 
 pub fn devtree2linuxoutput<'a>(
@@ -431,24 +341,18 @@ pub fn devtree2linuxoutput<'a>(
                         });
                 });
         }
-        Device::Zpool(x) => {
-            populate_zpool(x, parent.unwrap().major_minor.clone(), linux_plugin_data);
-        }
         _ => {}
     };
 }
 
-type PoolMap<'a> = BTreeMap<u64, (&'a Zpool, BTreeSet<DevicePath>)>;
-
 pub fn build_device_lookup<'a>(
     dev_tree: &'a Device,
     path_map: &mut BTreeMap<&'a DevicePath, MajorMinor>,
-    pool_map: &mut PoolMap<'a>,
 ) {
     match dev_tree {
         Device::Root(Root { children }) | Device::VolumeGroup(VolumeGroup { children, .. }) => {
             for c in children {
-                build_device_lookup(c, path_map, pool_map);
+                build_device_lookup(c, path_map);
             }
         }
         Device::ScsiDevice(ScsiDevice {
@@ -484,7 +388,7 @@ pub fn build_device_lookup<'a>(
             }
 
             for c in children {
-                build_device_lookup(c, path_map, pool_map);
+                build_device_lookup(c, path_map);
             }
         }
         Device::LogicalVolume(LogicalVolume {
@@ -498,56 +402,10 @@ pub fn build_device_lookup<'a>(
             }
 
             for c in children {
-                build_device_lookup(c, path_map, pool_map);
-            }
-        }
-        Device::Zpool(x) => {
-            let paths = get_vdev_paths(&x.vdev);
-
-            pool_map.entry(x.guid).or_insert_with(|| (x, paths));
-        }
-        Device::Dataset(_) => {}
-    }
-}
-
-/// In order for a pool to exist on > 1 node, *all* of it's backing
-/// storage must exist on > 1 host.
-///
-/// This fn figures out if all of a pools VDEVs exist on
-/// multiple hosts and if so, returns
-/// where they need to be inserted.
-pub fn get_shared_pools<'a, S: ::std::hash::BuildHasher>(
-    host: &Fqdn,
-    path_map: &'a BTreeMap<&'a DevicePath, MajorMinor>,
-    cluster_pools: &'a HashMap<&'a Fqdn, PoolMap<'a>, S>,
-) -> Vec<(&'a Zpool, MajorMinor)> {
-    let mut shared_pools: Vec<_> = vec![];
-
-    let paths: BTreeSet<&DevicePath> = path_map.keys().copied().collect();
-
-    for (&h, ps) in cluster_pools.iter() {
-        if host == h {
-            continue;
-        }
-
-        for v in ps.values() {
-            let ds = v.1.iter().collect();
-
-            if !paths.is_superset(&ds) {
-                continue;
-            };
-
-            tracing::debug!("pool is shared between {} and {}", h, host);
-
-            for d in ds {
-                let parent = path_map[&d].clone();
-
-                shared_pools.push((v.0, parent));
+                build_device_lookup(c, path_map);
             }
         }
     }
-
-    shared_pools
 }
 
 /// Given a slice of major minors,
@@ -656,31 +514,6 @@ mod tests {
     fn test_devtree2linuxoutput() {
         let device: Device =
             serde_json::from_slice(include_bytes!("../fixtures/devtree.json")).unwrap();
-
-        let mut data = LinuxPluginData::default();
-
-        devtree2linuxoutput(&device, None, &mut data);
-
-        assert_json_snapshot!(data);
-    }
-
-    #[test]
-    fn test_devtree2linuxoutput_zpool() {
-        let device: Device =
-            serde_json::from_slice(include_bytes!("../fixtures/devtree_zpool.json")).unwrap();
-
-        let mut data = LinuxPluginData::default();
-
-        devtree2linuxoutput(&device, None, &mut data);
-
-        assert_json_snapshot!(data);
-    }
-
-    #[test]
-    fn test_devtree2linuxoutput_dataset() {
-        let device: Device =
-            serde_json::from_slice(include_bytes!("../fixtures/devtree_zpool_dataset.json"))
-                .unwrap();
 
         let mut data = LinuxPluginData::default();
 

@@ -3,7 +3,6 @@ _topdir/
 *.egg-info/
 *.pyc
 *.rpm
-blockdevice_zfs.log
 chroma_agent.egg-info/
 chroma_agent/.dev_config_store/
 deps

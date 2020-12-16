@@ -109,8 +109,6 @@ touch management.files
 cat <<EndOfList>>management.files
 %{python_sitelib}/chroma_agent/action_plugins/manage_*.py*
 %{python_sitelib}/chroma_agent/templates/
-# ZFS is pulled from resource-agents master (see README.md)
-%{_usr}/lib/ocf/resource.d/chroma/ZFS
 %{_sbindir}/fence_chroma
 %{_sbindir}/chroma-copytool-monitor
 EndOfList
@@ -134,8 +132,6 @@ rm -rf %{buildroot}
 sed -ie 's/^SELINUX=.*$/SELINUX=disabled/' /etc/selinux/config
 # the above only disables on the next boot.  set to permissive currently, also
 setenforce 0
-
-rm -f /var/lib/iml/zfs_store.json
 
 %systemd_post iml-storage-server.target
 %systemd_post %{unit_name}

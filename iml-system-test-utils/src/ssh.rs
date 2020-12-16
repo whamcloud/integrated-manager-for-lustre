@@ -167,28 +167,10 @@ async fn ssh_script_parallel<'a, 'b>(
     Ok(output)
 }
 
-pub async fn install_ldiskfs_zfs_no_iml(config: &Config) -> Result<Vec<(&str, Output)>, TestError> {
-    ssh_script_parallel(
-        &config.storage_server_ips(),
-        "scripts/install_ldiskfs_zfs_no_iml.sh",
-        &[config.lustre_version()],
-    )
-    .await
-}
-
 pub async fn install_ldiskfs_no_iml(config: &Config) -> Result<Vec<(&str, Output)>, TestError> {
     ssh_script_parallel(
         &config.storage_server_ips(),
         "scripts/install_ldiskfs_no_iml.sh",
-        &[config.lustre_version()],
-    )
-    .await
-}
-
-pub async fn install_zfs_no_iml(config: &Config) -> Result<Vec<(&str, Output)>, TestError> {
-    ssh_script_parallel(
-        &config.storage_server_ips(),
-        "scripts/install_zfs_no_iml.sh",
         &[config.lustre_version()],
     )
     .await

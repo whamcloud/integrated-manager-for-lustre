@@ -11,12 +11,3 @@ baseurl=https://downloads.whamcloud.com/public/e2fsprogs/latest/el7/
 enabled=1
 gpgcheck=0
 repo_gpgcheck=0
-
-[zfs-kmod]
-name=ZFS 0.7.x on Linux for EL7 - kmod
-baseurl=http://download.zfsonlinux.org/epel/7.6/kmod/$basearch/
-enabled=1
-metadata_expire=7d
-gpgcheck=0
-#gpgcheck=1
-#gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-zfsonlinux

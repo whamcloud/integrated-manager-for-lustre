@@ -1,21 +1,20 @@
 [package]
 authors = ["IML Team <iml@whamcloud.com>"]
-description = "device-scanner-daemon builds an in-memory representation of devices using udev, zed and findmnt"
+description = "device-scanner-daemon builds an in-memory representation of devices using udev and findmnt"
 edition = "2018"
 license = "MIT"
 name = "device-scanner-daemon"
 version = "2.1.0"
 
 [dependencies]
-bytes = {version = "0.5", features = ["serde"]}
+bytes = {version = "0.6", features = ["serde"]}
 device-types = {path = "../device-types", version = "0.3.0"}
 futures = "0.3"
 im = {version = "15.0", features = ["serde"]}
-libzfs-types = "0.1.2"
 serde = {version = "1", features = ["derive"]}
 serde_json = "1"
-tokio = {version = "0.2", features = ["net", "io-util", "rt-threaded", "macros"]}
-tokio-util = {version = "0.3", features = ["codec"]}
+tokio = {version = "0.3", features = ["net", "io-util", "rt-multi-thread", "macros"]}
+tokio-util = {version = "0.5", features = ["codec"]}
 tracing = "0.1"
 tracing-subscriber = "0.2"
 

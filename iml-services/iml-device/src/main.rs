@@ -9,8 +9,7 @@ use iml_change::GetChanges as _;
 use iml_device::{
     build_device_index, client_mount_content_id, create_cache, create_target_cache, find_targets,
     linux_plugin_transforms::{
-        build_device_lookup, devtree2linuxoutput, get_shared_pools, populate_zpool, update_vgs,
-        LinuxPluginData,
+        build_device_lookup, devtree2linuxoutput, update_vgs, LinuxPluginData,
     },
     update_client_mounts, update_devices, Cache, ImlDeviceError,
 };
@@ -48,7 +47,7 @@ async fn main() -> Result<(), ImlDeviceError> {
         async move {
             let cache = cache.lock().await;
 
-            let mut xs: BTreeMap<&Fqdn, _> = cache
+            let xs: BTreeMap<&Fqdn, _> = cache
                 .iter()
                 .map(|(k, v)| {
                     let mut out = LinuxPluginData::default();
@@ -59,26 +58,16 @@ async fn main() -> Result<(), ImlDeviceError> {
                 })
                 .collect();
 
-            let (path_index, cluster_pools): (HashMap<&Fqdn, _>, HashMap<&Fqdn, _>) = cache
+            let path_index: HashMap<&Fqdn, _> = cache
                 .iter()
                 .map(|(k, v)| {
                     let mut path_to_mm = BTreeMap::new();
-                    let mut pools = BTreeMap::new();
 
-                    build_device_lookup(v, &mut path_to_mm, &mut pools);
+                    build_device_lookup(v, &mut path_to_mm);
 
-                    ((k, path_to_mm), (k, pools))
+                    (k, path_to_mm)
                 })
-                .unzip();
-
-            for (&h, x) in xs.iter_mut() {
-                let path_to_mm = &path_index[h];
-                let shared_pools = get_shared_pools(&h, path_to_mm, &cluster_pools);
-
-                for (a, b) in shared_pools {
-                    populate_zpool(a, b, x);
-                }
-            }
+                .collect();
 
             let xs: BTreeMap<&Fqdn, LinuxPluginData> = update_vgs(xs, &path_index);
 

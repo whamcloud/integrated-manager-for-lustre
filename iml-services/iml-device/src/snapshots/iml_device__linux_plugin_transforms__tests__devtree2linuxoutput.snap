@@ -1802,7 +1802,5 @@ expression: data
         "name": "lv1"
       }
     }
-  },
-  "zfspools": {},
-  "zfsdatasets": {}
+  }
 }

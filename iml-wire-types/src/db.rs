@@ -729,8 +729,6 @@ pub enum DeviceType {
     Mpath,
     VolumeGroup,
     LogicalVolume,
-    Zpool,
-    Dataset,
 }
 
 impl std::fmt::Display for DeviceType {
@@ -742,8 +740,6 @@ impl std::fmt::Display for DeviceType {
             Self::Mpath => write!(f, "mpath"),
             Self::VolumeGroup => write!(f, "vg"),
             Self::LogicalVolume => write!(f, "lv"),
-            Self::Zpool => write!(f, "zpool"),
-            Self::Dataset => write!(f, "dataset"),
         }
     }
 }

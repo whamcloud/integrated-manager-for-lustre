@@ -4,5 +4,4 @@
 
 
 import blockdevice_linux
-import blockdevice_zfs
 import blockdevice_lvm_volume

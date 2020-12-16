@@ -5,7 +5,7 @@ Version:    5.1.0
 # Release Start
 Release:    1%{?dist}
 # Release End
-Summary:    Maintains data of block and ZFS devices
+Summary:    Maintains data of block devices
 
 License:    MIT
 Group:      System Environment/Libraries
@@ -19,7 +19,7 @@ Requires: socat
 
 %description
 device-scanner-daemon builds an in-memory representation of
-devices using udev, zed and findmnt.
+devices using udev and findmnt.
 
 %prep
 %setup -c
@@ -46,28 +46,6 @@ cp swap-emitter.service %{buildroot}%{_unitdir}
 cp mount-emitter %{buildroot}%{_bindir}
 cp swap-emitter %{buildroot}%{_bindir}
 
-mkdir -p %{buildroot}%{_libexecdir}/zfs/zed.d
-cp pool_create-scanner %{buildroot}%{_libexecdir}/zfs/zed.d
-cp pool_import-scanner %{buildroot}%{_libexecdir}/zfs/zed.d
-cp vdev_add-scanner %{buildroot}%{_libexecdir}/zfs/zed.d
-cp pool_destroy-scanner %{buildroot}%{_libexecdir}/zfs/zed.d
-cp history_event-scanner %{buildroot}%{_libexecdir}/zfs/zed.d
-cp pool_export-scanner %{buildroot}%{_libexecdir}/zfs/zed.d
-
-mkdir -p %{buildroot}%{_sysconfdir}/zfs/zed.d
-ln -sf %{_libexecdir}/zfs/zed.d/pool_create-scanner %{buildroot}%{_sysconfdir}/zfs/zed.d
-ln -sf %{_libexecdir}/zfs/zed.d/pool_import-scanner %{buildroot}%{_sysconfdir}/zfs/zed.d
-ln -sf %{_libexecdir}/zfs/zed.d/vdev_add-scanner %{buildroot}%{_sysconfdir}/zfs/zed.d
-ln -sf %{_libexecdir}/zfs/zed.d/pool_destroy-scanner %{buildroot}%{_sysconfdir}/zfs/zed.d
-ln -sf %{_libexecdir}/zfs/zed.d/history_event-scanner %{buildroot}%{_sysconfdir}/zfs/zed.d
-ln -sf %{_libexecdir}/zfs/zed.d/pool_export-scanner %{buildroot}%{_sysconfdir}/zfs/zed.d
-
-cp zed-enhancer.{service,socket} %{buildroot}%{_unitdir}
-cp zed-populator.service %{buildroot}%{_unitdir}
-cp 00-zed-enhancer.preset %{buildroot}%{_presetdir}
-cp zed-enhancer %{buildroot}%{_bindir}
-cp 99-iml-zed-enhancer.rules %{buildroot}%{_sysconfdir}/udev/rules.d
-
 %files
 %attr(0644,root,root)%{_unitdir}/block-device-populator.service
 %attr(0644,root,root)%{_unitdir}/device-scanner.target
@@ -76,29 +54,18 @@ cp 99-iml-zed-enhancer.rules %{buildroot}%{_sysconfdir}/udev/rules.d
 %attr(0644,root,root)%{_unitdir}/mount-emitter.service
 %attr(0644,root,root)%{_unitdir}/mount-populator.service
 %attr(0644,root,root)%{_unitdir}/swap-emitter.service
-%attr(0644,root,root)%{_unitdir}/zed-enhancer.service
-%attr(0644,root,root)%{_unitdir}/zed-enhancer.socket
-%attr(0644,root,root)%{_unitdir}/zed-populator.service
-%attr(0644,root,root)%{_presetdir}/00-zed-enhancer.preset
 %attr(0644,root,root)%{_presetdir}/00-device-scanner.preset
 %attr(0644,root,root)%{_sysconfdir}/udev/rules.d/99-iml-device-scanner.rules
-%attr(0644,root,root)%{_sysconfdir}/udev/rules.d/99-iml-zed-enhancer.rules
 %attr(0755,root,root)%{_bindir}/device-scanner-daemon
 %attr(0755,root,root)%{_bindir}/uevent-listener
 %attr(0755,root,root)%{_bindir}/mount-emitter
 %attr(0755,root,root)%{_bindir}/swap-emitter
-%attr(0755,root,root)%{_bindir}/zed-enhancer
-%attr(0755,root,root)%{_libexecdir}/zfs/zed.d/*
-%{_sysconfdir}/zfs/zed.d/*
 
 
 %post
 %systemd_post device-scanner.socket
 %systemd_post mount-emitter.service
 %systemd_post swap-emitter.service
-%systemd_post zed-populator.service
-%systemd_post zed-enhancer.socket
-%systemd_post zed-enhancer.service
 
 
 %preun
@@ -107,16 +74,12 @@ cp 99-iml-zed-enhancer.rules %{buildroot}%{_sysconfdir}/udev/rules.d
 %systemd_preun device-scanner.service
 %systemd_preun mount-emitter.service
 %systemd_preun block-device-populator.service
-%systemd_preun zed-populator.service
 %systemd_preun mount-populator.service
 %systemd_preun swap-emitter.service
-%systemd_preun zed-enhancer.socket
-%systemd_preun zed-enhancer.service
 
 
 %postun
 %systemd_postun device-scanner.socket
-%systemd_postun zed-enhancer.socket
 
 
 %changelog

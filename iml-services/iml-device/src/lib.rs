@@ -207,18 +207,6 @@ impl DeviceMap {
             })?;
 
             Some((vg, self.0.get(&vg)?))
-        } else if id.0.starts_with("dataset_") {
-            let zpool = item.iter().find_map(|xs| {
-                let x = xs.last()?;
-
-                if x.0.starts_with("zpool_") {
-                    Some(x)
-                } else {
-                    None
-                }
-            })?;
-
-            Some((zpool, self.0.get(&zpool)?))
         } else {
             None
         }
@@ -268,16 +256,14 @@ fn add_shared_storage<'a>(
         .0
         .iter()
         .filter(|(device_id, _)| {
-            device_id.0.starts_with("lv_")
-                || device_id.0.starts_with("dataset_")
-                || device_id.0.starts_with("mdraid_")
+            device_id.0.starts_with("lv_") || device_id.0.starts_with("mdraid_")
         })
         .collect();
 
     let mut matches = vec![];
 
     for (existing_id, parents) in xs {
-        if existing_id.0.starts_with("lv_") || existing_id.0.starts_with("dataset_") {
+        if existing_id.0.starts_with("lv_") {
             let shared = map.get_shared_parent(existing_id);
 
             if let Some((shared_id, shared_parents)) = shared {
