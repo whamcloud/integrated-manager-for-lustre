@@ -3,7 +3,6 @@
 // license that can be found in the LICENSE file.
 
 use futures::channel::mpsc;
-use iml_manager_client::header::HeaderMap;
 use iml_tracing::tracing;
 use iml_wire_types::{ApiList, Command, EndpointName as _};
 use std::{collections::HashSet, iter, time::Duration};
@@ -52,8 +51,7 @@ pub async fn wait_for_cmds_progress(
         let client = iml_manager_client::get_api_client()?;
 
         let cmds: ApiList<Command> =
-            iml_manager_client::get(client, Command::endpoint_name(), query, None)
-                .await?;
+            iml_manager_client::get(client, Command::endpoint_name(), query, None).await?;
 
         for cmd in cmds.objects {
             if cmd_finished(&cmd) {

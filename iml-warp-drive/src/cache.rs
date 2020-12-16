@@ -313,23 +313,13 @@ pub async fn populate_from_api(shared_api_cache: SharedCache) -> Result<(), ImlM
     .map_ok(|fs: ApiList<Filesystem>| fs.objects)
     .map_ok(|fs: Vec<Filesystem>| fs.into_iter().map(|f| (f.id, f)).collect());
 
-    let active_alert_fut = get_retry(
-        client.clone(),
-        Alert::endpoint_name(),
-        Alert::query(),
-        None,
-    )
-    .map_ok(|x: ApiList<Alert>| x.objects)
-    .map_ok(|x: Vec<Alert>| x.into_iter().map(|x| (x.id, x)).collect());
+    let active_alert_fut = get_retry(client.clone(), Alert::endpoint_name(), Alert::query(), None)
+        .map_ok(|x: ApiList<Alert>| x.objects)
+        .map_ok(|x: Vec<Alert>| x.into_iter().map(|x| (x.id, x)).collect());
 
-    let host_fut = get_retry(
-        client.clone(),
-        Host::endpoint_name(),
-        Host::query(),
-        None,
-    )
-    .map_ok(|x: ApiList<Host>| x.objects)
-    .map_ok(|x: Vec<Host>| x.into_iter().map(|x| (x.id, x)).collect());
+    let host_fut = get_retry(client.clone(), Host::endpoint_name(), Host::query(), None)
+        .map_ok(|x: ApiList<Host>| x.objects)
+        .map_ok(|x: Vec<Host>| x.into_iter().map(|x| (x.id, x)).collect());
 
     let (filesystem, alert, host) = future::try_join3(fs_fut, active_alert_fut, host_fut).await?;
 

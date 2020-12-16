@@ -3,36 +3,33 @@
 // license that can be found in the LICENSE file.
 
 mod action;
-mod authorization;
 mod command;
 mod error;
 mod graphql;
 mod timer;
 
-use authorization::{create_user_map, Sessions, MODEL_PATH, POLICY_PATH};
 use casbin::{CoreApi, Enforcer};
 use iml_manager_env::get_pool_limit;
 use iml_postgres::get_db_pool;
 use iml_rabbit::{self, create_connection_filter};
 use iml_wire_types::Conf;
-use std::{collections::HashMap, sync::Arc};
-use tokio::sync::{Mutex, RwLock};
+use std::sync::Arc;
+use tokio::sync::Mutex;
 use warp::Filter;
 
 // Default pool limit if not overridden by POOL_LIMIT
 const DEFAULT_POOL_LIMIT: u32 = 5;
 
+const MODEL_PATH: &str = "./auth_model.conf";
+const POLICY_PATH: &str = "./policy.csv";
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     iml_tracing::init();
 
-    let user_map = Arc::new(RwLock::new(create_user_map()));
-    let sessions: Sessions = Arc::new(RwLock::new(HashMap::new()));
-    let enforcer = Arc::new(
-        Enforcer::new(MODEL_PATH, POLICY_PATH)
-            .await
-            .expect("can read casbin model and policy files"),
-    );
+    let enforcer = Enforcer::new(MODEL_PATH, POLICY_PATH)
+        .await
+        .expect("can read casbin model and policy files");
 
     let addr = iml_manager_env::get_iml_api_addr();
 
@@ -62,21 +59,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let schema_filter = warp::any().map(move || Arc::clone(&schema));
 
     let ctx = Arc::new(Mutex::new(graphql::Context {
+        enforcer,
         pg_pool,
         rabbit_pool,
-        session: None
+        session: None,
     }));
     let ctx_filter = warp::any().map(move || Arc::clone(&ctx));
-    let enforcer_filter = warp::any().map(move || Arc::clone(&enforcer));
 
     let routes = warp::path("conf")
         .map(move || warp::reply::json(&conf))
         .or(action::endpoint(conn_filter.clone()))
-        .or(graphql::endpoint(
-            schema_filter,
-            ctx_filter,
-            enforcer_filter,
-        ));
+        .or(graphql::endpoint(schema_filter, ctx_filter));
 
     tracing::info!("Starting on {:?}", addr);
 
