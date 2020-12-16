@@ -1256,23 +1256,24 @@ pub(crate) async fn graphql(
 
             if let Some(groups) = groups {
                 for g in groups {
-                    let group_ser = format!("{}", g.name);
+                    let group_string = format!("{}", g.name);
 
                     tracing::info!(
                         "User {} with group {} is authorizing for operation name {}",
                         user.id,
-                        group_ser,
+                        group_string,
                         operation_name.unwrap_or_else(|| "no operation name".into()),
                     );
 
-                    match enforcer.enforce(vec![group_ser.clone(), operation_name.unwrap().into()])
+                    match enforcer
+                        .enforce(vec![group_string.clone(), operation_name.unwrap().into()])
                     {
                         Ok(authorized) => {
                             if authorized {
                                 tracing::info!(
                                     "User {} with group {} is authorized for operation name {}",
                                     user.id,
-                                    group_ser,
+                                    group_string,
                                     req.operation_name()
                                         .unwrap_or_else(|| "no operation name".into()),
                                 );
@@ -1280,7 +1281,7 @@ pub(crate) async fn graphql(
                                 tracing::info!(
                                     "User {} with group {} is NOT authorized for operation name {}",
                                     user.id,
-                                    group_ser,
+                                    group_string,
                                     req.operation_name()
                                         .unwrap_or_else(|| "no operation name".into()),
                                 );
