@@ -13,8 +13,8 @@ use iml_manager_env::get_pool_limit;
 use iml_postgres::get_db_pool;
 use iml_rabbit::{self, create_connection_filter};
 use iml_wire_types::Conf;
-use std::sync::Arc;
-use tokio::sync::Mutex;
+use std::{sync::Arc, time::Duration};
+use tokio::{sync::Mutex, time};
 use warp::Filter;
 
 // Default pool limit if not overridden by POOL_LIMIT
@@ -64,6 +64,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         rabbit_pool,
         session: None,
     }));
+    {
+        let ctx = ctx.clone();
+        tokio::spawn(async move {
+            let mut interval = time::interval(Duration::from_secs(60));
+            loop {
+                interval.tick().await;
+                (*ctx.lock().await).session = None;
+            }
+        });
+    }
     let ctx_filter = warp::any().map(move || Arc::clone(&ctx));
 
     let routes = warp::path("conf")
