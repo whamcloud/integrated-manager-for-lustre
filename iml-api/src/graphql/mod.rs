@@ -1464,12 +1464,7 @@ pub(crate) fn authorize(
     }
 }
 
-pub(crate) async fn graphql(
-    schema: Arc<Schema>,
-    ctx: Arc<Mutex<Context>>,
-    req: GraphQLRequest,
-    cookies: HeaderValue,
-) -> Result<impl warp::Reply, warp::Rejection> {
+fn get_session_id(cookies: &HeaderValue) -> Result<Option<String>, ImlApiError> {
     let string = from_utf8(cookies.as_bytes()).map_err(ImlApiError::Utf8Error)?;
     tracing::info!("Cookie: {}", string);
     let maybe_session_id = {
@@ -1491,9 +1486,17 @@ pub(crate) async fn graphql(
     }
     .filter(|x| x.is_some())
     .next()
-    .flatten();
+    .flatten()
+    .map(Into::into);
     tracing::info!("Session ID: {:?}", maybe_session_id);
 
+    Ok(maybe_session_id)
+}
+
+async fn store_session(
+    ctx: Arc<Mutex<Context>>,
+    maybe_session_id: &Option<String>,
+) -> Result<(), ImlApiError> {
     if let Some(session_id) = maybe_session_id {
         let mut headers = HeaderMap::new();
         headers.insert(
@@ -1517,7 +1520,20 @@ pub(crate) async fn graphql(
             (*ctx.lock().await).session = Some(response.clone());
         }
         // TODO: Spin up a thread that clears the cache once a minute
+        Ok(())
+    } else {
+        Err(ImlApiError::NoSessionId)
     }
+}
+
+pub(crate) async fn graphql(
+    schema: Arc<Schema>,
+    ctx: Arc<Mutex<Context>>,
+    req: GraphQLRequest,
+    cookies: HeaderValue,
+) -> Result<impl warp::Reply, warp::Rejection> {
+    let maybe_session_id = get_session_id(&cookies)?;
+    store_session(ctx.clone(), &maybe_session_id).await?;
 
     let lock = ctx.lock().await;
     let ctx = lock.deref();

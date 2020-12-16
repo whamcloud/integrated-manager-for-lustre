@@ -32,6 +32,8 @@ pub enum ImlApiError {
     MgsNotFound,
     #[error(transparent)]
     Utf8Error(#[from] std::str::Utf8Error),
+    #[error("No session id")]
+    NoSessionId,
 }
 
 impl reject::Reject for ImlApiError {}
