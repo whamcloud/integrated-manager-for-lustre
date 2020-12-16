@@ -28,33 +28,35 @@ impl StratagemQuery {
     /// List completed Stratagem reports that currently reside on the manager node.
     /// Note: All report names must be valid unicode.
     async fn stratagem_reports(context: &Context) -> juniper::FieldResult<Vec<StratagemReport>> {
-        authorize(
+        if authorize(
             &context.enforcer,
             &context.session,
             "query_stratagem_reports",
-        )?;
+        )? {
+            let paths = tokio::fs::read_dir(get_report_path()).await?;
 
-        let paths = tokio::fs::read_dir(get_report_path()).await?;
+            let file_paths = paths
+                .map_ok(|x| x.file_name().to_string_lossy().to_string())
+                .try_collect::<Vec<String>>()
+                .await?
+                .into_iter()
+                .map(|filename| {
+                    fs::canonicalize(get_report_path().join(filename.clone()))
+                        .map_ok(|file_path| (file_path, filename))
+                });
 
-        let file_paths = paths
-            .map_ok(|x| x.file_name().to_string_lossy().to_string())
-            .try_collect::<Vec<String>>()
-            .await?
-            .into_iter()
-            .map(|filename| {
-                fs::canonicalize(get_report_path().join(filename.clone()))
-                    .map_ok(|file_path| (file_path, filename))
-            });
+            let items = try_join_all(file_paths)
+                .await?
+                .into_iter()
+                .map(|(file_path, filename)| (file_path.to_string_lossy().to_string(), filename))
+                .map(get_stratagem_files);
 
-        let items = try_join_all(file_paths)
-            .await?
-            .into_iter()
-            .map(|(file_path, filename)| (file_path.to_string_lossy().to_string(), filename))
-            .map(get_stratagem_files);
+            let items = try_join_all(items).await?;
 
-        let items = try_join_all(items).await?;
-
-        Ok(items)
+            Ok(items)
+        } else {
+            Err(FieldError::new("Not authorized", Value::null()))
+        }
     }
 }
 
