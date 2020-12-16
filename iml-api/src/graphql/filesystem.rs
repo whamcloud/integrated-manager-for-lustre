@@ -36,7 +36,7 @@ impl FilesystemMutation {
         if authorize(
             &context.enforcer,
             &context.session,
-            "mutation_filesystem_detect",
+            "mutation::filesystem::detect",
         )? {
             let mut xs = get_fs_target_resources(&context.pg_pool, None).await?;
 

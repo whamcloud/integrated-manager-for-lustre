@@ -5,7 +5,7 @@
 use crate::{
     command::get_command,
     error::ImlApiError,
-    graphql::{create_task_job, fs_id_by_name, insert_task, run_jobs, Context, SendJob},
+    graphql::{authorize, create_task_job, fs_id_by_name, insert_task, run_jobs, Context, SendJob},
 };
 use futures::TryStreamExt;
 use iml_postgres::sqlx;
@@ -13,6 +13,7 @@ use iml_wire_types::{
     task::{Task, TaskArgs, TaskOut},
     Command,
 };
+use juniper::{FieldError, Value};
 use std::{collections::HashMap, convert::TryInto};
 
 pub(crate) struct TaskQuery;
@@ -21,18 +22,22 @@ pub(crate) struct TaskQuery;
 impl TaskQuery {
     /// List all known `Task` records.
     async fn list(context: &Context) -> juniper::FieldResult<Vec<TaskOut>> {
-        let xs = sqlx::query_as!(Task, "SELECT * FROM chroma_core_task")
-            .fetch(&context.pg_pool)
-            .err_into::<ImlApiError>()
-            .and_then(|x| async {
-                let x = x.try_into()?;
+        if authorize(&context.enforcer, &context.session, "query::task::list")? {
+            let xs = sqlx::query_as!(Task, "SELECT * FROM chroma_core_task")
+                .fetch(&context.pg_pool)
+                .err_into::<ImlApiError>()
+                .and_then(|x| async {
+                    let x = x.try_into()?;
 
-                Ok(x)
-            })
-            .try_collect()
-            .await?;
+                    Ok(x)
+                })
+                .try_collect()
+                .await?;
 
-        Ok(xs)
+            Ok(xs)
+        } else {
+            Err(FieldError::new("Not authorized", Value::null()))
+        }
     }
 }
 

@@ -1,8 +1,15 @@
-p, superusers,                query_stratagem_stratagem_reports
-p, filesystem_administrators, query_stratagem_stratagem_reports
-p, filesystem_users         , query_stratagem_stratagem_reports
+p, superusers,                query::stratagem::stratagem_reports
+p, filesystem_administrators, query::stratagem::stratagem_reports
+p, filesystem_users         , query::stratagem::stratagem_reports
 
-p, superusers,                mutation_stratagem_run_filesync
-p, superusers,                mutation_stratagem_run_cloudsync
+p, superusers,                query::task::list
+p, filesystem_administrators, query::task::list
+p, filesystem_users         , query::task::list
 
-p, superusers,                mutation_filesystem_detect
+p, superusers,                mutation::stratagem::delete_stratagem_report
+p, superusers,                mutation::stratagem::run_cloudsync
+p, superusers,                mutation::stratagem::run_fast_file_scan
+p, superusers,                mutation::stratagem::run_filesync
+p, superusers,                mutation::stratagem::run_stratagem
+
+p, superusers,                mutation::filesystem::detect
