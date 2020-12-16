@@ -1497,32 +1497,39 @@ async fn store_session(
     ctx: Arc<Mutex<Context>>,
     maybe_session_id: &Option<String>,
 ) -> Result<(), ImlApiError> {
-    if let Some(session_id) = maybe_session_id {
-        let mut headers = HeaderMap::new();
-        headers.insert(
-            "Cookie",
-            HeaderValue::from_str(format!("sessionid={}", session_id).as_ref()).map_err(|e| {
-                ImlApiError::ImlManagerClientError(ImlManagerClientError::InvalidHeaderValue(e))
-            })?,
-        );
+    if (*ctx.lock().await).session.is_none() {
+        if let Some(session_id) = maybe_session_id {
+            let mut headers = HeaderMap::new();
+            headers.insert(
+                "Cookie",
+                HeaderValue::from_str(format!("sessionid={}", session_id).as_ref()).map_err(
+                    |e| {
+                        ImlApiError::ImlManagerClientError(
+                            ImlManagerClientError::InvalidHeaderValue(e),
+                        )
+                    },
+                )?,
+            );
 
-        let client: Client = get_client().map_err(ImlApiError::ImlManagerClientError)?;
-        let response: Session = get_retry(
-            client.clone(),
-            "session",
-            vec![("limit", "0")],
-            Some(&headers),
-        )
-        .await
-        .map_err(ImlApiError::ImlManagerClientError)?;
-        tracing::info!("Session: {:?}", response);
-        {
-            (*ctx.lock().await).session = Some(response.clone());
+            let client: Client = get_client().map_err(ImlApiError::ImlManagerClientError)?;
+            let response: Session = get_retry(
+                client.clone(),
+                "session",
+                vec![("limit", "0")],
+                Some(&headers),
+            )
+            .await
+            .map_err(ImlApiError::ImlManagerClientError)?;
+            tracing::info!("Session: {:?}", response);
+            {
+                (*ctx.lock().await).session = Some(response.clone());
+            }
+            Ok(())
+        } else {
+            Err(ImlApiError::NoSessionId)
         }
-        // TODO: Spin up a thread that clears the cache once a minute
-        Ok(())
     } else {
-        Err(ImlApiError::NoSessionId)
+        Ok(())
     }
 }
 
