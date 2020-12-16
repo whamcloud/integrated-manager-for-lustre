@@ -1194,10 +1194,82 @@ impl juniper::Context for Context {}
 struct Unauthorized;
 
 #[derive(Debug)]
-struct AuthorizationError;
+enum AuthorizationError {
+    General,
+    Unauthenticated,
+    NoGroups,
+}
 
 impl Reject for Unauthorized {}
 impl Reject for AuthorizationError {}
+
+fn authorize(
+    enforcer: &Enforcer,
+    session: &Session,
+    operation_name: &str,
+) -> Result<bool, AuthorizationError> {
+    let user = &session.user;
+    if let Some(user) = user {
+        let groups = &user.groups;
+
+        if let Some(groups) = groups {
+            let (authorizations, errors): (Vec<_>, Vec<_>) = groups
+                .iter()
+                .map(|g| {
+                    let group_string = format!("{}", g.name);
+
+                    tracing::info!(
+                        "User {} with group {} is authorizing for operation name {}",
+                        user.id,
+                        group_string,
+                        operation_name,
+                    );
+
+                    match enforcer.enforce(vec![group_string.clone(), operation_name.into()]) {
+                        Ok(authorized) => {
+                            if authorized {
+                                tracing::info!(
+                                    "User {} with group {} is authorized for operation name {}",
+                                    user.id,
+                                    group_string,
+                                    operation_name,
+                                );
+                                Ok(true)
+                            } else {
+                                tracing::info!(
+                                    "User {} with group {} is NOT authorized for operation name {}",
+                                    user.id,
+                                    group_string,
+                                    operation_name,
+                                );
+                                Ok(false)
+                            }
+                        }
+                        Err(e) => {
+                            tracing::error!("Error during authorization: {}", e);
+                            Err(AuthorizationError::General)
+                        }
+                    }
+                })
+                .partition(Result::is_ok);
+
+            if !errors.is_empty() {
+                Err(AuthorizationError::General)
+            } else {
+                let authorizations: Vec<_> =
+                    authorizations.into_iter().map(Result::unwrap).collect();
+                let final_authorization = authorizations.iter().fold(true, |_acc, x| *x);
+                Ok(final_authorization)
+            }
+        } else {
+            tracing::info!("No groups");
+            Err(AuthorizationError::NoGroups)
+        }
+    } else {
+        tracing::info!("Unauthenticated");
+        Err(AuthorizationError::Unauthenticated)
+    }
+}
 
 pub(crate) async fn graphql(
     schema: Arc<Schema>,
@@ -1296,7 +1368,7 @@ pub(crate) async fn graphql(
                         }
                         Err(e) => {
                             tracing::error!("Error during authorization: {}", e);
-                            return Err(warp::reject::custom(AuthorizationError));
+                            return Err(warp::reject::custom(AuthorizationError::General));
                         }
                     }
                 }
