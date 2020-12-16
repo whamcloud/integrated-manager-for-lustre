@@ -1,15 +1,86 @@
-p, superusers,                query::stratagem::stratagem_reports
+p, superusers               , query::client_mount_command
+p, filesystem_administrators, query::client_mount_command
+p, filesystem_users         , query::client_mount_command
+
+p, superusers               , query::client_mount_source
+p, filesystem_administrators, query::client_mount_source
+p, filesystem_users         , query::client_mount_source
+
+p, superusers               , query::commands
+p, filesystem_administrators, query::commands
+p, filesystem_users         , query::commands
+
+p, superusers               , query::commands_by_ids
+p, filesystem_administrators, query::commands_by_ids
+p, filesystem_users         , query::commands_by_ids
+
+p, superusers               , query::corosync_node_name_by_host
+p, filesystem_administrators, query::corosync_node_name_by_host
+p, filesystem_users         , query::corosync_node_name_by_host
+
+p, superusers               , query::corosync_nodes
+p, filesystem_administrators, query::corosync_nodes
+p, filesystem_users         , query::corosync_nodes
+
+p, superusers               , query::get_banned_resources
+p, filesystem_administrators, query::get_banned_resources
+p, filesystem_users         , query::get_banned_resources
+
+p, superusers               , query::get_fs_cluster_hosts
+p, filesystem_administrators, query::get_fs_cluster_hosts
+p, filesystem_users         , query::get_fs_cluster_hosts
+
+p, superusers               , query::get_fs_target_resources
+p, filesystem_administrators, query::get_fs_target_resources
+p, filesystem_users         , query::get_fs_target_resources
+
+p, superusers               , query::logs
+p, filesystem_administrators, query::logs
+p, filesystem_users         , query::logs
+
+p, superusers               , query::server_profiles
+p, filesystem_administrators, query::server_profiles
+p, filesystem_users         , query::server_profiles
+
+p, superusers               , query::snapshot_intervals
+p, filesystem_administrators, query::snapshot_intervals
+p, filesystem_users         , query::snapshot_intervals
+
+p, superusers               , query::snapshot_retention_policies
+p, filesystem_administrators, query::snapshot_retention_policies
+p, filesystem_users         , query::snapshot_retention_policies
+
+p, superusers               , query::snapshots
+p, filesystem_administrators, query::snapshots
+p, filesystem_users         , query::snapshots
+
+p, superusers               , query::targets
+p, filesystem_administrators, query::targets
+p, filesystem_users         , query::targets
+
+p, superusers               , query::stratagem::stratagem_reports
 p, filesystem_administrators, query::stratagem::stratagem_reports
 p, filesystem_users         , query::stratagem::stratagem_reports
 
-p, superusers,                query::task::list
+p, superusers               , query::task::list
 p, filesystem_administrators, query::task::list
 p, filesystem_users         , query::task::list
 
-p, superusers,                mutation::stratagem::delete_stratagem_report
-p, superusers,                mutation::stratagem::run_cloudsync
-p, superusers,                mutation::stratagem::run_fast_file_scan
-p, superusers,                mutation::stratagem::run_filesync
-p, superusers,                mutation::stratagem::run_stratagem
+p, superusers               , mutation::create_server_profile
+p, superusers               , mutation::create_snapshot
+p, superusers               , mutation::create_snapshot_interval
+p, superusers               , mutation::create_snapshot_retention
+p, superusers               , mutation::destroy_snapshot
+p, superusers               , mutation::mount_snapshot
+p, superusers               , mutation::remove_server_profile
+p, superusers               , mutation::remove_snapshot_interval
+p, superusers               , mutation::remove_snapshot_retention
+p, superusers               , mutation::unmount_snapshot
 
-p, superusers,                mutation::filesystem::detect
+p, superusers               , mutation::stratagem::delete_stratagem_report
+p, superusers               , mutation::stratagem::run_cloudsync
+p, superusers               , mutation::stratagem::run_fast_file_scan
+p, superusers               , mutation::stratagem::run_filesync
+p, superusers               , mutation::stratagem::run_stratagem
+
+p, superusers               , mutation::filesystem::detect
