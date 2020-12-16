@@ -1196,6 +1196,7 @@ struct Unauthorized;
 #[derive(Debug)]
 enum AuthorizationError {
     General,
+    Enforcer(casbin::Error),
     Unauthenticated,
     NoGroups,
 }
@@ -1247,7 +1248,7 @@ fn authorize(
                         }
                         Err(e) => {
                             tracing::error!("Error during authorization: {}", e);
-                            Err(AuthorizationError::General)
+                            Err(AuthorizationError::Enforcer(e))
                         }
                     }
                 })
@@ -1326,56 +1327,7 @@ pub(crate) async fn graphql(
         }
         // TODO: Spin up a thread that clears the cache once a minute
 
-        let user = response.user;
-        if let Some(user) = user {
-            let groups = user.groups;
-
-            let operation_name = req.operation_name();
-
-            if let Some(groups) = groups {
-                for g in groups {
-                    let group_string = format!("{}", g.name);
-
-                    tracing::info!(
-                        "User {} with group {} is authorizing for operation name {}",
-                        user.id,
-                        group_string,
-                        operation_name.unwrap_or_else(|| "no operation name".into()),
-                    );
-
-                    match enforcer
-                        .enforce(vec![group_string.clone(), operation_name.unwrap().into()])
-                    {
-                        Ok(authorized) => {
-                            if authorized {
-                                tracing::info!(
-                                    "User {} with group {} is authorized for operation name {}",
-                                    user.id,
-                                    group_string,
-                                    req.operation_name()
-                                        .unwrap_or_else(|| "no operation name".into()),
-                                );
-                            } else {
-                                tracing::info!(
-                                    "User {} with group {} is NOT authorized for operation name {}",
-                                    user.id,
-                                    group_string,
-                                    req.operation_name()
-                                        .unwrap_or_else(|| "no operation name".into()),
-                                );
-                                return Err(warp::reject::custom(Unauthorized));
-                            }
-                        }
-                        Err(e) => {
-                            tracing::error!("Error during authorization: {}", e);
-                            return Err(warp::reject::custom(AuthorizationError::General));
-                        }
-                    }
-                }
-            }
-        } else {
-            tracing::info!("Unauthenticated");
-        }
+        authorize(&enforcer, &response, req.operation_name().unwrap()).unwrap();
     }
 
     let lock = ctx.lock().await;
