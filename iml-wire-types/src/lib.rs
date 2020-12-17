@@ -2363,8 +2363,8 @@ pub struct NetworkInterface {
     pub interface: String,
     pub mac_address: Option<String>,
     pub interface_type: Option<LndType>,
-    pub inet4_address: Vec<Ipv4Network>,
-    pub inet6_address: Vec<Ipv6Network>,
+    pub inet4_address: BTreeSet<Ipv4Network>,
+    pub inet6_address: BTreeSet<Ipv6Network>,
     pub stats: Option<InterfaceStats>,
     pub is_up: bool,
     pub is_slave: bool,
@@ -2382,18 +2382,34 @@ impl PartialEq for NetworkInterface {
     }
 }
 
+#[derive(serde::Deserialize, Debug)]
+#[serde(untagged)]
+enum InterfaceCollection {
+    Map(Option<BTreeMap<usize, String>>),
+    Set(Option<BTreeSet<String>>),
+}
+
 fn deserialize_interfaces<'de, D>(deserializer: D) -> Result<Option<BTreeSet<String>>, D::Error>
 where
     D: serde::de::Deserializer<'de>,
 {
-    let xs: HashMap<usize, String> = serde::de::Deserialize::deserialize(deserializer)?;
-    let xs = xs
-        .values()
-        .into_iter()
-        .cloned()
-        .collect::<BTreeSet<String>>();
+    let xs: Result<InterfaceCollection, D::Error> =
+        serde::de::Deserialize::deserialize(deserializer);
 
-    Ok(Some(xs))
+    let xs = match xs {
+        Ok(xs) => match xs {
+            InterfaceCollection::Map(x) => x.map(|xs| {
+                xs.values()
+                    .into_iter()
+                    .cloned()
+                    .collect::<BTreeSet<String>>()
+            }),
+            InterfaceCollection::Set(x) => x,
+        },
+        Err(_) => None,
+    };
+
+    Ok(xs)
 }
 
 fn default_none<T>() -> Option<T> {

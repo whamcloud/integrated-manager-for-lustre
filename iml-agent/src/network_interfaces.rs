@@ -206,4 +206,14 @@ mod tests {
 
         assert_eq!(data1, data2);
     }
+
+    #[test]
+    fn test_json_data() {
+        let data = r#"{"net":[{"net type":"lo","local NI(s)":[{"nid":"0@lo","status":"up","interfaces":null}]},{"net type":"tcp","local NI(s)":[{"nid":"10.73.20.11@tcp","status":"up","interfaces":["eth1"]}]}],"state":"Up"}"#;
+        let data: LNet = serde_json::from_str(data).unwrap();
+
+        insta::with_settings!({sort_maps => true}, {
+            insta::assert_json_snapshot!(data)
+        });
+    }
 }

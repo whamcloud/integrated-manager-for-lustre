@@ -64,11 +64,13 @@ impl SetNetworkProperty for NetworkInterface {
             }
             InterfaceProperties::Inet4AddressAndPrefix((address, prefix)) => {
                 let address: Ipv4Addr = address.parse()?;
-                self.inet4_address.push(Ipv4Network::new(address, prefix?)?);
+                self.inet4_address
+                    .insert(Ipv4Network::new(address, prefix?)?);
             }
             InterfaceProperties::Inet6AddressAndPrefix((address, prefix)) => {
                 let address: Ipv6Addr = address.parse()?;
-                self.inet6_address.push(Ipv6Network::new(address, prefix?)?);
+                self.inet6_address
+                    .insert(Ipv6Network::new(address, prefix?)?);
             }
         }
 
@@ -495,6 +497,8 @@ inet6 fe80::5054:ff:fe12:3456/64 scope link
 
         let network_interfaces = parse(network_interfaces, stats_map);
 
-        insta::assert_json_snapshot!(network_interfaces);
+        insta::with_settings!({sort_maps => true}, {
+            insta::assert_json_snapshot!(network_interfaces)
+        });
     }
 }
