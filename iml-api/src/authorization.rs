@@ -10,6 +10,20 @@ use std::{str::from_utf8, sync::Arc};
 use tokio::sync::Mutex;
 use warp::reject::Reject;
 
+#[derive(Debug, thiserror::Error)]
+pub(crate) enum AuthorizationError {
+    #[error(transparent)]
+    Enforcer(#[from] casbin::Error),
+    #[error("User is not authenticated")]
+    Unauthenticated,
+    #[error("User has no groups")]
+    NoGroups,
+    #[error("No active session present")]
+    NoSession,
+}
+
+impl Reject for AuthorizationError {}
+
 pub(crate) fn get_session_id(cookies: &HeaderValue) -> Result<Option<String>, ImlApiError> {
     let string = from_utf8(cookies.as_bytes()).map_err(ImlApiError::Utf8Error)?;
     tracing::info!("Cookie: {}", string);
@@ -76,20 +90,6 @@ pub(crate) async fn store_session(
         Ok(())
     }
 }
-
-#[derive(Debug, thiserror::Error)]
-pub(crate) enum AuthorizationError {
-    #[error(transparent)]
-    Enforcer(#[from] casbin::Error),
-    #[error("User is not authenticated")]
-    Unauthenticated,
-    #[error("User has no groups")]
-    NoGroups,
-    #[error("No active session present")]
-    NoSession,
-}
-
-impl Reject for AuthorizationError {}
 
 pub(crate) fn authorize(
     enforcer: &Enforcer,
