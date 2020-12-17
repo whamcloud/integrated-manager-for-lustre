@@ -49,5 +49,6 @@ expression: yaml
         }
       ]
     }
-  ]
+  ],
+  "state": "Up"
 }

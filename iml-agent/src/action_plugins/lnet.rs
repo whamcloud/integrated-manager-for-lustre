@@ -53,7 +53,7 @@ pub async fn unload(_args: Vec<String>) -> Result<(), ImlAgentError> {
 
 /// Place LNet into the `up` state.
 pub async fn start(_args: Vec<String>) -> Result<(), ImlAgentError> {
-    command("lnetctl", &["lnet", "configure", "--all"])
+    command("lnetctl", &["lnet", "configure"])
         .checked_status()
         .inspect(|x| match x {
             Ok(_) => tracing::debug!("Start LNet: Successfully started LNet."),

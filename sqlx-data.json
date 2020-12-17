@@ -1766,35 +1766,6 @@
       ]
     }
   },
-  "4c327149bc654cb21909ba7b7e8110dc7df055e76d66ff6d61bc2ab3a6549eef": {
-    "query": "\n            WITH updated AS (\n                INSERT INTO nid\n                (net_type, host_id, nid, status, interfaces)\n                SELECT net_type, host_id, nid, status, string_to_array(interfaces, ',')::text[]\n                FROM UNNEST($1::text[], $2::int[], $3::text[], $4::text[], $5::text[])\n                AS t(net_type, host_id, nid, status, interfaces)\n                ON CONFLICT (host_id, nid)\n                    DO\n                    UPDATE SET  net_type      = EXCLUDED.net_type,\n                                status        = EXCLUDED.status,\n                                interfaces    = EXCLUDED.interfaces\n                RETURNING id\n            )\n\n            INSERT INTO lnet\n            (host_id, state, nids)\n            (SELECT $6, $7::lnet_state, array_agg(id) from updated)\n            ON CONFLICT (host_id)\n                DO\n                UPDATE SET nids  = EXCLUDED.nids,\n                           state = EXCLUDED.state;\n                ",
-    "describe": {
-      "columns": [],
-      "parameters": {
-        "Left": [
-          "TextArray",
-          "Int4Array",
-          "TextArray",
-          "TextArray",
-          "TextArray",
-          "Int4",
-          {
-            "Custom": {
-              "name": "lnet_state",
-              "kind": {
-                "Enum": [
-                  "up",
-                  "down",
-                  "unloaded"
-                ]
-              }
-            }
-          }
-        ]
-      },
-      "nullable": []
-    }
-  },
   "4eb28fbaf2c42bbcc852c074ade355c4f29c318def54af2290a05f37e90a3b23": {
     "query": "\n            INSERT INTO corosync_node (\n                id,\n                cluster_id,\n                online,\n                standby,\n                standby_onfail,\n                maintenance,\n                pending,\n                unclean,\n                shutdown,\n                expected_up,\n                is_dc,\n                resources_running,\n                type\n            )\n            SELECT\n                id::corosync_node_key,\n                $13,\n                online,\n                standby,\n                standby_onfail,\n                maintenance,\n                pending,\n                unclean,\n                shutdown,\n                expected_up,\n                is_dc,\n                resources_running,\n                type\n            FROM UNNEST(\n                $1::text[],\n                $2::bool[],\n                $3::bool[],\n                $4::bool[],\n                $5::bool[],\n                $6::bool[],\n                $7::bool[],\n                $8::bool[],\n                $9::bool[],\n                $10::bool[],\n                $11::int[],\n                $12::text[]\n            )\n            AS t(\n                id,\n                online,\n                standby,\n                standby_onfail,\n                maintenance,\n                pending,\n                unclean,\n                shutdown,\n                expected_up,\n                is_dc,\n                resources_running,\n                type\n            )\n            ON CONFLICT (id, cluster_id) DO UPDATE\n            SET\n                online = excluded.online,\n                standby = excluded.standby,\n                standby_onfail = excluded.standby_onfail,\n                maintenance = excluded.maintenance,\n                pending = excluded.pending,\n                unclean = excluded.unclean,\n                shutdown = excluded.shutdown,\n                expected_up = excluded.expected_up,\n                is_dc = excluded.is_dc,\n                resources_running = excluded.resources_running,\n                type = excluded.type\n        ",
     "describe": {
@@ -1882,6 +1853,65 @@
         ]
       },
       "nullable": []
+    }
+  },
+  "52672c2dc56d0d346168afd12625edba884012e591628a9d4d9ee04e902b56b8": {
+    "query": "\n        SELECT l.host_id, l.state as \"state: LNetState\", n.net_type, n.nid, n.status, n.interfaces FROM lnet AS l\n        INNER JOIN nid AS n ON n.id = ANY(l.nids)",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "host_id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "state: LNetState",
+          "type_info": {
+            "Custom": {
+              "name": "lnet_state",
+              "kind": {
+                "Enum": [
+                  "up",
+                  "down",
+                  "unloaded"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "ordinal": 2,
+          "name": "net_type",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 3,
+          "name": "nid",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 4,
+          "name": "status",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 5,
+          "name": "interfaces",
+          "type_info": "TextArray"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        false,
+        false
+      ]
     }
   },
   "554681d480739b966bb4fafc141ce924e3d4edafbad3cc811dd67b3f3295dabb": {
@@ -2381,6 +2411,18 @@
         false,
         false
       ]
+    }
+  },
+  "6828f1b7b555b982ace02cb08809dac5c9c0bf89602bbd737b3649ff0e9cc5f4": {
+    "query": "\n            DELETE FROM nid WHERE host_id=$1;\n        ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      },
+      "nullable": []
     }
   },
   "6981275b14db0bca4de21c63c9e9032f7a2f3271ae7806a972277991241f91da": {
@@ -3756,6 +3798,19 @@
       ]
     }
   },
+  "a92c31b106f1380e967b441a9835329586bfcf0554102a25455f352816cb5085": {
+    "query": "\n            DELETE FROM nid WHERE host_id=$1 AND NOT (nid = ANY($2::text[]))\n        ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int4",
+          "TextArray"
+        ]
+      },
+      "nullable": []
+    }
+  },
   "aad647085b43509084a1783a4c011b3ed8bd73bfd8f25c98d5951f094f3486d9": {
     "query": "\n        UPDATE chroma_core_managedtarget t\n        SET state = updates.state\n        FROM (\n            SELECT state, uuid\n            FROM UNNEST($1::text[], $2::text[])\n            AS t(state, uuid)\n        ) as updates\n        WHERE t.uuid = updates.uuid\n            AND t.not_deleted = 't'\n    ",
     "describe": {
@@ -4195,6 +4250,70 @@
       ]
     }
   },
+  "bfb40f91be77ec3ecd1896bf9ee59e6fdf88f9eeae109072e6fcbaf40b2ee428": {
+    "query": "SELECT mac_address, \n            name, \n            inet4_address, \n            inet6_address, \n            lnd_type as \"lnd_type: LndType\", \n            state_up, \n            host_id  \n        FROM network_interface",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "mac_address",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 1,
+          "name": "name",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "inet4_address",
+          "type_info": "InetArray"
+        },
+        {
+          "ordinal": 3,
+          "name": "inet6_address",
+          "type_info": "InetArray"
+        },
+        {
+          "ordinal": 4,
+          "name": "lnd_type: LndType",
+          "type_info": {
+            "Custom": {
+              "name": "lnd_network_type",
+              "kind": {
+                "Enum": [
+                  "tcp",
+                  "o2ib"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "ordinal": 5,
+          "name": "state_up",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 6,
+          "name": "host_id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false,
+        false,
+        false,
+        true,
+        false,
+        false
+      ]
+    }
+  },
   "c03e3ebe9b215be0ae06d3ce2c9488c554405124ac503e2a98c19ec904f26a15": {
     "query": "\n                        INSERT INTO chroma_core_filesystemticket\n                            (ticket_ptr_id, filesystem_id)\n                            VALUES\n                            ($1, $2)\n                            ON CONFLICT (ticket_ptr_id)\n                            DO UPDATE SET\n                            filesystem_id = EXCLUDED.filesystem_id\n                    ",
     "describe": {
@@ -4602,6 +4721,30 @@
       "nullable": []
     }
   },
+  "d5beccfb0e7df0db7e3dc32a45026da7ea59eeb9773e00c398acf5d3859d5d49": {
+    "query": "UPDATE lnet SET state=$1::lnet_state, nids=array[]::int[] WHERE host_id=$2",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          {
+            "Custom": {
+              "name": "lnet_state",
+              "kind": {
+                "Enum": [
+                  "up",
+                  "down",
+                  "unloaded"
+                ]
+              }
+            }
+          },
+          "Int4"
+        ]
+      },
+      "nullable": []
+    }
+  },
   "d7098e256b9c915f2ac0a8ddf278468e824bce89875dabbddac063383f51224f": {
     "query": "SELECT\n            id,\n            index,\n            enclosure_index,\n            health_state as \"health_state: HealthState\",\n            health_state_reason,\n            position,\n            storage_system\n        FROM chroma_core_sfapowersupply\n        ",
     "describe": {
@@ -4677,6 +4820,35 @@
       "nullable": [
         false
       ]
+    }
+  },
+  "d82474be5097c3af85f66b2c8cb72f6c008cfdbf3a67126618249737b22ed63d": {
+    "query": "\n                WITH updated AS (\n                    INSERT INTO nid\n                    (net_type, host_id, nid, status, interfaces)\n                    SELECT net_type, host_id, nid, status, string_to_array(interfaces, ',')::text[]\n                    FROM UNNEST($1::text[], $2::int[], $3::text[], $4::text[], $5::text[])\n                    AS t(net_type, host_id, nid, status, interfaces)\n                    ON CONFLICT (host_id, nid)\n                        DO\n                        UPDATE SET  net_type      = EXCLUDED.net_type,\n                                    status        = EXCLUDED.status,\n                                    interfaces    = EXCLUDED.interfaces,\n                                    id            = nid.id\n                    RETURNING id\n                )\n\n                INSERT INTO lnet\n                (host_id, state, nids)\n                (SELECT $6, $7::lnet_state, array_agg(id) from updated)\n                ON CONFLICT (host_id)\n                    DO\n                    UPDATE SET nids  = EXCLUDED.nids,\n                            state = EXCLUDED.state,\n                            id = lnet.id;\n                    ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "TextArray",
+          "Int4Array",
+          "TextArray",
+          "TextArray",
+          "TextArray",
+          "Int4",
+          {
+            "Custom": {
+              "name": "lnet_state",
+              "kind": {
+                "Enum": [
+                  "up",
+                  "down",
+                  "unloaded"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "nullable": []
     }
   },
   "da7a10e4d6f2a2456eccd0753df9d743ebcaebff8c13bae8f93c036dcfc8171b": {

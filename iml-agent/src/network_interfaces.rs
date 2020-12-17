@@ -6,9 +6,8 @@ use crate::{
     agent_error::ImlAgentError, network_interface::parse as parse_interfaces,
     network_interface_stats,
 };
-use iml_cmd::{CheckedCommandExt, CmdError, Command};
+use iml_cmd::{CheckedCommandExt, Command};
 use iml_wire_types::{LNet, LNetState, NetworkInterface};
-use std::io;
 
 fn ip_addr_cmd() -> Command {
     let mut cmd = Command::new("ip");
@@ -76,29 +75,32 @@ async fn get_lnet_state() -> Result<LNetState, ImlAgentError> {
 
 pub async fn get_lnet_data() -> Result<LNet, ImlAgentError> {
     let r = get_lnet_data_cmd().checked_output().await;
+    let state = get_lnet_state().await.unwrap_or_default();
 
-    let x = match r {
-        Ok(x) => Ok(x.stdout),
-        Err(CmdError::Io(ref err)) if err.kind() == io::ErrorKind::NotFound => {
-            tracing::debug!("lnetctl was not found. Will not send net data");
+    match r {
+        Ok(x) => {
+            tracing::debug!("Parcing received lnet data.");
+            let lnet_data = std::str::from_utf8(&x.stdout)?.trim();
 
-            Ok(vec![])
+            let mut lnet = if lnet_data.is_empty() {
+                LNet::default()
+            } else {
+                serde_yaml::from_str(lnet_data).unwrap_or_default()
+            };
+
+            lnet.state = state;
+
+            Ok(lnet)
         }
-        Err(e) => Err(e),
-    }?;
+        Err(_) => {
+            // This branch will be hit if `lnetctl net show` returns a non-zero value. This happens when
+            // lnet has been unconfigured but the module is still loaded.
+            let mut lnet = LNet::default();
+            lnet.state = state;
 
-    let lnet_data = std::str::from_utf8(&x)?.trim();
-
-    if lnet_data.is_empty() {
-        return Ok(LNet::default());
-    };
-
-    let mut x: LNet = serde_yaml::from_str(lnet_data)?;
-
-    let state: LNetState = get_lnet_state().await?;
-    x.state = state;
-
-    Ok(x)
+            Ok(lnet)
+        }
+    }
 }
 
 #[cfg(test)]
@@ -133,7 +135,8 @@ mod tests {
               1: ib4
               2: ib5"#;
 
-        let yaml: LNet = serde_yaml::from_str(data).unwrap();
+        let mut yaml: LNet = serde_yaml::from_str(data).unwrap();
+        yaml.state = LNetState::Up;
 
         insta::with_settings!({sort_maps => true}, {
             insta::assert_json_snapshot!(yaml)

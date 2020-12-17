@@ -2153,7 +2153,10 @@ impl PartialEq for LdevEntry {
     }
 }
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "postgres-interop", derive(sqlx::Type))]
+#[cfg_attr(feature = "postgres-interop", sqlx(rename = "lnd_network_type"))]
+#[cfg_attr(feature = "postgres-interop", sqlx(rename_all = "lowercase"))]
 #[serde(rename_all = "lowercase")]
 pub enum LndType {
     Tcp,
@@ -2367,14 +2370,26 @@ pub struct NetworkInterface {
     pub is_slave: bool,
 }
 
-#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
+impl PartialEq for NetworkInterface {
+    fn eq(&self, other: &Self) -> bool {
+        self.interface == other.interface
+            && self.mac_address == other.mac_address
+            && self.interface_type == other.interface_type
+            && self.inet4_address == other.inet4_address
+            && self.inet6_address == other.inet6_address
+            && self.is_up == other.is_up
+            && self.is_slave == other.is_slave
+    }
+}
+
+#[derive(Clone, Debug, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Nid {
     pub nid: String,
     pub status: String,
-    pub interfaces: Option<BTreeMap<i32, String>>,
+    pub interfaces: Option<BTreeMap<usize, String>>,
 }
 
-#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Net {
     #[serde(rename = "net type")]
     pub net_type: String,
@@ -2382,9 +2397,10 @@ pub struct Net {
     pub local_nis: Vec<Nid>,
 }
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct LNet {
     pub net: Vec<Net>,
+    #[serde(default)]
     pub state: LNetState,
 }
 
@@ -2397,7 +2413,7 @@ impl Default for LNet {
     }
 }
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "postgres-interop", derive(sqlx::Type))]
 #[cfg_attr(feature = "postgres-interop", sqlx(rename = "lnet_state"))]
 #[cfg_attr(feature = "postgres-interop", sqlx(rename_all = "lowercase"))]
@@ -2407,12 +2423,18 @@ pub enum LNetState {
     Unloaded,
 }
 
+impl Default for LNetState {
+    fn default() -> Self {
+        Self::Unloaded
+    }
+}
+
 impl fmt::Display for LNetState {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             Self::Up => write!(f, "up"),
             Self::Down => write!(f, "down"),
-            Self::Unloaded => write!(f, "unloaded")
+            Self::Unloaded => write!(f, "unloaded"),
         }
     }
 }

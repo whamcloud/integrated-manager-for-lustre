@@ -25,8 +25,8 @@ pub fn create() -> impl DaemonPlugin {
 }
 
 async fn get_network_interfaces() -> Result<Output, ImlAgentError> {
-    let network_interfaces = get_interfaces().await?;
-    let lnet_data = get_lnet_data().await?;
+    let network_interfaces = get_interfaces().await.unwrap_or_default();
+    let lnet_data = get_lnet_data().await.unwrap_or_default();
 
     let xs = NetworkData {
         network_interfaces,
