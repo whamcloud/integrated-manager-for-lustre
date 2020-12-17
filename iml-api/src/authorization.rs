@@ -156,6 +156,8 @@ pub(crate) fn authorize(
                 } else {
                     let authorizations: Vec<_> =
                         authorizations.into_iter().map(Result::unwrap).collect();
+                    // We collect authorizations for all groups the user is in.
+                    // If the user is denied permission per one group, we deny access.
                     let final_authorization =
                         authorizations
                             .iter()
