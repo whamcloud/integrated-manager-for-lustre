@@ -17,15 +17,15 @@ checksum = "ee2a4ec343196209d6594e19543ae87a39f96d5534d7174822a3ad825dd6ed7e"
 
 [[package]]
 name = "ahash"
-version = "0.4.6"
+version = "0.4.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f6789e291be47ace86a60303502173d84af8327e3627ecf334356ee0f87a164c"
+checksum = "739f4a8db6605981345c5654f3a85b056ce52f37a39d34da03f25bf2151ea16e"
 
 [[package]]
 name = "ahash"
-version = "0.5.9"
+version = "0.5.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "062782ee945b38cab67201cd84c77ab3881c07125a1f1f7a5d2fd213f797a2d6"
+checksum = "19fac972e53443ba111b1ff866e9d3b6484df5c05030e13bc7c6a1ebc802e983"
 dependencies = [
  "getrandom 0.2.0",
  "lazy_static",
@@ -1344,7 +1344,7 @@ version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d7afe4a420e3fe79967a00898cc1f4db7c8a49a9333a29f8a4bd76a253d5cd04"
 dependencies = [
- "ahash 0.4.6",
+ "ahash 0.4.7",
 ]
 
 [[package]]
@@ -1895,6 +1895,7 @@ dependencies = [
  "indicatif",
  "insta 1.3.0",
  "lazy_static",
+ "liblustreapi",
  "number-formatter",
  "prettytable-rs",
  "regex",
@@ -2423,8 +2424,8 @@ dependencies = [
 
 [[package]]
 name = "juniper"
-version = "0.14.2"
-source = "git+https://github.com/graphql-rust/juniper#4ffd276a5b33ae4423f295675f977ed6cc7fb88a"
+version = "0.15.0"
+source = "git+https://github.com/graphql-rust/juniper#6326acde336c2e67121afe6dd8c68dc32f6ecb38"
 dependencies = [
  "async-trait",
  "bson",
@@ -2443,8 +2444,8 @@ dependencies = [
 
 [[package]]
 name = "juniper_codegen"
-version = "0.14.2"
-source = "git+https://github.com/graphql-rust/juniper#4ffd276a5b33ae4423f295675f977ed6cc7fb88a"
+version = "0.15.0"
+source = "git+https://github.com/graphql-rust/juniper#6326acde336c2e67121afe6dd8c68dc32f6ecb38"
 dependencies = [
  "proc-macro-error",
  "proc-macro2 1.0.24",
@@ -2823,9 +2824,9 @@ dependencies = [
 
 [[package]]
 name = "net2"
-version = "0.2.36"
+version = "0.2.37"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d7cf75f38f16cb05ea017784dc6dbfd354f76c223dba37701734c4f5a9337d02"
+checksum = "391630d12b68002ae1e25e8f974306474966550ad82dac6886fb8910c19568ae"
 dependencies = [
  "cfg-if 0.1.10",
  "libc",
@@ -2944,12 +2945,12 @@ checksum = "624a8340c38c1b80fd549087862da4ba43e08858af025b236e509b6649fc13d5"
 
 [[package]]
 name = "openssl"
-version = "0.10.30"
+version = "0.10.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8d575eff3665419f9b83678ff2815858ad9d11567e082f5ac1814baba4e2bcb4"
+checksum = "8d008f51b1acffa0d3450a68606e6a51c123012edaacb0f4e1426bd978869187"
 dependencies = [
  "bitflags",
- "cfg-if 0.1.10",
+ "cfg-if 1.0.0",
  "foreign-types",
  "lazy_static",
  "libc",
@@ -2964,9 +2965,9 @@ checksum = "77af24da69f9d9341038eba93a073b1fdaaa1b788221b00a69bce9e762cb32de"
 
 [[package]]
 name = "openssl-sys"
-version = "0.9.58"
+version = "0.9.59"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a842db4709b604f0fe5d1170ae3565899be2ad3d9cbc72dedc789ac0511f78de"
+checksum = "de52d8eabd217311538a39bba130d7dea1f1e118010fee7a033d966845e7d5fe"
 dependencies = [
  "autocfg 1.0.1",
  "cc",
@@ -4054,7 +4055,7 @@ name = "sqlx-core"
 version = "0.4.0"
 source = "git+https://github.com/jgrund/sqlx?branch=workspace-support#83d3f8c5356efdb8c8abffb60947452e7fedf18c"
 dependencies = [
- "ahash 0.5.9",
+ "ahash 0.5.10",
  "atoi",
  "base64 0.13.0",
  "bitflags",
@@ -4397,9 +4398,9 @@ dependencies = [
 
 [[package]]
 name = "thrussh"
-version = "0.29.15"
+version = "0.29.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2495e666035ae6f400ab7eee0cec5e12a7aad1c3bac562d3fa3943fbed427c01"
+checksum = "1895fda8eef436a585ea38d43dd4e99cd579e6a7894e914adf4efee0801b1164"
 dependencies = [
  "anyhow",
  "bitflags",
@@ -4481,9 +4482,9 @@ checksum = "cda74da7e1a664f795bb1f8a87ec406fb89a02522cf6e50620d016add6dbbf5c"
 
 [[package]]
 name = "tokio"
-version = "0.2.23"
+version = "0.2.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a6d7ad61edd59bfcc7e80dababf0f4aed2e6d5e0ba1659356ae889752dfc12ff"
+checksum = "099837d3464c16a808060bb3f02263b412f6fafcb5d01c533d309985fbeebe48"
 dependencies = [
  "bytes",
  "fnv",
@@ -4882,9 +4883,9 @@ dependencies = [
 
 [[package]]
 name = "vcpkg"
-version = "0.2.10"
+version = "0.2.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6454029bf181f092ad1b853286f23e2c507d8e8194d01d92da4a55c274a5508c"
+checksum = "b00bca6106a5e23f3eee943593759b7fcddb00554332e856d990c893966879fb"
 
 [[package]]
 name = "vec_map"

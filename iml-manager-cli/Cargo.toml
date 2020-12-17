@@ -21,6 +21,7 @@ iml-manager-client = {path = "../iml-manager-client", version = "0.4"}
 iml-tracing = {version = "0.3", path = "../iml-tracing"}
 iml-wire-types = {path = "../iml-wire-types", version = "0.4", features = ["cli"]}
 indicatif = "0.15"
+liblustreapi = {path = "../liblustreapi", version = "0.4"}
 lazy_static = "1.4"
 number-formatter = {path = "../number-formatter", version = "0.2"}
 prettytable-rs = "0.8"

@@ -1439,7 +1439,7 @@ async fn insert_task(
 
 async fn insert_fidlist(
     fids: Vec<String>,
-    task: &Task,
+    task_id: i32,
     pool: &PgPool,
 ) -> Result<(), ImlApiError> {
     let x = fids
@@ -1464,7 +1464,7 @@ async fn insert_fidlist(
             &x.1,
             &x.2,
             &x.3,
-            task.id
+            task_id
     )
     .execute(pool)
     .await?;

@@ -61,7 +61,7 @@ impl StratagemMutation {
 	jobname: String,
 	taskname: String,
 	fsname: String,
-	args: String,
+	task_args: String,
 	fidlist: Vec<String>,
     ) -> juniper::FieldResult<bool> {
 	let uuid = Uuid::new_v4().to_hyphenated().to_string();
@@ -75,7 +75,7 @@ impl StratagemMutation {
             false,
             false,
             &vec![taskname.into()],
-	    serde_json::json!(args),
+	    serde_json::json!(task_args),
             fs_id,
             &context.pg_pool,
         )
@@ -83,12 +83,12 @@ impl StratagemMutation {
 
 	insert_fidlist(
 	    fidlist,
-	    &task,
+	    task.id,
 	    &context.pg_pool
 	).await?;
 
 	Ok(true)
-    }    
+    }
     async fn run_filesync(
         context: &Context,
         fsname: String,
