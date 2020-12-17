@@ -1521,9 +1521,7 @@ async fn store_session(
             .await
             .map_err(ImlApiError::ImlManagerClientError)?;
             tracing::info!("Session: {:?}", response);
-            {
-                (*ctx.lock().await).session = Some(response.clone());
-            }
+            (*ctx.lock().await).session = Some(response.clone());
             Ok(())
         } else {
             Err(ImlApiError::NoSessionId)
