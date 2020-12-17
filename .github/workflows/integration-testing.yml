@@ -1,0 +1,120 @@
+name: integration-testing
+on:
+  workflow_run:
+    workflows:
+      - produce-repo
+    types:
+      - completed
+jobs:
+  trigger_jenkins_build:
+    name: Trigger jenkins build
+    runs-on: ubuntu-latest
+    needs: create_emf_repo
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Trigger build
+        uses: ./.github/actions/jenkins-build
+        with:
+          jenkins-url: "https://build.whamcloud.com/"
+          jenkins-user: ${{ secrets.JENKINS_USER }}
+          jenkins-token: ${{ secrets.JENKINS_KEY }}
+          job-name: "emf-repo-reviews"
+          branch: ${{ github.head_ref }}
+          sha: ${{ github.event.pull_request.head.sha }}
+  rpm_testing:
+    name: RPM Testing
+    runs-on: self-hosted
+    needs: trigger_jenkins_build
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Setup
+        run: |
+          sudo yum install -y cargo || true
+          sudo yum-config-manager --add-repo=http://download.virtualbox.org/virtualbox/rpm/rhel/virtualbox.repo
+          sudo yum install -y VirtualBox-6.1 || true
+          sudo yum install -y https://releases.hashicorp.com/vagrant/2.2.10/vagrant_2.2.10_x86_64.rpm || true
+
+          sudo VBoxManage setproperty machinefolder /root/VirtualBox\ VMs
+
+          if [[ $(sudo VBoxManage list hostonlyifs | egrep -c 'vboxnet0') -eq 0 ]]; then
+            sudo VBoxManage hostonlyif create;
+          fi
+          sudo VBoxManage hostonlyif ipconfig vboxnet0 --ip 10.73.10.1
+
+      - name: Test
+        run: |
+          cd iml-system-rpm-tests
+          set -e
+          export REPO_URI=${{needs.trigger_jenkins_build.outputs.job_url}}
+          export VBOX_PASSWD=lustre
+          sudo --preserve-env=REPO_URI --preserve-env=VBOX_PASSWD cargo test -- --test-threads 1
+
+      - name: Archive SOS reports
+        if: ${{ success() || failure() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: sosreport_docker
+          path: /vagrant/sosreport_rpm*/*.tar.xz
+
+      - name: Cleanup
+        if: ${{ always() }}
+        run: |
+          sudo vagrant suspend 2>/dev/null || true
+          sudo vagrant destroy -f 2>/dev/null || true
+          sudo vagrant global-status --prune 2>/dev/null || true
+
+          sudo vboxmanage list runningvms | sed -r 's/.*\{(.*)\}/\1/' | xargs -L1 -I {} sudo VBoxManage controlvm {} poweroff 2>/dev/null || true
+          sudo vboxmanage list vms | sed -r 's/.*\{(.*)\}/\1/' | xargs -L1 -I {} sudo VBoxManage unregistervm {} --delete 2>/dev/null || true
+          sudo rm -rf /root/VirtualBox\ VMs/
+
+  docker_testing:
+    name: Docker Testing
+    runs-on: self-hosted
+    needs: trigger_jenkins_build
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Setup
+        run: |
+          sudo yum install -y cargo || true
+          sudo yum-config-manager --add-repo=http://download.virtualbox.org/virtualbox/rpm/rhel/virtualbox.repo
+          sudo yum install -y VirtualBox-6.1 || true
+          sudo yum install -y https://releases.hashicorp.com/vagrant/2.2.10/vagrant_2.2.10_x86_64.rpm || true
+
+          sudo VBoxManage setproperty machinefolder /root/VirtualBox\ VMs
+
+          if [[ $(sudo VBoxManage list hostonlyifs | egrep -c 'vboxnet0') -eq 0 ]]; then
+            sudo VBoxManage hostonlyif create;
+          fi
+          sudo VBoxManage hostonlyif ipconfig vboxnet0 --ip 10.73.10.1
+
+      - name: Test
+        run: |
+          cd iml-system-docker-tests
+          set -e
+          export REPO_URI=${{needs.trigger_jenkins_build.outputs.job_url}}
+          export VBOX_PASSWD=lustre
+          sudo --preserve-env=REPO_URI --preserve-env=VBOX_PASSWD cargo test -- --test-threads 1
+
+      - name: Archive SOS reports
+        if: ${{ success() || failure() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: sosreport_docker
+          path: vagrant/sosreport_docker*/*.tar.xz
+
+      - name: Cleanup
+        if: ${{ always() }}
+        run: |
+          sudo vagrant suspend 2>/dev/null || true
+          sudo vagrant destroy -f 2>/dev/null || true
+          sudo vagrant global-status --prune 2>/dev/null || true
+
+          sudo vboxmanage list runningvms | sed -r 's/.*\{(.*)\}/\1/' | xargs -L1 -I {} sudo VBoxManage controlvm {} poweroff 2>/dev/null || true
+          sudo vboxmanage list vms | sed -r 's/.*\{(.*)\}/\1/' | xargs -L1 -I {} sudo VBoxManage unregistervm {} --delete 2>/dev/null || true
+          sudo rm -rf /root/VirtualBox\ VMs/

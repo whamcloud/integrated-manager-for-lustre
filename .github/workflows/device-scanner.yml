@@ -65,24 +65,3 @@ jobs:
         with:
           command: test
           args: --locked --manifest-path device-scanner/Cargo.toml --exclude zed-enhancer --all
-
-  check_rpm_build:
-    name: Check RPM build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout sources
-        uses: actions/checkout@v1
-
-      - name: Build rpm
-        uses: ./.github/actions/copr-zfs
-        env:
-          SPEC: device-scanner/iml-device-scanner.spec
-          LOCAL_ONLY: true
-          SRPM_TASK: device-scanner-srpm
-          WORKSPACE: ${{ github.workspace }}
-          RUSTUP_TOOLCHAIN: stable-x86_64-unknown-linux-gnu
-      - name: Archive rpm
-        uses: actions/upload-artifact@v1
-        with:
-          name: rpm
-          path: _topdir/RPMS/x86_64

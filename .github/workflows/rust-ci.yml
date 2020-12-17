@@ -214,23 +214,3 @@ jobs:
         with:
           command: test
           args: --test integration_tests --locked -- --ignored
-
-  check_rpm_build:
-    name: Check RPM build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout sources
-        uses: actions/checkout@v2
-
-      - name: Build rpm
-        uses: ./.github/actions/copr-rust
-        env:
-          SPEC: rust-iml.spec
-          LOCAL_ONLY: true
-          WORKSPACE: ${{ github.workspace }}
-          RUSTUP_TOOLCHAIN: stable-x86_64-unknown-linux-gnu
-      - name: Archive rpm
-        uses: actions/upload-artifact@v1
-        with:
-          name: rpm
-          path: _topdir/RPMS/x86_64

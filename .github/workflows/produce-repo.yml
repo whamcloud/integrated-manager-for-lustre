@@ -1,0 +1,177 @@
+name: produce-repo
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+jobs:
+  gui_rpm_build:
+    name: GUI RPM build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v1
+
+      - name: Build rpm
+        uses: ./.github/actions/copr-wasm
+        env:
+          SPEC: iml-gui/rust-iml-gui.spec
+          LOCAL_ONLY: true
+          SRPM_TASK: iml-gui-srpm
+          WORKSPACE: ${{ github.workspace }}
+      - name: Archive rpm
+        uses: actions/upload-artifact@v2
+        with:
+          name: gui_rpm
+          path: _topdir/RPMS/x86_64
+          retention-days: 1
+  rust_iml_rpm_build:
+    name: Rust IML RPM build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Build rpm
+        uses: ./.github/actions/copr-rust
+        env:
+          SPEC: rust-iml.spec
+          LOCAL_ONLY: true
+          WORKSPACE: ${{ github.workspace }}
+          RUSTUP_TOOLCHAIN: stable-x86_64-unknown-linux-gnu
+      - name: Archive rpm
+        uses: actions/upload-artifact@v2
+        with:
+          name: rust_rpm
+          path: _topdir/RPMS/x86_64
+          retention-days: 1
+  python_iml_manager_rpm_build:
+    name: Python IML manager RPM build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Build rpm
+        uses: ./.github/actions/copr
+        env:
+          SPEC: python-iml-manager.spec
+          LOCAL_ONLY: true
+          SRPM_TASK: iml-srpm
+          WORKSPACE: ${{ github.workspace }}
+
+      - name: Archive rpm
+        uses: actions/upload-artifact@v2
+        with:
+          name: python_iml_manager_rpm
+          path: _topdir/RPMS/noarch
+          retention-days: 1
+  iml_docker_rpm_build:
+    name: iml-docker RPM build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Fetch older docker-compose
+        run: |
+          sudo curl -L "https://github.com/docker/compose/releases/download/1.26.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose
+
+      - name: Build the iml images
+        working-directory: ./docker
+        run: |
+          make save
+          docker image ls
+          docker system prune -f --all --volumes
+
+      - name: Build rpm
+        uses: ./.github/actions/copr
+        env:
+          SPEC: iml-docker.spec
+          LOCAL_ONLY: true
+          SRPM_TASK: iml-docker-srpm
+          WORKSPACE: ${{ github.workspace }}
+
+      - name: Archive rpm
+        uses: actions/upload-artifact@v2
+        with:
+          name: iml_docker_rpm
+          path: _topdir/RPMS/x86_64
+          retention-days: 1
+  device_scanner_rpm_build:
+    name: Device Scanner RPM build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v1
+
+      - name: Build rpm
+        uses: ./.github/actions/copr-zfs
+        env:
+          SPEC: device-scanner/iml-device-scanner.spec
+          LOCAL_ONLY: true
+          SRPM_TASK: device-scanner-srpm
+          WORKSPACE: ${{ github.workspace }}
+          RUSTUP_TOOLCHAIN: stable-x86_64-unknown-linux-gnu
+      - name: Archive rpm
+        uses: actions/upload-artifact@v2
+        with:
+          name: device_scanner_rpm
+          path: _topdir/RPMS/x86_64
+          retention-days: 1
+  create_emf_repo:
+    name: create EMF repo
+    runs-on: ubuntu-latest
+    needs:
+      [
+        device_scanner_rpm_build,
+        gui_rpm_build,
+        iml_docker_rpm_build,
+        python_iml_manager_rpm_build,
+        rust_iml_rpm_build,
+      ]
+    container:
+      image: centos:7
+    steps:
+      - name: Download GUI RPMs
+        uses: actions/download-artifact@v1
+        with:
+          name: gui_rpm
+          path: emf_rpms
+      - name: Download Rust RPMs
+        uses: actions/download-artifact@v1
+        with:
+          name: rust_rpm
+          path: emf_rpms
+      - name: Download Device Scanner RPMs
+        uses: actions/download-artifact@v1
+        with:
+          name: device_scanner_rpm
+          path: emf_rpms
+      - name: Download Python Manager RPMs
+        uses: actions/download-artifact@v1
+        with:
+          name: python_iml_manager_rpm
+          path: emf_rpms
+      - name: Download iml-docker RPMs
+        uses: actions/download-artifact@v1
+        with:
+          name: iml_docker_rpm
+          path: emf_rpms
+      - run: |
+          yum install -y createrepo yum-utils
+          createrepo --pretty emf_rpms
+          ls -l
+      - name: Archive repo
+        uses: actions/upload-artifact@v2
+        with:
+          name: emf_repo
+          path: emf_rpms
+
+      - uses: geekyeggo/delete-artifact@v1
+        with:
+          name: |
+            gui_rpm
+            rust_rpm
+            device_scanner_rpm
+            python_iml_manager_rpm
+            iml_docker_rpm

@@ -1,0 +1,34 @@
+name: "Build Jenkins Job"
+description: "Trigger a Jenkins Job and return its build URL"
+inputs:
+  jenkins-url:
+    description: "Jenkins server url"
+    required: true
+  jenkins-token:
+    description: "Token to access jenkins server"
+    required: true
+  jenkins-user:
+    description: "Jenkins username"
+    required: true
+  job-name:
+    description: "Jenkins job name"
+    required: true
+  branch:
+    description: "PR branch name"
+    required: true
+  sha:
+    description: "SHA of this commit"
+    required: true
+outputs:
+  job_url:
+    description: "The URL of this job"
+runs:
+  using: "docker"
+  image: "Dockerfile"
+  args:
+    - ${{ inputs.jenkins-url }}
+    - ${{ inputs.jenkins-token }}
+    - ${{ inputs.jenkins-user }}
+    - ${{ inputs.job-name }}
+    - ${{ inputs.branch }}
+    - ${{ inputs.sha }}
