@@ -20,8 +20,8 @@ use warp::Filter;
 // Default pool limit if not overridden by POOL_LIMIT
 const DEFAULT_POOL_LIMIT: u32 = 5;
 
-const MODEL_PATH: &str = "./auth_model.conf";
-const POLICY_PATH: &str = "./policy.csv";
+const MODEL_PATH: &str = "/etc/iml/auth_model.conf";
+const POLICY_PATH: &str = "/etc/iml/policy.csv";
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
