@@ -1376,7 +1376,7 @@ pub(crate) async fn graphql(
     req: GraphQLRequest,
     cookies: HeaderValue,
 ) -> Result<impl warp::Reply, warp::Rejection> {
-    let maybe_session_id = get_session_id(&cookies)?;
+    let maybe_session_id = get_session_id(&cookies).map_err(ImlApiError::from)?;
     store_session(ctx.clone(), &maybe_session_id).await?;
 
     let lock = ctx.lock().await;

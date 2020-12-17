@@ -2,6 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use crate::authorization::AuthorizationError;
 use futures::channel::oneshot;
 use iml_job_scheduler_rpc::ImlJobSchedulerRpcError;
 use iml_manager_client::ImlManagerClientError;
@@ -31,9 +32,7 @@ pub enum ImlApiError {
     #[error("Filesystem Not Found")]
     MgsNotFound,
     #[error(transparent)]
-    Utf8Error(#[from] std::str::Utf8Error),
-    #[error("No session id")]
-    NoSessionId,
+    AuthorizationError(#[from] AuthorizationError),
 }
 
 impl reject::Reject for ImlApiError {}

@@ -11,7 +11,7 @@ use tokio::sync::Mutex;
 use warp::reject::Reject;
 
 #[derive(Debug, thiserror::Error)]
-pub(crate) enum AuthorizationError {
+pub enum AuthorizationError {
     #[error(transparent)]
     Enforcer(#[from] casbin::Error),
     #[error("User is not authenticated")]
@@ -20,12 +20,16 @@ pub(crate) enum AuthorizationError {
     NoGroups,
     #[error("No active session present")]
     NoSession,
+    #[error("Couldn't retrieve session id from cookies")]
+    NoSessionId,
+    #[error(transparent)]
+    Utf8Error(#[from] std::str::Utf8Error),
 }
 
 impl Reject for AuthorizationError {}
 
-pub(crate) fn get_session_id(cookies: &HeaderValue) -> Result<Option<String>, ImlApiError> {
-    let string = from_utf8(cookies.as_bytes()).map_err(ImlApiError::Utf8Error)?;
+pub(crate) fn get_session_id(cookies: &HeaderValue) -> Result<Option<String>, AuthorizationError> {
+    let string = from_utf8(cookies.as_bytes()).map_err(AuthorizationError::Utf8Error)?;
     tracing::info!("Cookie: {}", string);
     let maybe_session_id = {
         string.split(';').map(|cookie| {
@@ -84,7 +88,9 @@ pub(crate) async fn store_session(
             (*ctx.lock().await).session = Some(response.clone());
             Ok(())
         } else {
-            Err(ImlApiError::NoSessionId)
+            Err(ImlApiError::AuthorizationError(
+                AuthorizationError::NoSessionId,
+            ))
         }
     } else {
         Ok(())
@@ -108,7 +114,7 @@ pub(crate) fn authorize(
                     .map(|g| {
                         let group_string = format!("{}", g.name);
 
-                        tracing::info!(
+                        tracing::debug!(
                             "User {} with group {} is authorizing for operation name {}",
                             user.id,
                             group_string,
@@ -118,7 +124,7 @@ pub(crate) fn authorize(
                         match enforcer.enforce(vec![group_string.clone(), operation_name.into()]) {
                             Ok(authorized) => {
                                 if authorized {
-                                    tracing::info!(
+                                    tracing::debug!(
                                         "User {} with group {} is authorized for operation name {}",
                                         user.id,
                                         group_string,
@@ -126,7 +132,7 @@ pub(crate) fn authorize(
                                     );
                                     Ok(true)
                                 } else {
-                                    tracing::info!(
+                                    tracing::debug!(
                                         "User {} with group {} is NOT authorized for operation name {}",
                                         user.id,
                                         group_string,
@@ -157,15 +163,16 @@ pub(crate) fn authorize(
                     Ok(final_authorization)
                 }
             } else {
-                tracing::info!("No groups");
+                // User having no groups is most likely an error in our setup
+                tracing::error!("No groups");
                 Err(AuthorizationError::NoGroups)
             }
         } else {
-            tracing::info!("Unauthenticated");
+            tracing::debug!("Unauthenticated");
             Err(AuthorizationError::Unauthenticated)
         }
     } else {
-        tracing::info!("No session");
+        tracing::debug!("No session");
         Err(AuthorizationError::NoSession)
     }
 }
