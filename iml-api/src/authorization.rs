@@ -98,6 +98,7 @@ pub(crate) fn authorize(
 ) -> Result<bool, AuthorizationError> {
     if let Some(session) = session {
         let user = &session.user;
+
         if let Some(user) = user {
             let groups = &user.groups;
 
@@ -144,6 +145,7 @@ pub(crate) fn authorize(
 
                 if !errors.is_empty() {
                     let mut errors: Vec<_> = errors.into_iter().map(Result::unwrap_err).collect();
+                    // We only return one error
                     Err(errors.pop().unwrap())
                 } else {
                     let authorizations: Vec<_> =
