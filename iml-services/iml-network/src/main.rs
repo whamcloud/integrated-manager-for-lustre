@@ -9,7 +9,7 @@ use iml_postgres::{get_db_pool, host_id_by_fqdn, sqlx, PgPool};
 use iml_service_queue::service_queue::consume_data;
 use iml_wire_types::{LNet, LNetState, LndType, Net, NetworkData, NetworkInterface, Nid};
 use ipnetwork::{Ipv4Network, Ipv6Network};
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeSet, HashMap};
 use url::Url;
 
 // Default pool limit if not overridden by POOL_LIMIT
@@ -184,8 +184,7 @@ fn parse_lnet_data(
                         net_type.to_string(),
                         x.nid,
                         x.status,
-                        x.interfaces
-                            .map(|x| x.values().into_iter().cloned().collect::<Vec<String>>()),
+                        x.interfaces.map(|x| x.into_iter().collect::<Vec<String>>()),
                     )
                 })
                 .collect::<Vec<(String, String, String, Option<Vec<String>>)>>()
@@ -397,33 +396,42 @@ async fn get_lnet_cache(pool: &PgPool) -> Result<HashMap<i32, LNet>, sqlx::Error
         let lnet = acc.entry(x.host_id).or_insert_with(|| LNet::default());
 
         let net_type = x.net_type.to_string();
-        let net_type2 = x.net_type;
-        let net_idx = lnet.net
+        let net_type2 = x.net_type.to_string();
+
+        if lnet.net
             .iter()
-            .position(|net| net.net_type == net_type);
+            .find(|x| x.net_type == net_type)
+            .is_some() {
+            let net = lnet.net
+                .iter()
+                .cloned()
+                .map(|mut net| {
+                    if net.net_type.to_string() == net_type {
+                        net.local_nis.insert(Nid {
+                            nid: x.nid.to_string(),
+                            status: x.status.to_string(),
+                            interfaces: Some(x.interfaces.iter().cloned().collect::<BTreeSet<String>>())
+                        });
+                    }
 
-        if let Some(idx) = net_idx {
-            let mut net = lnet.net.remove(idx);
-            net.local_nis.push(Nid {
-                nid: x.nid,
-                status: x.status,
-                interfaces: Some(x.interfaces.into_iter().enumerate().collect::<BTreeMap<usize, String>>())
-            });
+                    net
+                })
+                .collect::<BTreeSet<Net>>();
 
-            lnet.net.insert(idx, net);
+            lnet.net = net;
         } else {
             let nid = Nid {
                 nid: x.nid,
                 status: x.status,
-                interfaces: Some(x.interfaces.into_iter().enumerate().collect::<BTreeMap<usize, String>>()),
+                interfaces: Some(x.interfaces.into_iter().collect::<BTreeSet<String>>()),
             };
 
             let net = Net {
                 net_type: net_type2,
-                local_nis: vec![nid],
+                local_nis: vec![nid].iter().cloned().collect::<BTreeSet<Nid>>(),
             };
 
-            lnet.net = vec![net];
+            lnet.net = vec![net].into_iter().collect::<BTreeSet<Net>>();
         }
 
         lnet.state = x.state;
@@ -498,7 +506,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 mod tests {
     use super::*;
     use iml_wire_types::{LNetState, Net, Nid};
-    use std::collections::BTreeMap;
 
     #[test]
     fn test_parse_lnetctl_data() {
@@ -510,7 +517,10 @@ mod tests {
                         nid: "0@lo".into(),
                         status: "up".into(),
                         interfaces: None,
-                    }],
+                    }]
+                    .iter()
+                    .cloned()
+                    .collect::<BTreeSet<Nid>>(),
                 },
                 Net {
                     net_type: "tcp".into(),
@@ -518,11 +528,14 @@ mod tests {
                         nid: "10.73.20.21@tcp".into(),
                         status: "up".into(),
                         interfaces: Some(
-                            vec![(0, "eth1".into()), (1, "eth2".into())]
+                            vec!["eth1".into(), "eth2".into()]
                                 .into_iter()
-                                .collect::<BTreeMap<usize, String>>(),
+                                .collect::<BTreeSet<String>>(),
                         ),
-                    }],
+                    }]
+                    .iter()
+                    .cloned()
+                    .collect::<BTreeSet<Nid>>(),
                 },
                 Net {
                     net_type: "o2ib".into(),
@@ -531,9 +544,9 @@ mod tests {
                             nid: "172.16.0.24@o2ib".into(),
                             status: "down".into(),
                             interfaces: Some(
-                                vec![(0, "ib0".into()), (1, "ib3".into())]
+                                vec!["ib0".into(), "ib3".into()]
                                     .into_iter()
-                                    .collect::<BTreeMap<usize, String>>(),
+                                    .collect::<BTreeSet<String>>(),
                             ),
                         },
                         Nid {
@@ -545,26 +558,32 @@ mod tests {
                             nid: "172.16.0.28@o2ib".into(),
                             status: "up".into(),
                             interfaces: Some(
-                                vec![(0, "ib1".into()), (1, "ib4".into()), (2, "ib5".into())]
+                                vec!["ib1".into(), "ib4".into(), "ib5".into()]
                                     .into_iter()
-                                    .collect::<BTreeMap<usize, String>>(),
+                                    .collect::<BTreeSet<String>>(),
                             ),
                         },
-                    ],
+                    ]
+                    .into_iter()
+                    .collect::<BTreeSet<Nid>>(),
                 },
-            ],
+            ]
+            .into_iter()
+            .collect::<BTreeSet<Net>>(),
             state: LNetState::Up,
         };
 
         let parsed_data = parse_lnet_data(&data, 2);
 
-        insta::assert_debug_snapshot!(parsed_data)
+        insta::with_settings!({sort_maps => true}, {
+            insta::assert_debug_snapshot!(parsed_data)
+        });
     }
 
     #[test]
     fn test_parse_empty_lnetctl_data() {
         let data = LNet {
-            net: vec![],
+            net: vec![].into_iter().collect::<BTreeSet<Net>>(),
             state: LNetState::Unloaded,
         };
 

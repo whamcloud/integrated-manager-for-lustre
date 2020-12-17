@@ -2382,24 +2382,48 @@ impl PartialEq for NetworkInterface {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+fn deserialize_interfaces<'de, D>(deserializer: D) -> Result<Option<BTreeSet<String>>, D::Error>
+where
+    D: serde::de::Deserializer<'de>,
+{
+    let xs: HashMap<usize, String> = serde::de::Deserialize::deserialize(deserializer)?;
+    let xs = xs
+        .values()
+        .into_iter()
+        .cloned()
+        .collect::<BTreeSet<String>>();
+
+    Ok(Some(xs))
+}
+
+fn default_none<T>() -> Option<T> {
+    None
+}
+
+#[derive(
+    Clone, Debug, Default, Eq, Ord, PartialEq, PartialOrd, serde::Serialize, serde::Deserialize,
+)]
 pub struct Nid {
     pub nid: String,
     pub status: String,
-    pub interfaces: Option<BTreeMap<usize, String>>,
+    #[serde(deserialize_with = "deserialize_interfaces")]
+    #[serde(default = "default_none")]
+    pub interfaces: Option<BTreeSet<String>>,
 }
 
-#[derive(Clone, Debug, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(
+    Clone, Debug, Default, Eq, Ord, PartialEq, PartialOrd, serde::Serialize, serde::Deserialize,
+)]
 pub struct Net {
     #[serde(rename = "net type")]
     pub net_type: String,
     #[serde(rename = "local NI(s)")]
-    pub local_nis: Vec<Nid>,
+    pub local_nis: BTreeSet<Nid>,
 }
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct LNet {
-    pub net: Vec<Net>,
+    pub net: BTreeSet<Net>,
     #[serde(default)]
     pub state: LNetState,
 }
@@ -2408,7 +2432,7 @@ impl Default for LNet {
     fn default() -> Self {
         Self {
             state: LNetState::Unloaded,
-            net: vec![],
+            net: vec![].into_iter().collect::<BTreeSet<Net>>(),
         }
     }
 }

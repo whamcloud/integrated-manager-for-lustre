@@ -142,4 +142,68 @@ mod tests {
             insta::assert_json_snapshot!(yaml)
         });
     }
+
+    #[test]
+    fn test_equality() {
+        let data1 = r#"net:
+    - net type: lo
+      local NI(s):
+        - nid: 0@lo
+          status: up
+    - net type: tcp
+      local NI(s):
+        - nid: 10.73.20.21@tcp
+          status: up
+          interfaces:
+              0: eth1
+              1: eth2
+    - net type: o2ib
+      local NI(s):
+        - nid: 172.16.0.24@o2ib
+          status: down
+          interfaces:
+              0: ib0
+              1: ib3
+        - nid: 172.16.0.28@o2ib
+          status: up
+          interfaces:
+              0: ib1
+              1: ib4
+              2: ib5"#;
+
+        let data2 = r#"net:
+    - net type: lo
+      local NI(s):
+        - nid: 0@lo
+          status: up
+    - net type: o2ib
+      local NI(s):
+        - nid: 172.16.0.28@o2ib
+          status: up
+          interfaces:
+            0: ib5
+            1: ib4
+            2: ib1
+        - nid: 172.16.0.24@o2ib
+          status: down
+          interfaces:
+            0: ib3
+            1: ib0
+    - net type: tcp
+      local NI(s):
+        - nid: 10.73.20.21@tcp
+          status: up
+          interfaces:
+            0: eth2
+            1: eth1
+    "#;
+
+        let mut data1: LNet = serde_yaml::from_str(data1).unwrap();
+        data1.state = LNetState::Up;
+
+        let mut data2: LNet = serde_yaml::from_str(data2).unwrap();
+        data2.state = LNetState::Up;
+
+        assert_eq!(data1, data2);
+    }
 }

@@ -6,10 +6,10 @@ expression: parsed_data
     Some(
         (
             [
+                "o2ib",
+                "o2ib",
+                "o2ib",
                 "tcp",
-                "o2ib",
-                "o2ib",
-                "o2ib",
             ],
             [
                 2,
@@ -18,22 +18,22 @@ expression: parsed_data
                 2,
             ],
             [
-                "10.73.20.21@tcp",
                 "172.16.0.24@o2ib",
                 "172.16.0.26@o2ib",
                 "172.16.0.28@o2ib",
+                "10.73.20.21@tcp",
             ],
             [
-                "up",
                 "down",
                 "up",
                 "up",
+                "up",
             ],
             [
-                "eth1,eth2",
                 "ib0,ib3",
                 "",
                 "ib1,ib4,ib5",
+                "eth1,eth2",
             ],
         ),
     ),
