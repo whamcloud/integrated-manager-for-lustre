@@ -1,34 +1,195 @@
 name: integration-testing
 on:
-  workflow_run:
-    workflows:
-      - produce-repo
-    types:
-      - completed
+  pull_request:
+  push:
+    branches:
+      - master
 jobs:
-  trigger_jenkins_build:
-    name: Trigger jenkins build
+  gui_rpm_build:
+    name: GUI RPM build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v1
+
+      - name: Build rpm
+        uses: ./.github/actions/copr-wasm
+        env:
+          SPEC: iml-gui/rust-iml-gui.spec
+          LOCAL_ONLY: true
+          SRPM_TASK: iml-gui-srpm
+          WORKSPACE: ${{ github.workspace }}
+      - name: Archive rpm
+        uses: actions/upload-artifact@v2
+        with:
+          name: gui_rpm
+          path: _topdir/RPMS/x86_64
+          retention-days: 1
+  rust_iml_rpm_build:
+    name: Rust IML RPM build
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
 
-      - name: Trigger build
-        uses: ./.github/actions/jenkins-build
+      - name: Build rpm
+        uses: ./.github/actions/copr-rust
+        env:
+          SPEC: rust-iml.spec
+          LOCAL_ONLY: true
+          WORKSPACE: ${{ github.workspace }}
+          RUSTUP_TOOLCHAIN: stable-x86_64-unknown-linux-gnu
+      - name: Archive rpm
+        uses: actions/upload-artifact@v2
         with:
-          jenkins-url: "https://build.whamcloud.com/"
-          jenkins-user: ${{ secrets.JENKINS_USER }}
-          jenkins-token: ${{ secrets.JENKINS_KEY }}
-          job-name: "emf-repo-reviews"
-          branch: ${{ github.head_ref }}
-          sha: ${{ github.event.pull_request.head.sha }}
-  rpm_testing:
-    name: RPM Testing
-    runs-on: self-hosted
-    needs: trigger_jenkins_build
+          name: rust_rpm
+          path: _topdir/RPMS/x86_64
+          retention-days: 1
+  python_iml_manager_rpm_build:
+    name: Python IML manager RPM build
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
+
+      - name: Build rpm
+        uses: ./.github/actions/copr
+        env:
+          SPEC: python-iml-manager.spec
+          LOCAL_ONLY: true
+          SRPM_TASK: iml-srpm
+          WORKSPACE: ${{ github.workspace }}
+
+      - name: Archive rpm
+        uses: actions/upload-artifact@v2
+        with:
+          name: python_iml_manager_rpm
+          path: _topdir/RPMS/noarch
+          retention-days: 1
+  iml_docker_rpm_build:
+    name: iml-docker RPM build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Fetch older docker-compose
+        run: |
+          sudo curl -L "https://github.com/docker/compose/releases/download/1.26.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+          sudo chmod +x /usr/local/bin/docker-compose
+
+      - name: Build the iml images
+        working-directory: ./docker
+        run: |
+          make save
+          docker image ls
+          docker system prune -f --all --volumes
+
+      - name: Build rpm
+        uses: ./.github/actions/copr
+        env:
+          SPEC: iml-docker.spec
+          LOCAL_ONLY: true
+          SRPM_TASK: iml-docker-srpm
+          WORKSPACE: ${{ github.workspace }}
+
+      - name: Archive rpm
+        uses: actions/upload-artifact@v2
+        with:
+          name: iml_docker_rpm
+          path: _topdir/RPMS/x86_64
+          retention-days: 1
+  device_scanner_rpm_build:
+    name: Device Scanner RPM build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v1
+
+      - name: Build rpm
+        uses: ./.github/actions/copr-zfs
+        env:
+          SPEC: device-scanner/iml-device-scanner.spec
+          LOCAL_ONLY: true
+          SRPM_TASK: device-scanner-srpm
+          WORKSPACE: ${{ github.workspace }}
+          RUSTUP_TOOLCHAIN: stable-x86_64-unknown-linux-gnu
+      - name: Archive rpm
+        uses: actions/upload-artifact@v2
+        with:
+          name: device_scanner_rpm
+          path: _topdir/RPMS/x86_64
+          retention-days: 1
+  create_emf_repo:
+    name: create EMF repo
+    runs-on: ubuntu-latest
+    needs:
+      [
+        device_scanner_rpm_build,
+        gui_rpm_build,
+        iml_docker_rpm_build,
+        python_iml_manager_rpm_build,
+        rust_iml_rpm_build,
+      ]
+    container:
+      image: centos:7
+    steps:
+      - name: Download GUI RPMs
+        uses: actions/download-artifact@v1
+        with:
+          name: gui_rpm
+          path: emf_rpms
+      - name: Download Rust RPMs
+        uses: actions/download-artifact@v1
+        with:
+          name: rust_rpm
+          path: emf_rpms
+      - name: Download Device Scanner RPMs
+        uses: actions/download-artifact@v1
+        with:
+          name: device_scanner_rpm
+          path: emf_rpms
+      - name: Download Python Manager RPMs
+        uses: actions/download-artifact@v1
+        with:
+          name: python_iml_manager_rpm
+          path: emf_rpms
+      - name: Download iml-docker RPMs
+        uses: actions/download-artifact@v1
+        with:
+          name: iml_docker_rpm
+          path: emf_rpms
+      - run: |
+          yum install -y createrepo yum-utils
+          createrepo --pretty emf_rpms
+          ls -l
+      - name: Archive repo
+        uses: actions/upload-artifact@v2
+        with:
+          name: emf_repo
+          path: emf_rpms
+          retention-days: 15
+      - uses: geekyeggo/delete-artifact@v1
+        with:
+          name: |
+            gui_rpm
+            rust_rpm
+            device_scanner_rpm
+            python_iml_manager_rpm
+            iml_docker_rpm
+  rpm_testing:
+    name: RPM Testing
+    runs-on: self-hosted
+    needs: create_emf_repo
+    steps:
+      - name: Cleanup old Workspace
+        run: sudo rm -rf "${{ github.workspace }}/*"
+
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Download Repo
+        uses: actions/download-artifact@v1
+        with:
+          name: emf_repo
 
       - name: Setup
         run: |
@@ -44,11 +205,15 @@ jobs:
           fi
           sudo VBoxManage hostonlyif ipconfig vboxnet0 --ip 10.73.10.1
 
+          pushd emf_repo
+          python -m SimpleHTTPServer 9000 &> /dev/null &
+          popd
+
       - name: Test
         run: |
           cd iml-system-rpm-tests
           set -e
-          export REPO_URI=${{needs.trigger_jenkins_build.outputs.job_url}}
+          export REPO_URI='http://10.0.2.2:9000'
           export VBOX_PASSWD=lustre
           sudo --preserve-env=REPO_URI --preserve-env=VBOX_PASSWD cargo test -- --test-threads 1
 
@@ -56,12 +221,15 @@ jobs:
         if: ${{ success() || failure() }}
         uses: actions/upload-artifact@v2
         with:
-          name: sosreport_docker
-          path: /vagrant/sosreport_rpm*/*.tar.xz
+          name: sosreport_rpm
+          path: "**/vagrant/sosreport_rpm*/*.tar.xz"
+          retention-days: 5
 
       - name: Cleanup
         if: ${{ always() }}
         run: |
+          kill -9 `ps -ef |grep SimpleHTTPServer |grep 9000 |awk '{print $2}'`
+
           sudo vagrant suspend 2>/dev/null || true
           sudo vagrant destroy -f 2>/dev/null || true
           sudo vagrant global-status --prune 2>/dev/null || true
@@ -69,14 +237,21 @@ jobs:
           sudo vboxmanage list runningvms | sed -r 's/.*\{(.*)\}/\1/' | xargs -L1 -I {} sudo VBoxManage controlvm {} poweroff 2>/dev/null || true
           sudo vboxmanage list vms | sed -r 's/.*\{(.*)\}/\1/' | xargs -L1 -I {} sudo VBoxManage unregistervm {} --delete 2>/dev/null || true
           sudo rm -rf /root/VirtualBox\ VMs/
-
   docker_testing:
     name: Docker Testing
     runs-on: self-hosted
-    needs: trigger_jenkins_build
+    needs: create_emf_repo
     steps:
+      - name: Cleanup old Workspace
+        run: sudo rm -rf "${{ github.workspace }}/*"
+
       - name: Checkout sources
         uses: actions/checkout@v2
+
+      - name: Download Repo
+        uses: actions/download-artifact@v1
+        with:
+          name: emf_repo
 
       - name: Setup
         run: |
@@ -92,11 +267,15 @@ jobs:
           fi
           sudo VBoxManage hostonlyif ipconfig vboxnet0 --ip 10.73.10.1
 
+          pushd emf_repo
+          python -m SimpleHTTPServer 9000 &> /dev/null &
+          popd
+
       - name: Test
         run: |
           cd iml-system-docker-tests
           set -e
-          export REPO_URI=${{needs.trigger_jenkins_build.outputs.job_url}}/artifact/emf-repo/_topdir/
+          export REPO_URI='http://10.0.2.2:9000'
           export VBOX_PASSWD=lustre
           sudo --preserve-env=REPO_URI --preserve-env=VBOX_PASSWD cargo test -- --test-threads 1
 
@@ -105,11 +284,14 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: sosreport_docker
-          path: vagrant/sosreport_docker*/*.tar.xz
+          path: "**/vagrant/sosreport_docker*/*.tar.xz"
+          retention-days: 5
 
       - name: Cleanup
         if: ${{ always() }}
         run: |
+          kill -9 `ps -ef |grep SimpleHTTPServer |grep 9000 |awk '{print $2}'`
+
           sudo vagrant suspend 2>/dev/null || true
           sudo vagrant destroy -f 2>/dev/null || true
           sudo vagrant global-status --prune 2>/dev/null || true

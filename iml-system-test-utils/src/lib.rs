@@ -631,6 +631,8 @@ async fn mount_fs(config: &Config) -> Result<usize, TestError> {
 
 pub async fn detect_fs(config: Config) -> Result<Config, TestError> {
     let count = mount_fs(&config).await?;
+    tokio::time::delay_for(Duration::from_secs(60)).await;
+
     ssh::detect_fs(config.manager_ip).await?;
 
     let fs_info = ssh::list_fs_json(config.manager_ip).await?;
