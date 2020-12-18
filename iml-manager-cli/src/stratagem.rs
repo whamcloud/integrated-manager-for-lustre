@@ -384,11 +384,8 @@ pub async fn stratagem_cli(command: StratagemCommand) -> Result<(), ImlManagerCl
 
 		    tracing::error!("query: {:?}", query);
 		    let resp: iml_graphql_queries::Response<stratagem_queries::task_fidlist::Resp> =
-			graphql(query).await?;
+		    graphql(query).await?;
 		    tracing::error!("resp: {:?}", resp);
-		    let command = Result::from(resp)?.data.stratagem.run_task_fidlist;
-		    tracing::error!("command: {:?}", command);
-		    wait_for_cmd_display(command).await?;
 		}
 	    }
         }

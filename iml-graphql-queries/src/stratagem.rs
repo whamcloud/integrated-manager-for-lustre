@@ -188,8 +188,6 @@ pub mod fast_file_scan {
 }
 
 pub mod task_fidlist {
-    use iml_wire_types::Command;
-
     use crate::Query;
 
     pub static QUERY: &str = r#"
@@ -231,7 +229,7 @@ pub mod task_fidlist {
     #[derive(Debug, Clone, serde::Deserialize)]
     pub struct RunTaskFidlist {
         #[serde(rename(deserialize = "runTaskFidlist"))]
-        pub run_task_fidlist: Command,
+        pub run_task_fidlist: bool,
     }
 
     pub type Resp = super::Resp<RunTaskFidlist>;
