@@ -19,8 +19,15 @@ class Command(BaseCommand):
 
     def handle(self, *args, **kwargs):
         cursor = connection.cursor()
-        cursor.execute("SELECT * from api_key()")
-        (API_USER, API_KEY) = cursor.fetchone()
+        API_USER = "api"
+        cursor.execute("SELECT * from api_key('%s')" % API_USER)
+        API_KEY = cursor.fetchone()[0]
+        cursor.close()
+
+        cursor = connection.cursor()
+        CLIENT_API_USER = "client_api"
+        cursor.execute("SELECT * from api_key('%s')" % CLIENT_API_USER)
+        CLIENT_API_KEY = cursor.fetchone()[0]
         cursor.close()
 
         DB = settings.DATABASES.get("default")
@@ -60,6 +67,8 @@ class Command(BaseCommand):
             "VERSION": settings.VERSION,
             "API_USER": API_USER,
             "API_KEY": API_KEY,
+            "CLIENT_API_USER": CLIENT_API_USER,
+            "CLIENT_API_KEY": CLIENT_API_KEY,
             "REPORT_PATH": settings.REPORT_PATH,
             "PROXY_HOST": settings.PROXY_HOST,
             "INFLUXDB_IML_DB": settings.INFLUXDB_IML_DB,

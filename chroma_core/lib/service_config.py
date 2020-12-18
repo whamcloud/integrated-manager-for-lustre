@@ -680,15 +680,16 @@ class ServiceConfig(CommandLine):
             ApiKey.objects.get_or_create(user=api_user)
             log.info("API user created")
 
-        GUEST_USERNAME = "guest"
+        CLIENT_API_USERNAME = "client_api"
 
         try:
-            User.objects.get(username=GUEST_USERNAME)
-            log.info("API user already created")
+            User.objects.get(username=CLIENT_API_USERNAME)
+            log.info("Client API user already created")
         except User.DoesNotExist:
-            api_user = User.objects.create_user(GUEST_USERNAME, "", "password")
+            api_user = User.objects.create_superuser(CLIENT_API_USERNAME, "", User.objects.make_random_password())
             api_user.groups.add(Group.objects.get(name="filesystem_users"))
-            log.info("Guest user created")
+            ApiKey.objects.get_or_create(user=api_user)
+            log.info("Client API user created")
 
         return
 
