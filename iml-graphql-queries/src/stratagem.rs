@@ -200,28 +200,28 @@ pub mod task_fidlist {
 
     #[derive(Debug, serde::Serialize)]
     pub struct Vars {
-	jobname: String,
-	taskname: String,
+        jobname: String,
+        taskname: String,
         fsname: String,
-	arguments: String,
-	fidlist: Vec<String>,
+        arguments: String,
+        fidlist: Vec<String>,
     }
 
     pub fn build(
-	jobname: impl ToString,
-	taskname: impl ToString,
+        jobname: impl ToString,
+        taskname: impl ToString,
         fsname: impl ToString,
-	arguments: impl ToString,
-	fidlist: Vec<String>,
+        arguments: impl ToString,
+        fidlist: Vec<String>,
     ) -> Query<Vars> {
         Query {
             query: QUERY.to_string(),
             variables: Some(Vars {
-		jobname: jobname.to_string(),
-		taskname: taskname.to_string(),
+                jobname: jobname.to_string(),
+                taskname: taskname.to_string(),
                 fsname: fsname.to_string(),
-		arguments: arguments.to_string(),
-		fidlist,
+                arguments: arguments.to_string(),
+                fidlist,
             }),
         }
     }

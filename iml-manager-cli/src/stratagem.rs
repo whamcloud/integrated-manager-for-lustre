@@ -11,12 +11,13 @@ use crate::{
     },
 };
 use console::Term;
-use liblustreapi::LlapiFid;
-use iml_graphql_queries::{stratagem as stratagem_queries};
+use iml_graphql_queries::stratagem as stratagem_queries;
 use iml_manager_client::ImlManagerClientError;
 use iml_wire_types::{ApiList, CmdWrapper, EndpointName, Filesystem, StratagemConfiguration};
-use structopt::{clap::arg_enum, StructOpt};
+use liblustreapi::LlapiFid;
+use serde::Serialize;
 use std::path::PathBuf;
+use structopt::{clap::arg_enum, StructOpt};
 
 #[derive(Debug, StructOpt)]
 pub enum StratagemCommand {
@@ -331,64 +332,65 @@ pub async fn stratagem_cli(command: StratagemCommand) -> Result<(), ImlManagerCl
 
             wait_for_cmd_display(command).await?;
         }
-        StratagemCommand::Filesync(data) => {
-	    match data.expression {
-		Some(ref x) => {
-		    tracing::error!("expression! {:?}", x);
-		    let query = stratagem_queries::filesync::build(
-			&data.filesystem,
-			data.remote,
-			data.expression.unwrap(),
-			data.action,
-		    );
+        StratagemCommand::Filesync(data) => match data.expression {
+            Some(ref _x) => {
+                let query = stratagem_queries::filesync::build(
+                    &data.filesystem,
+                    data.remote,
+                    data.expression.unwrap(),
+                    data.action,
+                );
 
-		    let resp: iml_graphql_queries::Response<stratagem_queries::filesync::Resp> =
-			graphql(query).await?;
-		    
-		    let command = Result::from(resp)?.data.stratagem.run_filesync;
+                let resp: iml_graphql_queries::Response<stratagem_queries::filesync::Resp> =
+                    graphql(query).await?;
 
-		    wait_for_cmd_display(command).await?;
-		}
-		None => {
-		    tracing::error!("files! {:?}", data);
-		    let task_args = serde_json::json!({
-			"remote": data.remote,
-			"action": data.action
-		    });
+                let command = Result::from(resp)?.data.stratagem.run_filesync;
 
-		    let llapi = match LlapiFid::create(&data.filesystem) {
-			Ok(x) => x,
-			Err(e) => {
-			    eprintln!("Can only specify a list of files on a client where the filesystem is mounted: {}", e);
-			    return Ok(())
-			}
-		    };
-		    
-                    let (fids, errors): (Vec<_>, Vec<_>) = data.files
-			.into_iter()
-			.map(|file| llapi.path2fid(&file))
-			.partition(Result::is_ok);
-                    let fidlist: Vec<_> = fids.into_iter().map(Result::unwrap).collect();
-                    let errors: Vec<_> = errors.into_iter().map(Result::unwrap_err).collect();
-                    if !errors.is_empty() {
-			eprintln!("files not found, ignoring: {:?}", errors);
+                wait_for_cmd_display(command).await?;
+            }
+            None => {
+                #[derive(Serialize, Debug)]
+                struct FilesyncArgs {
+                    remote: String,
+                    action: String,
+                }
+
+                let task_args = FilesyncArgs {
+                    remote: data.remote,
+                    action: data.action.to_string(),
+                };
+
+                let llapi = match LlapiFid::create(&data.filesystem) {
+                    Ok(x) => x,
+                    Err(e) => {
+                        eprintln!("Can only specify a list of files on a client where the filesystem is mounted: {}", e);
+                        return Ok(());
                     }
+                };
 
-		    let query = stratagem_queries::task_fidlist::build(
-			"filesync",
-			"bob-filesync",
-			&data.filesystem,
-			&task_args.to_string(),
-			fidlist,
-		    );
+                let (fids, errors): (Vec<_>, Vec<_>) = data
+                    .files
+                    .into_iter()
+                    .map(|file| llapi.path2fid(&file))
+                    .partition(Result::is_ok);
+                let fidlist: Vec<_> = fids.into_iter().map(Result::unwrap).collect();
+                let errors: Vec<_> = errors.into_iter().map(Result::unwrap_err).collect();
+                if !errors.is_empty() {
+                    eprintln!("files not found, ignoring: {:?}", errors);
+                }
 
-		    tracing::error!("query: {:?}", query);
-		    let resp: iml_graphql_queries::Response<stratagem_queries::task_fidlist::Resp> =
-		    graphql(query).await?;
-		    tracing::error!("resp: {:?}", resp);
-		}
-	    }
-        }
+                let query = stratagem_queries::task_fidlist::build(
+                    "filesync",
+                    "filesync",
+                    &data.filesystem,
+                    serde_json::to_value(task_args).unwrap(),
+                    fidlist,
+                );
+
+                let _resp: iml_graphql_queries::Response<stratagem_queries::task_fidlist::Resp> =
+                    graphql(query).await?;
+            }
+        },
         StratagemCommand::Cloudsync(data) => {
             let query = stratagem_queries::cloudsync::build(
                 &data.filesystem,

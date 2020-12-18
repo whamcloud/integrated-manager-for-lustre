@@ -29,11 +29,14 @@ fn do_rsync<'a>(
     dest_root: &'a PathBuf,
     work_list: &'a [Work],
 ) -> impl Future<Output = Result<Vec<FidError>, ImlAgentError>> + 'a {
-    
     stream::iter(work_list)
         .map(move |work| async move {
             let src_file = format!("{}/{}", src_root.display(), work.file_path.display());
             let dest_file = format!("{}/{}", dest_root.display(), work.file_path.display());
+            let mut dest_dir = PathBuf::from(&src_file);
+            dest_dir.pop();
+            fs::create_dir_all(&dest_dir).await?;
+
             let output = Command::new("rsync")
                 .arg("-a")
                 .arg("-t")
@@ -43,7 +46,7 @@ fn do_rsync<'a>(
                 .output()
                 .await?;
 
-            tracing::error!(
+            tracing::debug!(
                 " moved {} to {} {:?}",
                 src_file,
                 dest_file,
@@ -80,6 +83,10 @@ fn do_dsync<'a>(
             let src_file = format!("{}/{}", src_root.display(), work.file_path.display());
             let dest_file = format!("{}/{}", dest_root.display(), work.file_path.display());
 
+            let mut dest_dir = PathBuf::from(&src_file);
+            dest_dir.pop();
+            fs::create_dir_all(&dest_dir).await?;
+
             let output = Command::new(mpi_path)
                 .arg("--allow-run-as-root")
                 .arg("-c")
@@ -89,12 +96,12 @@ fn do_dsync<'a>(
                 .arg("dsync")
                 .arg("-S")
                 .arg(&src_file)
-		.arg(&dest_file)
-		.kill_on_drop(true)
+                .arg(&dest_file)
+                .kill_on_drop(true)
                 .output()
                 .await?;
 
-            tracing::error!(
+            tracing::debug!(
                 " moved {} to {} {:?}",
                 src_file,
                 dest_file,

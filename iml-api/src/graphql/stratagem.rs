@@ -5,7 +5,7 @@
 use crate::{
     command::get_command,
     error::ImlApiError,
-    graphql::{fs_id_by_name, insert_task, insert_fidlist, Context, SendJob},
+    graphql::{fs_id_by_name, insert_fidlist, insert_task, Context, SendJob},
 };
 use futures::{
     future::{self, try_join_all},
@@ -14,7 +14,7 @@ use futures::{
 use iml_manager_env::get_report_path;
 use iml_postgres::{sqlx, PgPool};
 use iml_wire_types::{
-    graphql_duration::GraphQLDuration, stratagem, task::TaskArgs, Command, StratagemReport
+    graphql_duration::GraphQLDuration, stratagem, task::TaskArgs, Command, StratagemReport,
 };
 use juniper::{FieldError, Value};
 use std::collections::HashMap;
@@ -57,37 +57,33 @@ pub(crate) struct StratagemMutation;
 #[juniper::graphql_object(Context = Context)]
 impl StratagemMutation {
     async fn run_task_fidlist(
-	context: &Context,
-	jobname: String,
-	taskname: String,
-	fsname: String,
-	arguments: String,
-	fidlist: Vec<String>,
+        context: &Context,
+        jobname: String,
+        taskname: String,
+        fsname: String,
+        arguments: String,
+        fidlist: Vec<String>,
     ) -> juniper::FieldResult<bool> {
-	let uuid = Uuid::new_v4().to_hyphenated().to_string();
+        let uuid = Uuid::new_v4().to_hyphenated().to_string();
 
-	let fs_id = fs_id_by_name(&context.pg_pool, &fsname).await?;
-	let taskname = format!("stratagem.{}", taskname);
-	
+        let fs_id = fs_id_by_name(&context.pg_pool, &fsname).await?;
+        let taskname = format!("stratagem.{}", taskname);
+
+        let a = serde_json::from_str(&arguments)?;
         let task = insert_task(
             &format!("{}-{}", uuid, jobname),
             "created",
             false,
             false,
             &vec![taskname.into()],
-	    serde_json::json!(arguments),
+            serde_json::from_value(a)?,
             fs_id,
             &context.pg_pool,
         )
         .await?;
 
-	insert_fidlist(
-	    fidlist,
-	    task.id,
-	    &context.pg_pool
-	).await?;
-
-	Ok(true)
+        insert_fidlist(fidlist, task.id, &context.pg_pool).await?;
+        Ok(true)
     }
     async fn run_filesync(
         context: &Context,
