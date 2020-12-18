@@ -193,19 +193,9 @@ pub mod task_fidlist {
     use crate::Query;
 
     pub static QUERY: &str = r#"
-        mutation RunTaskFidlist($jobname: String!, $taskname: String!, $fsname: String!, $task_args: String!, $fidlist: [String!]!) {
+        mutation RunTaskFidlist($jobname: String!, $taskname: String!, $fsname: String!, $arguments: String!, $fidlist: [String!]!) {
           stratagem {
-            runTaskFidlist(jobname: $jobname, taskname: $taskname, fsname: $fsname, task_args: $task_args, fidlist: $fidlist) {
-              cancelled
-              complete
-              created_at: createdAt
-              errored
-              id
-              jobs
-              logs
-              message
-              resource_uri: resourceUri
-            }
+            runTaskFidlist(jobname: $jobname, taskname: $taskname, fsname: $fsname, arguments: $arguments, fidlist: $fidlist)
           }
         }
     "#;
@@ -215,7 +205,7 @@ pub mod task_fidlist {
 	jobname: String,
 	taskname: String,
         fsname: String,
-	task_args: String,
+	arguments: String,
 	fidlist: Vec<String>,
     }
 
@@ -223,7 +213,7 @@ pub mod task_fidlist {
 	jobname: impl ToString,
 	taskname: impl ToString,
         fsname: impl ToString,
-	task_args: impl ToString,
+	arguments: impl ToString,
 	fidlist: Vec<String>,
     ) -> Query<Vars> {
         Query {
@@ -232,7 +222,7 @@ pub mod task_fidlist {
 		jobname: jobname.to_string(),
 		taskname: taskname.to_string(),
                 fsname: fsname.to_string(),
-		task_args: task_args.to_string(),
+		arguments: arguments.to_string(),
 		fidlist,
             }),
         }
@@ -241,7 +231,7 @@ pub mod task_fidlist {
     #[derive(Debug, Clone, serde::Deserialize)]
     pub struct RunTaskFidlist {
         #[serde(rename(deserialize = "runTaskFidlist"))]
-        pub run_taskFidlist: Command,
+        pub run_task_fidlist: Command,
     }
 
     pub type Resp = super::Resp<RunTaskFidlist>;

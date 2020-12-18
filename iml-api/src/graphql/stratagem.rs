@@ -61,7 +61,7 @@ impl StratagemMutation {
 	jobname: String,
 	taskname: String,
 	fsname: String,
-	task_args: String,
+	arguments: String,
 	fidlist: Vec<String>,
     ) -> juniper::FieldResult<bool> {
 	let uuid = Uuid::new_v4().to_hyphenated().to_string();
@@ -75,7 +75,7 @@ impl StratagemMutation {
             false,
             false,
             &vec![taskname.into()],
-	    serde_json::json!(task_args),
+	    serde_json::json!(arguments),
             fs_id,
             &context.pg_pool,
         )

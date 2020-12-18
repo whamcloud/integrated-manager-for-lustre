@@ -12,9 +12,9 @@ use crate::{
 };
 use console::Term;
 use liblustreapi::LlapiFid;
-use iml_graphql_queries::{stratagem as stratagem_queries, task};
+use iml_graphql_queries::{stratagem as stratagem_queries};
 use iml_manager_client::ImlManagerClientError;
-use iml_wire_types::{ApiList, CmdWrapper, EndpointName, Filesystem, StratagemConfiguration, task::KeyValue, task::TaskArgs};
+use iml_wire_types::{ApiList, CmdWrapper, EndpointName, Filesystem, StratagemConfiguration};
 use structopt::{clap::arg_enum, StructOpt};
 use std::path::PathBuf;
 
@@ -359,7 +359,7 @@ pub async fn stratagem_cli(command: StratagemCommand) -> Result<(), ImlManagerCl
 		    let llapi = match LlapiFid::create(&data.filesystem) {
 			Ok(x) => x,
 			Err(e) => {
-			    eprintln!("Can only specify a list of files on a client where the filesystem is mounted");
+			    eprintln!("Can only specify a list of files on a client where the filesystem is mounted: {}", e);
 			    return Ok(())
 			}
 		    };
@@ -368,7 +368,7 @@ pub async fn stratagem_cli(command: StratagemCommand) -> Result<(), ImlManagerCl
 			.into_iter()
 			.map(|file| llapi.path2fid(&file))
 			.partition(Result::is_ok);
-                    let fids: Vec<_> = fids.into_iter().map(Result::unwrap).collect();
+                    let fidlist: Vec<_> = fids.into_iter().map(Result::unwrap).collect();
                     let errors: Vec<_> = errors.into_iter().map(Result::unwrap_err).collect();
                     if !errors.is_empty() {
 			eprintln!("files not found, ignoring: {:?}", errors);
@@ -378,15 +378,16 @@ pub async fn stratagem_cli(command: StratagemCommand) -> Result<(), ImlManagerCl
 			"filesync",
 			"bob-filesync",
 			&data.filesystem,
-			task_args.to_string(),
-			fids,
+			&task_args.to_string(),
+			fidlist,
 		    );
 
+		    tracing::error!("query: {:?}", query);
 		    let resp: iml_graphql_queries::Response<stratagem_queries::task_fidlist::Resp> =
 			graphql(query).await?;
-
-		    let command = Result::from(resp)?.data.stratagem.run_taskFidlist;
-
+		    tracing::error!("resp: {:?}", resp);
+		    let command = Result::from(resp)?.data.stratagem.run_task_fidlist;
+		    tracing::error!("command: {:?}", command);
 		    wait_for_cmd_display(command).await?;
 		}
 	    }
