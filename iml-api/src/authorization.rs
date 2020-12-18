@@ -22,39 +22,47 @@ pub enum AuthorizationError {
     NoSession,
     #[error("Couldn't retrieve session id from cookies")]
     NoSessionId,
+    #[error("No session cookie supplied")]
+    NoSessionCookie,
     #[error(transparent)]
     Utf8Error(#[from] std::str::Utf8Error),
 }
 
 impl Reject for AuthorizationError {}
 
-pub(crate) fn get_session_id(cookies: &HeaderValue) -> Result<Option<String>, AuthorizationError> {
-    let string = from_utf8(cookies.as_bytes()).map_err(AuthorizationError::Utf8Error)?;
-    tracing::info!("Cookie: {}", string);
-    let maybe_session_id = {
-        string.split(';').map(|cookie| {
-            let mut split = cookie.split_terminator('=');
-            let key = split.next().map(|s| s.trim_start().trim_end());
-            let value = split.next().map(|s| s.trim_start().trim_end());
-            tracing::info!("key: {:?}, value: {:?}", key, value);
+pub(crate) fn get_session_id(
+    cookies: &Option<String>,
+) -> Result<Option<String>, AuthorizationError> {
+    if let Some(cookies) = cookies {
+        let string = from_utf8(cookies.as_bytes()).map_err(AuthorizationError::Utf8Error)?;
+        tracing::info!("Cookie: {}", string);
+        let maybe_session_id = {
+            string.split(';').map(|cookie| {
+                let mut split = cookie.split_terminator('=');
+                let key = split.next().map(|s| s.trim_start().trim_end());
+                let value = split.next().map(|s| s.trim_start().trim_end());
+                tracing::info!("key: {:?}, value: {:?}", key, value);
 
-            match (key, value) {
-                (Some("sessionid"), value) => {
-                    return value;
+                match (key, value) {
+                    (Some("sessionid"), value) => {
+                        return value;
+                    }
+                    (_, _) => {
+                        return None;
+                    }
                 }
-                (_, _) => {
-                    return None;
-                }
-            }
-        })
+            })
+        }
+        .filter(|x| x.is_some())
+        .next()
+        .flatten()
+        .map(Into::into);
+        tracing::info!("Session ID: {:?}", maybe_session_id);
+
+        Ok(maybe_session_id)
+    } else {
+        Err(AuthorizationError::NoSessionCookie)
     }
-    .filter(|x| x.is_some())
-    .next()
-    .flatten()
-    .map(Into::into);
-    tracing::info!("Session ID: {:?}", maybe_session_id);
-
-    Ok(maybe_session_id)
 }
 
 pub(crate) async fn store_session(

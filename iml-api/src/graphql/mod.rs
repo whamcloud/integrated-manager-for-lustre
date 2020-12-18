@@ -18,7 +18,6 @@ use futures::{
     future::{self, join_all},
     TryFutureExt, TryStreamExt,
 };
-use iml_manager_client::header::HeaderValue;
 use iml_postgres::{
     active_mgs_host_fqdn, fqdn_by_host_id, sqlx, sqlx::postgres::types::PgInterval, PgPool,
 };
@@ -1374,7 +1373,8 @@ pub(crate) async fn graphql(
     schema: Arc<Schema>,
     ctx: Arc<Mutex<Context>>,
     req: GraphQLRequest,
-    cookies: HeaderValue,
+    cookies: Option<String>,
+    authorization: Option<String>,
 ) -> Result<impl warp::Reply, warp::Rejection> {
     let maybe_session_id = get_session_id(&cookies).map_err(ImlApiError::from)?;
     store_session(ctx.clone(), &maybe_session_id).await?;
@@ -1396,7 +1396,8 @@ pub(crate) fn endpoint(
         .and(schema_filter.clone())
         .and(ctx_filter)
         .and(warp::body::json())
-        .and(warp::header::value("Cookie"))
+        .and(warp::header::optional::<String>("Cookie"))
+        .and(warp::header::optional::<String>("Authorization"))
         .and_then(graphql);
 
     let graphiql_route = warp::path!("graphiql")
