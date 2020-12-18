@@ -29,6 +29,7 @@ fn do_rsync<'a>(
     dest_root: &'a PathBuf,
     work_list: &'a [Work],
 ) -> impl Future<Output = Result<Vec<FidError>, ImlAgentError>> + 'a {
+    
     stream::iter(work_list)
         .map(move |work| async move {
             let src_file = format!("{}/{}", src_root.display(), work.file_path.display());
@@ -36,8 +37,8 @@ fn do_rsync<'a>(
             let output = Command::new("rsync")
                 .arg("-a")
                 .arg("-t")
-                .arg(&work.src_file)
-                .arg(&work.dest_file)
+                .arg(&src_file)
+                .arg(&dest_file)
                 .kill_on_drop(true)
                 .output()
                 .await?;
