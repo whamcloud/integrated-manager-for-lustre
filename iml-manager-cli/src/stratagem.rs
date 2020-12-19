@@ -367,7 +367,9 @@ pub async fn stratagem_cli(command: StratagemCommand) -> Result<(), ImlManagerCl
                     Ok(x) => x,
                     Err(e) => {
                         eprintln!("Can only specify a list of files on a client where the filesystem is mounted: {}", e);
-                        return Ok(());
+                        return Err(ImlManagerCliError::ApiError(
+                            "Filesystem not mounted".to_string(),
+                        ));
                     }
                 };
 
