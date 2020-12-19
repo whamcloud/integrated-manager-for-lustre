@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
-set -eux
+set -eu
+
 /bin/mkdir -p /etc/iml
-service=iml_influxdb
+service=iml_nginx
 trailer=$(/usr/bin/docker service ps -f "name=$service.1" $service -q --no-trunc | head -n1)
-until /usr/bin/docker exec $service.1.$trailer /bin/bash -c 'until [ -f /var/lib/chroma/iml-settings.conf ]; do echo "Waiting for settings."; sleep 1; done'; do
-  echo "Waiting for container"
-  sleep 1
+until /usr/bin/docker exec $service.1.$trailer sh -c 'until [ -f /var/lib/chroma/iml-settings.conf ]; do echo "copy-embedded-settings: Waiting for EMF container settings..."; sleep 1; done' 2>/dev/null; do
+    echo "copy-embedded-settings: Waiting for EMF startup..."
+    sleep 1
 done
+mkdir -p /etc/iml
 /usr/bin/docker cp $service.1.$trailer:/var/lib/chroma/iml-settings.conf /etc/iml/iml-settings.conf
