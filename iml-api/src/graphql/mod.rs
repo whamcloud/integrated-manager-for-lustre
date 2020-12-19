@@ -1441,7 +1441,7 @@ async fn insert_fidlist(fids: Vec<String>, task_id: i32, pool: &PgPool) -> Resul
     let x = fids
         .iter()
         .map(|fid| LustreFid::from_str(&fid))
-	.filter_map(Result::ok)
+        .filter_map(Result::ok)
         .fold((vec![], vec![], vec![]), |mut acc, fid| {
             acc.0.push(fid.seq);
             acc.1.push(fid.oid);

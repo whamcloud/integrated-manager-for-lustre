@@ -334,10 +334,13 @@ pub async fn stratagem_cli(command: StratagemCommand) -> Result<(), ImlManagerCl
         }
         StratagemCommand::Filesync(data) => match data.expression {
             Some(ref _x) => {
+                let exp = data.expression.ok_or_else(|| {
+                    ImlManagerCliError::ApiError("Expression is empty?".to_string())
+                })?;
                 let query = stratagem_queries::filesync::build(
                     &data.filesystem,
                     data.remote,
-                    data.expression.unwrap(),
+                    exp,
                     data.action,
                 );
 
@@ -383,7 +386,7 @@ pub async fn stratagem_cli(command: StratagemCommand) -> Result<(), ImlManagerCl
                     "filesync",
                     "filesync",
                     &data.filesystem,
-                    serde_json::to_value(task_args).unwrap(),
+                    serde_json::to_value(task_args)?,
                     fidlist,
                 );
 
