@@ -50,22 +50,22 @@ impl TaskMutation {
     async fn create(
         context: &Context,
         fsname: String,
-        arguments: TaskArgs,
+        task_args: TaskArgs,
     ) -> juniper::FieldResult<CreateTaskResult> {
         let fs_id = fs_id_by_name(&context.pg_pool, &fsname).await?;
 
-        let args: HashMap<String, String> = arguments
+        let args: HashMap<String, String> = task_args
             .pairs
             .into_iter()
             .map(|x| (x.key, x.value))
             .collect();
 
         let task = insert_task(
-            &arguments.name,
+            &task_args.name,
             "created",
-            arguments.single_runner,
-            arguments.keep_failed,
-            &arguments.actions,
+            task_args.single_runner,
+            task_args.keep_failed,
+            &task_args.actions,
             serde_json::to_value(&args)?,
             fs_id,
             &context.pg_pool,
