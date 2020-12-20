@@ -108,7 +108,6 @@ async fn restore_fids(
 
 arg_enum! {
     #[derive(Debug, serde::Deserialize, Clone, Copy)]
-    #[serde(rename_all = "lowercase")]
     pub enum ActionType {
     Push,
     Pull,

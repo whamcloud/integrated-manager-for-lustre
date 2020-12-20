@@ -33,6 +33,7 @@ pub struct Fid {
     pub oid: u32,
     pub ver: u32,
 }
+
 impl fmt::Display for Fid {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "[0x{:x}:0x{:x}:0x{:x}]", self.seq, self.oid, self.ver)

@@ -21,7 +21,7 @@ use iml_postgres::{
 };
 use iml_rabbit::{ImlRabbitError, Pool};
 use iml_wire_types::{
-    db::{LogMessageRecord, ServerProfileRecord, TargetRecord},
+    db::{LogMessageRecord, LustreFid, ServerProfileRecord, TargetRecord},
     graphql::{ServerProfile, ServerProfileInput},
     graphql_duration::GraphQLDuration,
     logs::{LogResponse, Meta},
@@ -38,6 +38,7 @@ use std::{
     collections::{HashMap, HashSet},
     convert::{Infallible, TryFrom as _, TryInto},
     ops::Deref,
+    str::FromStr,
     sync::Arc,
 };
 use warp::Filter;
@@ -1434,6 +1435,49 @@ async fn insert_task(
     .await?;
 
     Ok(x)
+}
+
+async fn insert_fidlist(fids: Vec<String>, task_id: i32, pool: &PgPool) -> Result<(), ImlApiError> {
+    let x = fids
+        .iter()
+        .map(|fid| LustreFid::from_str(&fid))
+        .filter_map(Result::ok)
+        .fold((vec![], vec![], vec![]), |mut acc, fid| {
+            acc.0.push(fid.seq);
+            acc.1.push(fid.oid);
+            acc.2.push(fid.ver);
+
+            acc
+        });
+
+    sqlx::query!(
+        r#"
+	    INSERT INTO chroma_core_fidtaskqueue (fid, data, task_id)
+            SELECT row(seq, oid, ver)::lustre_fid, '{}'::jsonb, $4
+            FROM UNNEST($1::bigint[], $2::int[], $3::int[])
+            AS t(seq, oid, ver)"#,
+        &x.0,
+        &x.1,
+        &x.2,
+        task_id
+    )
+    .execute(pool)
+    .await?;
+
+    // update the number of fids in the task
+    sqlx::query!(
+        r#"
+        UPDATE chroma_core_task
+        SET fids_total = fids_total + $1
+        WHERE id = $2
+    "#,
+        fids.len() as i64,
+        task_id
+    )
+    .execute(pool)
+    .await?;
+
+    Ok(())
 }
 
 async fn run_jobs<T: std::fmt::Debug + serde::Serialize>(

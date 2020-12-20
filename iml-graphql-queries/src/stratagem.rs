@@ -187,6 +187,54 @@ pub mod fast_file_scan {
     pub type Resp = super::Resp<RunFastFileScan>;
 }
 
+pub mod task_fidlist {
+    use crate::Query;
+
+    pub static QUERY: &str = r#"
+        mutation RunTaskFidlist($jobname: String!, $taskname: String!, $fsname: String!, $arguments: String!, $fidlist: [String!]!) {
+          stratagem {
+            runTaskFidlist(jobname: $jobname, taskname: $taskname, fsname: $fsname, arguments: $arguments, fidlist: $fidlist)
+          }
+        }
+    "#;
+
+    #[derive(Debug, serde::Serialize)]
+    pub struct Vars {
+        jobname: String,
+        taskname: String,
+        fsname: String,
+        arguments: String,
+        fidlist: Vec<String>,
+    }
+
+    pub fn build(
+        jobname: impl ToString,
+        taskname: impl ToString,
+        fsname: impl ToString,
+        arguments: impl ToString,
+        fidlist: Vec<String>,
+    ) -> Query<Vars> {
+        Query {
+            query: QUERY.to_string(),
+            variables: Some(Vars {
+                jobname: jobname.to_string(),
+                taskname: taskname.to_string(),
+                fsname: fsname.to_string(),
+                arguments: arguments.to_string(),
+                fidlist,
+            }),
+        }
+    }
+
+    #[derive(Debug, Clone, serde::Deserialize)]
+    pub struct RunTaskFidlist {
+        #[serde(rename(deserialize = "runTaskFidlist"))]
+        pub run_task_fidlist: bool,
+    }
+
+    pub type Resp = super::Resp<RunTaskFidlist>;
+}
+
 pub mod filesync {
     use iml_wire_types::Command;
 
