@@ -333,10 +333,7 @@ pub async fn stratagem_cli(command: StratagemCommand) -> Result<(), ImlManagerCl
             wait_for_cmd_display(command).await?;
         }
         StratagemCommand::Filesync(data) => match data.expression {
-            Some(ref _x) => {
-                let exp = data.expression.ok_or_else(|| {
-                    ImlManagerCliError::ApiError("Expression is empty?".to_string())
-                })?;
+            Some(ref exp) => {
                 let query = stratagem_queries::filesync::build(
                     &data.filesystem,
                     data.remote,
