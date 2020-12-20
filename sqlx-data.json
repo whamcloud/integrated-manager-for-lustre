@@ -4668,6 +4668,21 @@
       ]
     }
   },
+  "da77f4661fee36284a2158479ccbb6448604efd0fa74648e15a50b48d5ea143e": {
+    "query": "\n\t    INSERT INTO chroma_core_fidtaskqueue (fid, data, task_id)\n            SELECT row(seq, oid, ver)::lustre_fid, '{}'::jsonb, $4\n            FROM UNNEST($1::bigint[], $2::int[], $3::int[])\n            AS t(seq, oid, ver)",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Int8Array",
+          "Int4Array",
+          "Int4Array",
+          "Int4"
+        ]
+      },
+      "nullable": []
+    }
+  },
   "da7a10e4d6f2a2456eccd0753df9d743ebcaebff8c13bae8f93c036dcfc8171b": {
     "query": "\n                                                INSERT INTO chroma_core_fidtaskerror (fid, task_id, data, errno)\n                                                VALUES ($1, $2, $3, $4)",
     "describe": {
