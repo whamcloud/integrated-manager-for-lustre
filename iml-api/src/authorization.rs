@@ -24,11 +24,18 @@ pub enum AuthorizationError {
     NoSessionId,
     #[error("No session cookie supplied")]
     NoSessionCookie,
+    #[error("No credentials supplied")]
+    NoCredentials,
     #[error(transparent)]
     Utf8Error(#[from] std::str::Utf8Error),
 }
 
 impl Reject for AuthorizationError {}
+
+pub enum Credentials {
+    SessionId(String),
+    AuthorizationBearer(String),
+}
 
 pub(crate) fn get_session_id(
     cookies: &Option<String>,
@@ -61,44 +68,68 @@ pub(crate) fn get_session_id(
 
         Ok(maybe_session_id)
     } else {
-        Err(AuthorizationError::NoSessionCookie)
+        Ok(None)
     }
 }
 
 pub(crate) async fn store_session(
     ctx: Arc<Mutex<Context>>,
-    maybe_session_id: &Option<String>,
+    credentials: Credentials,
 ) -> Result<(), ImlApiError> {
     if (*ctx.lock().await).session.is_none() {
-        if let Some(session_id) = maybe_session_id {
-            let mut headers = HeaderMap::new();
-            headers.insert(
-                "Cookie",
-                HeaderValue::from_str(format!("sessionid={}", session_id).as_ref()).map_err(
-                    |e| {
+        match credentials {
+            Credentials::SessionId(i) => {
+                tracing::debug!("Session id: {:?}", i);
+
+                let mut headers = HeaderMap::new();
+                headers.insert(
+                    "Cookie",
+                    HeaderValue::from_str(format!("sessionid={}", i).as_ref()).map_err(|e| {
                         ImlApiError::ImlManagerClientError(
                             ImlManagerClientError::InvalidHeaderValue(e),
                         )
-                    },
-                )?,
-            );
+                    })?,
+                );
 
-            let client: Client = get_client().map_err(ImlApiError::ImlManagerClientError)?;
-            let response: Session = get_retry(
-                client.clone(),
-                "session",
-                vec![("limit", "0")],
-                Some(&headers),
-            )
-            .await
-            .map_err(ImlApiError::ImlManagerClientError)?;
-            tracing::info!("Session: {:?}", response);
-            (*ctx.lock().await).session = Some(response.clone());
-            Ok(())
-        } else {
-            Err(ImlApiError::AuthorizationError(
-                AuthorizationError::NoSessionId,
-            ))
+                let client: Client = get_client().map_err(ImlApiError::ImlManagerClientError)?;
+                let response: Session = get_retry(
+                    client.clone(),
+                    "session",
+                    vec![("limit", "0")],
+                    Some(&headers),
+                )
+                .await
+                .map_err(ImlApiError::ImlManagerClientError)?;
+                tracing::info!("Session: {:?}", response);
+                (*ctx.lock().await).session = Some(response.clone());
+                Ok(())
+            }
+            Credentials::AuthorizationBearer(a) => {
+                tracing::debug!("Authorization bearer: {:?}", a);
+
+                let mut headers = HeaderMap::new();
+                headers.insert(
+                    "Authorization",
+                    HeaderValue::from_str(a.as_ref()).map_err(|e| {
+                        ImlApiError::ImlManagerClientError(
+                            ImlManagerClientError::InvalidHeaderValue(e),
+                        )
+                    })?,
+                );
+
+                let client: Client = get_client().map_err(ImlApiError::ImlManagerClientError)?;
+                let response: Session = get_retry(
+                    client.clone(),
+                    "session",
+                    vec![("limit", "0")],
+                    Some(&headers),
+                )
+                .await
+                .map_err(ImlApiError::ImlManagerClientError)?;
+                tracing::info!("Session: {:?}", response);
+                (*ctx.lock().await).session = Some(response.clone());
+                Ok(())
+            }
         }
     } else {
         Ok(())

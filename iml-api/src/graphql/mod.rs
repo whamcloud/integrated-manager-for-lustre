@@ -7,7 +7,7 @@ mod stratagem;
 mod task;
 
 use crate::{
-    authorization::{authorize, get_session_id, store_session},
+    authorization::{authorize, get_session_id, store_session, AuthorizationError, Credentials},
     command::get_command,
     error::ImlApiError,
     timer::{configure_snapshot_timer, remove_snapshot_timer},
@@ -1374,10 +1374,15 @@ pub(crate) async fn graphql(
     ctx: Arc<Mutex<Context>>,
     req: GraphQLRequest,
     cookies: Option<String>,
-    authorization: Option<String>,
+    maybe_authorization: Option<String>,
 ) -> Result<impl warp::Reply, warp::Rejection> {
     let maybe_session_id = get_session_id(&cookies).map_err(ImlApiError::from)?;
-    store_session(ctx.clone(), &maybe_session_id).await?;
+    let credentials = match (maybe_session_id, maybe_authorization) {
+        (None, None) => return Err(warp::reject::custom(AuthorizationError::NoCredentials)),
+        (Some(i), None) | (Some(i), Some(_)) => Credentials::SessionId(i),
+        (None, Some(a)) => Credentials::AuthorizationBearer(a),
+    };
+    store_session(ctx.clone(), credentials).await?;
 
     let lock = ctx.lock().await;
     let ctx = lock.deref();
