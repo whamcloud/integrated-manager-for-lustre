@@ -42,13 +42,13 @@ pub(crate) fn get_session_id(
 ) -> Result<Option<String>, AuthorizationError> {
     if let Some(cookies) = cookies {
         let string = from_utf8(cookies.as_bytes()).map_err(AuthorizationError::Utf8Error)?;
-        tracing::info!("Cookie: {}", string);
+        tracing::debug!("Cookie: {}", string);
         let maybe_session_id = {
             string.split(';').map(|cookie| {
                 let mut split = cookie.split_terminator('=');
                 let key = split.next().map(|s| s.trim_start().trim_end());
                 let value = split.next().map(|s| s.trim_start().trim_end());
-                tracing::info!("key: {:?}, value: {:?}", key, value);
+                tracing::debug!("key: {:?}, value: {:?}", key, value);
 
                 match (key, value) {
                     (Some("sessionid"), value) => {
@@ -64,7 +64,7 @@ pub(crate) fn get_session_id(
         .next()
         .flatten()
         .map(Into::into);
-        tracing::info!("Session ID: {:?}", maybe_session_id);
+        tracing::debug!("Session ID: {:?}", maybe_session_id);
 
         Ok(maybe_session_id)
     } else {
@@ -100,7 +100,7 @@ pub(crate) async fn store_session(
                 )
                 .await
                 .map_err(ImlApiError::ImlManagerClientError)?;
-                tracing::info!("Session: {:?}", response);
+                tracing::debug!("Session: {:?}", response);
                 (*ctx.lock().await).session = Some(response.clone());
                 Ok(())
             }
@@ -126,7 +126,7 @@ pub(crate) async fn store_session(
                 )
                 .await
                 .map_err(ImlApiError::ImlManagerClientError)?;
-                tracing::info!("Session: {:?}", response);
+                tracing::debug!("Session: {:?}", response);
                 (*ctx.lock().await).session = Some(response.clone());
                 Ok(())
             }
