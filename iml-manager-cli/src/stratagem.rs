@@ -156,8 +156,11 @@ pub struct StratagemCloudsyncData {
     #[structopt(short = "r", long = "remote")]
     remote: String,
     /// Match expression
-    #[structopt(short = "e", long = "expression")]
-    expression: String,
+    #[structopt(short = "e", long = "expression", required_unless = "files")]
+    expression: Option<String>,
+    /// List of files to act on
+    #[structopt(parse(from_os_str), min_values = 1, required_unless = "expression")]
+    files: Vec<PathBuf>,
 }
 
 fn parse_duration(src: &str) -> Result<u64, ImlManagerCliError> {
@@ -393,23 +396,69 @@ pub async fn stratagem_cli(command: StratagemCommand) -> Result<(), ImlManagerCl
                     graphql(query).await?;
             }
         },
-        StratagemCommand::Cloudsync(data) => {
-            let query = stratagem_queries::cloudsync::build(
+	StratagemCommand::Cloudsync(data) => match data.expression {
+            Some(ref exp) => {
+		let query = stratagem_queries::cloudsync::build(
                 &data.filesystem,
-                data.remote,
-                data.expression,
-                data.action,
-            );
+                    data.remote,
+                    exp,
+                    data.action,
+		);
 
-            let resp: iml_graphql_queries::Response<stratagem_queries::cloudsync::Resp> =
-                graphql(query).await?;
+		let resp: iml_graphql_queries::Response<stratagem_queries::cloudsync::Resp> =
+                    graphql(query).await?;
 
-            let command = Result::from(resp)?.data.stratagem.run_cloudsync;
+		let command = Result::from(resp)?.data.stratagem.run_cloudsync;
 
-            tracing::debug!("run_cloudsync: {:?}", command);
+		tracing::debug!("run_cloudsync: {:?}", command);
 
-            wait_for_cmd_display(command).await?;
-        }
+		wait_for_cmd_display(command).await?;
+            }
+	    None => {
+		#[derive(Serialize, Debug)]
+                struct CloudsyncArgs {
+                    remote: String,
+                    action: String,
+                }
+
+                let task_args = CloudsyncArgs {
+                    remote: data.remote,
+                    action: data.action.to_string(),
+                };
+
+                let llapi = match LlapiFid::create(&data.filesystem) {
+                    Ok(x) => x,
+                    Err(e) => {
+                        eprintln!("Can only specify a list of files on a client where the filesystem is mounted: {}", e);
+                        return Err(ImlManagerCliError::ApiError(
+                            "Filesystem not mounted".to_string(),
+                        ));
+                    }
+                };
+
+                let (fids, errors): (Vec<_>, Vec<_>) = data
+                    .files
+                    .into_iter()
+                    .map(|file| llapi.path2fid(&file))
+                    .partition(Result::is_ok);
+                let fidlist: Vec<_> = fids.into_iter().map(Result::unwrap).collect();
+                let errors: Vec<_> = errors.into_iter().map(Result::unwrap_err).collect();
+                if !errors.is_empty() {
+                    eprintln!("files not found, ignoring: {:?}", errors);
+                }
+
+                let query = stratagem_queries::task_fidlist::build(
+                    "cloudsync",
+                    "cloudsync",
+                    &data.filesystem,
+                    serde_json::to_value(task_args)?,
+                    fidlist,
+                );
+
+                let _resp: iml_graphql_queries::Response<stratagem_queries::task_fidlist::Resp> =
+                    graphql(query).await?;
+	    }
+	},
         StratagemCommand::Interval(cmd) => interval_cli(cmd).await?,
         StratagemCommand::Report { command } => {
             report_cli(command.unwrap_or(ReportCommand::List {
