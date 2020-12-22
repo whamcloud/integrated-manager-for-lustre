@@ -19,6 +19,7 @@ from chroma_core.lib.job import DependOn, DependAll, Step
 from chroma_help.help import help_text
 
 import settings
+import sys
 
 
 class NTPConfiguration(DeletableStatefulObject):
@@ -56,14 +57,34 @@ class StopChronyStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        return self.invoke_rust_agent_expect_result(kwargs["fqdn"], "stop_unit", "chronyd.service")
+        from chroma_core.services.job_scheduler.agent_rpc import AgentException
+
+        try:
+            return self.invoke_rust_agent_expect_result(kwargs["fqdn"], "stop_unit", "chronyd.service")
+        except AgentException as e:
+            t, v, tb = sys.exc_info()
+
+            if "Unknown busctl" in str(e):
+                return ""
+            else:
+                raise t, v, tb
 
 
 class DisableChronyStep(Step):
     idempotent = True
 
     def run(self, kwargs):
-        return self.invoke_rust_agent_expect_result(kwargs["fqdn"], "disable_unit", "chronyd.service")
+        from chroma_core.services.job_scheduler.agent_rpc import AgentException
+
+        try:
+            return self.invoke_rust_agent_expect_result(kwargs["fqdn"], "disable_unit", "chronyd.service")
+        except AgentException as e:
+            t, v, tb = sys.exc_info()
+
+            if "Unknown busctl" in str(e):
+                return ""
+            else:
+                raise t, v, tb
 
 
 class EnableNtpStep(Step):
