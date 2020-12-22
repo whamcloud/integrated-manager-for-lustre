@@ -396,26 +396,26 @@ pub async fn stratagem_cli(command: StratagemCommand) -> Result<(), ImlManagerCl
                     graphql(query).await?;
             }
         },
-	StratagemCommand::Cloudsync(data) => match data.expression {
+        StratagemCommand::Cloudsync(data) => match data.expression {
             Some(ref exp) => {
-		let query = stratagem_queries::cloudsync::build(
-                &data.filesystem,
+                let query = stratagem_queries::cloudsync::build(
+                    &data.filesystem,
                     data.remote,
                     exp,
                     data.action,
-		);
+                );
 
-		let resp: iml_graphql_queries::Response<stratagem_queries::cloudsync::Resp> =
+                let resp: iml_graphql_queries::Response<stratagem_queries::cloudsync::Resp> =
                     graphql(query).await?;
 
-		let command = Result::from(resp)?.data.stratagem.run_cloudsync;
+                let command = Result::from(resp)?.data.stratagem.run_cloudsync;
 
-		tracing::debug!("run_cloudsync: {:?}", command);
+                tracing::debug!("run_cloudsync: {:?}", command);
 
-		wait_for_cmd_display(command).await?;
+                wait_for_cmd_display(command).await?;
             }
-	    None => {
-		#[derive(Serialize, Debug)]
+            None => {
+                #[derive(Serialize, Debug)]
                 struct CloudsyncArgs {
                     remote: String,
                     action: String,
@@ -457,8 +457,8 @@ pub async fn stratagem_cli(command: StratagemCommand) -> Result<(), ImlManagerCl
 
                 let _resp: iml_graphql_queries::Response<stratagem_queries::task_fidlist::Resp> =
                     graphql(query).await?;
-	    }
-	},
+            }
+        },
         StratagemCommand::Interval(cmd) => interval_cli(cmd).await?,
         StratagemCommand::Report { command } => {
             report_cli(command.unwrap_or(ReportCommand::List {
