@@ -162,59 +162,46 @@ fn side_panel_buttons(
     route: &Route,
     activity_health: &activity_indicator::ActivityHealth,
 ) -> Node<Msg> {
+    let a_cls = class![
+        C.flex,
+        C.flex_col,
+        C.items_center,
+        C.justify_center,
+        C.cursor_pointer,
+        C.hover__text_active
+    ];
+
     div![
-        class![C.grid, C.grid_rows_3],
-        div![
-            class![
-                // C.bg_menu_active => model.route == Route::Activity,
-                C.flex,
-                C.flex_col,
-                C.group,
-                C.items_center,
-                C.justify_center,
-                C.text_gray_500
-                // C.text_gray_500 => model.route != Route::Activity,
-                // C.text_white => model.route == Route::Activity,
-            ],
-            a![
-                class![C.cursor_pointer],
-                simple_ev(Ev::Click, Msg::Open(SectionSelector::Activity)),
-                activity_indicator::view(activity_health),
-            ],
-            a![
-                class![C.text_sm, C.group_hover__text_active, C.pt_2, C.cursor_pointer],
-                simple_ev(Ev::Click, Msg::Open(SectionSelector::Activity)),
-                "Activity"
-            ]
+        class![C.grid, C.grid_rows_3, C.text_gray_500],
+        a![
+            &a_cls,
+            simple_ev(Ev::Click, Msg::Open(SectionSelector::Activity)),
+            activity_indicator::view(activity_health),
+            span![class![C.text_sm, C.pt_2], "Activity"],
         ],
         restrict::view(
             session,
             GroupType::FilesystemAdministrators,
-            div![
-                class![
-                    // C.bg_menu_active => model.route == Route::Logs,
-                    C.flex,
-                    C.flex_col,
-                    C.group,
-                    C.items_center,
-                    C.justify_center,
-                ],
-                a![
-                    class![C.cursor_pointer],
-                    simple_ev(Ev::Click, Msg::Open(SectionSelector::Logs)),
-                    font_awesome(class![C.h_8, C.w_8, C.text_pink_600], "book"),
-                ],
-                a![
-                    class![C.text_sm, C.group_hover__text_active, C.text_gray_500, C.pt_2],
-                    simple_ev(Ev::Click, Msg::Open(SectionSelector::Logs)),
-                    "Logs"
-                ]
+            a![
+                &a_cls,
+                simple_ev(Ev::Click, Msg::Open(SectionSelector::Logs)),
+                font_awesome(class![C.h_8, C.w_8, C.text_pink_600], "book"),
+                span![class![C.text_sm, C.pt_2], "Logs"],
             ]
         ),
-        div![
-            class![C.flex, C.flex_col, C.group, C.justify_center, C.items_center],
-            context_sensitive_help_link(route).els()
-        ]
+        a![
+            &a_cls,
+            attrs! {
+               At::Target => "_blank",
+               At::Href => format!(
+                   "/{}/docs/Graphical_User_Interface_9_0.html{}",
+                   HELP_PATH,
+                   route.help_link().unwrap_or_else(|| "".into())
+               )
+            },
+            font_awesome_outline(class![C.h_8, C.w_8, C.text_blue_400], "question-circle"),
+            span![class![C.text_sm, C.pt_2], "Support"]
+        ],
     ]
 }
 
@@ -231,28 +218,5 @@ fn section_container(children: impl View<Msg>) -> Node<Msg> {
             C.w_132
         ],
         children.els()
-    ]
-}
-
-fn context_sensitive_help_link<T: 'static>(route: &Route) -> impl View<T> {
-    let at = attrs! {
-       At::Target => "_blank", // open the link in a new tab
-       At::Href => format!(
-           "/{}/docs/Graphical_User_Interface_9_0.html{}",
-           HELP_PATH,
-           route.help_link().unwrap_or_else(|| "".into())
-       )
-    };
-
-    nodes![
-        a![
-            &at,
-            font_awesome_outline(class![C.h_8, C.w_8, C.text_blue_400], "question-circle")
-        ],
-        a![
-            &at,
-            class![C.text_sm, C.group_hover__text_active, C.text_gray_500, C.pt_2],
-            "Help"
-        ]
     ]
 }
