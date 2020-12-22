@@ -234,12 +234,12 @@ impl StratagemMutation {
                     groups: vec!["cloudsync".into()],
                 },
                 groups: vec![stratagem::StratagemGroup {
-                    name: "filesync".into(),
+                    name: "cloudsync".into(),
                     rules: vec![stratagem::StratagemRule {
                         action: "LAT_SHELL_CMD_FID".into(),
                         expression: expression.clone(),
-                        argument: "filesync".into(),
-                        counter_name: Some("filesync".into()),
+                        argument: "cloudsync".into(),
+                        counter_name: Some("cloudsync".into()),
                     }],
                 }],
             };
