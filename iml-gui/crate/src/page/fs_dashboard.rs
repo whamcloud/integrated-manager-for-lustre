@@ -125,5 +125,5 @@ pub fn view(model: &Model) -> Node<Msg> {
 }
 
 pub fn init(orders: &mut impl Orders<Msg, GMsg>) {
-    orders.proxy(Msg::FsUsage).send_msg(fs_usage::Msg::FetchData);
+    orders.proxy(Msg::FsUsage).send_msg(fs_usage::Msg::FetchData(None));
 }

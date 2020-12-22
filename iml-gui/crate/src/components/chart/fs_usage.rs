@@ -10,6 +10,7 @@ use std::time::Duration;
 static DB_NAME: &str = "iml_stats";
 
 pub struct Model {
+    filesystems: Option<Vec<String>>,
     fs_name: Option<String>,
     cancel: Option<oneshot::Sender<()>>,
     pub metric_data: Option<FsUsage>,
@@ -19,6 +20,7 @@ pub struct Model {
 impl Default for Model {
     fn default() -> Self {
         Self {
+            filesystems: None,
             fs_name: None,
             cancel: None,
             metric_data: None,
@@ -67,7 +69,7 @@ pub struct FsUsage {
 #[derive(Clone, Debug)]
 pub enum Msg {
     DataFetched(Box<seed::fetch::ResponseDataResult<InfluxResults>>),
-    FetchData,
+    FetchData(Option<Vec<String>>),
     Noop,
 }
 
@@ -81,9 +83,13 @@ async fn fetch_metrics(db: &str, query: String) -> Result<Msg, Msg> {
 
 pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) {
     match msg {
-        Msg::FetchData => {
+        Msg::FetchData(filesystems) => {
+            model.filesystems = filesystems.clone();
+
             let part = if let Some(fs_name) = &model.fs_name {
                 format!(r#"AND "fs" = '{}'"#, fs_name)
+            } else if let Some(filesystems) = filesystems {
+                format!(r#"AND "fs" =~ /{}/"#, filesystems.join("|"))
             } else {
                 "".into()
             };
@@ -130,7 +136,11 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
                 }
             }
 
-            let (cancel, fut) = sleep_with_handle(Duration::from_secs(10), Msg::FetchData, Msg::Noop);
+            let (cancel, fut) = sleep_with_handle(
+                Duration::from_secs(10),
+                Msg::FetchData(model.filesystems.clone()),
+                Msg::Noop,
+            );
 
             model.cancel = Some(cancel);
 
