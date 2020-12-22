@@ -121,7 +121,7 @@ jobs:
           toolchain: stable
           override: true
 
-      - run: cargo install sqlx-cli --no-default-features --features postgres --git https://github.com/jgrund/sqlx --branch workspace-support
+      - run: cargo install sqlx-cli --no-default-features --features postgres --git https://github.com/launchbadge/sqlx --tag v0.4.2
       - uses: actions-rs/cargo@v1
         env:
           DATABASE_URL: postgres://chroma:chroma@localhost:5432/chroma
@@ -190,7 +190,7 @@ jobs:
           DB_PASSWORD: chroma
           DB_HOST: localhost
           DB_PORT: 5432
-      - run: cargo install sqlx-cli --no-default-features --features postgres --git https://github.com/jgrund/sqlx --branch workspace-support
+      - run: cargo install sqlx-cli --no-default-features --features postgres --git https://github.com/launchbadge/sqlx --tag v0.4.2
       - uses: actions-rs/cargo@v1
         env:
           DATABASE_URL: postgres://chroma:chroma@localhost:5432/chroma

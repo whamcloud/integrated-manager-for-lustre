@@ -1,0 +1,18 @@
+---
+source: mount-emitter/src/lib.rs
+expression: line_to_command(line).unwrap()
+---
+AddMount(
+    MountPoint(
+        "/mnt/part1",
+    ),
+    DevicePath(
+        "/dev/sde1",
+    ),
+    FsType(
+        "ext4",
+    ),
+    MountOpts(
+        "rw,relatime,data=ordered",
+    ),
+)

@@ -1,8 +1,6 @@
 ---
-created: "2019-08-25T21:49:38.325210Z"
-creator: insta@0.10.1
 source: mount-emitter/src/lib.rs
-expression: line_to_command(line)
+expression: line_to_command(line).unwrap()
 ---
 MoveMount(
     MountPoint(

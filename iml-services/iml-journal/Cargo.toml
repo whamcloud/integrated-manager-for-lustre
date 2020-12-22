@@ -25,4 +25,4 @@ features = ["std"]
 version = "1.3"
 
 [dev-dependencies]
-insta = "1.0"
+insta = "1"

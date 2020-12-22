@@ -25,5 +25,5 @@ warp = "0.2"
 [dev-dependencies]
 chrono = "0.4"
 iml-postgres = {path = "../../iml-postgres", version = "0.4", features = ["test"]}
-insta = {version = "0.16", features = ["redactions"]}
+insta = {version = "1", features = ["redactions"]}
 tokio-test = "0.2"

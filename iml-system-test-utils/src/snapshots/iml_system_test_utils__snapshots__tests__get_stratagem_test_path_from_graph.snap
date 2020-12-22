@@ -10,3 +10,4 @@ edge: Stratagem has nodes (Snapshot { name: ServersDeployed, available: false },
 edge: Stratagem has nodes (Snapshot { name: StratagemCreated, available: false }, Snapshot { name: StratagemDetected, available: false })
 edge: Stratagem has nodes (Snapshot { name: StratagemDetected, available: false }, Snapshot { name: StratagemMountedClient, available: false })
 edge: Stratagem has nodes (Snapshot { name: StratagemMountedClient, available: false }, Snapshot { name: StratagemTestTaskQueue, available: false })
+
