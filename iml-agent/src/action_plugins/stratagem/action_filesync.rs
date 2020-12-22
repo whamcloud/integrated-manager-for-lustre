@@ -37,7 +37,7 @@ fn do_rsync<'a>(
                   }| async move {
                 let src_file = src_root.join(&file_path);
                 let dest_file = dest_root.join(&file_path);
-                let mut dest_dir = PathBuf::from(&src_file);
+                let mut dest_dir = PathBuf::from(&dest_file);
                 dest_dir.pop();
                 fs::create_dir_all(&dest_dir).await?;
 
@@ -92,7 +92,7 @@ fn do_dsync<'a>(
                 let mpi_count = env::get_openmpi_count();
                 let src_file = src_root.join(&file_path);
                 let dest_file = dest_root.join(&file_path);
-                let mut dest_dir = PathBuf::from(&src_file);
+                let mut dest_dir = PathBuf::from(&dest_file);
                 dest_dir.pop();
                 fs::create_dir_all(&dest_dir).await?;
 
