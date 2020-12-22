@@ -2,11 +2,8 @@
 set -eu
 
 /bin/mkdir -p /etc/iml
-service=iml_nginx
-trailer=$(/usr/bin/docker service ps -f "name=$service.1" $service -q --no-trunc | head -n1)
-until /usr/bin/docker exec $service.1.$trailer sh -c 'until [ -f /var/lib/chroma/iml-settings.conf ]; do echo "copy-embedded-settings: Waiting for EMF container settings..."; sleep 1; done' 2>/dev/null; do
+
+until /usr/bin/docker cp iml_nginx.1.$(/usr/bin/docker service ps -f "name=iml_nginx.1" iml_nginx -q --no-trunc 2>/dev/null | head -n1):/var/lib/chroma/iml-settings.conf /etc/iml/iml-settings.conf 2>/dev/null; do
     echo "copy-embedded-settings: Waiting for EMF startup..."
-    sleep 1
+    sleep 5
 done
-mkdir -p /etc/iml
-/usr/bin/docker cp $service.1.$trailer:/var/lib/chroma/iml-settings.conf /etc/iml/iml-settings.conf
