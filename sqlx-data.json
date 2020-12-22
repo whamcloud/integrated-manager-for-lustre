@@ -4496,6 +4496,26 @@
       "nullable": []
     }
   },
+  "ceff1ca4a42d0a41561eb3c3f51f5e720138c890d76437845b74889fc82410cb": {
+    "query": "\n            SELECT n.nid FROM target AS t\n            INNER JOIN lnet as l ON l.host_id = ANY(t.host_ids)\n            INNER JOIN nid as n ON n.id = ANY(l.nids)\n            WHERE t.name='MGS' AND $1 = ANY(t.filesystems)\n            AND n.host_id NOT IN (\n                SELECT nh.host_id\n                FROM corosync_resource_bans b\n                INNER JOIN corosync_node_managed_host nh ON (nh.corosync_node_id).name = b.node\n                AND nh.cluster_id = b.cluster_id\n                INNER JOIN corosync_resource r ON r.name = b.resource AND b.cluster_id = r.cluster_id\n                WHERE r.mount_point is not NULL AND r.mount_point = t.mount_path\n            )\n            GROUP BY l.host_id, n.nid ORDER BY l.host_id, n.nid\n            ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "nid",
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      },
+      "nullable": [
+        false
+      ]
+    }
+  },
   "d21d5385bab3f2131870f7eb192ae2e6a6e44ea485f571a20861dd0cedb2070b": {
     "query": "select id from django_content_type where model = 'lustreclientmount'",
     "describe": {
@@ -5096,26 +5116,6 @@
         ]
       },
       "nullable": []
-    }
-  },
-  "e99781622236f4fd9b7c6cbb2ee291e026cd430a1a5bed35e0ede9aa384fd626": {
-    "query": "\n            SELECT n.nid FROM target AS t\n            INNER JOIN lnet as l ON l.host_id = ANY(t.host_ids)\n            INNER JOIN nid as n ON n.id = ANY(l.nids)\n            WHERE t.name='MGS' AND $1 = ANY(t.filesystems) AND n.host_id NOT IN (\n                SELECT nh.host_id\n                FROM corosync_resource_bans b\n                INNER JOIN corosync_node_managed_host nh ON (nh.corosync_node_id).name = b.node\n                AND nh.cluster_id = b.cluster_id\n                INNER JOIN corosync_resource t ON t.name = b.resource AND b.cluster_id = t.cluster_id\n                WHERE t.mount_point is not NULL\n            ) GROUP BY l.host_id, n.nid ORDER BY l.host_id, n.nid;\n            ",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "nid",
-          "type_info": "Text"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "Text"
-        ]
-      },
-      "nullable": [
-        false
-      ]
     }
   },
   "ec70b9a5caeadc31f5d1359737cc1c6da64e41db8315a81d81420d3b37b182c5": {
