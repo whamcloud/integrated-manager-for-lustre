@@ -270,6 +270,12 @@ Vagrant.configure('2') do |config|
                      type: 'shell',
                      run: 'never',
                      path: 'scripts/build_rust_rpms.sh'
+
+    adm.vm.provision 'build-rust-rpms-clean',
+                     type: 'shell',
+                     run: 'never',
+                     path: 'scripts/build_rust_rpms.sh',
+                     args: '--clean'
   end
 
   #
