@@ -58,7 +58,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
 
             let req = fetch::Request::graphql_query(&query);
 
-            orders.perform_cmd(req.fetch_json_data(|x| Msg::SnapshotCreateResp(x)));
+            orders.perform_cmd(req.fetch_json_data(Msg::SnapshotCreateResp));
         }
         Msg::SnapshotCreateResp(x) => match x {
             Ok(Response::Data(x)) => {
@@ -104,7 +104,7 @@ pub fn init(cache: &ArcCache, model: &mut Model) {
     let fs_name = get_fs_names(cache).into_iter().next();
 
     if let Some(fs_name) = fs_name {
-        model.fs_name = fs_name.to_string();
+        model.fs_name = fs_name;
     }
 }
 

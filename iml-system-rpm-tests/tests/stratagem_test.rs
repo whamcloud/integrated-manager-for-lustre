@@ -10,8 +10,8 @@ async fn test_stratagem_setup() -> Result<(), TestError> {
     let config = Config::default();
     let config: Config = Config {
         profile_map: vec![
-            ("base_monitored".into(), config.storage_servers()),
-            ("stratagem_client".into(), config.client_servers()),
+            ("base_monitored", config.storage_servers()),
+            ("stratagem_client", config.client_servers()),
         ],
         branding: iml_wire_types::Branding::DDN(iml_wire_types::DdnBranding::Exascaler),
         use_stratagem: true,

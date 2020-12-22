@@ -37,21 +37,10 @@ pub fn line_to_command(x: &[u8]) -> Result<MountCommand, Error> {
     let mut x: IntermediateMap = line_to_hashmap(&x)?;
 
     let (target, source, fstype, mount_opts, old_opts, old_target) = (
-        MountPoint(
-            x.remove("TARGET")
-                .ok_or_else(|| Error::Missing("TARGET"))?
-                .into(),
-        ),
-        DevicePath(
-            x.remove("SOURCE")
-                .ok_or_else(|| Error::Missing("SOURCE"))?
-                .into(),
-        ),
-        FsType(x.remove("FSTYPE").ok_or_else(|| Error::Missing("FSTYPE"))?),
-        MountOpts(
-            x.remove("OPTIONS")
-                .ok_or_else(|| Error::Missing("OPTIONS"))?,
-        ),
+        MountPoint(x.remove("TARGET").ok_or(Error::Missing("TARGET"))?.into()),
+        DevicePath(x.remove("SOURCE").ok_or(Error::Missing("SOURCE"))?.into()),
+        FsType(x.remove("FSTYPE").ok_or(Error::Missing("FSTYPE"))?),
+        MountOpts(x.remove("OPTIONS").ok_or(Error::Missing("OPTIONS"))?),
         x.get("OLD-OPTIONS"),
         x.get("OLD-TARGET"),
     );
@@ -64,22 +53,14 @@ pub fn line_to_command(x: &[u8]) -> Result<MountCommand, Error> {
             source,
             fstype,
             mount_opts,
-            MountOpts(
-                old_opts
-                    .ok_or_else(|| Error::Missing("OLD-OPTIONS"))?
-                    .to_string(),
-            ),
+            MountOpts(old_opts.ok_or(Error::Missing("OLD-OPTIONS"))?.to_string()),
         ),
         Some("move") => MountCommand::MoveMount(
             target,
             source,
             fstype,
             mount_opts,
-            MountPoint(
-                old_target
-                    .ok_or_else(|| Error::Missing("OLD-TARGET"))?
-                    .into(),
-            ),
+            MountPoint(old_target.ok_or(Error::Missing("OLD-TARGET"))?.into()),
         ),
         Some(x) => return Err(Error::Unexpected(x.to_string())),
     };
@@ -163,7 +144,7 @@ where
 
         tracing::debug!("Read line: {}", String::from_utf8_lossy(&line));
 
-        if str::from_utf8(&line)? == "" {
+        if str::from_utf8(&line)?.is_empty() {
             break;
         }
 

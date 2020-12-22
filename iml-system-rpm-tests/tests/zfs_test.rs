@@ -11,8 +11,8 @@ async fn test_zfs_setup() -> Result<(), TestError> {
     let config = Config::default();
     let config: Config = Config {
         profile_map: vec![
-            ("base_monitored".into(), config.storage_servers()),
-            ("base_client".into(), config.client_servers()),
+            ("base_monitored", config.storage_servers()),
+            ("base_client", config.client_servers()),
         ],
         fs_type: FsType::Zfs,
         ..config

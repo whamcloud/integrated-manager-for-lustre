@@ -120,7 +120,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
 
             let req = fetch::Request::graphql_query(&query);
 
-            orders.perform_cmd(req.fetch_json_data(|x| Msg::SnapshotCreateRetentionResp(x)));
+            orders.perform_cmd(req.fetch_json_data(Msg::SnapshotCreateRetentionResp));
         }
         Msg::SnapshotCreateRetentionResp(x) => {
             model.submitting = false;

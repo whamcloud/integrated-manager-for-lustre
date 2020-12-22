@@ -347,7 +347,7 @@ mod tests {
     fn test_rich_wrapper() {
         fn extract_from_y(y: &Y) -> (u32, Vec<u32>) {
             let mut deps = y.deps.iter().map(|s| s.parse::<u32>().unwrap()).collect::<Vec<u32>>();
-            deps.sort();
+            deps.sort_unstable();
             (y.id, deps)
         }
         // the DAG built over RichDeps<_, _> must be always the same, no matter how dependencies are sorted
@@ -417,7 +417,7 @@ mod tests {
         }
     }
 
-    const SMALL_TREE: &'static str = r#"48: Setup managed host oss2.local
+    const SMALL_TREE: &str = r#"48: Setup managed host oss2.local
   39: Install packages on server oss2.local
   40: Configure NTP on oss2.local
     39: Install packages on server oss2.local...
@@ -425,7 +425,7 @@ mod tests {
     46: Configure Pacemaker on oss2.local...
 "#;
 
-    const TREE_DIRECT: &'static str = r#"48: Setup managed host oss2.local.
+    const TREE_DIRECT: &str = r#"48: Setup managed host oss2.local.
   39: Install packages on server oss2.local.
   40: Configure NTP on oss2.local.
   41: Enable LNet on oss2.local.
@@ -437,7 +437,7 @@ mod tests {
   47: Start Pacemaker on oss2.local.
 "#;
 
-    const TREE_INVERSE: &'static str = r#"39: Install packages on server oss2.local.
+    const TREE_INVERSE: &str = r#"39: Install packages on server oss2.local.
   40: Configure NTP on oss2.local.
     48: Setup managed host oss2.local.
   41: Enable LNet on oss2.local.

@@ -129,7 +129,7 @@ pub fn update(msg: Msg, cache: &ArcCache, model: &mut Model, orders: &mut impl O
             let query = client_mount::list_mount_command::build(model.fs.name.to_string());
             let req = seed::fetch::Request::graphql_query(&query);
 
-            orders.perform_cmd(req.fetch_json_data(|x| Msg::MountCommandFetched(x)));
+            orders.perform_cmd(req.fetch_json_data(Msg::MountCommandFetched));
         }
         Msg::MountCommandFetched(x) => {
             match x {
@@ -538,7 +538,7 @@ pub(crate) fn standby_hosts_view<T>(cache: &ArcCache, target: &TargetRecord) -> 
 
     standby_hosts.sort_by(|a, b| natord::compare(&a.fqdn, &b.fqdn));
 
-    if standby_hosts.len() > 0 {
+    if !standby_hosts.is_empty() {
         ul![standby_hosts
             .iter()
             .map(|x| li![resource_links::server_link(Some(&x.resource_uri), &x.fqdn)])]

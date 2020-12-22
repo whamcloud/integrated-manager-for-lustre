@@ -80,7 +80,7 @@ pub fn update(msg: Msg, model: &mut Model) {
             let value = input_el.value_as_number();
 
             model.value = if value.is_nan() { None } else { Some(value as u64) };
-            model.validation_message = input_el.validation_message().ok().filter(|x| x != "");
+            model.validation_message = input_el.validation_message().ok().filter(|x| !x.is_empty());
         }
         Msg::Dropdown(msg) => {
             dropdown::update(msg, &mut model.dropdown);

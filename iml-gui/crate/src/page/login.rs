@@ -111,7 +111,7 @@ pub fn view(model: &Model, branding: Branding, exa_version: &Option<String>) -> 
 
     let errs = Errors::default();
 
-    let errs = model.errors.as_ref().unwrap_or_else(|| &errs);
+    let errs = model.errors.as_ref().unwrap_or(&errs);
     let (border_color, text_color, logo) = match branding {
         Branding::Whamcloud => (
             C.border_teal_500,
