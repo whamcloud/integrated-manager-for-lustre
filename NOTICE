@@ -3,11 +3,5 @@ Copyright (c) 2020 DDN. All rights reserved.
 Use of this source code is governed by a MIT-style
 license that can be found in the LICENSE file.
 
-Third party components in chroma-manager/chroma_ui/static/js/lib/
-individually note the licenses under which these packages are included
-herein.  Where a package is dual-licensed under (L)GPL and a more
-liberal license (e.g. BSD, MIT, ASL), it is included under the more
-liberal license.
-
 The code in chroma-manager/polymorphic/ is included under the New BSD
 license from http://code.google.com/p/django-polymorphic-models/

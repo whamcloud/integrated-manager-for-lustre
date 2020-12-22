@@ -8,7 +8,6 @@ include tests/sample_data/*.json
 include scm_version.py
 include *.repo
 include *.profile
-graft licenses
 graft polymorphic
 graft scripts
 global-exclude local_settings.py*

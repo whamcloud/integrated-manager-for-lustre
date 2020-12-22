@@ -1,5 +1,0 @@
-IML_NODE="lotus-22"
-MDS_NODES="lotus-24 lotus-25"
-OSS_NODES="lotus-26 lotus-27"
-CLIENTS="lotus-21vm9"
-PDSH_ARGS="-Rssh"

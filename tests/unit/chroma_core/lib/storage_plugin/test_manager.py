@@ -167,11 +167,6 @@ class TestValidate(IMLUnitTestCase):
             ],
         )
 
-    def test_example_package(self):
-        dirname = os.path.dirname(__file__) + "/../../../../../example_storage_plugin_package/"
-        errors = ValidateCommand().execute(os.path.join(os.path.abspath(dirname), "example_storage_plugin/"))
-        self.assertListEqual(errors, [])
-
     def test_fake_controller(self):
         dirname = os.path.dirname(__file__) + "/../../../../plugins/"
         errors = ValidateCommand().execute(os.path.join(os.path.abspath(dirname), "fake_controller.py"))

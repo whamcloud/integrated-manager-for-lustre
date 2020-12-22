@@ -19,8 +19,6 @@ CODE_OF_CONDUCT.md
 docker/iml-images.tar
 docker/iml-images.tgz
 docker/*.tar
-example_storage_plugin_package
-licenses
 logrotate.cfg
 media
 requirements.dev

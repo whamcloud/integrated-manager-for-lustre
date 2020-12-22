@@ -308,9 +308,7 @@ fi
 # Stuff below goes into the -cli/-lib packages
 %exclude %{python_sitelib}/*.egg-info/
 # will go into the -tests packages
-%exclude %{manager_root}/example_storage_plugin_package
 %exclude %{manager_root}/tests
-%doc licenses/*
 
 %files -n python2-%{pypi_name}-libs
 %{python_sitelib}/*.egg-info/
