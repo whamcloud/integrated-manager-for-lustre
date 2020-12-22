@@ -583,7 +583,7 @@ fn tree_host_item_view(cache: &ArcCache, model: &Model, host: &Host) -> Option<N
             tooltip::view(&"View statistics", Placement::Bottom),
             font_awesome(class![C.w_5, C.h_4, C.inline, C.mr_1, C._mt_1], "chart-bar"),
         ],
-        alert_indicator(&cache.active_alert, &host, true, Placement::Bottom),
+        alert_indicator(&cache.active_alert, &host, true, Placement::Top),
         if tree_node.open {
             tree_volume_collection_view(cache, model, &address, host)
         } else {

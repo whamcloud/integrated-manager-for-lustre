@@ -227,7 +227,7 @@ pub fn view(model: &Model, mut input: Node<Msg>) -> Node<Msg> {
                 open,
                 dropdown_items(model.unit, &model.exclude_units)
             )
-            .merge_attrs(class![C.z_10])
+            .merge_attrs(class![C.z_20])
         ]
     ]
 }
