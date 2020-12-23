@@ -486,11 +486,22 @@ inet6 fe80::5054:ff:fe12:3456/64 scope link
 
     #[test]
     fn test_parsing_multiple_interfaces() {
-        let network_interfaces = include_bytes!("./fixtures/network_interfaces.txt");
-        let network_interfaces = std::str::from_utf8(network_interfaces).unwrap();
+        let network_interfaces = include_str!("./fixtures/network_interfaces.txt");
 
-        let stats = include_bytes!("./fixtures/network_stats.txt");
-        let stats = std::str::from_utf8(stats).unwrap();
+        let stats = include_str!("./fixtures/network_stats.txt");
+
+        let stats_map = network_interface_stats::parse(stats).unwrap();
+
+        let network_interfaces = parse(network_interfaces, stats_map);
+
+        insta::assert_json_snapshot!(network_interfaces);
+    }
+
+    #[test]
+    fn test_parse_multiple_ipv4() {
+        let network_interfaces = include_str!("./fixtures/network_interfaces2.txt");
+
+        let stats = include_str!("./fixtures/network_stats2.txt");
         let stats_map = network_interface_stats::parse(stats).unwrap();
 
         let network_interfaces = parse(network_interfaces, stats_map);

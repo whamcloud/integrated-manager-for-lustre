@@ -1,0 +1,170 @@
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+    inet 127.0.0.1/8 scope host lo
+       valid_lft forever preferred_lft forever
+    inet6 ::1/128 scope host 
+       valid_lft forever preferred_lft forever
+2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP group default qlen 1000
+    link/ether 52:54:00:12:34:56 brd ff:ff:ff:ff:ff:ff
+    inet 10.0.2.15/24 brd 10.0.2.255 scope global dynamic eth0
+       valid_lft 64061sec preferred_lft 64061sec
+    inet6 fec0::5054:ff:fe12:3456/64 scope site mngtmpaddr dynamic 
+       valid_lft 86093sec preferred_lft 14093sec
+    inet6 fe80::5054:ff:fe12:3456/64 scope link 
+       valid_lft forever preferred_lft forever
+3: ens2: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP group default qlen 1000
+    link/ether 02:00:c3:ab:85:3c brd ff:ff:ff:ff:ff:ff
+    inet 172.16.71.89/24 brd 172.16.71.255 scope global ens2
+       valid_lft forever preferred_lft forever
+    inet6 fe80::c3ff:feab:853c/64 scope link 
+       valid_lft forever preferred_lft forever
+4: ens3: <NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc mq state DOWN group default qlen 1000
+    link/ether 02:00:db:46:85:3d brd ff:ff:ff:ff:ff:ff
+5: ens4: <NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc mq state DOWN group default qlen 1000
+    link/ether 02:00:0c:7f:85:3e brd ff:ff:ff:ff:ff:ff
+6: enp1s0: <BROADCAST,MULTICAST,SLAVE,UP,LOWER_UP> mtu 9000 qdisc mq master bond0 state UP group default qlen 1000
+    link/ether 0c:42:a1:e2:b7:fc brd ff:ff:ff:ff:ff:ff
+7: ens1: <NO-CARRIER,BROADCAST,MULTICAST,SLAVE,UP> mtu 9000 qdisc mq master bond0 state DOWN group default qlen 1000
+    link/ether 0c:42:a1:e2:b7:fc brd ff:ff:ff:ff:ff:ff
+264: veth25e16b2@if263: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker_gwbridge state UP group default 
+    link/ether 6e:e0:4e:0a:cd:24 brd ff:ff:ff:ff:ff:ff link-netnsid 14
+    inet6 fe80::6ce0:4eff:fe0a:cd24/64 scope link 
+       valid_lft forever preferred_lft forever
+8: bond0: <BROADCAST,MULTICAST,MASTER,UP,LOWER_UP> mtu 9000 qdisc noqueue state UP group default qlen 1000
+    link/ether 0c:42:a1:e2:b7:fc brd ff:ff:ff:ff:ff:ff
+    inet 10.64.58.101/25 brd 10.64.58.127 scope global bond0
+       valid_lft forever preferred_lft forever
+    inet 10.64.58.116/30 brd 10.64.58.127 scope global bond0
+       valid_lft forever preferred_lft forever
+    inet6 fe80::e42:a1ff:fee2:b7fc/64 scope link 
+       valid_lft forever preferred_lft forever
+9: docker0: <NO-CARRIER,BROADCAST,MULTICAST,UP> mtu 1500 qdisc noqueue state DOWN group default 
+    link/ether 02:42:c1:76:a8:b2 brd ff:ff:ff:ff:ff:ff
+    inet 172.17.0.1/16 brd 172.17.255.255 scope global docker0
+       valid_lft forever preferred_lft forever
+268: vethc119042@if267: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker_gwbridge state UP group default 
+    link/ether 32:ad:70:12:5e:d6 brd ff:ff:ff:ff:ff:ff link-netnsid 15
+    inet6 fe80::30ad:70ff:fe12:5ed6/64 scope link 
+       valid_lft forever preferred_lft forever
+14: docker_gwbridge: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default 
+    link/ether 02:42:41:8c:6d:5d brd ff:ff:ff:ff:ff:ff
+    inet 172.18.0.1/16 brd 172.18.255.255 scope global docker_gwbridge
+       valid_lft forever preferred_lft forever
+    inet6 fe80::42:41ff:fe8c:6d5d/64 scope link 
+       valid_lft forever preferred_lft forever
+278: veth8f853c6@if277: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker_gwbridge state UP group default 
+    link/ether fa:86:e8:4b:e4:4e brd ff:ff:ff:ff:ff:ff link-netnsid 17
+    inet6 fe80::f886:e8ff:fe4b:e44e/64 scope link 
+       valid_lft forever preferred_lft forever
+286: vethb1e52d2@if285: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker_gwbridge state UP group default 
+    link/ether 6e:a0:48:96:d6:f8 brd ff:ff:ff:ff:ff:ff link-netnsid 18
+    inet6 fe80::6ca0:48ff:fe96:d6f8/64 scope link 
+       valid_lft forever preferred_lft forever
+292: veth7efacaa@if291: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker_gwbridge state UP group default 
+    link/ether 0e:63:9e:4e:fc:cb brd ff:ff:ff:ff:ff:ff link-netnsid 20
+    inet6 fe80::c63:9eff:fe4e:fccb/64 scope link 
+       valid_lft forever preferred_lft forever
+298: vethd34feff@if297: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker_gwbridge state UP group default 
+    link/ether 72:54:e6:2b:25:15 brd ff:ff:ff:ff:ff:ff link-netnsid 19
+    inet6 fe80::7054:e6ff:fe2b:2515/64 scope link 
+       valid_lft forever preferred_lft forever
+306: vetha4b1f26@if305: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker_gwbridge state UP group default 
+    link/ether be:6e:fb:c4:74:d4 brd ff:ff:ff:ff:ff:ff link-netnsid 21
+    inet6 fe80::bc6e:fbff:fec4:74d4/64 scope link 
+       valid_lft forever preferred_lft forever
+312: veth1890fa9@if311: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker_gwbridge state UP group default 
+    link/ether 0e:18:ba:42:9e:57 brd ff:ff:ff:ff:ff:ff link-netnsid 22
+    inet6 fe80::c18:baff:fe42:9e57/64 scope link 
+       valid_lft forever preferred_lft forever
+314: vetha4fc92e@if313: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker_gwbridge state UP group default 
+    link/ether fe:a0:47:d9:d4:1b brd ff:ff:ff:ff:ff:ff link-netnsid 25
+    inet6 fe80::fca0:47ff:fed9:d41b/64 scope link 
+       valid_lft forever preferred_lft forever
+316: vethd7af9d1@if315: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker_gwbridge state UP group default 
+    link/ether 86:23:26:a6:7d:14 brd ff:ff:ff:ff:ff:ff link-netnsid 29
+    inet6 fe80::8423:26ff:fea6:7d14/64 scope link 
+       valid_lft forever preferred_lft forever
+318: veth6ed7766@if317: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker_gwbridge state UP group default 
+    link/ether 26:03:e8:bf:3e:0b brd ff:ff:ff:ff:ff:ff link-netnsid 27
+    inet6 fe80::2403:e8ff:febf:3e0b/64 scope link 
+       valid_lft forever preferred_lft forever
+322: veth8d752f1@if321: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker_gwbridge state UP group default 
+    link/ether 1e:34:bd:9f:7c:08 brd ff:ff:ff:ff:ff:ff link-netnsid 28
+    inet6 fe80::1c34:bdff:fe9f:7c08/64 scope link 
+       valid_lft forever preferred_lft forever
+324: veth6330716@if323: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker_gwbridge state UP group default 
+    link/ether 66:bb:c4:e5:79:c9 brd ff:ff:ff:ff:ff:ff link-netnsid 33
+    inet6 fe80::64bb:c4ff:fee5:79c9/64 scope link 
+       valid_lft forever preferred_lft forever
+326: veth3371773@if325: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker_gwbridge state UP group default 
+    link/ether e2:9c:7c:32:32:0c brd ff:ff:ff:ff:ff:ff link-netnsid 30
+    inet6 fe80::e09c:7cff:fe32:320c/64 scope link 
+       valid_lft forever preferred_lft forever
+328: vethf2e0e2e@if327: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker_gwbridge state UP group default 
+    link/ether 6e:ef:e5:e2:34:c7 brd ff:ff:ff:ff:ff:ff link-netnsid 31
+    inet6 fe80::6cef:e5ff:fee2:34c7/64 scope link 
+       valid_lft forever preferred_lft forever
+332: veth568f8b0@if331: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker_gwbridge state UP group default 
+    link/ether ca:ac:90:21:a2:02 brd ff:ff:ff:ff:ff:ff link-netnsid 32
+    inet6 fe80::c8ac:90ff:fe21:a202/64 scope link 
+       valid_lft forever preferred_lft forever
+334: veth5bcc126@if333: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker_gwbridge state UP group default 
+    link/ether de:3c:4a:1b:20:f4 brd ff:ff:ff:ff:ff:ff link-netnsid 34
+    inet6 fe80::dc3c:4aff:fe1b:20f4/64 scope link 
+       valid_lft forever preferred_lft forever
+336: vetha66b354@if335: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker_gwbridge state UP group default 
+    link/ether 82:4b:40:80:12:6f brd ff:ff:ff:ff:ff:ff link-netnsid 35
+    inet6 fe80::804b:40ff:fe80:126f/64 scope link 
+       valid_lft forever preferred_lft forever
+352: veth3aa4d71@if351: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker_gwbridge state UP group default 
+    link/ether 1e:55:a1:63:24:6a brd ff:ff:ff:ff:ff:ff link-netnsid 16
+    inet6 fe80::1c55:a1ff:fe63:246a/64 scope link 
+       valid_lft forever preferred_lft forever
+358: veth729be1c@if357: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker_gwbridge state UP group default 
+    link/ether 72:cd:d4:79:13:50 brd ff:ff:ff:ff:ff:ff link-netnsid 7
+    inet6 fe80::70cd:d4ff:fe79:1350/64 scope link 
+       valid_lft forever preferred_lft forever
+362: veth9c5cdac@if361: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker_gwbridge state UP group default 
+    link/ether 36:00:ab:2a:95:3b brd ff:ff:ff:ff:ff:ff link-netnsid 23
+    inet6 fe80::3400:abff:fe2a:953b/64 scope link 
+       valid_lft forever preferred_lft forever
+199: veth050e1a0@if198: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker_gwbridge state UP group default 
+    link/ether 8a:74:72:5c:09:4b brd ff:ff:ff:ff:ff:ff link-netnsid 1
+    inet6 fe80::8874:72ff:fe5c:94b/64 scope link 
+       valid_lft forever preferred_lft forever
+207: veth5fc0fbb@if206: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker_gwbridge state UP group default 
+    link/ether b6:d7:1e:24:66:cd brd ff:ff:ff:ff:ff:ff link-netnsid 24
+    inet6 fe80::b4d7:1eff:fe24:66cd/64 scope link 
+       valid_lft forever preferred_lft forever
+218: vethae16e0e@if217: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker_gwbridge state UP group default 
+    link/ether ae:b5:7d:3b:15:1b brd ff:ff:ff:ff:ff:ff link-netnsid 4
+    inet6 fe80::acb5:7dff:fe3b:151b/64 scope link 
+       valid_lft forever preferred_lft forever
+222: vetha42e077@if221: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker_gwbridge state UP group default 
+    link/ether fa:65:b9:48:e7:2c brd ff:ff:ff:ff:ff:ff link-netnsid 5
+    inet6 fe80::f865:b9ff:fe48:e72c/64 scope link 
+       valid_lft forever preferred_lft forever
+228: vethc876fb7@if227: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker_gwbridge state UP group default 
+    link/ether 92:7a:43:87:0b:10 brd ff:ff:ff:ff:ff:ff link-netnsid 9
+    inet6 fe80::907a:43ff:fe87:b10/64 scope link 
+       valid_lft forever preferred_lft forever
+234: vethc932bcb@if233: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker_gwbridge state UP group default 
+    link/ether 62:5e:e8:91:57:b7 brd ff:ff:ff:ff:ff:ff link-netnsid 6
+    inet6 fe80::605e:e8ff:fe91:57b7/64 scope link 
+       valid_lft forever preferred_lft forever
+238: vethde1cde6@if237: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker_gwbridge state UP group default 
+    link/ether 0a:bc:db:3f:c0:60 brd ff:ff:ff:ff:ff:ff link-netnsid 8
+    inet6 fe80::8bc:dbff:fe3f:c060/64 scope link 
+       valid_lft forever preferred_lft forever
+240: veth3921730@if239: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker_gwbridge state UP group default 
+    link/ether 86:0a:be:2e:d5:28 brd ff:ff:ff:ff:ff:ff link-netnsid 10
+    inet6 fe80::840a:beff:fe2e:d528/64 scope link 
+       valid_lft forever preferred_lft forever
+246: veth0e10876@if245: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker_gwbridge state UP group default 
+    link/ether 2e:b1:88:3c:4d:e2 brd ff:ff:ff:ff:ff:ff link-netnsid 11
+    inet6 fe80::2cb1:88ff:fe3c:4de2/64 scope link 
+       valid_lft forever preferred_lft forever
+250: vethbee3492@if249: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue master docker_gwbridge state UP group default 
+    link/ether 8e:3a:ac:76:78:be brd ff:ff:ff:ff:ff:ff link-netnsid 12
+    inet6 fe80::8c3a:acff:fe76:78be/64 scope link 
+       valid_lft forever preferred_lft forever
