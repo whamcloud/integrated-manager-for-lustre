@@ -247,20 +247,21 @@ impl StratagemMutation {
                     None => continue,
                 };
 
-            let cfg = stratagem::StratagemConfig {
-                flist_type: "none".into(),
-                summarize_size: true,
-                device: stratagem::StratagemDevice {
-                    path,
-                    groups: vec!["cloudsync".into()],
-                },
-                groups: vec![stratagem::StratagemGroup {
-                    name: "cloudsync".into(),
-                    rules: vec![stratagem::StratagemRule {
-                        action: "LAT_SHELL_CMD_FID".into(),
-                        expression: expression.clone(),
-                        argument: "cloudsync".into(),
-                        counter_name: Some("cloudsync".into()),
+                let cfg = stratagem::StratagemConfig {
+                    flist_type: "none".into(),
+                    summarize_size: true,
+                    device: stratagem::StratagemDevice {
+                        path,
+                        groups: vec!["cloudsync".into()],
+                    },
+                    groups: vec![stratagem::StratagemGroup {
+                        name: "cloudsync".into(),
+                        rules: vec![stratagem::StratagemRule {
+                            action: "LAT_SHELL_CMD_FID".into(),
+                            expression: expression.clone(),
+                            argument: "cloudsync".into(),
+                            counter_name: Some("cloudsync".into()),
+                        }],
                     }],
                 };
 
@@ -484,7 +485,7 @@ impl StratagemMutation {
                 }
 
                 jobs.push(SendJob {
-                    class_name: "FastFileScanMdtJob".into(),
+                    class_name: "FastFileScanMdtJob",
                     args: vec![
                         ("fqdn".into(), serde_json::to_value(&x.fqdn)?),
                         ("uuid".into(), serde_json::to_value(&uuid)?),
@@ -500,8 +501,10 @@ impl StratagemMutation {
                 })
             }
 
+            let job_range: Vec<_> = (0..jobs.len()).collect();
+
             jobs.push(SendJob {
-                class_name: "RemoveTaskJob",
+                class_name: "AggregateStratagemResultsJob",
                 args: vec![
                     ("fs_name".into(), serde_json::to_value(&fsname)?),
                     (
@@ -515,7 +518,7 @@ impl StratagemMutation {
 
             for t in cleanup_tasks {
                 jobs.push(SendJob {
-                    class_name: "RemoveTaskJob".into(),
+                    class_name: "RemoveTaskJob",
                     args: vec![
                         ("task_id".into(), serde_json::json!(t.id)),
                         (
