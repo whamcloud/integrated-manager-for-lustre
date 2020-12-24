@@ -100,8 +100,6 @@ def install_packages(repos, packages):
         if error:
             return agent_error(error)
 
-    ServiceControl.create("iml-update-check").start(0)
-
     return agent_result_ok
 
 

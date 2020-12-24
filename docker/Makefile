@@ -9,7 +9,7 @@ clean:
 build: clean
 	DOCKER_CLI_EXPERIMENTAL=enabled docker buildx bake -f compose-deps.hcl
 	DOCKER_CLI_EXPERIMENTAL=enabled docker buildx bake -f docker-compose.yml
-	COMPOSE_DOCKER_CLI_BUILD=1 docker-compose pull postgres update-handler
+	COMPOSE_DOCKER_CLI_BUILD=1 docker-compose pull postgres
 
 save: build
 	docker save -o iml-images.tar $(COMPOSE_IMAGES)

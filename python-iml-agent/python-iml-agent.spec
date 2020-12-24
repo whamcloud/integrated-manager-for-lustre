@@ -46,7 +46,6 @@ Requires:       iml_sos_plugin >= 2.3.1
 Requires:       python2-iml-common1.4 >= 1.4.5
 Requires:       python2-toolz
 Requires:       iml-device-scanner >= 4.0.0
-Requires:       iml-update-check >= 1.0.4
 Requires:       util-linux-ng
 Requires(post): selinux-policy
 Requires:       python-urllib3

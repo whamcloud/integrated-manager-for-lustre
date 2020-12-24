@@ -43,7 +43,6 @@ class Command(BaseCommand):
             "REPORT_PROXY_PASS": settings.REPORT_PROXY_PASS,
             "SSL_PATH": settings.SSL_PATH,
             "DEVICE_AGGREGATOR_PROXY_PASS": settings.DEVICE_AGGREGATOR_PROXY_PASS,
-            "UPDATE_HANDLER_PROXY_PASS": settings.UPDATE_HANDLER_PROXY_PASS,
             "GRAFANA_PORT": settings.GRAFANA_PORT,
             "GRAFANA_PROXY_PASS": settings.GRAFANA_PROXY_PASS,
             "INFLUXDB_SERVER_FQDN": settings.INFLUXDB_SERVER_FQDN,

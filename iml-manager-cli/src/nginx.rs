@@ -99,10 +99,6 @@ mod tests {
             ("SSL_PATH", "/var/lib/chroma"),
             ("DEVICE_AGGREGATOR_PORT", "8008"),
             ("DEVICE_AGGREGATOR_PROXY_PASS", "http://127.0.0.1:8008"),
-            (
-                "UPDATE_HANDLER_PROXY_PASS",
-                "http://unix:/var/run/iml-update-handler.sock",
-            ),
             ("GRAFANA_PORT", "3000"),
             ("GRAFANA_PROXY_PASS", "http://127.0.0.1:3000"),
             ("INFLUXDB_PROXY_PASS", "http://127.0.0.1:8086"),

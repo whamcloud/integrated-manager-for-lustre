@@ -44,7 +44,7 @@ from chroma_core.models import (
     get_fs_id_from_identifier,
 )
 from chroma_core.models import VolumeNode
-from chroma_core.models import DeployHostJob, UpdatesAvailableAlert, LustreClientMount, Copytool
+from chroma_core.models import DeployHostJob, LustreClientMount, Copytool
 from chroma_core.models import CorosyncConfiguration
 from chroma_core.models import Corosync2Configuration
 from chroma_core.models import PacemakerConfiguration
@@ -664,9 +664,6 @@ class JobScheduler(object):
                     AgentDaemonRpcInterface().rebalance_host_volumes(changed_item.id)
                 except RpcError:
                     log.error("Host volumes failed to rebalance: " + traceback.format_exc())
-
-            if "needs_update" in updated_attrs:
-                UpdatesAvailableAlert.notify(changed_item, changed_item.needs_update)
 
         if isinstance(changed_item, ManagedTarget):
             # See if any MGS conf params need applying

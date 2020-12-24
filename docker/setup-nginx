@@ -10,7 +10,6 @@ vars = {
     "HTTP_AGENT2_PROXY_PASS": "http://iml-agent-comms:8003",
     "REPO_PATH": "/var/lib/chroma/repo",
     "DEVICE_AGGREGATOR_PROXY_PASS": "http://device:8008",
-    "UPDATE_HANDLER_PROXY_PASS": "http://update-handler:8080",
     "WARP_DRIVE_PROXY_PASS": "http://iml-warp-drive:8890",
     "MAILBOX_PROXY_PASS": "http://iml-mailbox:8891",
     "GRAFANA_PROXY_PASS": "http://grafana:3000",

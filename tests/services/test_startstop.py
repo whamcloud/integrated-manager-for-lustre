@@ -1,7 +1,6 @@
 import mock
 import os
 import time
-import xmlrpclib
 
 from tests.services.systemd_test_case import SystemdTestCase
 
@@ -15,7 +14,6 @@ class TestStartStop(SystemdTestCase):
         services = [
             "iml-http-agent.service",
             "iml-job-scheduler.service",
-            "iml-lustre-audit.service",
             "iml-plugin-runner.service",
             "iml-power-control.service",
             "iml-corosync.service",

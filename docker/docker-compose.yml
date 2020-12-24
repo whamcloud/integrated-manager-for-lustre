@@ -125,15 +125,6 @@ services:
       - "static-config2:/usr/lib/node_modules/@iml"
     ports:
       - "7443:7443"
-  update-handler:
-    image: "imlteam/iml-update-check:5.1"
-    hostname: "update-handler"
-    logging: *default-logging
-    deploy: *default-deploy
-    volumes:
-      - "manager-config:/var/lib/chroma"
-    environment:
-      - "IML_CA_PATH=/var/lib/chroma/authority.crt"
   snapshot:
     image: "imlteam/snapshot:6.3.0"
     hostname: "snapshot"
@@ -282,18 +273,6 @@ services:
       - DEVICE_AGGREGATOR_URL=http://device:8008
       - PROXY_HOST=iml-action-runner
       - LOG_LEVEL
-  lustre-audit:
-    image: "imlteam/manager-lustre-audit:6.3.0"
-    hostname: "lustre-audit"
-    logging: *default-logging
-    build:
-      context: .
-      dockerfile: ./lustre-audit.dockerfile
-    deploy: *default-deploy
-    environment:
-      - LOG_LEVEL
-    volumes:
-      - "manager-config:/var/lib/chroma"
   plugin-runner:
     image: "imlteam/manager-plugin-runner:6.3.0"
     hostname: "plugin-runner"

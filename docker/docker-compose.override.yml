@@ -10,8 +10,6 @@ services:
     restart: on-failure
   nginx:
     restart: on-failure
-  update-handler:
-    restart: on-failure
   device:
     restart: on-failure
   ntp:
@@ -25,8 +23,6 @@ services:
   iml-agent-comms:
     restart: on-failure
   job-scheduler:
-    restart: on-failure
-  lustre-audit:
     restart: on-failure
   plugin-runner:
     restart: on-failure

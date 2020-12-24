@@ -1114,7 +1114,6 @@ pub enum AlertRecordType {
     HostContactAlert,
     HostOfflineAlert,
     HostRebootEvent,
-    UpdatesAvailableAlert,
     TargetOfflineAlert,
     TargetRecoveryAlert,
     StorageResourceOffline,

@@ -21,7 +21,7 @@
                 "sha256:01f490098c18b19d2bd5bb5dc445b2054d2fa97f09a4280ba2c5f3c394c8162e",
                 "sha256:3355078a159fbb44ee60ea80abd0d87b80b78c248643b49aa6d94673b413609b"
             ],
-            "markers": "python_version < '3'",
+            "markers": "python_version < '3.4'",
             "version": "==0.6.0.post1"
         },
         "iml-common": {
@@ -33,11 +33,11 @@
         },
         "importlib-resources": {
             "hashes": [
-                "sha256:7b51f0106c8ec564b1bef3d9c588bc694ce2b92125bbb6278f4f2f5b54ec3592",
-                "sha256:a3d34a8464ce1d5d7c92b0ea4e921e696d86f2aa212e684451cb1482c8d84ed5"
+                "sha256:0ed250dbd291947d1a298e89f39afcc477d5a6624770503034b72588601bcc05",
+                "sha256:42068585cc5e8c2bf0a17449817401102a5125cbfbb26bb0f43cde1568f6f2df"
             ],
             "markers": "python_version < '3.7'",
-            "version": "==3.3.0"
+            "version": "==3.3.1"
         },
         "jinja2": {
             "hashes": [

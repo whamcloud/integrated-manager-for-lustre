@@ -84,8 +84,6 @@ DEVICE_AGGREGATOR_PROXY_PASS = os.getenv(
 
 ACTION_RUNNER_PORT = 8009
 
-UPDATE_HANDLER_PROXY_PASS = "http://unix:/var/run/iml-update-handler.sock"
-
 GRAFANA_PORT = 3000
 
 GRAFANA_PROXY_PASS = "http://{}:{}".format(PROXY_HOST, GRAFANA_PORT)

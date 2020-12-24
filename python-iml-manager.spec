@@ -64,14 +64,12 @@ Requires:       policycoreutils-python
 Requires:       system-config-firewall-base
 Requires:       systemd-python
 Requires:       nginx >= 1:1.12.2
-Requires:       nodejs >= 1:6.16.0
 Requires(post): selinux-policy-targeted
 # IML Repo
 Requires:       python2-django-tastypie = 0.14.1
 Requires:       python2-django-picklefield >= 1.0.0
 Requires:       iml-online-help >= 3.1.0
 Requires:       iml_sos_plugin >= 2.3.1
-Requires:       iml-update-handler >= 1.0.4, iml-update-handler < 2
 Requires:       python2-gevent >= 1.0.1
 Requires:       python2-httpagentparser >= 1.5
 Requires:       python2-iml-manager-libs = %{version}-%{release}
@@ -200,7 +198,6 @@ install -m 644 iml-corosync.service $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 iml-gunicorn.service $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 iml-http-agent.service $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 iml-job-scheduler.service $RPM_BUILD_ROOT%{_unitdir}/
-install -m 644 iml-lustre-audit.service $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 iml-plugin-runner.service $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 iml-power-control.service $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 iml-settings-populator.service $RPM_BUILD_ROOT%{_unitdir}/
@@ -261,7 +258,6 @@ rmdir %{python_sitelib}/iml_manager-5.0.*.egg-info 2> /dev/null || :
 %systemd_preun iml-gunicorn.service
 %systemd_preun iml-http-agent.service
 %systemd_preun iml-job-scheduler.service
-%systemd_preun iml-lustre-audit.service
 %systemd_preun iml-plugin-runner.service
 %systemd_preun iml-power-control.service
 %systemd_preun iml-settings-populator.service

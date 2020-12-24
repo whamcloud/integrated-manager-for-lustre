@@ -172,8 +172,6 @@ lustre-backend-fs
                 ("grubby", "--default-kernel"),
                 stdout="/boot/vmlinuz-2.6.32-504.3.3.el6.x86_64",
             ),
-            CommandCaptureCommand(("systemctl", "start", "iml-update-check")),
-            CommandCaptureCommand(("systemctl", "is-active", "iml-update-check")),
         )
 
         def isfile(arg):

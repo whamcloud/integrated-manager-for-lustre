@@ -3,19 +3,16 @@
 # license that can be found in the LICENSE file.
 
 
-import hashlib
 import logging
 import getpass
 import socket
 import sys
-import xmlrpclib
 import time
 import os
 import json
 import glob
 import shutil
 import errno
-import requests
 
 # without GNU readline, raw_input prompt goes to stderr
 import readline

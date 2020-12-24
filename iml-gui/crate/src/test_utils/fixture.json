@@ -402,11 +402,6 @@
             "app_label": "chroma_core",
             "model": "configurepacemakerjob"
         },
-        "179": {
-            "id": 179,
-            "app_label": "chroma_core",
-            "model": "updatesavailablealert"
-        },
         "65": {
             "id": 65,
             "app_label": "chroma_core",
@@ -736,7 +731,6 @@
             "app_label": "chroma_core",
             "model": "managedtargetmount"
         },
-        "132": { "id": 132, "app_label": "chroma_core", "model": "updatejob" },
         "109": {
             "id": 109,
             "app_label": "chroma_core",

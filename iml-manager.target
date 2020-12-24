@@ -19,9 +19,6 @@ After=iml-http-agent.service
 Requires=iml-job-scheduler.service
 After=iml-job-scheduler.service
 
-Requires=iml-lustre-audit.service
-After=iml-lustre-audit.service
-
 Requires=iml-plugin-runner.service
 After=iml-plugin-runner.service
 
@@ -67,9 +64,6 @@ After=iml-action-runner.service
 Requires=iml-task-runner.service
 After=iml-task-runner.service
 
-Requires=iml-update-handler.socket
-After=iml-update-handler.socket
-
 Requires=iml-warp-drive.service
 After=iml-warp-drive.service
 
@@ -111,7 +105,6 @@ Also=iml-gunicorn.service
 Also=iml-http-agent.service
 Also=iml-job-scheduler.service
 Also=iml-journal.service
-Also=iml-lustre-audit.service
 Also=iml-mailbox.service
 Also=iml-network.service
 Also=iml-ntp.service
@@ -121,7 +114,6 @@ Also=iml-rust-corosync.service
 Also=iml-rust-stats.service
 Also=iml-sfa.service
 Also=iml-snapshot.service
-Also=iml-update-handler.socket
 Also=iml-warp-drive.service
 Also=influxdb.service
 Also=nginx.service

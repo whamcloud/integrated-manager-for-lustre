@@ -1299,55 +1299,6 @@ class UpdateYumFileJob(Job):
         ]
 
 
-class UpdateJob(Job):
-    host = models.ForeignKey(ManagedHost, on_delete=CASCADE)
-
-    @classmethod
-    def long_description(cls, stateful_object):
-        return help_text["update_packages"]
-
-    def description(self):
-        return "Update packages on server %s" % self.host
-
-    def get_steps(self):
-        # Three stage update, first update the agent, then the yum file and then update everything. This means that
-        #  when the packages are updated the new agent and yum file is used.
-
-        # the minimum repos needed on a storage server now
-        repo_file_contents = self.host.server_profile.repo_contents
-
-        return [
-            (UpdateYumFileStep, {"host": self.host, "filename": REPO_FILENAME, "file_contents": repo_file_contents}),
-            (
-                UpdatePackagesStep,
-                {"host": self.host, "enablerepos": [], "packages": list(self.host.server_profile.base_packages)},
-            ),
-            (RemovePackagesStep, {"host": self.host, "packages": ["lustre-all-dkms"]}),
-            (
-                UpdatePackagesStep,
-                {"host": self.host, "enablerepos": [], "packages": list(self.host.server_profile.packages)},
-            ),
-            (UpdateProfileStep, {"host": self.host, "profile": self.host.server_profile}),
-            (RebootIfNeededStep, {"host": self.host, "timeout": settings.INSTALLATION_REBOOT_TIMEOUT}),
-        ]
-
-    def create_locks(self):
-        locks = [StateLock(job=self, locked_item=self.host, write=True)]
-
-        # Take a write lock on get_stateful_object if this is a StateChangeJob
-        for object in self.host.get_dependent_objects():
-            job_log.debug("Creating StateLock on %s/%s" % (object.__class__, object.id))
-            locks.append(StateLock(job=self, locked_item=object, write=True))
-
-        return locks
-
-    def on_success(self):
-        UpdatesAvailableAlert.notify(self.host, False)
-
-    class Meta:
-        app_label = "chroma_core"
-
-
 class ResetConfParamsStep(Step):
     database = True
 
@@ -1442,19 +1393,6 @@ class HostRebootEvent(AlertStateBase):
 
     def alert_message(self):
         return "%s restarted at %s" % (self.alert_item, self.begin)
-
-
-class UpdatesAvailableAlert(AlertStateBase):
-    # This is INFO because the system is unlikely to be suffering as a consequence
-    # of having an older software version installed.
-    default_severity = logging.INFO
-
-    class Meta:
-        app_label = "chroma_core"
-        proxy = True
-
-    def alert_message(self):
-        return "Updates are ready for server %s" % self.alert_item
 
 
 class NoNidsPresent(Exception):

@@ -1,18 +1,9 @@
 import logging
 import socket
-import subprocess
-import tempfile
-import time
-import xmlrpclib
-import sys
-import os
 
-from ConfigParser import ConfigParser
-from StringIO import StringIO
 from unittest import TestCase
 import settings
 
-from chroma_core.lib.util import site_dir
 from iml_common.lib import util, shell
 from iml_common.lib.service_control import ServiceControlEL7
 

@@ -4,7 +4,6 @@
 
 
 import re
-import os
 from collections import defaultdict
 from collections import namedtuple
 
