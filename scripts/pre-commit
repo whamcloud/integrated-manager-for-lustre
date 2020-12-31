@@ -5,6 +5,9 @@ FIRST_FILE=1
 
 for file in $(git diff --name-only --staged); do
     FMT_RESULT=""
+    if [ ! -e $file ]; then
+	continue
+    fi
     case "$file" in
 	*.rs) FMT_RESULT="$(rustfmt --edition 2018 --check $file 2>/dev/null || true)" ;;
 	*.py) if ! black -q --check $file; then FMT_RESULT="need blackening"; fi ;;
