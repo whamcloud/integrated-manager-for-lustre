@@ -38,8 +38,6 @@ This is the Integrated Manager for Lustre Monitoring and Administration Interfac
 Summary:        %{summary}
 # Base / EPEL repos
 Requires:       createrepo
-Requires:       fence-agents
-Requires:       fence-agents-virsh
 Requires:       ntp
 Requires:       pygobject2
 Requires:       postgresql96-server >= 9.6.17
@@ -199,7 +197,6 @@ install -m 644 iml-gunicorn.service $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 iml-http-agent.service $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 iml-job-scheduler.service $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 iml-plugin-runner.service $RPM_BUILD_ROOT%{_unitdir}/
-install -m 644 iml-power-control.service $RPM_BUILD_ROOT%{_unitdir}/
 install -m 644 iml-settings-populator.service $RPM_BUILD_ROOT%{_unitdir}/
 mkdir -p $RPM_BUILD_ROOT/var/log/chroma
 
@@ -259,7 +256,6 @@ rmdir %{python_sitelib}/iml_manager-5.0.*.egg-info 2> /dev/null || :
 %systemd_preun iml-http-agent.service
 %systemd_preun iml-job-scheduler.service
 %systemd_preun iml-plugin-runner.service
-%systemd_preun iml-power-control.service
 %systemd_preun iml-settings-populator.service
 %systemd_preun iml-syslog.service
 %systemd_preun iml-warp-drive.service
@@ -296,7 +292,6 @@ fi
 %attr(0755,root,root)%{manager_root}/manage.py
 %{manager_root}/agent-bootstrap-script.template
 %{manager_root}/chroma-manager.conf.template
-%{manager_root}/chroma_core/fixtures/
 %{manager_root}/polymorphic/COPYING
 %config(noreplace) %{manager_root}/*.repo
 %{manager_root}/*.profile

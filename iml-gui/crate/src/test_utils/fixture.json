@@ -219,11 +219,6 @@
             "app_label": "chroma_core",
             "model": "createtaskjob"
         },
-        "191": {
-            "id": 191,
-            "app_label": "chroma_core",
-            "model": "powercontroldeviceunavailablealert"
-        },
         "119": {
             "id": 119,
             "app_label": "chroma_core",
@@ -318,11 +313,6 @@
             "app_label": "chroma_core",
             "model": "hostrebootevent"
         },
-        "146": {
-            "id": 146,
-            "app_label": "chroma_core",
-            "model": "configurehostfencingjob"
-        },
         "111": {
             "id": 111,
             "app_label": "chroma_core",
@@ -416,11 +406,6 @@
             "id": 126,
             "app_label": "chroma_core",
             "model": "startcorosync2job"
-        },
-        "102": {
-            "id": 102,
-            "app_label": "chroma_core",
-            "model": "powercyclehostjob"
         },
         "15": {
             "id": 15,
@@ -620,20 +605,10 @@
             "app_label": "chroma_core",
             "model": "corosyncstoppedalert"
         },
-        "51": {
-            "id": 51,
-            "app_label": "chroma_core",
-            "model": "powercontroldevice"
-        },
         "133": {
             "id": 133,
             "app_label": "chroma_core",
             "model": "configurecorosyncjob"
-        },
-        "53": {
-            "id": 53,
-            "app_label": "chroma_core",
-            "model": "powercontroltype"
         },
         "99": {
             "id": 99,
@@ -641,11 +616,6 @@
             "model": "starttargetjob"
         },
         "9": { "id": 9, "app_label": "chroma_core", "model": "fidtaskerror" },
-        "31": {
-            "id": 31,
-            "app_label": "chroma_core",
-            "model": "powercontroldeviceoutlet"
-        },
         "85": {
             "id": 85,
             "app_label": "chroma_core",

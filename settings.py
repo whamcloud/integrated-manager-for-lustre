@@ -310,16 +310,6 @@ STORAGE_PLUGIN_DEBUG_PLUGINS = []
 # for the canonical device serial on the manager?  Favorite first.
 SERIAL_PREFERENCE = ["serial_83", "serial_80"]
 
-# Use this to disable the manager's monitoring of your power control devices
-# (eg, BMC, PDU outlets, etc.) This is necessary for sites where the manager
-# server does not have access to the power control devices itself. However,
-# IML will then *NO LONGER REPORT ANY FAILURE IN ANY POWER CONTROL DEVICES*.
-# If power control becomes non-operational, automatic failover will not occur
-# on failure, and manual intervention will be required to restore service to
-# your file system. We recommend putting external monitoring in place if you
-# disable this monitoring from the IML Manager.
-DISABLE_POWER_CONTROL_DEVICE_MONITORING = False
-
 # For django_coverage
 COVERAGE_REPORT_HTML_OUTPUT_DIR = "/tmp/test_html"
 
@@ -357,9 +347,6 @@ SERVER_FQDN = os.getenv("SERVER_FQDN", socket.getfqdn())
 # If your storage servers will address the manager server by a non-default
 # address or port, override this
 SERVER_HTTP_URL = "https://%s:%s" % (SERVER_FQDN, HTTPS_FRONTEND_PORT)
-
-# Supported power control agents
-SUPPORTED_FENCE_AGENTS = ["fence_apc", "fence_apc_snmp", "fence_ipmilan", "fence_virsh", "fence_vbox"]
 
 # How long to wait for a storage server to reboot after installing a new kernel
 INSTALLATION_REBOOT_TIMEOUT = 300

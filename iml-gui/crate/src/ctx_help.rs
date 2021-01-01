@@ -13,7 +13,6 @@ impl<'a> CtxHelp for Route<'a> {
         let anchor = match self {
             Route::Dashboard => Some("9.1"),
             Route::Servers => Some("9.3.1"),
-            Route::PowerControl => Some("9.3.2"),
             Route::Filesystems => Some("9.3.3"),
             Route::Users => Some("9.3.6"),
             Route::Volumes => Some("9.3.7"),

@@ -49,8 +49,6 @@ import chroma_api.storage_resource_class
 import chroma_api.network_interface
 import chroma_api.corosync
 
-import chroma_api.power_control
-
 import chroma_api.host
 import chroma_api.ha_cluster
 import chroma_api.registration_token
@@ -90,9 +88,6 @@ api.register(chroma_api.command.CommandResource())
 api.register(chroma_api.help.HelpResource())
 api.register(chroma_api.system_status.SystemStatusResource())
 api.register(chroma_api.ha_cluster.HaClusterResource())
-api.register(chroma_api.power_control.PowerControlTypeResource())
-api.register(chroma_api.power_control.PowerControlDeviceResource())
-api.register(chroma_api.power_control.PowerControlDeviceOutletResource())
 api.register(chroma_api.copytool.CopytoolResource())
 api.register(chroma_api.copytool.CopytoolOperationResource())
 api.register(chroma_api.network_interface.NetworkInterfaceResource())

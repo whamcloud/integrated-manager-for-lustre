@@ -15,7 +15,6 @@ class TestStartStop(SystemdTestCase):
             "iml-http-agent.service",
             "iml-job-scheduler.service",
             "iml-plugin-runner.service",
-            "iml-power-control.service",
             "iml-corosync.service",
             "iml-gunicorn.service",
         ]

@@ -26,8 +26,6 @@ services:
     restart: on-failure
   plugin-runner:
     restart: on-failure
-  power-control:
-    restart: on-failure
   journal:
     restart: on-failure
   iml-ostpool:

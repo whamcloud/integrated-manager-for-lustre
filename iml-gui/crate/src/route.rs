@@ -53,7 +53,6 @@ pub enum Route<'a> {
     Login,
     Mgt,
     NotFound,
-    PowerControl,
     Servers,
     Server(RouteId<'a>),
     OstPools,
@@ -86,7 +85,6 @@ impl<'a> Route<'a> {
             Self::NotFound => vec!["404"],
             Self::OstPools => vec!["ost_pools"],
             Self::OstPool(id) => vec!["ost_pools", id],
-            Self::PowerControl => vec!["power_control"],
             Self::Servers => vec!["servers"],
             Self::Server(id) => vec!["servers", id],
             Self::Targets => vec!["targets"],
@@ -155,7 +153,6 @@ impl<'a> From<Url> for Route<'a> {
                 None => Self::OstPools,
                 Some(id) => Self::OstPool(RouteId::from(id)),
             },
-            Some("power_control") => Self::PowerControl,
             Some("servers") => match path.next() {
                 None => Self::Servers,
                 Some(id) => match path.next().as_deref() {

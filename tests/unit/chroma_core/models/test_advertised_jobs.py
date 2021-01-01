@@ -9,9 +9,6 @@ from chroma_core.models import (
     FailoverTargetJob,
     RebootHostJob,
     ShutdownHostJob,
-    PoweronHostJob,
-    PoweroffHostJob,
-    PowercycleHostJob,
     MountLustreFilesystemsJob,
     UnmountLustreFilesystemsJob,
     CreateOstPoolJob,
@@ -142,127 +139,6 @@ class TestAdvertisedHostJobs(TestAdvertisedCase):
         # Monitor-only host
         self.set_managed(False)
         self.assertFalse(ShutdownHostJob.can_run(self.host))
-
-
-class TestAdvertisedPowerJobs(TestAdvertisedCase):
-    def setUp(self):
-        super(TestAdvertisedPowerJobs, self).setUp()
-
-        self.host = mock.Mock()
-        self.set_managed(True)
-
-        self.host.outlet_list = [mock.MagicMock(has_power=True), mock.MagicMock(has_power=True)]
-
-        self.host.outlets = mock.Mock()
-
-        def all():
-            return self.host.outlet_list
-
-        self.host.outlets.all = all
-
-        def count():
-            return len(self.host.outlet_list)
-
-        self.host.outlets.count = count
-
-    def test_PoweronHostJob(self):
-        # Normal situation, all outlets have power
-        self.assertFalse(PoweronHostJob.can_run(self.host))
-
-        # One outlet has power
-        self.host.outlet_list[0].has_power = False
-        self.assertFalse(PoweronHostJob.can_run(self.host))
-
-        # No outlets have power
-        self.host.outlet_list[1].has_power = False
-        self.assertTrue(PoweronHostJob.can_run(self.host))
-
-        # Monitor-only host
-        self.set_managed(False)
-        self.assertFalse(PoweronHostJob.can_run(self.host))
-        self.set_managed(True)
-
-        # One outlet off, one unknown
-        self.host.outlet_list[1].has_power = None
-        self.assertTrue(PoweronHostJob.can_run(self.host))
-
-        # One outlet on, one unknown
-        self.host.outlet_list[0].has_power = True
-        self.assertFalse(PoweronHostJob.can_run(self.host))
-
-        # Both outlets unknown
-        self.host.outlet_list[0].has_power = None
-        self.assertFalse(PoweronHostJob.can_run(self.host))
-
-        # No outlets associated
-        self.host.outlet_list[:] = []
-        self.assertFalse(PoweronHostJob.can_run(self.host))
-
-    def test_PoweroffHostJob(self):
-        # Monitor-only host
-        self.set_managed(False)
-        self.assertFalse(PowercycleHostJob.can_run(self.host))
-        self.set_managed(True)
-
-        # Normal situation, all outlets have power
-        self.assertTrue(PoweroffHostJob.can_run(self.host))
-
-        # One outlet has power
-        self.host.outlet_list[0].has_power = False
-        self.assertTrue(PoweroffHostJob.can_run(self.host))
-
-        # No outlets have power
-        self.host.outlet_list[1].has_power = False
-        self.assertFalse(PoweroffHostJob.can_run(self.host))
-
-        # One outlet off, one unknown
-        self.host.outlet_list[1].has_power = None
-        self.assertFalse(PoweroffHostJob.can_run(self.host))
-
-        # One outlet on, one unknown
-        self.host.outlet_list[0].has_power = True
-        self.assertFalse(PoweroffHostJob.can_run(self.host))
-
-        # Both outlets unknown
-        self.host.outlet_list[0].has_power = None
-        self.assertFalse(PoweroffHostJob.can_run(self.host))
-
-        # No outlets associated
-        self.host.outlet_list[:] = []
-        self.assertFalse(PoweronHostJob.can_run(self.host))
-
-    def test_PowercycleHostJob(self):
-        # Monitor-only host
-        self.set_managed(False)
-        self.assertFalse(PowercycleHostJob.can_run(self.host))
-        self.set_managed(True)
-
-        # Normal situation, all outlets have power
-        self.assertTrue(PowercycleHostJob.can_run(self.host))
-
-        # One outlet has power
-        self.host.outlet_list[0].has_power = False
-        self.assertTrue(PowercycleHostJob.can_run(self.host))
-
-        # No outlets have power
-        self.host.outlet_list[1].has_power = False
-        self.assertTrue(PowercycleHostJob.can_run(self.host))
-
-        # One outlet off, one unknown
-        self.host.outlet_list[1].has_power = None
-        self.assertTrue(PowercycleHostJob.can_run(self.host))
-
-        # One outlet on, one unknown
-        self.host.outlet_list[0].has_power = True
-        self.assertTrue(PowercycleHostJob.can_run(self.host))
-
-        # Both outlets unknown
-        self.host.outlet_list[0].has_power = None
-        self.assertTrue(PowercycleHostJob.can_run(self.host))
-
-        # No outlets associated
-        self.host.outlet_list[:] = []
-        self.assertFalse(PoweronHostJob.can_run(self.host))
 
 
 class TestClientManagementJobs(TestAdvertisedCase):

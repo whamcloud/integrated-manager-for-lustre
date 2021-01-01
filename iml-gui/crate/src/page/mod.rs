@@ -16,7 +16,6 @@ pub mod not_found;
 pub mod ostpool;
 pub mod ostpools;
 pub mod partial;
-pub mod power_control;
 pub mod server;
 pub mod server_dashboard;
 pub mod servers;
@@ -68,7 +67,6 @@ pub(crate) enum Page {
     NotFound,
     OstPools,
     OstPool(ostpool::Model),
-    PowerControl,
     Servers(servers::Model),
     Server(Box<server::Model>),
     Targets,
@@ -100,7 +98,6 @@ impl Page {
             Self::NotFound => "Page not found".into(),
             Self::OstPools => "OST Pools".into(),
             Self::OstPool(m) => format!("OST Pool: {}", &m.id),
-            Self::PowerControl => "Power Control".into(),
             Self::Servers(_) => "Servers".into(),
             Self::Server(m) => format!("Server: {}", &m.server.fqdn),
             Self::Targets => "Targets".into(),
@@ -188,7 +185,6 @@ impl<'a> From<(&ArcCache, &Conf, &Route<'a>)> for Page {
                 .parse()
                 .map(|id| Self::OstPool(ostpool::Model { id }))
                 .unwrap_or_default(),
-            Route::PowerControl => Self::PowerControl,
             Route::Servers => Self::Servers(servers::Model::default()),
             Route::Server(id) => id
                 .parse()
@@ -252,7 +248,6 @@ impl Page {
             | (Route::Mgt, Self::Mgts(_))
             | (Route::NotFound, Self::NotFound)
             | (Route::OstPools, Self::OstPools)
-            | (Route::PowerControl, Self::PowerControl)
             | (Route::Servers, Self::Servers(_))
             | (Route::Targets, Self::Targets)
             | (Route::Users, Self::Users)
@@ -330,7 +325,6 @@ pub enum Msg {
     Jobstats(jobstats::Msg),
     OstPools(ostpools::Msg),
     OstPool(ostpool::Msg),
-    PowerControl(power_control::Msg),
     Login(Box<login::Msg>),
     User(user::Msg),
     Users(users::Msg),
@@ -416,7 +410,6 @@ pub(crate) fn update(msg: Msg, page: &mut Page, cache: &ArcCache, orders: &mut i
         | Msg::Jobstats(_)
         | Msg::OstPool(_)
         | Msg::OstPools(_)
-        | Msg::PowerControl(_)
         | Msg::ServerDashboard(_)
         | Msg::Targets(_)
         | Msg::Users(_)

@@ -6,9 +6,36 @@ import chroma_core.models.registration_token
 import chroma_core.models.utils
 from django.conf import settings
 from django.db import migrations, models
+from django.core.exceptions import ValidationError
 import django.db.models.deletion
 import django.utils.timezone
 import picklefield.fields
+
+
+def validate_inet_address(address):
+    # Guard against accidental input of single-digit "addresses" which
+    # apparently gethostbyname will take anyhow. This is an unlikely
+    # problem, but could happen if a BMC identifier field is confused
+    # for a regular PDU identifier field (i.e. an outlet number).
+    try:
+        if int(address):
+            raise ValidationError("{} is not a valid address for a BMC".format(address))
+    except ValueError:
+        pass
+
+    import socket
+
+    try:
+        return socket.gethostbyname(address)
+    except socket.gaierror as e:
+        raise ValidationError("Unable to resolve %s: %s" % (address, e))
+
+
+class ValidatedGenericIPAddressField(models.GenericIPAddressField):
+    def to_python(self, value):
+        value = validate_inet_address(value)
+
+        return super(ValidatedGenericIPAddressField, self).to_python(value)
 
 
 class Migration(migrations.Migration):
@@ -634,9 +661,7 @@ class Migration(migrations.Migration):
                 ),
                 (
                     "address",
-                    chroma_core.models.power_control.ValidatedGenericIPAddressField(
-                        help_text=b"IP address of power control device"
-                    ),
+                    ValidatedGenericIPAddressField(help_text=b"IP address of power control device"),
                 ),
                 (
                     "port",

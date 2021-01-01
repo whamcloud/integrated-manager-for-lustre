@@ -881,20 +881,12 @@ class DeleteHostStep(Step):
         for mount in host.client_mounts.all():
             mount.mark_deleted()
 
-        # Remove configuration objects. This needs done *before* removing outlets.
+        # Remove configuration objects.
         for configuration in [host.pacemaker_configuration, host.corosync_configuration, host.ntp_configuration]:
             if configuration:
                 configuration.set_state("removed")
                 configuration.mark_deleted()
                 configuration.save()
-
-        # Remove associations with PDU outlets, or delete IPMI BMCs
-        # This is done intentionally after the configurations are removed so
-        # the trigger for fencing reconfiguration will behave properly.
-        for outlet in host.outlets.select_related():
-            if outlet.device.is_ipmi:
-                outlet.mark_deleted()
-        host.outlets.update(host=None)
 
         # Mark the host itself deleted
         host.mark_deleted()

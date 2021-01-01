@@ -47,8 +47,6 @@ from chroma_core.models import VolumeNode
 from chroma_core.models import DeployHostJob, LustreClientMount, Copytool
 from chroma_core.models import CorosyncConfiguration
 from chroma_core.models import Corosync2Configuration
-from chroma_core.models import PacemakerConfiguration
-from chroma_core.models import ConfigureHostFencingJob
 from chroma_core.models import TriggerPluginUpdatesJob
 from chroma_core.models import StratagemConfiguration
 from chroma_core.services.job_scheduler.dep_cache import DepCache
@@ -682,13 +680,6 @@ class JobScheduler(object):
                                     message="Updating configuration parameters on %s" % mgs
                                 )
                             self.CommandPlan.add_jobs([job], command, {})
-
-        if isinstance(changed_item, PacemakerConfiguration) and "reconfigure_fencing" in updated_attrs:
-            with transaction.atomic():
-                job = ConfigureHostFencingJob(host=changed_item.host)
-                if not command:
-                    command = Command.objects.create(message="Configuring fencing agent on %s" % changed_item)
-                self.CommandPlan.add_jobs([job], command, {})
 
     def _drain_notification_buffer(self):
         # Give any buffered notifications a chance to drain out

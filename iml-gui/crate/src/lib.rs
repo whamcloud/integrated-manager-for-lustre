@@ -969,11 +969,6 @@ fn view(model: &Model) -> Vec<Node<Msg>> {
         Page::NotFound => page::not_found::view(model).els(),
         Page::OstPools => main_panels(model, page::ostpools::view(model).els().map_msg(page::Msg::OstPools)).els(),
         Page::OstPool(x) => main_panels(model, page::ostpool::view(x).els().map_msg(page::Msg::OstPool)).els(),
-        Page::PowerControl => main_panels(
-            model,
-            page::power_control::view(model).els().map_msg(page::Msg::PowerControl),
-        )
-        .els(),
         Page::Servers(page) => main_panels(
             model,
             page::servers::view(

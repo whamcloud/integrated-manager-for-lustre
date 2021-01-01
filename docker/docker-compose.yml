@@ -286,18 +286,6 @@ services:
     environment:
       - DEVICE_AGGREGATOR_URL=http://device:8008
       - LOG_LEVEL
-  power-control:
-    image: "imlteam/manager-power-control:6.3.0"
-    hostname: "power-control"
-    logging: *default-logging
-    build:
-      context: .
-      dockerfile: ./power-control.dockerfile
-    deploy: *default-deploy
-    environment:
-      - LOG_LEVEL
-    volumes:
-      - "manager-config:/var/lib/chroma"
   journal:
     image: "imlteam/journal:6.3.0"
     hostname: "journal"

@@ -12,8 +12,6 @@
     "packages": [
         "python2-iml-agent-management",
         "pcs",
-        "fence-agents",
-        "fence-agents-virsh",
         "lustre-resource-agents",
         "lustre-ldiskfs"
     ],

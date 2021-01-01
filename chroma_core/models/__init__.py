@@ -27,7 +27,6 @@ from .conf_param import *
 from .storage_plugin import *
 from .registration_token import *
 from .ha_cluster import *
-from .power_control import *
 from .repo import *
 from .copytool import *
 from .client_mount import *

@@ -1119,7 +1119,6 @@ pub enum AlertRecordType {
     StorageResourceOffline,
     StorageResourceAlert,
     StorageResourceLearnEvent,
-    PowerControlDeviceUnavailableAlert,
     IpmiBmcUnavailableAlert,
     LNetOfflineAlert,
     LNetNidsChangedAlert,

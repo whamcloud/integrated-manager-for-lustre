@@ -22,9 +22,6 @@ After=iml-job-scheduler.service
 Requires=iml-plugin-runner.service
 After=iml-plugin-runner.service
 
-Requires=iml-power-control.service
-After=iml-power-control.service
-
 Requires=iml-rust-stats.service
 After=iml-rust-stats.service
 
@@ -109,7 +106,6 @@ Also=iml-mailbox.service
 Also=iml-network.service
 Also=iml-ntp.service
 Also=iml-plugin-runner.service
-Also=iml-power-control.service
 Also=iml-rust-corosync.service
 Also=iml-rust-stats.service
 Also=iml-sfa.service

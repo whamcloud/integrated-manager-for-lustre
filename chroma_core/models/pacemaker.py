@@ -12,7 +12,6 @@ from chroma_core.models import AlertEvent
 from chroma_core.models import DeletableStatefulObject
 from chroma_core.models import StateChangeJob
 from chroma_core.models import Job
-from chroma_core.models import SchedulingError
 from chroma_core.models import StateLock
 from chroma_core.lib.job import DependOn, DependAll, Step
 from chroma_help.help import help_text
@@ -369,71 +368,3 @@ class GetPacemakerStateJob(Job):
 
     def get_steps(self):
         return [(GetPacemakerStateStep, {"host": self.pacemaker_configuration.host})]
-
-
-class ConfigureHostFencingJob(Job):
-    host = models.ForeignKey("ManagedHost", on_delete=CASCADE)
-    requires_confirmation = False
-    verb = "Configure Host Fencing"
-
-    class Meta:
-        app_label = "chroma_core"
-        ordering = ["id"]
-
-    @classmethod
-    def get_args(cls, host):
-        return {"host_id": host.id}
-
-    @classmethod
-    def long_description(cls, stateful_object):
-        return help_text["configure_host_fencing"]
-
-    def description(self):
-        return "Configure fencing agent on %s" % self.host
-
-    def create_locks(self):
-        return [StateLock(job=self, locked_item=self.host.pacemaker_configuration, write=True)]
-
-    def get_steps(self):
-        return [(ConfigureHostFencingStep, {"host": self.host})]
-
-
-class ConfigureHostFencingStep(Step):
-    idempotent = True
-    # Needs database in order to query host outlets
-    database = True
-
-    def run(self, kwargs):
-        host = kwargs["host"]
-
-        if host.state != "managed":
-            raise SchedulingError(
-                "Attempted to configure a fencing device while the host %s was in state %s. Expected host to be in state 'managed'. Please ensure your host has completed set up and configure power control again."
-                % (host.fqdn, host.state)
-            )
-
-        if not host.pacemaker_configuration:
-            # Shouldn't normally happen, but makes debugging our own bugs easier.
-            raise RuntimeError(
-                "Attemped to configure fencing on a host that does not yet have a pacemaker configuration."
-            )
-
-        agent_kwargs = []
-        for outlet in host.outlets.select_related().all():
-            fence_kwargs = {
-                "agent": outlet.device.device_type.agent,
-                "login": outlet.device.username,
-                "password": outlet.device.password,
-            }
-            # IPMI fencing config doesn't need most of these attributes.
-            if outlet.device.is_ipmi and outlet.device.device_type.agent not in ["fence_virsh", "fence_vbox"]:
-                fence_kwargs["ipaddr"] = outlet.identifier
-                fence_kwargs["lanplus"] = "2.0" in outlet.device.device_type.model  # lanplus
-            else:
-                fence_kwargs["plug"] = outlet.identifier
-                fence_kwargs["ipaddr"] = outlet.device.address
-                fence_kwargs["ipport"] = outlet.device.port
-
-            agent_kwargs.append(fence_kwargs)
-
-        self.invoke_agent(host, "configure_fencing", {"agents": agent_kwargs})

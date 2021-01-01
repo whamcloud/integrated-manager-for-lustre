@@ -13,8 +13,6 @@
         "python2-iml-agent-management",
         "kernel-devel-lustre",
         "pcs",
-        "fence-agents",
-        "fence-agents-virsh",
         "mlnx-ofa_kernel-devel",
         "kmod-mlnx-ofa_kernel",
         "lustre-resource-agents",

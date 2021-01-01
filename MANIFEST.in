@@ -3,7 +3,6 @@ include logrotate.cfg
 include wsgi.py
 include chroma-manager.conf.template
 include agent-bootstrap-script.template
-include chroma_core/fixtures/*.json
 include tests/sample_data/*.json
 include scm_version.py
 include *.repo
