@@ -23,6 +23,7 @@ _topdir
 *.pytest_cache
 artifacts
 /base.repo
+build/
 /chroma_support.repo
 chroma_test_env/
 chroma_unit_test_env/

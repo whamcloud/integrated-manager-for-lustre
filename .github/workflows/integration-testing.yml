@@ -160,6 +160,26 @@ jobs:
           name: device_scanner_rpm
           path: _topdir/RPMS/x86_64
           retention-days: 1
+  sos_plugin_build:
+    name: EMF SOS Plugin
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Build rpm
+        uses: ./.github/actions/copr
+        env:
+          SPEC: emf-sos-plugin/emf-sos-plugin.spec
+          LOCAL_ONLY: true
+          SRPM_TASK: sos-srpm
+          WORKSPACE: ${{ github.workspace }}
+      - name: Archive rpm
+        uses: actions/upload-artifact@v2
+        with:
+          name: sos_rpm
+          path: _topdir/RPMS/noarch
+          retention-days: 1
   create_emf_repo:
     name: create EMF repo
     runs-on: ubuntu-latest
@@ -172,6 +192,7 @@ jobs:
         python_iml_common_rpm_build,
         python_iml_manager_rpm_build,
         rust_iml_rpm_build,
+        sos_plugin_build,
       ]
     container:
       image: centos:7
@@ -211,6 +232,11 @@ jobs:
         with:
           name: iml_docker_rpm
           path: emf_rpms
+      - name: Download sos-plugin RPM
+        uses: actions/download-artifact@v1
+        with:
+          name: sos_rpm
+          path: emf_rpms
       - run: |
           yum install -y createrepo yum-utils
           createrepo --pretty emf_rpms
@@ -229,6 +255,7 @@ jobs:
             device_scanner_rpm
             python_iml_manager_rpm
             iml_docker_rpm
+            sos_rpm
   rpm_testing:
     name: RPM Testing
     runs-on: self-hosted

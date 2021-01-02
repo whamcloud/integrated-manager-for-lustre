@@ -12,6 +12,7 @@ Source0: iml-docker.tar.gz
 Requires: docker-ce
 Requires: sed
 Requires: rust-iml-cli
+Requires: emf-sos-plugin >= 2.4.0
 
 %description
 %{summary}

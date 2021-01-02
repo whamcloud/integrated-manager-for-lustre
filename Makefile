@@ -35,7 +35,7 @@ NOSE_ARGS ?= --stop
 
 ZIP_TYPE := $(shell if [ "$(ZIP_DEV)" == "true" ]; then echo '-dev'; else echo ''; fi)
 
-all: copr-rpms rpms device-scanner-rpms iml-gui-rpm docker-rpms
+all: copr-rpms rpms device-scanner-rpms iml-gui-rpm docker-rpms sos-rpm
 
 local:
 	$(MAKE) RPM_DIST="0.$(shell date '+%s')" all
@@ -80,6 +80,10 @@ docker-rpms:
 device-scanner-rpms:
 	$(MAKE) -f .copr/Makefile device-scanner-srpm outdir=.
 	rpmbuild --rebuild ${RPM_OPTS} _topdir/SRPMS/iml-device-scanner-*.src.rpm
+
+sos-rpm:
+	$(MAKE) -f .copr/Makefile sos-srpm outdir=.
+	rpmbuild --rebuild ${RPM_OPTS} _topdir/SRPMS/emf-sos-plugin-*.src.rpm
 
 cleandist:
 	rm -rf dist

@@ -187,3 +187,15 @@ device-scanner-srpm:
 	cp -rf ${TMPDIR}/_topdir ${BUILDROOT}/
 	cp -f ${TMPDIR}/_topdir/SRPMS/*.rpm $(outdir)
 
+sos-srpm:
+	mkdir -p ${TMPDIR}/_topdir/{SOURCES,SPECS}
+
+	cd emf-sos-plugin; \
+	python setup.py sdist --formats bztar -d ${TMPDIR}/_topdir/SOURCES/
+
+	cp emf-sos-plugin/emf-sos-plugin.spec ${TMPDIR}/_topdir/SPECS/
+
+	rpmbuild -bs -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/_topdir/SPECS/emf-sos-plugin.spec
+
+	cp -rf ${TMPDIR}/_topdir ${BUILDROOT}/
+	cp -f ${TMPDIR}/_topdir/SRPMS/*.rpm $(outdir)

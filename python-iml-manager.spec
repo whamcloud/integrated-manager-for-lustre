@@ -67,7 +67,7 @@ Requires(post): selinux-policy-targeted
 Requires:       python2-django-tastypie = 0.14.1
 Requires:       python2-django-picklefield >= 1.0.0
 Requires:       iml-online-help >= 3.1.0
-Requires:       iml_sos_plugin >= 2.3.1
+Requires:       emf-sos-plugin >= 2.4.0
 Requires:       python2-gevent >= 1.0.1
 Requires:       python2-httpagentparser >= 1.5
 Requires:       python2-iml-manager-libs = %{version}-%{release}
