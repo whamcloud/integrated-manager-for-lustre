@@ -43,7 +43,7 @@ Requires:       python-setuptools
 Requires:       python-requests >= 2.6.0
 Requires:       yum-utils
 Requires:       emf-sos-plugin >= 2.4.0
-Requires:       python2-iml-common1.4 >= 1.4.5
+Requires:       python2-iml-common1.5 >= 1.5.0
 Requires:       python2-toolz
 Requires:       iml-device-scanner >= 4.0.0
 Requires:       util-linux-ng

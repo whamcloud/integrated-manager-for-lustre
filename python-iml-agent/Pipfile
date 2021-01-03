@@ -4,14 +4,13 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
-Django = "==1.7"
+mock = "==1.0.1"
 nose = "*"
 
 [packages]
 Jinja2 = "==2.7.2"
-iml-common = "<1.5,>=1.4"
+iml-common = {editable = true, path = "./../iml-common"}
 lockfile = "==0.9.1"
-mock = "==1.0.1"
 netaddr = "*"
 pkginfo = "*"
 requests = "==2.6.0"

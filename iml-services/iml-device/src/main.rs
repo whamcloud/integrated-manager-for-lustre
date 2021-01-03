@@ -78,7 +78,7 @@ async fn main() -> Result<(), ImlDeviceError> {
 
     tracing::info!("Server starting");
 
-    let server = warp::serve(get.with(warp::log("devices"))).run(addr);
+    let server = warp::serve(get).run(addr);
 
     tokio::spawn(server);
 

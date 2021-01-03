@@ -1,31 +1,34 @@
+-i https://pypi.org/simple
+./iml-common
 amqp==2.4.0
+cffi==1.14.4
+cryptography==3.3.1
 django-picklefield==1.0.0
 django-tastypie==0.14.1
-Django==1.11.23
+django==1.11.23
+enum34==1.1.10 ; python_version < '3'
+functools32==3.2.3.post2 ; python_version == '2.7'
 gevent==1.3
 greenlet==0.4.14
 gunicorn==19.9.0
-httpagentparser==1.5.0
-https://github.com/drkjam/netaddr/archive/rel-0.7.5.tar.gz
-https://github.com/weholt/massiviu/archive/master.tar.gz
-iml-common>=1.4,<1.5
+https://github.com/weholt/massiviu/archive/master.tar.gz#egg=massiviu
+ipaddress==1.0.23 ; python_version < '3'
 jsonschema==2.5.1
 kombu==4.2.2.post1
 lockfile==0.9.1
-mimeparse==0.1.3
 networkx==1.7
 ordereddict==1.1
 paramiko==2.1.1
-pexpect
 psycopg2==2.7.7
-pyparsing==1.5.6
+pyasn1==0.4.8
+pycparser==2.20
 python-daemon==1.6
 python-dateutil==1.5
-pytz==2014.4
-requests_unixsocket==0.1.5
+python-mimeparse==1.6.0
+pytz==2020.5
+requests-unixsocket==0.1.5
 requests==2.12.5
-setuptools
+six==1.15.0
 toolz==0.10.0
-tzlocal
-urllib3
+urllib3==1.26.2
 vine==1.3.0

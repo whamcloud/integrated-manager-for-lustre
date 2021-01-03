@@ -113,17 +113,43 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Fetch older docker-compose
-        run: |
-          sudo curl -L "https://github.com/docker/compose/releases/download/1.26.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-          sudo chmod +x /usr/local/bin/docker-compose
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+        id: buildx
+        with:
+          use: false
+
+      - name: Builder instance name
+        run: echo ${{ steps.buildx.outputs.name }}
+
+      - name: Cache Docker layers
+        uses: actions/cache@v2
+        id: cache
+        with:
+          path: /tmp/.rust-base-cache
+          key: ${{ runner.os }}-rust-base-${{ hashFiles('Cargo.lock') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-rust-base-${{ hashFiles('Cargo.lock') }}
+            ${{ runner.os }}-rust-base-
 
       - name: Build the iml images
         working-directory: ./docker
         run: |
-          make save
+          docker buildx bake \
+            --builder ${{ steps.buildx.outputs.name }} \
+            --set='rust-base.cache-from=type=local,src=/tmp/.rust-base-cache' \
+            --set='rust-base.cache-to=type=local,dest=/tmp/.rust-base-cache' \
+            --load \
+            -f compose-deps.hcl
+
+          docker buildx bake -f docker-compose.yml --load
+
+          COMPOSE_IMAGES=$(docker-compose config 2>/dev/null | awk '{if ($1 == "image:") print $2;}')
+          docker save -o iml-images.tar $(echo $COMPOSE_IMAGES)
+          gzip -9 < iml-images.tar > iml-images.tgz
+
           docker image ls
-          docker system prune -f --all --volumes
 
       - name: Build rpm
         uses: ./.github/actions/copr
@@ -246,7 +272,7 @@ jobs:
         with:
           name: emf_repo
           path: emf_rpms
-          retention-days: 15
+          retention-days: 5
       - uses: geekyeggo/delete-artifact@v1
         with:
           name: |
@@ -254,6 +280,8 @@ jobs:
             rust_rpm
             device_scanner_rpm
             python_iml_manager_rpm
+            python_iml_agent_rpm
+            python_iml_common_rpm
             iml_docker_rpm
             sos_rpm
   rpm_testing:
@@ -304,7 +332,7 @@ jobs:
         with:
           name: sosreport_rpm
           path: "**/vagrant/sosreport_rpm*/*.tar.xz"
-          retention-days: 5
+          retention-days: 2
 
       - name: Cleanup
         if: ${{ always() }}
@@ -366,7 +394,7 @@ jobs:
         with:
           name: sosreport_docker
           path: "**/vagrant/sosreport_docker*/*.tar.xz"
-          retention-days: 5
+          retention-days: 2
 
       - name: Cleanup
         if: ${{ always() }}

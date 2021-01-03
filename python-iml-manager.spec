@@ -54,7 +54,6 @@ Requires:       python-uuid
 Requires:       python-dateutil >= 1.5
 Requires:       python2-jsonschema >= 2.5.1
 Requires:       python2-kombu >= 4.2.2
-Requires:       python2-mimeparse
 Requires:       python2-toolz
 Requires:       rabbitmq-server >= 3.3.5-34
 Requires:       Django >= 1.11, Django < 1.12
@@ -69,7 +68,6 @@ Requires:       python2-django-picklefield >= 1.0.0
 Requires:       iml-online-help >= 3.1.0
 Requires:       emf-sos-plugin >= 2.4.0
 Requires:       python2-gevent >= 1.0.1
-Requires:       python2-httpagentparser >= 1.5
 Requires:       python2-iml-manager-libs = %{version}-%{release}
 Requires:       python2-requests-unixsocket >= 0.2.0
 Requires:       python2-massiviu >= 0.1.0-2
@@ -117,7 +115,7 @@ This is the Integrated Manager for Lustre Monitoring and Administration Interfac
 %package -n     python2-%{pypi_name}-libs
 Summary:        Common libraries for Chroma Server
 Group:          System/Libraries
-Requires:       python2-iml-common1.4 >= 1.4.5
+Requires:       python2-iml-common1.5 >= 1.5.0
 Obsoletes:      chroma-manager-libs
 Provides:       chroma-manager-libs
 
@@ -128,7 +126,7 @@ This package contains libraries for Chroma CLI and Chroma Server.
 %package -n     python2-%{pypi_name}-integration-tests
 Summary: Integrated Manager for Lustre Integration Tests
 Group: Development/Tools
-Requires: python-requests >= 2.6.0 python-nose python-nose-testconfig python-paramiko python-ordereddict python2-iml-common1.4 python-packaging
+Requires: python-requests >= 2.6.0 python-nose python-nose-testconfig python-paramiko python-ordereddict python2-iml-common1.5 python-packaging
 Requires: Django >= 1.11, Django < 1.12
 %description -n     python2-%{pypi_name}-integration-tests
 This package contains the Integrated Manager for Lustre integration tests and scripts and is intended

@@ -1,7 +1,7 @@
 # Created by pyp2rpm-3.2.2
 %global pypi_name iml-common
 %{!?name: %global name python2-%{pypi_name}}
-%{?!version: %global version 1.4.5}
+%{?!version: %global version 1.5.0}
 %global major_minor %(version="%{version}"; v=($(echo ${version//./ })); echo ${v[0]}.${v[1]})
 %global rpm_name %{pypi_name}%{major_minor}
 
@@ -11,7 +11,7 @@
 %{?!dist_version: %global archive_version %{version}}
 
 Name:           python-%{rpm_name}
-Version:        1.4.5
+Version:        1.5.0
 # Release Start
 Release:    1%{?dist}
 # Release End
@@ -35,6 +35,7 @@ Summary:        %{summary}
 %{?python_provide:%python_provide python2-%{rpm_name}}
 Obsoletes:       python2-%{pypi_name}1.0 python2-%{pypi_name}1.1
 Obsoletes:       python2-%{pypi_name}1.2 python2-%{pypi_name}1.3
+Obsoletes:       python2-%{pypi_name}1.4
 
 %description -n python2-%{rpm_name}
 A Python package that contains common components for the IML project.  Different

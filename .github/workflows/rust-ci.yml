@@ -78,6 +78,27 @@ jobs:
         with:
           command: fmt
           args: --all -- --check
+
+  timings:
+    name: Timings
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+
+      - run: cargo +nightly build -Ztimings=html,info
+
+      - name: Archive report
+        uses: actions/upload-artifact@v2
+        with:
+          name: timing_report
+          path: cargo-timing*.html
+          retention-days: 1
+
   sqlx_schema_check:
     name: Sqlx Schema Check
     runs-on: ubuntu-latest

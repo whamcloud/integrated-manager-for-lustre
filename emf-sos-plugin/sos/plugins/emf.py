@@ -42,8 +42,11 @@ class EMF(Plugin, RedHatPlugin, UbuntuPlugin, DebianPlugin):
 
         self.add_cmd_output(
             [
-                "chroma-agent device_plugin --plugin=linux",
-                "chroma-agent detect_scan",
+                "iml server list",
+                "iml target list",
+                "iml filesystem list",
+                "iml filesystem pool list",
+                "iml-agent ha list",
                 "chroma-config validate",
                 "chroma-agent device_plugin --plugin=linux_network",
                 "lctl device_list",

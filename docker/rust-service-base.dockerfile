@@ -1,4 +1,4 @@
-FROM centos:7
-RUN yum update -y \
-  && yum install -y postgresql \
-  && yum clean all
+FROM centos:8
+RUN dnf update -y \
+  && dnf install -y postgresql \
+  && dnf clean all

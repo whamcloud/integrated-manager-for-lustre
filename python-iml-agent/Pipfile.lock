@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "4e03cdf663589b870666fa1c075b9013260753b99cedd5dfb10ba1b56451c888"
+            "sha256": "91de59e1119cd1a2f2b089375dd950d3885389746f901dc3f6ab66d675e9a922"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -21,15 +21,12 @@
                 "sha256:01f490098c18b19d2bd5bb5dc445b2054d2fa97f09a4280ba2c5f3c394c8162e",
                 "sha256:3355078a159fbb44ee60ea80abd0d87b80b78c248643b49aa6d94673b413609b"
             ],
-            "markers": "python_version < '3.4'",
+            "markers": "python_version < '3'",
             "version": "==0.6.0.post1"
         },
         "iml-common": {
-            "hashes": [
-                "sha256:a67aa39ae0d3bff81130fc8906c4a5e8f5a7c7ca47604410fbe6f5d94c6a194b"
-            ],
-            "index": "pypi",
-            "version": "==1.4.4"
+            "editable": true,
+            "path": "./../iml-common"
         },
         "importlib-resources": {
             "hashes": [
@@ -90,14 +87,6 @@
                 "sha256:e8313f01ba26fbbe36c7be1966a7b7424942f670f38e666995b88d012765b9be"
             ],
             "version": "==1.1.1"
-        },
-        "mock": {
-            "hashes": [
-                "sha256:8f83080daa249d036cbccfb8ae5cc6ff007b88d6d937521371afabe7b19badbc",
-                "sha256:b839dd2d9c117c701430c149956918a423a9863b48b09c90e30a6013e7d2f44f"
-            ],
-            "index": "pypi",
-            "version": "==1.0.1"
         },
         "netaddr": {
             "hashes": [
@@ -195,13 +184,13 @@
         }
     },
     "develop": {
-        "django": {
+        "mock": {
             "hashes": [
-                "sha256:009ddda445c5750c1a8392979fbd28f3e55de6e43310cd316199837065dff559",
-                "sha256:33f781f17f145f79ee8e0b8d753498e0e0188f0b53b2accad4045d623422d5e1"
+                "sha256:8f83080daa249d036cbccfb8ae5cc6ff007b88d6d937521371afabe7b19badbc",
+                "sha256:b839dd2d9c117c701430c149956918a423a9863b48b09c90e30a6013e7d2f44f"
             ],
             "index": "pypi",
-            "version": "==1.7"
+            "version": "==1.0.1"
         },
         "nose": {
             "hashes": [

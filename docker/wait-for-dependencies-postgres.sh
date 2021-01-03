@@ -1,10 +1,10 @@
 #!/bin/bash
 
- set -e
+set -e
 
 until [ -f /var/lib/chroma/iml-settings.conf ]; do
-  echo "Waiting for settings."
-  sleep 1
+    echo "Waiting for settings."
+    sleep 1
 done
 
 TMP=$PROXY_HOST
@@ -17,24 +17,24 @@ set +a
 
 
 if [[ ! -z "$TMP" ]]; then
-  export PROXY_HOST=$TMP
+    export PROXY_HOST=$TMP
 fi
 
 if [[ ! -z "$TMP2" ]]; then
-  export AMQP_BROKER_HOST=$TMP2
+    export AMQP_BROKER_HOST=$TMP2
 fi
 
 if [[ ! -z "$TMP3" ]]; then
-  export DB_HOST=$TMP3
+    export DB_HOST=$TMP3
 fi
 
 echo "Starting dependency check"
 
 RABBIT_CHECK_URL="http://$AMQP_BROKER_USER:$AMQP_BROKER_PASSWORD@$AMQP_BROKER_HOST:15672/api/aliveness-test/$AMQP_BROKER_VHOST/"
 
-until psql -h 'postgres' -U 'chroma' -c '\q' && curl -s --fail $RABBIT_CHECK_URL > /dev/null; do
-  echo "Waiting for dependencies"
-  sleep 5
+until psql -h 'postgres' -U 'chroma' -c '\q' 2>/dev/null && curl -s --fail $RABBIT_CHECK_URL > /dev/null; do
+    echo "Waiting for dependencies"
+    sleep 5
 done
 
 echo "Dependency check passed"

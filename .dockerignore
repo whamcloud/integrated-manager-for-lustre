@@ -14,6 +14,8 @@ _topdir/
 **/snapshots/
 **/target
 **/.env
+**/*.pyc
+**/*.pyo
 benchmark
 CODE_OF_CONDUCT.md
 docker/iml-images.tar
@@ -24,3 +26,4 @@ media
 requirements.dev
 tests
 vagrant/
+python-iml-agent/
