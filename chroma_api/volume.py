@@ -3,16 +3,14 @@
 # license that can be found in the LICENSE file.
 
 
-from chroma_core.models import Volume, HaCluster, ManagedHost
-
 from tastypie.exceptions import ImmediateHttpResponse
 from tastypie.http import HttpBadRequest
-
 from tastypie import fields
 from chroma_api.authentication import AnonymousAuthentication, PatchedDjangoAuthorization
 from chroma_api.chroma_model_resource import ChromaModelResource
 from chroma_api.validation_utils import validate
-
+from chroma_core.models import HaCluster, ManagedHost
+from chroma_core.models.host import Volume
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
 

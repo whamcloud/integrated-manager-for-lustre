@@ -3,7 +3,7 @@ import logging
 from chroma_core.models import HostOfflineAlert
 
 from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
-from tests.unit.chroma_core.helpers import synthetic_host
+from tests.unit.chroma_core.helpers.synthentic_objects import synthetic_host
 
 INFO = logging.INFO
 WARNING = logging.WARNING

@@ -5,7 +5,6 @@ import json
 from toolz.functoolz import pipe, partial
 
 temp_stratagem_measurement = "temp_stratagem_scan"
-stratagem_measurement = "stratagem_scan"
 
 size_distribution_name_table = {
     "size < 1m": "less_than_1m",

@@ -5,8 +5,8 @@
 from django.db import models
 from django.db.models import CASCADE
 from chroma_core.lib.job import DependOn, DependAll, Step
-from chroma_core.models import DeletableDowncastableMetaclass
-from chroma_core.models import StatefulObject, StateChangeJob
+from chroma_core.models.utils import DeletableDowncastableMetaclass
+from chroma_core.models.jobs import StatefulObject, StateChangeJob
 from chroma_help.help import help_text
 
 

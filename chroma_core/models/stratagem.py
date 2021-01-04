@@ -18,7 +18,6 @@ from chroma_core.lib.stratagem import (
     record_stratagem_point,
     clear_scan_results,
     temp_stratagem_measurement,
-    stratagem_measurement,
     aggregate_points,
     submit_aggregated_data,
 )

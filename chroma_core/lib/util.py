@@ -16,10 +16,6 @@ from threading import Thread
 from threading import Event
 
 
-# We use an integer for time and record microseconds.
-SECONDSTOMICROSECONDS = 1000000
-
-
 def all_subclasses(obj):
     """Used to introspect all descendents of a class.  Used because metaclasses
     are a PITA when doing multiple inheritance"""
@@ -42,15 +38,6 @@ def sizeof_fmt(num):
         num /= 1024.0
 
 
-def sizeof_fmt_detailed(num):
-    for x in ["", "kB", "MB", "GB", "TB", "EB", "ZB", "YB"]:
-        if num < 1024.0 * 1024.0:
-            return "%3.1f%s" % (num, x)
-        num /= 1024.0
-
-    return int(num)
-
-
 def target_label_split(label):
     """
     Split a target label into a tuple of it's parts: (fsname, target type, index)
@@ -60,35 +47,6 @@ def target_label_split(label):
         # MGS
         return (None, a[0][0:3], None)
     return (a[0], a[1][0:3], int(a[1][3:], 16))
-
-
-class timeit(object):
-    def __init__(self, logger):
-        self.logger = logger
-
-    def __call__(self, method):
-        from functools import wraps
-
-        @wraps(method)
-        def timed(*args, **kw):
-            if self.logger.level <= logging.DEBUG:
-                ts = time.time()
-                result = method(*args, **kw)
-                te = time.time()
-
-                print_args = False
-                if print_args:
-                    self.logger.debug(
-                        "Ran %r (%s, %r) in %2.2fs"
-                        % (method.__name__, ", ".join(["%s" % (a,) for a in args]), kw, te - ts)
-                    )
-                else:
-                    self.logger.debug("Ran %r in %2.2fs" % (method.__name__, te - ts))
-                return result
-            else:
-                return method(*args, **kw)
-
-        return timed
 
 
 class dbperf(object):
@@ -204,26 +162,6 @@ class CommandLine(object):
         out, err = p.communicate()
         rc = p.wait()
         return rc, out, err
-
-
-def normalize_nids(nid_list):
-    """Cope with the Lustre and users sometimes calling tcp0 'tcp' to allow
-    direct comparisons between NIDs"""
-    return [normalize_nid(n) for n in nid_list]
-
-
-def normalize_nid(string):
-    """Cope with the Lustre and users sometimes calling tcp0 'tcp' to allow
-    direct comparisons between NIDs"""
-    if not re.search(r"\d+$", string):
-        string += "0"
-
-    # remove _ from nids (i.e. @tcp_0 -> @tcp0
-    i = string.find("_")
-    if i > -1:
-        string = string[:i] + string[i + 1 :]
-
-    return string
 
 
 def runningInDocker():

@@ -8,7 +8,8 @@ import threading
 import datetime
 
 from chroma_agent_comms.views import MessageView
-from chroma_core.models import ManagedHost, HostContactAlert, HostRebootEvent
+from chroma_core.models.host import ManagedHost
+from chroma_core.models import HostContactAlert, HostRebootEvent
 from chroma_core.services import log_register
 from chroma_core.services.job_scheduler import job_scheduler_notify
 from iml_common.lib.date_time import IMLDateTime

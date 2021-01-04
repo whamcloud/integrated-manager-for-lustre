@@ -27,7 +27,6 @@ from django.core.exceptions import FieldDoesNotExist
 import django.utils.timezone
 
 from chroma_core.lib.cache import ObjectCache
-from chroma_core.lib.util import target_label_split
 from chroma_core.models.server_profile import ServerProfile
 from chroma_core.models import Command
 from chroma_core.models import StateLock

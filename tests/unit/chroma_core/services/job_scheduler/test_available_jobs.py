@@ -2,8 +2,9 @@ from django.contrib.contenttypes.models import ContentType
 
 from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
 from chroma_core.lib.cache import ObjectCache
-from chroma_core.models import ManagedMgs, ManagedFilesystem, ManagedOst, ManagedMdt, RebootHostJob, ShutdownHostJob
-from tests.unit.chroma_core.helpers import create_simple_fs, synthetic_host
+from chroma_core.models import RebootHostJob, ShutdownHostJob
+from tests.unit.chroma_core.helpers.synthentic_objects import synthetic_host
+from tests.unit.chroma_core.helpers.helper import create_simple_fs
 
 
 class TestAvailableJobs(IMLUnitTestCase):
@@ -25,7 +26,7 @@ class TestAvailableJobs(IMLUnitTestCase):
 
         from chroma_core.services.job_scheduler.job_scheduler import JobScheduler
 
-        from tests.unit.chroma_core.helpers import load_default_profile
+        from tests.unit.chroma_core.helpers.helper import load_default_profile
 
         load_default_profile()
 

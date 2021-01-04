@@ -10,7 +10,7 @@ from django.db.models import CASCADE
 
 from chroma_core.models import AlertStateBase
 from chroma_core.models import AlertEvent
-from chroma_core.models import StateChangeJob
+from chroma_core.models.jobs import StateChangeJob
 from chroma_core.models import NetworkInterface
 from chroma_core.models.jobs import Job, StateLock
 from chroma_core.lib.job import DependOn, DependAll, Step

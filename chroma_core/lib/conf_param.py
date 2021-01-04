@@ -476,7 +476,8 @@ def validate_conf_params(klass, params):
 
 
 def set_conf_params(obj, params, new=True):
-    from chroma_core.models import ManagedFilesystem, ManagedMdt, ManagedOst, FilesystemMember
+    from chroma_core.models import ManagedFilesystem, ManagedMdt, ManagedOst
+    from chroma_core.models.target import FilesystemMember
 
     if isinstance(obj, ManagedFilesystem):
         mgs = obj.mgs.downcast()
@@ -501,7 +502,7 @@ def set_conf_params(obj, params, new=True):
 
     param_records = []
     for key, value in params.items():
-        model_klass, param_value_obj, help_text = all_params[key]
+        model_klass, _, _ = all_params[key]
         existing_params = ConfParam.get_latest_params(model_klass.objects.filter(key=key, **kwargs))
         # Store if the new value is
         if (len(existing_params) > 0 and existing_params[0].value != value) or (

@@ -3,18 +3,17 @@ import datetime
 import mock
 import django.utils.timezone
 
-from chroma_core.lib.cache import ObjectCache
 from chroma_core.models.jobs import SchedulingError, Job
 from chroma_core.models.command import Command
-from chroma_core.models import ManagedMgs, ManagedTarget
+from chroma_core.models import ManagedMgs
 from chroma_core.models import LNetConfiguration
 from chroma_core.services.job_scheduler.job_scheduler import RunJobThread
 from chroma_core.services.job_scheduler import job_scheduler_notify
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 from chroma_core.services.job_scheduler.job_scheduler import JobScheduler
-from tests.unit.chroma_core.helpers import freshen
-from tests.unit.chroma_core.helpers import MockAgentRpc
-from tests.unit.chroma_core.helpers import create_simple_fs
+from tests.unit.chroma_core.helpers.helper import freshen
+from tests.unit.chroma_core.helpers.mock_agent_rpc import MockAgentRpc
+from tests.unit.chroma_core.helpers.helper import create_simple_fs
 from tests.unit.services.job_scheduler.job_test_case import JobTestCaseWithHost
 from chroma_api.urls import api
 
@@ -241,7 +240,7 @@ class TestStateManager(JobTestCaseWithHost):
         cancel_bak = RunJobThread.cancel
         RunJobThread.cancel = mock.Mock()
 
-        from tests.unit.chroma_core.helpers import log
+        from tests.unit.chroma_core.helpers.helper import log
 
         def spawn_job(job):
             log.debug("neutered spawn_job")

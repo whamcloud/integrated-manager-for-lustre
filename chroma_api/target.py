@@ -2,22 +2,12 @@
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
 
-
-from chroma_core.models.host import Volume, VolumeNode
-from chroma_core.models.target import FilesystemMember
 import chroma_core.lib.conf_param
-from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 from collections import defaultdict
-from django.db.models import Q
-from django.contrib.contenttypes.models import ContentType
-from chroma_core.models import ManagedOst, ManagedMdt, ManagedMgs, ManagedTarget, ManagedFilesystem
-import tastypie.http as http
-from tastypie.utils import dict_strip_unicode_keys
+from chroma_core.models import ManagedOst, ManagedMdt, ManagedMgs, ManagedTarget
 from tastypie.validation import Validation
-from tastypie.resources import BadRequest, ImmediateHttpResponse
 from chroma_api.authentication import AnonymousAuthentication, PatchedDjangoAuthorization
-from chroma_api.utils import custom_response, ConfParamResource, dehydrate_command
-from chroma_api.validation_utils import validate
+from chroma_api.utils import ConfParamResource
 
 # Some lookups for the three 'kind' letter strings used
 # by API consumers to refer to our target types

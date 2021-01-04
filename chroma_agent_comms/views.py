@@ -19,7 +19,6 @@ from tastypie.http import HttpForbidden
 
 from chroma_core.models.host import ManagedHost
 from chroma_core.models import ClientCertificate, RegistrationToken, ServerProfile
-from chroma_core.models.log import LogMessage, MessageClass
 from chroma_core.models.utils import Version
 from chroma_core.services import log_register
 from chroma_core.services.crypto import Crypto

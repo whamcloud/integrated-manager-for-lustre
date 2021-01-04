@@ -12,7 +12,7 @@ DEFAULT_AGENT_CONFIG = {
 
 PRODUCTION_CONFIG_STORE = "/var/lib/chroma"
 DEVEL_CONFIG_STORE = os.path.join(os.path.dirname(__file__), ".dev_config_store")
-from config_store import ConfigStore
+from .config_store import ConfigStore
 
 try:
     config = ConfigStore(PRODUCTION_CONFIG_STORE)
@@ -23,7 +23,7 @@ except OSError as e:
         raise
 
 try:
-    from version import VERSION, PACKAGE_VERSION
+    from .version import VERSION, PACKAGE_VERSION
 
     __version__ = VERSION
     __package_version__ = PACKAGE_VERSION

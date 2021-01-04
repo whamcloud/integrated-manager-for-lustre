@@ -6,9 +6,7 @@
 import sys
 import traceback
 import logging
-import itertools
 from chroma_core.models.jobs import SchedulingError
-import bisect
 from collections import namedtuple
 
 
@@ -30,11 +28,8 @@ from chroma_core.services.job_scheduler.job_scheduler_client import JobScheduler
 from chroma_api.chroma_model_resource import ChromaModelResource
 import chroma_core.lib.conf_param
 from chroma_core.models import utils as conversion_util
-from iml_common.lib.date_time import IMLDateTime
 
-from collections import defaultdict
 from django.db.models.query import QuerySet
-from django.db.models import fields as django_fields
 
 log = log_register(__name__)
 
@@ -61,41 +56,6 @@ def dehydrate_command(command):
         return cr.full_dehydrate(cr.build_bundle(obj=command)).data
     else:
         return None
-
-
-# Given a dict of queries, turn the variables into the correct format for a django filter.
-def filter_fields_to_type(klass, query_dict):
-    reserved_fields = ["order_by", "format", "limit", "offset"]
-
-    q = QuerySet(klass)
-
-    query = dict(query_dict)
-
-    fields = {}
-    for field in q.model._meta.fields:
-        fields[field.column] = field
-
-    # Remove the reserved fields we know about.
-    for field in query.keys():
-        if field in reserved_fields:
-            del query[field]
-
-    # This will error if it find an unknown field and cause the standard tasty pie query to run.
-    for field in query.keys():
-        try:
-            field_type = type(fields[field])
-            value = query[field]
-
-            if field_type == django_fields.AutoField or field_type == django_fields.IntegerField:
-                value = int(value)
-            elif field_type == django_fields.BooleanField:
-                value = value.lower() == "true"
-
-            query[field] = value
-        except KeyError:
-            pass
-
-    return query
 
 
 # monkey-patch ResourceOptions to have a default-empty readonly list

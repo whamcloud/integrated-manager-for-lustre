@@ -1,6 +1,6 @@
 from chroma_core.models import ManagedHost
 from chroma_core.services.log import log_register
-from tests.unit.chroma_core.helpers import MockAgentRpc
+from tests.unit.chroma_core.helpers.mock_agent_rpc import MockAgentRpc
 
 log = log_register("mock_agent_ssh")
 

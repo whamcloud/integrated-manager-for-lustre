@@ -7,11 +7,11 @@ import json
 import logging
 
 from django.db import models
-from django.db.models import Q, CASCADE
+from django.db.models import CASCADE
 
 from chroma_core.models import AlertEvent
 from chroma_core.models import AlertStateBase
-from chroma_core.models import Volume
+from chroma_core.models.host import Volume
 from chroma_core.lib.storage_plugin.log import storage_plugin_log as log
 from chroma_core.models.sparse_model import VariantDescriptor
 

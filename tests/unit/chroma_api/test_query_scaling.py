@@ -9,7 +9,6 @@ from chroma_api.target import TargetResource
 from chroma_api.volume import VolumeResource
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.models import (
-    LogMessage,
     ManagedHost,
     LNetConfiguration,
     VolumeNode,
@@ -23,7 +22,7 @@ from chroma_core.models import (
 )
 from django.db import connection
 from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
-from tests.unit.chroma_core.helpers import fake_log_message, synthetic_volume
+from tests.unit.chroma_core.helpers.synthentic_objects import synthetic_volume
 
 
 Order1 = namedtuple("Order1", ["query_count"])

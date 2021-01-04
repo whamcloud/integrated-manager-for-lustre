@@ -18,10 +18,6 @@ def ssi(runlevel):
     AgentShell.try_run(["init", runlevel])
 
 
-def fail_node():
-    ssi("0")
-
-
 def stonith(node):
     p_cfg = PacemakerConfig()
 
@@ -56,4 +52,4 @@ def reboot_server(at_time="now"):
     raise CallbackAfterResponse(None, _reboot)
 
 
-ACTIONS = [reboot_server, shutdown_server, fail_node, stonith]
+ACTIONS = [reboot_server, shutdown_server, stonith]

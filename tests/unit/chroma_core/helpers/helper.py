@@ -27,11 +27,6 @@ def random_str(length=10, prefix="", postfix=""):
     return "%s%s%s" % (prefix, test_string, postfix)
 
 
-def synchronous_run_job(job):
-    for step_klass, args in job.get_steps():
-        step_klass(job, args, lambda x: None, lambda x: None, mock.Mock()).run(args)
-
-
 def _passthrough_create_targets(target_data):
     ObjectCache.clear()
     return JobScheduler().create_targets(target_data)

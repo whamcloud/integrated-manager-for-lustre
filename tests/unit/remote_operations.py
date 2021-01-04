@@ -15,7 +15,6 @@ from iml_common.lib.shell import Shell
 from tests.utils.remote_firewall_control import RemoteFirewallControl
 from tests.unit.constants import TEST_TIMEOUT
 from tests.unit.constants import LONG_TEST_TIMEOUT
-from tests.unit.constants import UNATTENDED_BOOT_TIMEOUT
 
 logger = logging.getLogger("test")
 logger.setLevel(logging.DEBUG)

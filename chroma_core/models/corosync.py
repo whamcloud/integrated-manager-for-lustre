@@ -9,7 +9,7 @@ from django.db.models import CASCADE
 
 from chroma_core.models import DeletableStatefulObject
 from chroma_core.models import NetworkInterface
-from chroma_core.models import CorosyncStoppedAlert
+from chroma_core.models.corosync_common import CorosyncStoppedAlert
 from chroma_core.models import corosync_common
 from chroma_core.lib.job import Step
 from chroma_core.services.job_scheduler import job_scheduler_notify

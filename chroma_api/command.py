@@ -18,7 +18,7 @@ from chroma_api.host import HostResource
 from chroma_api.chroma_model_resource import ChromaModelResource
 
 from chroma_core.models import Command
-from chroma_core.models import SchedulingError
+from chroma_core.models.jobs import SchedulingError
 from chroma_core.models import StepResult
 from chroma_api.validation_utils import validate
 

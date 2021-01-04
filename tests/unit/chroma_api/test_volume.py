@@ -1,8 +1,7 @@
 import json
 
 from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
-from tests.unit.chroma_core.helpers import synthetic_host, synthetic_volume_full
-from tests.unit.chroma_core.helpers import create_targets_patch
+from tests.unit.chroma_core.helpers.synthentic_objects import synthetic_host, synthetic_volume_full
 from chroma_core.models import VolumeNode
 
 

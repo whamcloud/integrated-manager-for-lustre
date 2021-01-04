@@ -9,7 +9,7 @@ from chroma_core.models import Command
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.models import StorageResourceRecord
 from chroma_core.services.log import log_register
-from tests.unit.chroma_core.helpers import random_str
+from tests.unit.chroma_core.helpers.helper import random_str
 
 log = log_register("synthetic_objects")
 
@@ -267,7 +267,7 @@ def _synthetic_create_host_ssh(address, server_profile, root_pw=None, pkey=None,
         host = ManagedHost.objects.get(address=address)
         assert host.state == "undeployed"
     except ManagedHost.DoesNotExist:
-        from tests.unit.chroma_core.helpers import MockAgentRpc
+        from tests.unit.chroma_core.helpers.mock_agent_rpc import MockAgentRpc
 
         host_info = MockAgentRpc.mock_servers[address]
 

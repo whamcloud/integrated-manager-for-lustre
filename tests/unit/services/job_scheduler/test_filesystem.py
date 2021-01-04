@@ -1,14 +1,11 @@
-from itertools import chain
-
 from django.db import connection
 
-from chroma_core.lib.cache import ObjectCache
 from chroma_core.lib.util import dbperf
 from chroma_core.models import ManagedFilesystem
 from chroma_core.models import Nid
 from chroma_core.models import ManagedMdt, ManagedMgs, ManagedOst, ManagedTarget
-from tests.unit.chroma_core.helpers import freshen
-from tests.unit.chroma_core.helpers import synthetic_host
+from tests.unit.chroma_core.helpers.helper import freshen
+from tests.unit.chroma_core.helpers.synthentic_objects import synthetic_host
 from tests.unit.services.job_scheduler.job_test_case import JobTestCase, JobTestCaseWithHost
 
 

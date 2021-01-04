@@ -17,7 +17,6 @@ from tastypie.resources import Resource
 from tastypie import fields
 from tastypie.api import url
 from tastypie import http
-from tastypie.exceptions import ImmediateHttpResponse
 from tastypie.validation import Validation
 from chroma_api.authentication import AnonymousAuthentication, PatchedDjangoAuthorization
 from chroma_api.chroma_model_resource import ChromaModelResource

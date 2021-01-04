@@ -4,9 +4,10 @@ import mock
 
 from chroma_core.models import Nid
 from chroma_core.models import Command
-from tests.unit.chroma_core.helpers import MockAgentRpc, create_host_ssh_patch
+from tests.unit.chroma_core.helpers.mock_agent_rpc import MockAgentRpc
+from tests.unit.chroma_core.helpers.synthentic_objects import create_host_ssh_patch
 from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
-from tests.unit.chroma_core.helpers import log
+from tests.unit.chroma_core.helpers.helper import log
 
 
 def mock_update_nids(nids_data):

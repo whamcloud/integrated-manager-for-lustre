@@ -13,9 +13,9 @@ from chroma_core.models.event import AlertEvent
 from chroma_core.models.alert import AlertStateBase
 from chroma_core.models.jobs import StateChangeJob, StateLock, AdvertisedJob
 from chroma_core.models.host import ManagedHost, HostContactAlert
-from chroma_core.models import StatefulObject
+from chroma_core.models.jobs import StatefulObject
 from chroma_core.models.pacemaker import PacemakerConfiguration
-from chroma_core.models import DeletableDowncastableMetaclass
+from chroma_core.models.utils import DeletableDowncastableMetaclass
 from chroma_help.help import help_text
 from iml_common.lib import util
 

@@ -7,9 +7,10 @@ import operator
 from django.db import models
 from django.db.models import CASCADE
 from chroma_core.lib.job import DependOn, DependAll, Step
-from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst, FilesystemMember, ManagedTarget, ManagedHost
-from chroma_core.models import StatefulObject, StateChangeJob, Job, AdvertisedJob
-from chroma_core.models import DeletableDowncastableMetaclass
+from chroma_core.models.target import FilesystemMember
+from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst, ManagedTarget, ManagedHost
+from chroma_core.models.jobs import StatefulObject, StateChangeJob, Job, AdvertisedJob
+from chroma_core.models.utils import DeletableDowncastableMetaclass
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.lib.util import target_label_split
 from django.db.models import Q

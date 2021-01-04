@@ -1,7 +1,7 @@
 import mock
 
-from tests.unit.chroma_core.helpers import synthetic_host
-from tests.unit.chroma_core.helpers import load_default_profile
+from tests.unit.chroma_core.helpers.synthentic_objects import synthetic_host
+from tests.unit.chroma_core.helpers.helper import load_default_profile
 from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
 from chroma_core.models import HostContactAlert, HostOfflineAlert, ServerProfile
 from chroma_core.models import (
@@ -11,8 +11,6 @@ from chroma_core.models import (
     ShutdownHostJob,
     MountLustreFilesystemsJob,
     UnmountLustreFilesystemsJob,
-    CreateOstPoolJob,
-    DestroyOstPoolJob,
 )
 from chroma_core.lib.cache import ObjectCache
 
@@ -155,7 +153,6 @@ class TestClientManagementJobs(TestAdvertisedCase):
 
     def create_fake_filesystem_client(self, active=False):
         from chroma_core.models import ManagedMgs, ManagedMdt, ManagedOst, ManagedFilesystem, LustreClientMount
-        from tests.unit.chroma_core.helpers import synthetic_volume_full
 
         mgt_target = ManagedTarget.objects.create(
             id=1,

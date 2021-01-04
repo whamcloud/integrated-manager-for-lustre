@@ -5,7 +5,7 @@ from django.utils import timezone
 from chroma_core.models import ManagedHost
 from chroma_core.models import HostOfflineAlert
 from tests.unit.chroma_api.notification_test_case import NotificationTestCase
-from tests.unit.chroma_core.helpers import freshen
+from tests.unit.chroma_core.helpers.helper import freshen
 from iml_common.lib.date_time import IMLDateTime
 
 INFO = logging.INFO

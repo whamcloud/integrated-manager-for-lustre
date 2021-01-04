@@ -1,11 +1,8 @@
-from chroma_core.lib.cache import ObjectCache
 from chroma_core.models import Nid
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
-from chroma_core.models import ManagedTarget, ManagedMgs, ManagedHost
+from chroma_core.models import ManagedTarget, ManagedMgs
 
-from tests.unit.chroma_core.helpers import freshen
-from tests.unit.chroma_core.helpers import MockAgentRpc
-from tests.unit.chroma_core.helpers import create_simple_fs
+from tests.unit.chroma_core.helpers.helper import create_simple_fs
 from tests.unit.services.job_scheduler.job_test_case import JobTestCaseWithHost
 
 

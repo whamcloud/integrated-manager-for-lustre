@@ -10,7 +10,8 @@ from chroma_core.models import Command
 from chroma_core.models import StepResult
 from chroma_core.models import ManagedTarget
 from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
-from tests.unit.chroma_core.helpers import create_simple_fs, synthetic_host
+from tests.unit.chroma_core.helpers.synthentic_objects import synthetic_host
+from tests.unit.chroma_core.helpers.helper import create_simple_fs
 from iml_common.lib.date_time import IMLDateTime
 
 

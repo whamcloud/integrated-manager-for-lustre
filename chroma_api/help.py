@@ -4,7 +4,8 @@
 
 
 import chroma_core.lib.conf_param
-from chroma_core.models import ManagedOst, ManagedMdt, ManagedFilesystem
+from chroma_core.models import ManagedOst, ManagedMdt
+from chroma_core.models.filesystem import ManagedFilesystem
 
 from chroma_api.authentication import AnonymousAuthentication, PatchedDjangoAuthorization
 

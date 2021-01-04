@@ -8,9 +8,6 @@ Actions for registration and deregistration of a server (adding and removing
 it from manager)
 """
 
-import os
-
-from chroma_agent import config
 from chroma_agent import conf
 from chroma_agent.agent_client import AgentClient, HttpError
 from chroma_agent.agent_daemon import ServerProperties

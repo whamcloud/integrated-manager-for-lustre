@@ -1,10 +1,8 @@
 import mock
 
-from chroma_core.lib.cache import ObjectCache
-from chroma_core.models import ManagedMgs, ManagedFilesystem, ManagedHost, ManagedMdt, ManagedOst, Nid
-from django.db import connection
-from tests.unit.chroma_core.helpers import synthetic_host, synthetic_volume_full
-from tests.unit.chroma_core.helpers import create_simple_fs, load_default_profile
+from chroma_core.models import ManagedHost, Nid
+from tests.unit.chroma_core.helpers.synthentic_objects import synthetic_host
+from tests.unit.chroma_core.helpers.helper import create_simple_fs, load_default_profile
 from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
 
 

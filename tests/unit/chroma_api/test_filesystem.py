@@ -1,9 +1,9 @@
 import mock
 
 from chroma_core.models import Command
-from chroma_core.models.target import ManagedMgs
 from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
-from tests.unit.chroma_core.helpers import create_simple_fs, synthetic_host, synthetic_volume_full
+from tests.unit.chroma_core.helpers.synthentic_objects import synthetic_host
+from tests.unit.chroma_core.helpers.helper import create_simple_fs
 
 
 class TestFilesystemResource(ChromaApiTestCase):

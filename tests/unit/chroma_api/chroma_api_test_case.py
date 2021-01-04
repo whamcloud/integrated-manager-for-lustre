@@ -4,10 +4,7 @@ import mock
 
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.services.job_scheduler.job_scheduler import JobScheduler
-from django.db import connection
 from tests.unit.chroma_api.tastypie_test import ResourceTestCase
-from tests.unit.chroma_core.helpers import synthetic_volume_full
-from chroma_core.models import ManagedTarget
 
 
 class ChromaApiTestCase(ResourceTestCase):
@@ -29,7 +26,7 @@ class ChromaApiTestCase(ResourceTestCase):
 
         self.assertTrue(self.api_client.client.login(username=self.username, password=self.password))
 
-        from tests.unit.chroma_core.helpers import load_default_profile
+        from tests.unit.chroma_core.helpers.helper import load_default_profile
 
         load_default_profile()
 

@@ -8,7 +8,8 @@ from chroma_core.models.registration_token import RegistrationToken
 from chroma_core.services.crypto import Crypto
 from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
 from chroma_agent_comms.views import ValidatedClientView
-from tests.unit.chroma_core.helpers import generate_csr, synthetic_host, load_default_profile
+from tests.unit.chroma_core.helpers.helper import generate_csr, load_default_profile
+from tests.unit.chroma_core.helpers.synthentic_objects import synthetic_host
 from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
 from tests.utils import patch, timed
 import settings
