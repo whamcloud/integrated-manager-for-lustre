@@ -93,7 +93,6 @@ rm -rf %{buildroot}
 %{__python} setup.py install --skip-build --install-lib=%{python_sitelib} --install-scripts=%{_bindir} --root=%{buildroot}
 mkdir -p $RPM_BUILD_ROOT/usr/sbin/
 mv $RPM_BUILD_ROOT/usr/{,s}bin/fence_chroma
-mv $RPM_BUILD_ROOT/usr/{,s}bin/chroma-copytool-monitor
 mkdir -p %{buildroot}%{_unitdir}/device-scanner.target.d/
 install -m 644 %{unit_name} %{buildroot}%{_unitdir}/
 install -m 644 iml-storage-server.target %{buildroot}%{_unitdir}/iml-storage-server.target
@@ -109,7 +108,6 @@ cat <<EndOfList>>management.files
 %{python_sitelib}/chroma_agent/action_plugins/manage_*.py*
 %{python_sitelib}/chroma_agent/templates/
 %{_sbindir}/fence_chroma
-%{_sbindir}/chroma-copytool-monitor
 EndOfList
 
 touch base.files

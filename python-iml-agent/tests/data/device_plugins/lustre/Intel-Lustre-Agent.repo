@@ -30,14 +30,3 @@ sslcacert = /etc/iml/authority.crt
 sslclientkey = /etc/iml/private.pem
 sslclientcert = /etc/iml/self.crt
 proxy=_none_
-
-[robinhood]
-name=Dummy bundle
-baseurl=https://cgearing-mac01.local:8000/repo//robinhood
-enabled=0
-gpgcheck=0
-sslverify = 1
-sslcacert = /etc/iml/authority.crt
-sslclientkey = /etc/iml/private.pem
-sslclientcert = /etc/iml/self.crt
-proxy=_none_

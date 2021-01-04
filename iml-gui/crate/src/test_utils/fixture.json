@@ -1,10 +1,5 @@
 {
     "content_type": {
-        "70": {
-            "id": 70,
-            "app_label": "chroma_core",
-            "model": "removeunconfiguredcopytooljob"
-        },
         "58": {
             "id": 58,
             "app_label": "chroma_core",
@@ -78,16 +73,6 @@
             "id": 75,
             "app_label": "chroma_core",
             "model": "addostpooljob"
-        },
-        "17": {
-            "id": 17,
-            "app_label": "chroma_core",
-            "model": "copytooloperation"
-        },
-        "120": {
-            "id": 120,
-            "app_label": "chroma_core",
-            "model": "startcopytooljob"
         },
         "95": {
             "id": 95,
@@ -273,11 +258,6 @@
             "app_label": "chroma_core",
             "model": "poweroffhostjob"
         },
-        "76": {
-            "id": 76,
-            "app_label": "chroma_core",
-            "model": "forceremovecopytooljob"
-        },
         "158": {
             "id": 158,
             "app_label": "chroma_core",
@@ -334,11 +314,6 @@
             "app_label": "chroma_core",
             "model": "sfapowersupply"
         },
-        "134": {
-            "id": 134,
-            "app_label": "chroma_core",
-            "model": "configurecopytooljob"
-        },
         "74": {
             "id": 74,
             "app_label": "chroma_core",
@@ -355,12 +330,6 @@
             "model": "clearoldstratagemdatajob"
         },
         "69": { "id": 69, "app_label": "chroma_core", "model": "fidtaskqueue" },
-        "26": { "id": 26, "app_label": "chroma_core", "model": "copytool" },
-        "82": {
-            "id": 82,
-            "app_label": "chroma_core",
-            "model": "stopcopytooljob"
-        },
         "160": {
             "id": 160,
             "app_label": "chroma_core",
@@ -804,11 +773,6 @@
             "model": "removemanagedhostjob"
         },
         "39": { "id": 39, "app_label": "chroma_core", "model": "repo" },
-        "140": {
-            "id": 140,
-            "app_label": "chroma_core",
-            "model": "removecopytooljob"
-        },
         "161": {
             "id": 161,
             "app_label": "chroma_core",

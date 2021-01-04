@@ -8,8 +8,6 @@ import os
 
 DEFAULT_AGENT_CONFIG = {
     "lustre_client_root": "/mnt/lustre_clients",
-    "copytool_fifo_directory": "/var/spool",
-    "copytool_template": "--quiet --update-interval %(report_interval)s --event-fifo %(event_fifo)s --archive %(archive_number)s %(hsm_arguments)s %(mountpoint)s",
 }
 
 PRODUCTION_CONFIG_STORE = "/var/lib/chroma"

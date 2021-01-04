@@ -12,12 +12,10 @@ class MessageClass:
     NORMAL = 0
     LUSTRE = 1
     LUSTRE_ERROR = 2
-    COPYTOOL = 3
-    COPYTOOL_ERROR = 4
 
     @classmethod
     def strings(cls):
-        return [cls.to_string(i) for i in [cls.NORMAL, cls.LUSTRE, cls.LUSTRE_ERROR, cls.COPYTOOL, cls.COPYTOOL_ERROR]]
+        return [cls.to_string(i) for i in [cls.NORMAL, cls.LUSTRE, cls.LUSTRE_ERROR]]
 
     @classmethod
     def to_string(cls, n):

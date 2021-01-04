@@ -44,7 +44,7 @@ from chroma_core.models import (
     get_fs_id_from_identifier,
 )
 from chroma_core.models import VolumeNode
-from chroma_core.models import DeployHostJob, LustreClientMount, Copytool
+from chroma_core.models import DeployHostJob, LustreClientMount
 from chroma_core.models import CorosyncConfiguration
 from chroma_core.models import Corosync2Configuration
 from chroma_core.models import TriggerPluginUpdatesJob
@@ -1128,64 +1128,6 @@ class JobScheduler(object):
 
         self.progress.advance()
         return command_id
-
-    def create_copytool(self, copytool_data):
-        log.debug("Creating copytool from: %s" % copytool_data)
-        with self._lock:
-            host = ObjectCache.get_by_id(ManagedHost, int(copytool_data["host"]))
-            copytool_data["host"] = host
-            filesystem = ObjectCache.get_by_id(ManagedFilesystem, int(copytool_data["filesystem"]))
-            copytool_data["filesystem"] = filesystem
-
-            with transaction.atomic():
-                copytool = Copytool.objects.create(**copytool_data)
-
-            # Add the copytool after the transaction commits
-            ObjectCache.add(Copytool, copytool)
-
-        log.debug("Created copytool: %s" % copytool)
-
-        mount = self._create_client_mount(host, filesystem, copytool_data["mountpoint"])
-
-        # Make the association between the copytool and client mount
-        with self._lock:
-            copytool.client_mount = mount
-
-            with transaction.atomic():
-                copytool.save()
-
-            ObjectCache.update(copytool)
-
-        self.progress.advance()
-        return copytool.id
-
-    def register_copytool(self, copytool_id, uuid):
-        from django.db import transaction
-
-        with self._lock:
-            copytool = ObjectCache.get_by_id(Copytool, int(copytool_id))
-            log.debug("Registering copytool %s with uuid %s" % (copytool, uuid))
-
-            with transaction.atomic():
-                copytool.register(uuid)
-
-            ObjectCache.update(copytool)
-
-        self.progress.advance()
-
-    def unregister_copytool(self, copytool_id):
-        from django.db import transaction
-
-        with self._lock:
-            copytool = ObjectCache.get_by_id(Copytool, int(copytool_id))
-            log.debug("Unregistering copytool %s" % copytool)
-
-            with transaction.atomic():
-                copytool.unregister()
-
-            ObjectCache.update(copytool)
-
-        self.progress.advance()
 
     def create_host_ssh(self, address, profile, root_pw, pkey, pkey_pw):
         """

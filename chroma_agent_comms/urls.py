@@ -9,7 +9,6 @@ from django.views.decorators.csrf import csrf_exempt
 
 urlpatterns = [
     url(r"^message/$", csrf_exempt(views.MessageView.as_view())),
-    url(r"^copytool_event/$", csrf_exempt(views.CopytoolEventView.as_view())),
     url(r"^register/(\w+)/$", views.register),
     url(r"^setup/(\w+)/$", views.setup),
     url(r"^reregister/$", views.reregister),

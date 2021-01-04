@@ -1210,8 +1210,6 @@ pub enum MessageClass {
     Normal = 0,
     Lustre = 1,
     LustreError = 2,
-    Copytool = 3,
-    CopytoolError = 4,
 }
 
 impl TryFrom<i16> for MessageClass {
@@ -1222,8 +1220,6 @@ impl TryFrom<i16> for MessageClass {
             0 => Ok(MessageClass::Normal),
             1 => Ok(MessageClass::Lustre),
             2 => Ok(MessageClass::LustreError),
-            3 => Ok(MessageClass::Copytool),
-            4 => Ok(MessageClass::CopytoolError),
             _ => Err("Invalid variant for MessageClass"),
         }
     }

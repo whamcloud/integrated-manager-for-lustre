@@ -252,7 +252,6 @@ class ManagedTarget(StatefulObject):
         "LNetConfiguration": lambda lc: get_host_targets(lc.host.id),
         "PacemakerConfiguration": lambda pc: get_host_targets(pc.host.id),
         "ManagedFilesystem": lambda mfs: ObjectCache.fs_targets(mfs.id),
-        "Copytool": lambda ct: ObjectCache.client_mount_copytools(ct.id),
     }
 
     def target_type(self):

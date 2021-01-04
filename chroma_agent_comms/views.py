@@ -19,7 +19,6 @@ from tastypie.http import HttpForbidden
 
 from chroma_core.models.host import ManagedHost
 from chroma_core.models import ClientCertificate, RegistrationToken, ServerProfile
-from chroma_core.models.copytool import Copytool, CopytoolEvent, CopytoolOperation, log as copytool_log, UNKNOWN_UUID
 from chroma_core.models.log import LogMessage, MessageClass
 from chroma_core.models.utils import Version
 from chroma_core.services import log_register
@@ -54,102 +53,6 @@ class ValidatedClientView(View):
         elif fqdn != request.META["HTTP_X_SSL_CLIENT_NAME"]:
             log.info("Domain name changed %s" % fqdn)
         return fqdn
-
-
-class CopytoolEventView(ValidatedClientView):
-    @log_exception
-    def post(self, request):
-        """
-        Receive copytool events from the monitor.
-        Handle a POST containing events from the monitor
-        """
-        body = json.loads(request.body)
-        fqdn = self.valid_fqdn(request)
-        if not fqdn:
-            copytool_log.error("Invalid client: %s" % request.META)
-            return HttpForbidden()
-
-        copytool_log.debug("Incoming payload: %s" % body)
-        try:
-            copytool = Copytool.objects.select_related().get(id=body["copytool"])
-            events = [CopytoolEvent(**e) for e in body["events"]]
-        except KeyError as e:
-            return HttpResponseBadRequest("Missing attribute '%s'" % e.args[0])
-        except Copytool.DoesNotExist:
-            return HttpResponseBadRequest("Unknown copytool: %s" % body["copytool"])
-
-        copytool_log.debug("Received %d events from %s on %s" % (len(events), copytool, copytool.host))
-
-        from chroma_core.services.job_scheduler.job_scheduler_client import JobSchedulerClient
-
-        active_operations = {}
-        for event in sorted(events, key=lambda event: event.timestamp):
-            copytool_log.debug(event)
-
-            # These types aren't associated with active operations
-            if event.type == "UNREGISTER":
-                JobSchedulerClient.unregister_copytool(copytool.id)
-                continue
-            elif event.type == "REGISTER":
-                JobSchedulerClient.register_copytool(copytool.id, event.uuid)
-                continue
-            elif event.type == "LOG":
-                LogMessage.objects.create(
-                    fqdn=copytool.host.fqdn,
-                    message=event.message,
-                    severity=getattr(logging, event.level),
-                    facility=4,  # daemon
-                    tag=str(copytool),
-                    datetime=event.timestamp,
-                    message_class=MessageClass.COPYTOOL_ERROR if event.level == "ERROR" else MessageClass.COPYTOOL,
-                )
-                continue
-
-            # Fixup for times when the register event was missed
-            if copytool.state != "started":
-                # FIXME: Figure out how to find the uuid after the fact. Maybe
-                # the solution is to send uuid with every event from the
-                # copytool, but that seems kludgy.
-                JobSchedulerClient.register_copytool(copytool.id, UNKNOWN_UUID)
-
-            try:
-                active_operations[event.data_fid] = CopytoolOperation.objects.get(id=event.active_operation)
-            except AttributeError:
-                if event.state == "START":
-                    kwargs = dict(
-                        start_time=event.timestamp, type=event.type, path=event.lustre_path, fid=event.data_fid
-                    )
-                    active_operations[event.data_fid] = copytool.create_operation(**kwargs)
-                    continue
-                elif event.source_fid in active_operations:
-                    active_operations[event.data_fid] = active_operations.pop(event.source_fid)
-                else:
-                    copytool_log.error(
-                        "%s on %s, received malformed non-START event: %s" % (copytool, copytool.host, event)
-                    )
-                    continue
-            except CopytoolOperation.DoesNotExist:
-                copytool_log.error(
-                    "%s on %s, received event for unknown operation: %s" % (copytool, copytool.host, event)
-                )
-                continue
-
-            if event.state in ["FINISH", "ERROR"]:
-                active_operations[event.data_fid].finish(event.timestamp, event.state, event.error)
-                del active_operations[event.data_fid]
-            elif event.state == "RUNNING":
-                active_operations[event.data_fid].update(event.timestamp, event.current_bytes, event.total_bytes)
-            else:
-                copytool_log.error("%s on %s, received unknown event type: %s" % (copytool, copytool.host, event))
-                continue
-
-        try:
-            return HttpResponse(
-                json.dumps({"active_operations": dict((fid, op.id) for fid, op in active_operations.items())}),
-                content_type="application/json",
-            )
-        except AttributeError:
-            return HttpResponse()
 
 
 class MessageView(ValidatedClientView):

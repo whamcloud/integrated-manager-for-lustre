@@ -13,9 +13,6 @@ import sys
 # in warnings and errors
 daemon_log = logging.getLogger("daemon")
 
-# This log is for copytool monitoring instances. Not particularly interesting
-# unless things have gone wrong.
-copytool_log = logging.getLogger("copytool")
 
 # This log is for messages about operations invoked at the user's request,
 # the user will be interested general breezy chat (INFO) about what we're
@@ -26,14 +23,12 @@ logging_in_debug_mode = os.path.exists("/tmp/chroma-agent-debug")
 
 if logging_in_debug_mode or "nosetests" in sys.argv[0]:
     daemon_log.setLevel(logging.DEBUG)
-    copytool_log.setLevel(logging.DEBUG)
     console_log.setLevel(logging.DEBUG)
 else:
     daemon_log.setLevel(logging.WARN)
-    copytool_log.setLevel(logging.WARN)
     console_log.setLevel(logging.WARN)
 
-agent_loggers = [daemon_log, console_log, copytool_log]
+agent_loggers = [daemon_log, console_log]
 
 
 # these are signal handlers used to adjust loglevel at runtime
@@ -72,19 +67,6 @@ class SafeSyslogFormatter(logging.Formatter):
         if isinstance(result, unicode):
             result = result.encode("utf-8", "replace")
         return result
-
-
-# Log copytool stuff to syslog because we may have multiple processes running.
-def copytool_log_setup():
-    handler = SysLogHandler(facility=SysLogHandler.LOG_DAEMON, address="/dev/log")
-    # FIXME: define a custom formatter that will handle unicode strings
-    handler.setFormatter(SafeSyslogFormatter("[%(asctime)s] copytool %(levelname)s: %(message)s", "%d/%b/%Y:%H:%M:%S"))
-    copytool_log.addHandler(handler)
-
-    # Hijack these so that we can reuse code without stomping on other
-    # processes' logging.
-    console_log.addHandler(handler)
-    daemon_log.addHandler(handler)
 
 
 def console_log_setup():

@@ -31,9 +31,6 @@ class JobSchedulerRpc(ServiceRpcInterface):
         "create_ostpool",
         "update_ostpool",
         "delete_ostpool",
-        "create_copytool",
-        "register_copytool",
-        "unregister_copytool",
         "update_nids",
         "trigger_plugin_update",
         "update_lnet_configuration",
@@ -215,21 +212,6 @@ class JobSchedulerClient(object):
         host_id, command_id = JobSchedulerRpc().create_host(fqdn, nodename, address, server_profile_id)
 
         return (ManagedHost.objects.get(pk=host_id), Command.objects.get(pk=command_id))
-
-    @classmethod
-    def create_copytool(cls, copytool_data):
-        from chroma_core.models import Copytool
-
-        copytool_id = JobSchedulerRpc().create_copytool(copytool_data)
-        return Copytool.objects.get(id=copytool_id)
-
-    @classmethod
-    def register_copytool(cls, copytool_id, uuid):
-        JobSchedulerRpc().register_copytool(copytool_id, uuid)
-
-    @classmethod
-    def unregister_copytool(cls, copytool_id):
-        JobSchedulerRpc().unregister_copytool(copytool_id)
 
     @classmethod
     def get_locks(cls):

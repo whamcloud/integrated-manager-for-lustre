@@ -125,7 +125,7 @@ class TestAvailableJobs(IMLUnitTestCase):
     def test_locks_query_count(self):
         """Check that query count to pull in available jobs hasn't changed"""
 
-        EXPECTED_QUERIES = 7
+        EXPECTED_QUERIES = 6
 
         host_ct_key = ContentType.objects.get_for_model(self.host.downcast()).natural_key()
         host_id = self.host.id

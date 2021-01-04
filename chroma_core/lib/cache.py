@@ -19,7 +19,6 @@ class ObjectCache(object):
         from chroma_core.models import ServerProfile
         from chroma_core.models import NTPConfiguration, StratagemConfiguration, Ticket
         from chroma_core.models.target import ManagedTarget
-        from chroma_core.models.copytool import Copytool
 
         self.objects = defaultdict(dict)
         self.filter_args = {
@@ -27,7 +26,6 @@ class ObjectCache(object):
         }
 
         self._cached_models = [
-            Copytool,
             Corosync2Configuration,
             CorosyncConfiguration,
             LNetConfiguration,
@@ -142,19 +140,6 @@ class ObjectCache(object):
     def clear(cls):
         log.info("clear")
         cls.instance = None
-
-    @classmethod
-    def client_mount_copytools(cls, cm_id):
-        from chroma_core.models.client_mount import LustreClientMount
-        from chroma_core.models.copytool import Copytool
-
-        try:
-            client_mount = cls.get_one(LustreClientMount, lambda ccm: ccm.id == cm_id)
-            return cls.get(
-                Copytool, lambda ct: (client_mount.host_id == ct.host_id and ct.mountpoint in client_mount.mountpoints)
-            )
-        except LustreClientMount.DoesNotExist:
-            return []
 
     @classmethod
     def purge(cls, klass, filter):

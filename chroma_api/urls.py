@@ -54,7 +54,6 @@ import chroma_api.ha_cluster
 import chroma_api.registration_token
 import chroma_api.filesystem
 import chroma_api.target
-import chroma_api.copytool
 import chroma_api.nid
 import chroma_api.lnet_configuration
 import chroma_api.pacemaker
@@ -88,8 +87,6 @@ api.register(chroma_api.command.CommandResource())
 api.register(chroma_api.help.HelpResource())
 api.register(chroma_api.system_status.SystemStatusResource())
 api.register(chroma_api.ha_cluster.HaClusterResource())
-api.register(chroma_api.copytool.CopytoolResource())
-api.register(chroma_api.copytool.CopytoolOperationResource())
 api.register(chroma_api.network_interface.NetworkInterfaceResource())
 api.register(chroma_api.nid.NidResource())
 api.register(chroma_api.lnet_configuration.LNetConfigurationResource())

@@ -359,21 +359,6 @@ server {
         proxy_pass http://127.0.0.1:8003/message;
     }
 
-    location /agent/copytool_event {
-        if ($ssl_client_verify != SUCCESS) {
-            return 401;
-        }
-
-        proxy_set_header X-SSL-Client-On $ssl_client_verify;
-        proxy_set_header X-SSL-Client-Name $ssl_client_s_dn_cn;
-        proxy_set_header X-SSL-Client-Serial $ssl_client_serial;
-
-        proxy_set_header X-Forwarded-Host $host;
-        proxy_set_header X-Forwarded-Server $host;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_pass http://127.0.0.1:8002/agent/copytool_event;
-    }
-
     location /repo/ {
         if ($ssl_client_verify != SUCCESS) {
             return 401;

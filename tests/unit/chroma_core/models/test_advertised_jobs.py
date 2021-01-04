@@ -40,7 +40,6 @@ class TestAdvertisedJobCoverage(TestAdvertisedCase):
         # or jobs that are parents for implementing subclasses.
         EXCEPTIONS = [
             "ForceRemoveHostJob",
-            "ForceRemoveCopytoolJob",
             "MigrateTargetJob",
             "CreateOstPoolJob",
             "DestroyOstPoolJob",

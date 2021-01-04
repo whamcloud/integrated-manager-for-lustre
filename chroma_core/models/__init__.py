@@ -28,7 +28,6 @@ from .storage_plugin import *
 from .registration_token import *
 from .ha_cluster import *
 from .repo import *
-from .copytool import *
 from .client_mount import *
 from .lnet_configuration import *
 from .sparse_model import *
