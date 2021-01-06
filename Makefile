@@ -64,7 +64,7 @@ rpms:
 	$(MAKE) -f .copr/Makefile iml-srpm outdir=.
 	rpmbuild --rebuild ${RPM_OPTS} _topdir/SRPMS/python-iml-manager-*.src.rpm
 	$(MAKE) -f .copr/Makefile iml-common-srpm outdir=.
-	rpmbuild --rebuild ${RPM_OPTS} _topdir/SRPMS/python-iml-common-*.src.rpm
+	rpmbuild --rebuild ${RPM_OPTS} _topdir/SRPMS/python-iml-common1.5-*.src.rpm
 	$(MAKE) -f .copr/Makefile python-iml-agent-srpm outdir=.
 	rpmbuild --rebuild ${RPM_OPTS} _topdir/SRPMS/python-iml-agent-*.src.rpm
 

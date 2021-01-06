@@ -122,7 +122,6 @@ iml-srpm: iml-deps substs
 	rm -rf ${TMPDIR}
 
 iml-common-srpm:
-	yum install -y python2-devel
 	mkdir -p ${TMPDIR}/_topdir/SOURCES
 	mkdir -p ${TMPDIR}/scratch
 	cp -r iml-common/* ${TMPDIR}/scratch
@@ -131,6 +130,7 @@ iml-common-srpm:
 	python setup.py sdist -d ${TMPDIR}/_topdir/SOURCES/
 
 	rpmbuild -bs -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/scratch/python-iml-common.spec
+	cp -rf ${TMPDIR}/_topdir ${BUILDROOT}/
 	cp -r ${TMPDIR}/_topdir/SRPMS/* $(outdir)
 	rm -rf ${TMPDIR}
 
