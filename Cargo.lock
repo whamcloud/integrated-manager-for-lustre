@@ -2147,6 +2147,7 @@ dependencies = [
  "thiserror",
  "thrussh",
  "thrussh-keys",
+ "tokio",
 ]
 
 [[package]]
@@ -5045,7 +5046,6 @@ name = "wbem-client"
 version = "0.2.0"
 dependencies = [
  "async-trait",
- "base64 0.12.3",
  "bytes",
  "futures",
  "iml-tracing",

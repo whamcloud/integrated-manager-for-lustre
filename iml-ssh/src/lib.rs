@@ -4,8 +4,9 @@
 
 use futures::{future::BoxFuture, stream, FutureExt, TryStreamExt};
 use iml_tracing::tracing;
-use std::{io, string::FromUtf8Error, sync::Arc, time::Duration};
-use thrussh::client::{self, Channel};
+use std::{io, path::PathBuf, string::FromUtf8Error, sync::Arc, time::Duration};
+use thrussh::client;
+pub use thrussh::client::{Channel, Handle};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -24,6 +25,7 @@ pub enum Error {
 }
 
 /// Various ways to Authenticate the SSH client
+#[derive(Debug, Clone)]
 pub enum Auth {
     /// Use the ssh-agent if one is available.
     Agent,
@@ -167,13 +169,138 @@ impl Output {
     }
 }
 
+pub trait SshHandleExt {
+    fn create_channel(&mut self) -> BoxFuture<Result<Channel, Error>>;
+    /// Send a file to the remote path using this session
+    fn push_file(
+        &mut self,
+        from: impl Into<PathBuf> + std::marker::Send,
+        to: impl Into<PathBuf> + std::marker::Send,
+    ) -> BoxFuture<Result<u32, Error>>;
+    /// Send the `AsyncRead` item to the remote path using this session
+    fn stream_file<'a, R: 'a + tokio::io::AsyncReadExt + std::marker::Unpin + std::marker::Send>(
+        &'a mut self,
+        data: R,
+        to: impl Into<PathBuf>,
+    ) -> BoxFuture<'a, Result<u32, Error>>;
+}
+
+impl SshHandleExt for Handle {
+    fn create_channel(&mut self) -> BoxFuture<Result<Channel, Error>> {
+        let fut = self.channel_open_session();
+
+        Box::pin(async move {
+            let ch = fut.await?;
+
+            Ok(ch)
+        })
+    }
+    fn push_file(
+        &mut self,
+        from: impl Into<PathBuf>,
+        to: impl Into<PathBuf>,
+    ) -> BoxFuture<Result<u32, Error>> {
+        let from = from.into();
+        let to = to.into();
+
+        async move {
+            let mut ch = self.create_channel().await?;
+
+            let x = ch.push_file(from, to).await?;
+
+            Ok(x)
+        }
+        .boxed()
+    }
+    fn stream_file<'a, R: 'a + tokio::io::AsyncReadExt + std::marker::Unpin + std::marker::Send>(
+        &'a mut self,
+        data: R,
+        to: impl Into<PathBuf>,
+    ) -> BoxFuture<'a, Result<u32, Error>> {
+        let to = to.into();
+
+        async move {
+            let mut ch = self.create_channel().await?;
+
+            let x = ch.stream_file(data, to).await?;
+
+            Ok(x)
+        }
+        .boxed()
+    }
+}
+
 pub trait SshChannelExt {
     /// Execute a remote command. Stdout and stderr will be buffered and returned
     /// As well as any exit code.
     fn exec_cmd(&mut self, cmd: impl ToString) -> BoxFuture<Result<Output, Error>>;
+    /// Send a file to the remote path using this channel
+    fn push_file(
+        &mut self,
+        from: impl Into<PathBuf>,
+        to: impl Into<PathBuf>,
+    ) -> BoxFuture<Result<u32, Error>>;
+    /// Send the `AsyncRead` item to the remote path using this channel
+    fn stream_file<'a, R: 'a + tokio::io::AsyncReadExt + std::marker::Unpin + std::marker::Send>(
+        &'a mut self,
+        data: R,
+        to: impl Into<PathBuf>,
+    ) -> BoxFuture<'a, Result<u32, Error>>;
 }
 
 impl SshChannelExt for Channel {
+    fn push_file(
+        &mut self,
+        from: impl Into<PathBuf>,
+        to: impl Into<PathBuf>,
+    ) -> BoxFuture<Result<u32, Error>> {
+        let from = from.into();
+        let to = to.into();
+
+        async move {
+            let f = tokio::fs::File::open(from).await?;
+
+            let x = self.stream_file(f, to).await?;
+
+            Ok(x)
+        }
+        .boxed()
+    }
+
+    fn stream_file<'a, R: 'a + tokio::io::AsyncReadExt + std::marker::Unpin + std::marker::Send>(
+        &'a mut self,
+        data: R,
+        to: impl Into<PathBuf>,
+    ) -> BoxFuture<'a, Result<u32, Error>> {
+        let to = to.into();
+
+        async move {
+            let fut = self.exec(true, format!("cat - > {}", to.to_string_lossy()));
+
+            fut.await?;
+
+            self.data(data).await?;
+
+            self.eof().await?;
+
+            let mut exit_status = 1;
+
+            while let Some(msg) = self.wait().await {
+                match msg {
+                    thrussh::ChannelMsg::ExitStatus { exit_status: x } => {
+                        exit_status = x;
+                    }
+                    x => {
+                        tracing::debug!("Got ssh ChannelMsg {:?}", x);
+                    }
+                }
+            }
+
+            Ok(exit_status)
+        }
+        .boxed()
+    }
+
     fn exec_cmd(&mut self, cmd: impl ToString) -> BoxFuture<Result<Output, Error>> {
         let cmd = cmd.to_string();
 
