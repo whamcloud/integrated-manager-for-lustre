@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - master
+defaults:
+  run:
+    shell: bash -eux {0}
 jobs:
   gui_rpm_build:
     name: GUI RPM build
