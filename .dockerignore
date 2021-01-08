@@ -4,6 +4,7 @@ _topdir/
 .gitignore
 .gitlint
 .travis.yml
+.env
 *.service
 **/.cargo
 **/.git

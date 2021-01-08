@@ -53,18 +53,6 @@ The IML Team typically uses [Vagrant](https://www.vagrantup.com) and [VirtualBox
       vagrant provision --provision-with=install-iml-devel
       ```
 
-   1. Local RPM Install
-
-      ```sh
-      vagrant provision --provision-with=install-iml-local
-      ```
-
-   1. Local Docker Install
-
-      ```sh
-      vagrant provision --provision-with=install-iml-docker-local
-      ```
-
    1. RPM Install from a specific repo:
 
       ```sh

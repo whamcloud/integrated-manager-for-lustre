@@ -13,7 +13,7 @@ RUN dnf install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-8-x
   && dnf install -y python2 python2-pip python2-devel postgresql96 openssl gcc-c++
 RUN python2 -m pip install --upgrade pip==20.3.3 setuptools wheel
 COPY --from=rust-remover /build/ .
-RUN make -f .copr/Makefile base.repo
+RUN make base.repo
 COPY --from=rust-remover /build/requirements.txt .
 RUN pip install --user -r requirements.txt
 

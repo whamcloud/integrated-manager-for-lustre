@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -ex
+
 if [[ -z $REPO_URI ]];
 then
     echo "REPO_URI must be set to use this provisioner"

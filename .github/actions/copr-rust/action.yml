@@ -1,5 +1,0 @@
-name: copr rust
-description: build in the copr-rust image
-runs:
-  using: "docker"
-  image: "docker://imlteam/copr-rust:stable"

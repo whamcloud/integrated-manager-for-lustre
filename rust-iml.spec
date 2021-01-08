@@ -13,7 +13,7 @@ Summary: Integrated Manager for Lustre Services
 License: MIT
 
 URL: https://github.com/whamcloud/integrated-manager-for-lustre
-Source0: rust-iml.tar.gz
+Source0: rust-core.tar.gz
 
 ExclusiveArch: x86_64
 

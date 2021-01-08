@@ -7,6 +7,9 @@ on:
   schedule:
     - cron: "00 01 * * *"
 
+env:
+  RUST_BACKTRACE: 1
+
 jobs:
   check:
     name: Check

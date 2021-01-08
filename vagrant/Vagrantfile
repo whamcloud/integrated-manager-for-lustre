@@ -234,20 +234,6 @@ Vagrant.configure('2') do |config|
                      path: 'scripts/install_iml_tar.sh',
                      args: '4.0.10.2'
 
-    # Install IML onto the admin node
-    # This requires you have the IML source tree available at
-    # /integrated-manager-for-lustre
-    adm.vm.provision 'install-iml-local',
-                     type: 'shell',
-                     run: 'never',
-                     path: 'scripts/install_iml_local.sh'
-
-    # Install iml-docker onto the admin node
-    adm.vm.provision 'install-iml-docker-local',
-                     type: 'shell',
-                     run: 'never',
-                     path: 'scripts/install_iml_docker_local.sh'
-
     # Install iml-docker onto the admin node
     adm.vm.provision 'install-iml-docker-repouri',
                      type: 'shell',
@@ -309,11 +295,6 @@ Vagrant.configure('2') do |config|
       provision_clush mds
 
       cleanup_storage_server mds
-
-      mds.vm.provision 'install-iml-local',
-                       type: 'shell',
-                       run: 'never',
-                       path: './scripts/install_iml_local_agent.sh'
 
       install_lustre_ldiskfs mds
 
@@ -473,11 +454,6 @@ Vagrant.configure('2') do |config|
       provision_clush oss
 
       cleanup_storage_server oss
-
-      oss.vm.provision 'install-iml-local',
-            type: 'shell',
-            run: 'never',
-            path: './scripts/install_iml_local_agent.sh'
 
       install_lustre_ldiskfs oss
 
@@ -646,11 +622,6 @@ Vagrant.configure('2') do |config|
       configure_ntp c
 
       provision_clush c
-
-      c.vm.provision 'install-iml-local',
-            type: 'shell',
-            run: 'never',
-            path: './scripts/install_iml_local_agent.sh'
 
       c.vm.provision 'install-lustre-client',
                      type: 'shell',

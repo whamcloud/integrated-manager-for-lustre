@@ -11,37 +11,33 @@ jobs:
   gui_rpm_build:
     name: GUI RPM build
     runs-on: ubuntu-latest
+    container:
+      image: emfteam/emf-centos7-deps
     steps:
       - name: Checkout sources
         uses: actions/checkout@v1
 
       - name: Build rpm
-        uses: ./.github/actions/copr-wasm
-        env:
-          SPEC: iml-gui/rust-iml-gui.spec
-          LOCAL_ONLY: true
-          SRPM_TASK: iml-gui-srpm
-          WORKSPACE: ${{ github.workspace }}
+        run: make RPM_DIST=".$(date '+%s')" iml-gui-rpm
+
       - name: Archive rpm
         uses: actions/upload-artifact@v2
         with:
           name: gui_rpm
           path: _topdir/RPMS/x86_64
           retention-days: 1
-  rust_iml_rpm_build:
-    name: Rust IML RPM build
+  rust_emf_rpm_build:
+    name: Rust EMF RPM build
     runs-on: ubuntu-latest
+    container:
+      image: emfteam/emf-centos7-deps
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
 
       - name: Build rpm
-        uses: ./.github/actions/copr-rust
-        env:
-          SPEC: rust-iml.spec
-          LOCAL_ONLY: true
-          WORKSPACE: ${{ github.workspace }}
-          RUSTUP_TOOLCHAIN: stable-x86_64-unknown-linux-gnu
+        run: make RPM_DIST=".$(date '+%s')" rust-core-rpms
+
       - name: Archive rpm
         uses: actions/upload-artifact@v2
         with:
@@ -51,17 +47,14 @@ jobs:
   python_iml_manager_rpm_build:
     name: Python IML manager RPM build
     runs-on: ubuntu-latest
+    container:
+      image: emfteam/emf-centos7-deps
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
 
       - name: Build rpm
-        uses: ./.github/actions/copr
-        env:
-          SPEC: python-iml-manager.spec
-          LOCAL_ONLY: true
-          SRPM_TASK: iml-srpm
-          WORKSPACE: ${{ github.workspace }}
+        run: make RPM_DIST=".$(date '+%s')" python-iml-rpms
 
       - name: Archive rpm
         uses: actions/upload-artifact@v2
@@ -72,17 +65,14 @@ jobs:
   python_iml_common_rpm_build:
     name: Python IML common RPM build
     runs-on: ubuntu-latest
+    container:
+      image: emfteam/emf-centos7-deps
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
 
       - name: Build rpm
-        uses: ./.github/actions/copr
-        env:
-          SPEC: iml-common/python-iml-common.spec
-          LOCAL_ONLY: true
-          SRPM_TASK: iml-common-srpm
-          WORKSPACE: ${{ github.workspace }}
+        run: make RPM_DIST=".$(date '+%s')" python-iml-common-rpms
 
       - name: Archive rpm
         uses: actions/upload-artifact@v2
@@ -93,17 +83,14 @@ jobs:
   python_agent_rpm_build:
     name: Python Agent RPM build
     runs-on: ubuntu-latest
+    container:
+      image: emfteam/emf-centos7-deps
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
 
       - name: Build rpm
-        uses: ./.github/actions/copr
-        env:
-          SPEC: python-iml-agent/python-iml-agent.spec
-          LOCAL_ONLY: true
-          SRPM_TASK: python-iml-agent-srpm
-          WORKSPACE: ${{ github.workspace }}
+        run: make RPM_DIST=".$(date '+%s')" python-iml-agent-rpms
 
       - name: Archive rpm
         uses: actions/upload-artifact@v2
@@ -111,8 +98,8 @@ jobs:
           name: python_iml_agent_rpm
           path: _topdir/RPMS/noarch
           retention-days: 1
-  iml_docker_rpm_build:
-    name: iml-docker RPM build
+  iml_docker_image_build:
+    name: iml-docker image build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -136,7 +123,7 @@ jobs:
             ${{ runner.os }}-rust-base-${{ hashFiles('Cargo.lock') }}
             ${{ runner.os }}-rust-base-
 
-      - name: Build the iml images
+      - name: Build the images
         working-directory: ./docker
         run: |
           docker buildx bake \
@@ -154,35 +141,55 @@ jobs:
 
           docker image ls
 
-      - name: Build rpm
-        uses: ./.github/actions/copr
-        env:
-          SPEC: iml-docker.spec
-          LOCAL_ONLY: true
-          SRPM_TASK: iml-docker-srpm
-          WORKSPACE: ${{ github.workspace }}
+      - name: Archive images
+        uses: actions/upload-artifact@v2
+        with:
+          name: iml_images
+          path: docker/iml-images.tgz
+          retention-days: 1
+  iml_docker_rpm_build:
+    name: iml-docker rpm build
+    runs-on: ubuntu-latest
+    container:
+      image: emfteam/emf-centos7-deps
+    needs: iml_docker_image_build
+    steps:
+      - uses: actions/checkout@v2
+      - name: Download docker images
+        uses: actions/download-artifact@v1
+        with:
+          name: iml_images
+      - run: |
+          mkdir -p /tmp/_topdir/{SOURCES,SPECS}
+          mkdir -p /tmp/scratch/iml-docker/
+          mv docker/{docker-compose.yml,update-embedded.sh,copy-embedded-settings} /tmp/scratch/iml-docker/
+          mv iml_images/iml-images.tgz /tmp/scratch/iml-docker/
+          mv iml-docker.service /tmp/scratch/iml-docker/
+          tar -czvf /tmp/_topdir/SOURCES/iml-docker.tar.gz -C /tmp/scratch/iml-docker .
+          mv iml-docker.spec /tmp/_topdir/SPECS/
 
+          rpmbuild -bb -D "_topdir /tmp/_topdir" /tmp/_topdir/SPECS/iml-docker.spec
+      - uses: geekyeggo/delete-artifact@v1
+        with:
+          name: iml_images
       - name: Archive rpm
         uses: actions/upload-artifact@v2
         with:
           name: iml_docker_rpm
-          path: _topdir/RPMS/x86_64
+          path: /tmp/_topdir/RPMS/x86_64
           retention-days: 1
   device_scanner_rpm_build:
     name: Device Scanner RPM build
     runs-on: ubuntu-latest
+    container:
+      image: emfteam/emf-centos7-deps
     steps:
       - name: Checkout sources
         uses: actions/checkout@v1
 
       - name: Build rpm
-        uses: ./.github/actions/copr-rust
-        env:
-          SPEC: device-scanner/iml-device-scanner.spec
-          LOCAL_ONLY: true
-          SRPM_TASK: device-scanner-srpm
-          WORKSPACE: ${{ github.workspace }}
-          RUSTUP_TOOLCHAIN: stable-x86_64-unknown-linux-gnu
+        run: make RPM_DIST=".$(date '+%s')" device-scanner-rpms
+
       - name: Archive rpm
         uses: actions/upload-artifact@v2
         with:
@@ -192,17 +199,15 @@ jobs:
   sos_plugin_build:
     name: EMF SOS Plugin
     runs-on: ubuntu-latest
+    container:
+      image: emfteam/emf-centos7-deps
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
 
       - name: Build rpm
-        uses: ./.github/actions/copr
-        env:
-          SPEC: emf-sos-plugin/emf-sos-plugin.spec
-          LOCAL_ONLY: true
-          SRPM_TASK: sos-srpm
-          WORKSPACE: ${{ github.workspace }}
+        run: make RPM_DIST=".$(date '+%s')" sos-rpm
+
       - name: Archive rpm
         uses: actions/upload-artifact@v2
         with:
@@ -220,7 +225,7 @@ jobs:
         python_agent_rpm_build,
         python_iml_common_rpm_build,
         python_iml_manager_rpm_build,
-        rust_iml_rpm_build,
+        rust_emf_rpm_build,
         sos_plugin_build,
       ]
     container:
@@ -275,7 +280,7 @@ jobs:
         with:
           name: emf_repo
           path: emf_rpms
-          retention-days: 5
+          retention-days: 2
       - uses: geekyeggo/delete-artifact@v1
         with:
           name: |
