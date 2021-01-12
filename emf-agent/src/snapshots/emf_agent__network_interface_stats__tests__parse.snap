@@ -1,0 +1,864 @@
+---
+source: emf-agent/src/network_interface_stats.rs
+expression: stats
+---
+{
+  "docker0": {
+    "rx": {
+      "bytes": 0,
+      "packets": 0,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "frame": 0,
+      "compressed": 0,
+      "multicast": 0
+    },
+    "tx": {
+      "bytes": 0,
+      "packets": 0,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "colls": 0,
+      "carrier": 0,
+      "compressed": 0
+    }
+  },
+  "ib0": {
+    "rx": {
+      "bytes": 4828965068,
+      "packets": 23837574,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "frame": 0,
+      "compressed": 0,
+      "multicast": 0
+    },
+    "tx": {
+      "bytes": 4209864628,
+      "packets": 26019919,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "colls": 0,
+      "carrier": 0,
+      "compressed": 0
+    }
+  },
+  "ib1": {
+    "rx": {
+      "bytes": 157149372,
+      "packets": 1323290,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "frame": 0,
+      "compressed": 0,
+      "multicast": 0
+    },
+    "tx": {
+      "bytes": 5955084,
+      "packets": 99249,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "colls": 0,
+      "carrier": 0,
+      "compressed": 0
+    }
+  },
+  "lo": {
+    "rx": {
+      "bytes": 24433256938,
+      "packets": 55834478,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "frame": 0,
+      "compressed": 0,
+      "multicast": 0
+    },
+    "tx": {
+      "bytes": 24433256938,
+      "packets": 55834478,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "colls": 0,
+      "carrier": 0,
+      "compressed": 0
+    }
+  },
+  "mgmt0": {
+    "rx": {
+      "bytes": 21493598205,
+      "packets": 39560517,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "frame": 0,
+      "compressed": 0,
+      "multicast": 0
+    },
+    "tx": {
+      "bytes": 8893646531,
+      "packets": 25626311,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "colls": 0,
+      "carrier": 0,
+      "compressed": 0
+    }
+  },
+  "mgmt1": {
+    "rx": {
+      "bytes": 0,
+      "packets": 0,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "frame": 0,
+      "compressed": 0,
+      "multicast": 0
+    },
+    "tx": {
+      "bytes": 0,
+      "packets": 0,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "colls": 0,
+      "carrier": 0,
+      "compressed": 0
+    }
+  },
+  "mgmt2": {
+    "rx": {
+      "bytes": 38758532460,
+      "packets": 78257976,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "frame": 0,
+      "compressed": 0,
+      "multicast": 0
+    },
+    "tx": {
+      "bytes": 11666165360,
+      "packets": 74856970,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "colls": 0,
+      "carrier": 0,
+      "compressed": 0
+    }
+  },
+  "usermode": {
+    "rx": {
+      "bytes": 449364,
+      "packets": 3919,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "frame": 0,
+      "compressed": 0,
+      "multicast": 0
+    },
+    "tx": {
+      "bytes": 20174,
+      "packets": 173,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "colls": 0,
+      "carrier": 0,
+      "compressed": 0
+    }
+  },
+  "veth06b8882": {
+    "rx": {
+      "bytes": 4148,
+      "packets": 58,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "frame": 0,
+      "compressed": 0,
+      "multicast": 0
+    },
+    "tx": {
+      "bytes": 592505330,
+      "packets": 664833,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "colls": 0,
+      "carrier": 0,
+      "compressed": 0
+    }
+  },
+  "veth16eb12b": {
+    "rx": {
+      "bytes": 4116,
+      "packets": 58,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "frame": 0,
+      "compressed": 0,
+      "multicast": 0
+    },
+    "tx": {
+      "bytes": 592505130,
+      "packets": 664829,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "colls": 0,
+      "carrier": 0,
+      "compressed": 0
+    }
+  },
+  "veth237e8e3": {
+    "rx": {
+      "bytes": 10372,
+      "packets": 146,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "frame": 0,
+      "compressed": 0,
+      "multicast": 0
+    },
+    "tx": {
+      "bytes": 592517122,
+      "packets": 664897,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "colls": 0,
+      "carrier": 0,
+      "compressed": 0
+    }
+  },
+  "veth2e73ef6": {
+    "rx": {
+      "bytes": 4148,
+      "packets": 58,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "frame": 0,
+      "compressed": 0,
+      "multicast": 0
+    },
+    "tx": {
+      "bytes": 592505330,
+      "packets": 664833,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "colls": 0,
+      "carrier": 0,
+      "compressed": 0
+    }
+  },
+  "veth34c4142": {
+    "rx": {
+      "bytes": 0,
+      "packets": 0,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "frame": 0,
+      "compressed": 0,
+      "multicast": 0
+    },
+    "tx": {
+      "bytes": 592496244,
+      "packets": 664758,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "colls": 0,
+      "carrier": 0,
+      "compressed": 0
+    }
+  },
+  "veth36f5f66": {
+    "rx": {
+      "bytes": 0,
+      "packets": 0,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "frame": 0,
+      "compressed": 0,
+      "multicast": 0
+    },
+    "tx": {
+      "bytes": 592496772,
+      "packets": 664770,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "colls": 0,
+      "carrier": 0,
+      "compressed": 0
+    }
+  },
+  "veth45bb9b8": {
+    "rx": {
+      "bytes": 3598,
+      "packets": 51,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "frame": 0,
+      "compressed": 0,
+      "multicast": 0
+    },
+    "tx": {
+      "bytes": 592503148,
+      "packets": 664802,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "colls": 0,
+      "carrier": 0,
+      "compressed": 0
+    }
+  },
+  "veth46b11d3": {
+    "rx": {
+      "bytes": 3540,
+      "packets": 50,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "frame": 0,
+      "compressed": 0,
+      "multicast": 0
+    },
+    "tx": {
+      "bytes": 592503342,
+      "packets": 664807,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "colls": 0,
+      "carrier": 0,
+      "compressed": 0
+    }
+  },
+  "veth4a6528b": {
+    "rx": {
+      "bytes": 4174,
+      "packets": 59,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "frame": 0,
+      "compressed": 0,
+      "multicast": 0
+    },
+    "tx": {
+      "bytes": 592504828,
+      "packets": 664822,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "colls": 0,
+      "carrier": 0,
+      "compressed": 0
+    }
+  },
+  "veth4eb3f8a": {
+    "rx": {
+      "bytes": 0,
+      "packets": 0,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "frame": 0,
+      "compressed": 0,
+      "multicast": 0
+    },
+    "tx": {
+      "bytes": 592497024,
+      "packets": 664776,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "colls": 0,
+      "carrier": 0,
+      "compressed": 0
+    }
+  },
+  "veth63d4f07": {
+    "rx": {
+      "bytes": 3556,
+      "packets": 50,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "frame": 0,
+      "compressed": 0,
+      "multicast": 0
+    },
+    "tx": {
+      "bytes": 592503526,
+      "packets": 664811,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "colls": 0,
+      "carrier": 0,
+      "compressed": 0
+    }
+  },
+  "veth65f9fa0": {
+    "rx": {
+      "bytes": 17214,
+      "packets": 243,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "frame": 0,
+      "compressed": 0,
+      "multicast": 0
+    },
+    "tx": {
+      "bytes": 592531500,
+      "packets": 665002,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "colls": 0,
+      "carrier": 0,
+      "compressed": 0
+    }
+  },
+  "veth676cb59": {
+    "rx": {
+      "bytes": 4116,
+      "packets": 58,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "frame": 0,
+      "compressed": 0,
+      "multicast": 0
+    },
+    "tx": {
+      "bytes": 592505298,
+      "packets": 664833,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "colls": 0,
+      "carrier": 0,
+      "compressed": 0
+    }
+  },
+  "veth6a20ae2": {
+    "rx": {
+      "bytes": 3598,
+      "packets": 51,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "frame": 0,
+      "compressed": 0,
+      "multicast": 0
+    },
+    "tx": {
+      "bytes": 592503148,
+      "packets": 664802,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "colls": 0,
+      "carrier": 0,
+      "compressed": 0
+    }
+  },
+  "veth72f61ea": {
+    "rx": {
+      "bytes": 0,
+      "packets": 0,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "frame": 0,
+      "compressed": 0,
+      "multicast": 0
+    },
+    "tx": {
+      "bytes": 592497024,
+      "packets": 664776,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "colls": 0,
+      "carrier": 0,
+      "compressed": 0
+    }
+  },
+  "veth7bd5de8": {
+    "rx": {
+      "bytes": 4116,
+      "packets": 58,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "frame": 0,
+      "compressed": 0,
+      "multicast": 0
+    },
+    "tx": {
+      "bytes": 592505298,
+      "packets": 664833,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "colls": 0,
+      "carrier": 0,
+      "compressed": 0
+    }
+  },
+  "veth7c0d679": {
+    "rx": {
+      "bytes": 4158,
+      "packets": 59,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "frame": 0,
+      "compressed": 0,
+      "multicast": 0
+    },
+    "tx": {
+      "bytes": 592504770,
+      "packets": 664821,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "colls": 0,
+      "carrier": 0,
+      "compressed": 0
+    }
+  },
+  "veth7ff82b2": {
+    "rx": {
+      "bytes": 4158,
+      "packets": 59,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "frame": 0,
+      "compressed": 0,
+      "multicast": 0
+    },
+    "tx": {
+      "bytes": 592504896,
+      "packets": 664824,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "colls": 0,
+      "carrier": 0,
+      "compressed": 0
+    }
+  },
+  "veth86cfdc2": {
+    "rx": {
+      "bytes": 3598,
+      "packets": 51,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "frame": 0,
+      "compressed": 0,
+      "multicast": 0
+    },
+    "tx": {
+      "bytes": 592503232,
+      "packets": 664804,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "colls": 0,
+      "carrier": 0,
+      "compressed": 0
+    }
+  },
+  "veth874a4ed": {
+    "rx": {
+      "bytes": 0,
+      "packets": 0,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "frame": 0,
+      "compressed": 0,
+      "multicast": 0
+    },
+    "tx": {
+      "bytes": 592496370,
+      "packets": 664761,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "colls": 0,
+      "carrier": 0,
+      "compressed": 0
+    }
+  },
+  "veth95ac83e": {
+    "rx": {
+      "bytes": 3598,
+      "packets": 51,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "frame": 0,
+      "compressed": 0,
+      "multicast": 0
+    },
+    "tx": {
+      "bytes": 592503526,
+      "packets": 664811,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "colls": 0,
+      "carrier": 0,
+      "compressed": 0
+    }
+  },
+  "veth9e52739": {
+    "rx": {
+      "bytes": 4132,
+      "packets": 58,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "frame": 0,
+      "compressed": 0,
+      "multicast": 0
+    },
+    "tx": {
+      "bytes": 592505062,
+      "packets": 664827,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "colls": 0,
+      "carrier": 0,
+      "compressed": 0
+    }
+  },
+  "vethb66e91f": {
+    "rx": {
+      "bytes": 3556,
+      "packets": 50,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "frame": 0,
+      "compressed": 0,
+      "multicast": 0
+    },
+    "tx": {
+      "bytes": 592503106,
+      "packets": 664801,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "colls": 0,
+      "carrier": 0,
+      "compressed": 0
+    }
+  },
+  "vethbdb5f64": {
+    "rx": {
+      "bytes": 4132,
+      "packets": 58,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "frame": 0,
+      "compressed": 0,
+      "multicast": 0
+    },
+    "tx": {
+      "bytes": 592504870,
+      "packets": 664823,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "colls": 0,
+      "carrier": 0,
+      "compressed": 0
+    }
+  },
+  "vethc28587c": {
+    "rx": {
+      "bytes": 5126155971,
+      "packets": 15906644,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "frame": 0,
+      "compressed": 0,
+      "multicast": 0
+    },
+    "tx": {
+      "bytes": 22376563397,
+      "packets": 21448851,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "colls": 0,
+      "carrier": 0,
+      "compressed": 0
+    }
+  },
+  "vethc401548": {
+    "rx": {
+      "bytes": 3598,
+      "packets": 51,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "frame": 0,
+      "compressed": 0,
+      "multicast": 0
+    },
+    "tx": {
+      "bytes": 592503232,
+      "packets": 664804,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "colls": 0,
+      "carrier": 0,
+      "compressed": 0
+    }
+  },
+  "vethc647f9c": {
+    "rx": {
+      "bytes": 3540,
+      "packets": 50,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "frame": 0,
+      "compressed": 0,
+      "multicast": 0
+    },
+    "tx": {
+      "bytes": 592503342,
+      "packets": 664807,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "colls": 0,
+      "carrier": 0,
+      "compressed": 0
+    }
+  },
+  "vethd1e8802": {
+    "rx": {
+      "bytes": 0,
+      "packets": 0,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "frame": 0,
+      "compressed": 0,
+      "multicast": 0
+    },
+    "tx": {
+      "bytes": 592495446,
+      "packets": 664739,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "colls": 0,
+      "carrier": 0,
+      "compressed": 0
+    }
+  },
+  "vethd531014": {
+    "rx": {
+      "bytes": 3556,
+      "packets": 50,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "frame": 0,
+      "compressed": 0,
+      "multicast": 0
+    },
+    "tx": {
+      "bytes": 592503190,
+      "packets": 664803,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "colls": 0,
+      "carrier": 0,
+      "compressed": 0
+    }
+  },
+  "vethe2cd54f": {
+    "rx": {
+      "bytes": 3582,
+      "packets": 51,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "frame": 0,
+      "compressed": 0,
+      "multicast": 0
+    },
+    "tx": {
+      "bytes": 592503552,
+      "packets": 664812,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "colls": 0,
+      "carrier": 0,
+      "compressed": 0
+    }
+  },
+  "vethf6ea3d7": {
+    "rx": {
+      "bytes": 5098678,
+      "packets": 58194,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "frame": 0,
+      "compressed": 0,
+      "multicast": 0
+    },
+    "tx": {
+      "bytes": 609478062,
+      "packets": 715181,
+      "errs": 0,
+      "drop": 0,
+      "fifo": 0,
+      "colls": 0,
+      "carrier": 0,
+      "compressed": 0
+    }
+  }
+}

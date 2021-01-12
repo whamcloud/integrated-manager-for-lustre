@@ -4,8 +4,8 @@ import socket
 from unittest import TestCase
 import settings
 
-from iml_common.lib import util, shell
-from iml_common.lib.service_control import ServiceControlEL7
+from emf_common.lib import util, shell
+from emf_common.lib.service_control import ServiceControlEL7
 
 log = logging.getLogger(__name__)
 
@@ -15,7 +15,7 @@ class SystemdTestCase(TestCase):
 
     SERVICES = []
     PORTS = {  # service ports to wait on binding
-        "iml-http-agent": [settings.HTTP_AGENT_PORT],
+        "emf-http-agent": [settings.HTTP_AGENT_PORT],
         "nginx": [settings.HTTPS_FRONTEND_PORT, settings.HTTP_FRONTEND_PORT],
     }
     TIMEOUT = 5  # default timeout to wait for services to start

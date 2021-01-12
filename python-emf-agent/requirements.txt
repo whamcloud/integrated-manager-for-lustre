@@ -1,0 +1,19 @@
+-i https://pypi.org/simple
+-e ./../emf-common
+contextlib2==0.6.0.post1 ; python_version < '3'
+importlib-resources==3.3.1 ; python_version < '3.7'
+jinja2==2.7.2
+lockfile==0.9.1
+markupsafe==1.1.1
+mock==1.0.1
+netaddr==0.8.0
+pathlib2==2.3.5 ; python_version < '3'
+pkginfo==1.6.1
+requests==2.6.0
+scandir==1.10.0 ; python_version < '3.5'
+scapy==2.4.4
+singledispatch==3.4.0.3 ; python_version < '3.4'
+six==1.15.0
+toolz==0.10.0
+typing==3.7.4.3 ; python_version < '3.5'
+zipp==1.2.0 ; python_version < '3.8'

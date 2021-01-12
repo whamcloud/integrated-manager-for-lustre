@@ -7,9 +7,9 @@ Release: 1%{?dist}
 Summary: EMF sosreport plugin
 License: MIT
 Group: Applications/System
-Vendor: Whamcloud <iml@whamcloud.com>
-Packager: EMF Team <iml@whamcloud.com>
-Url: https://pypi.python.org/pypi/iml-sos-plugin
+Vendor: Whamcloud <emf@whamcloud.com>
+Packager: EMF Team <emf@whamcloud.com>
+Url: https://pypi.python.org/pypi/emf-sos-plugin
 
 Source0: %{name}-%{version}.tar.bz2
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-buildroot
@@ -21,7 +21,7 @@ Provides: iml_sos_plugin
 Obsoletes: iml_sos_plugin
 
 %description
-A sosreport plugin for collecting EMF/IML data
+A sosreport plugin for collecting EMF/EMF data
 
 %prep
 %setup

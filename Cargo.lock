@@ -981,6 +981,708 @@ dependencies = [
 ]
 
 [[package]]
+name = "emf-action-client"
+version = "0.1.0"
+dependencies = [
+ "bytes",
+ "emf-manager-env",
+ "emf-wire-types",
+ "futures",
+ "hyper",
+ "hyperlocal",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "emf-action-runner"
+version = "0.4.0"
+dependencies = [
+ "dotenv",
+ "emf-agent-comms",
+ "emf-manager-env",
+ "emf-postgres",
+ "emf-rabbit",
+ "emf-service-queue",
+ "emf-tracing",
+ "emf-util",
+ "emf-wire-types",
+ "futures",
+ "rand 0.7.3",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tokio-runtime-shutdown",
+ "tokio-test",
+ "tracing",
+ "warp",
+]
+
+[[package]]
+name = "emf-agent"
+version = "0.4.0"
+dependencies = [
+ "async-trait",
+ "byte-unit",
+ "bytes",
+ "chrono",
+ "combine 4.1.0",
+ "console 0.12.0",
+ "device-types",
+ "dns-lookup",
+ "dotenv",
+ "dyn-clone",
+ "elementtree",
+ "emf-cmd",
+ "emf-fs",
+ "emf-systemd",
+ "emf-tracing",
+ "emf-util",
+ "emf-wire-types",
+ "exitcode",
+ "futures",
+ "http",
+ "inotify",
+ "insta",
+ "ipnetwork",
+ "lazy_static",
+ "libc",
+ "liblustreapi",
+ "lustre_collector",
+ "mockito",
+ "prettytable-rs",
+ "quick-xml 0.18.1",
+ "regex",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "spinners",
+ "stream-cancel 0.6.2",
+ "strfmt",
+ "structopt",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "tokio-util",
+ "tracing",
+ "url",
+ "uuid",
+ "v_hist",
+ "version-utils",
+]
+
+[[package]]
+name = "emf-agent-comms"
+version = "0.4.0"
+dependencies = [
+ "emf-manager-env",
+ "emf-rabbit",
+ "emf-tracing",
+ "emf-wire-types",
+ "futures",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "uuid",
+ "warp",
+]
+
+[[package]]
+name = "emf-api"
+version = "0.4.0"
+dependencies = [
+ "chrono",
+ "emf-job-scheduler-rpc",
+ "emf-manager-client",
+ "emf-manager-env",
+ "emf-postgres",
+ "emf-rabbit",
+ "emf-tracing",
+ "emf-wire-types",
+ "futures",
+ "humantime 2.0.1",
+ "itertools",
+ "juniper",
+ "lazy_static",
+ "regex",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "uuid",
+ "warp",
+]
+
+[[package]]
+name = "emf-api-utils"
+version = "0.4.0"
+dependencies = [
+ "lazy_static",
+ "regex",
+]
+
+[[package]]
+name = "emf-change"
+version = "0.1.0"
+
+[[package]]
+name = "emf-cmd"
+version = "0.4.0"
+dependencies = [
+ "futures",
+ "tokio",
+ "tracing",
+ "warp",
+]
+
+[[package]]
+name = "emf-command-utils"
+version = "0.4.0"
+dependencies = [
+ "emf-manager-client",
+ "emf-tracing",
+ "emf-wire-types",
+ "futures",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
+name = "emf-corosync"
+version = "0.4.0"
+dependencies = [
+ "emf-change",
+ "emf-manager-env",
+ "emf-postgres",
+ "emf-rabbit",
+ "emf-service-queue",
+ "emf-tracing",
+ "emf-wire-types",
+ "futures",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tokio-test",
+]
+
+[[package]]
+name = "emf-device"
+version = "0.4.0"
+dependencies = [
+ "chrono",
+ "device-types",
+ "emf-change",
+ "emf-manager-env",
+ "emf-postgres",
+ "emf-rabbit",
+ "emf-service-queue",
+ "emf-tracing",
+ "emf-wire-types",
+ "futures",
+ "im",
+ "insta",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tokio-test",
+ "url",
+ "warp",
+]
+
+[[package]]
+name = "emf-fs"
+version = "0.4.0"
+dependencies = [
+ "bytes",
+ "futures",
+ "tempdir",
+ "tempfile",
+ "tokio",
+ "tokio-util",
+]
+
+[[package]]
+name = "emf-graphql-queries"
+version = "0.2.0"
+dependencies = [
+ "emf-wire-types",
+ "humantime 2.0.1",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "emf-influx"
+version = "0.2.0"
+dependencies = [
+ "futures",
+ "influx_db_client",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
+name = "emf-job-scheduler-rpc"
+version = "0.4.0"
+dependencies = [
+ "emf-rabbit",
+ "emf-wire-types",
+ "futures",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "emf-journal"
+version = "0.4.0"
+dependencies = [
+ "chrono",
+ "emf-manager-env",
+ "emf-postgres",
+ "emf-rabbit",
+ "emf-service-queue",
+ "emf-tracing",
+ "emf-wire-types",
+ "futures",
+ "insta",
+ "lazy_static",
+ "regex",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
+name = "emf-mailbox"
+version = "0.4.0"
+dependencies = [
+ "bytes",
+ "emf-fs",
+ "emf-manager-env",
+ "emf-postgres",
+ "emf-tracing",
+ "emf-wire-types",
+ "futures",
+ "lazy_static",
+ "serde",
+ "serde_json",
+ "tempdir",
+ "thiserror",
+ "tokio",
+ "warp",
+]
+
+[[package]]
+name = "emf-manager-cli"
+version = "0.4.0"
+dependencies = [
+ "chrono",
+ "chrono-humanize",
+ "combine 4.1.0",
+ "console 0.11.3",
+ "dialoguer",
+ "dotenv",
+ "emf-api-utils",
+ "emf-command-utils",
+ "emf-graphql-queries",
+ "emf-influx",
+ "emf-manager-client",
+ "emf-tracing",
+ "emf-wire-types",
+ "futures",
+ "hostlist-parser",
+ "indicatif",
+ "insta",
+ "lazy_static",
+ "liblustreapi",
+ "number-formatter",
+ "prettytable-rs",
+ "regex",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "structopt",
+ "thiserror",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "emf-manager-client"
+version = "0.4.0"
+dependencies = [
+ "emf-manager-env",
+ "emf-request-retry",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tracing",
+ "url",
+]
+
+[[package]]
+name = "emf-manager-env"
+version = "0.4.0"
+dependencies = [
+ "lazy_static",
+ "url",
+]
+
+[[package]]
+name = "emf-network"
+version = "0.4.0"
+dependencies = [
+ "emf-influx",
+ "emf-manager-env",
+ "emf-postgres",
+ "emf-rabbit",
+ "emf-service-queue",
+ "emf-tracing",
+ "emf-wire-types",
+ "futures",
+ "insta",
+ "tokio",
+ "tracing",
+ "url",
+]
+
+[[package]]
+name = "emf-ntp"
+version = "0.4.0"
+dependencies = [
+ "emf-manager-env",
+ "emf-postgres",
+ "emf-rabbit",
+ "emf-service-queue",
+ "emf-tracing",
+ "emf-wire-types",
+ "futures",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "emf-ostpool"
+version = "0.4.0"
+dependencies = [
+ "emf-postgres",
+ "emf-rabbit",
+ "emf-service-queue",
+ "emf-tracing",
+ "emf-wire-types",
+ "futures",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "emf-postgres"
+version = "0.4.0"
+dependencies = [
+ "dotenv",
+ "emf-manager-env",
+ "emf-wire-types",
+ "futures",
+ "sqlx",
+ "tokio-postgres",
+ "tracing",
+]
+
+[[package]]
+name = "emf-postoffice"
+version = "0.4.0"
+dependencies = [
+ "emf-rabbit",
+ "emf-service-queue",
+ "emf-tracing",
+ "emf-wire-types",
+ "futures",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "emf-rabbit"
+version = "0.4.0"
+dependencies = [
+ "deadpool-lapin",
+ "emf-manager-env",
+ "emf-wire-types",
+ "futures",
+ "lapin",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tokio-amqp",
+ "tracing",
+ "warp",
+]
+
+[[package]]
+name = "emf-report"
+version = "0.1.0"
+dependencies = [
+ "bytes",
+ "emf-fs",
+ "emf-manager-env",
+ "emf-tracing",
+ "futures",
+ "tempdir",
+ "tokio",
+ "tracing",
+ "warp",
+]
+
+[[package]]
+name = "emf-request-retry"
+version = "0.4.0"
+dependencies = [
+ "futures",
+ "http",
+ "rand 0.7.3",
+ "rand_xorshift 0.2.0",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tokio-test",
+ "tracing",
+ "url",
+ "warp",
+]
+
+[[package]]
+name = "emf-service-queue"
+version = "0.4.0"
+dependencies = [
+ "emf-rabbit",
+ "emf-wire-types",
+ "futures",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tracing",
+]
+
+[[package]]
+name = "emf-sfa"
+version = "0.2.0"
+dependencies = [
+ "async-trait",
+ "emf-change",
+ "emf-manager-env",
+ "emf-postgres",
+ "emf-request-retry",
+ "emf-tracing",
+ "emf-wire-types",
+ "futures",
+ "serde",
+ "thiserror",
+ "tokio",
+ "unzip-n",
+ "url",
+ "wbem-client",
+]
+
+[[package]]
+name = "emf-snapshot"
+version = "0.4.0"
+dependencies = [
+ "emf-command-utils",
+ "emf-graphql-queries",
+ "emf-influx",
+ "emf-manager-client",
+ "emf-manager-env",
+ "emf-postgres",
+ "emf-rabbit",
+ "emf-service-queue",
+ "emf-tracing",
+ "emf-wire-types",
+ "futures",
+ "futures-util",
+ "serde",
+ "thiserror",
+ "tokio",
+ "url",
+]
+
+[[package]]
+name = "emf-ssh"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "dirs 3.0.1",
+ "emf-fs",
+ "emf-tracing",
+ "futures",
+ "thiserror",
+ "thrussh",
+ "thrussh-keys",
+ "tokio",
+]
+
+[[package]]
+name = "emf-stats"
+version = "0.4.0"
+dependencies = [
+ "emf-influx",
+ "emf-manager-env",
+ "emf-rabbit",
+ "emf-service-queue",
+ "emf-tracing",
+ "emf-wire-types",
+ "futures",
+ "lustre_collector",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "url",
+]
+
+[[package]]
+name = "emf-system-test-utils"
+version = "0.4.0"
+dependencies = [
+ "async-trait",
+ "emf-cmd",
+ "emf-fs",
+ "emf-graphql-queries",
+ "emf-wire-types",
+ "futures",
+ "insta",
+ "petgraph",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "emf-systemd"
+version = "0.4.0"
+dependencies = [
+ "emf-cmd",
+ "emf-wire-types",
+ "futures",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "emf-task-runner"
+version = "0.1.0"
+dependencies = [
+ "emf-action-client",
+ "emf-manager-env",
+ "emf-postgres",
+ "emf-tracing",
+ "emf-wire-types",
+ "futures",
+ "lazy_static",
+ "serde_json",
+ "thiserror",
+ "tokio",
+]
+
+[[package]]
+name = "emf-timer"
+version = "0.4.0"
+dependencies = [
+ "emf-cmd",
+ "emf-manager-env",
+ "emf-tracing",
+ "futures",
+ "serde",
+ "serde_json",
+ "tokio",
+ "warp",
+]
+
+[[package]]
+name = "emf-tracing"
+version = "0.3.0"
+dependencies = [
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "emf-util"
+version = "0.4.0"
+dependencies = [
+ "emf-wire-types",
+ "futures",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "emf-warp-drive"
+version = "0.4.0"
+dependencies = [
+ "emf-manager-client",
+ "emf-manager-env",
+ "emf-postgres",
+ "emf-rabbit",
+ "emf-tracing",
+ "emf-wire-types",
+ "futures",
+ "im",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tokio-runtime-shutdown",
+ "tracing",
+ "uuid",
+ "warp",
+]
+
+[[package]]
+name = "emf-wire-types"
+version = "0.4.0"
+dependencies = [
+ "bytes",
+ "chrono",
+ "emf-api-utils",
+ "emf-change",
+ "humantime 2.0.1",
+ "im",
+ "ipnetwork",
+ "juniper",
+ "serde",
+ "serde_json",
+ "serde_repr",
+ "sqlx",
+ "structopt",
+ "thiserror",
+ "wbem-client",
+]
+
+[[package]]
 name = "encode_unicode"
 version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1591,708 +2293,6 @@ dependencies = [
  "sized-chunks",
  "typenum",
  "version_check 0.9.2",
-]
-
-[[package]]
-name = "iml-action-client"
-version = "0.1.0"
-dependencies = [
- "bytes",
- "futures",
- "hyper",
- "hyperlocal",
- "iml-manager-env",
- "iml-wire-types",
- "reqwest",
- "serde",
- "serde_json",
- "thiserror",
- "tracing",
- "uuid",
-]
-
-[[package]]
-name = "iml-action-runner"
-version = "0.4.0"
-dependencies = [
- "dotenv",
- "futures",
- "iml-agent-comms",
- "iml-manager-env",
- "iml-postgres",
- "iml-rabbit",
- "iml-service-queue",
- "iml-tracing",
- "iml-util",
- "iml-wire-types",
- "rand 0.7.3",
- "serde",
- "serde_json",
- "thiserror",
- "tokio",
- "tokio-runtime-shutdown",
- "tokio-test",
- "tracing",
- "warp",
-]
-
-[[package]]
-name = "iml-agent"
-version = "0.4.0"
-dependencies = [
- "async-trait",
- "byte-unit",
- "bytes",
- "chrono",
- "combine 4.1.0",
- "console 0.12.0",
- "device-types",
- "dns-lookup",
- "dotenv",
- "dyn-clone",
- "elementtree",
- "exitcode",
- "futures",
- "http",
- "iml-cmd",
- "iml-fs",
- "iml-systemd",
- "iml-tracing",
- "iml-util",
- "iml-wire-types",
- "inotify",
- "insta",
- "ipnetwork",
- "lazy_static",
- "libc",
- "liblustreapi",
- "lustre_collector",
- "mockito",
- "prettytable-rs",
- "quick-xml 0.18.1",
- "regex",
- "reqwest",
- "serde",
- "serde_json",
- "serde_yaml",
- "spinners",
- "stream-cancel 0.6.2",
- "strfmt",
- "structopt",
- "tempfile",
- "thiserror",
- "tokio",
- "tokio-util",
- "tracing",
- "url",
- "uuid",
- "v_hist",
- "version-utils",
-]
-
-[[package]]
-name = "iml-agent-comms"
-version = "0.4.0"
-dependencies = [
- "futures",
- "iml-manager-env",
- "iml-rabbit",
- "iml-tracing",
- "iml-wire-types",
- "serde",
- "serde_json",
- "tokio",
- "tracing",
- "uuid",
- "warp",
-]
-
-[[package]]
-name = "iml-api"
-version = "0.4.0"
-dependencies = [
- "chrono",
- "futures",
- "humantime 2.0.1",
- "iml-job-scheduler-rpc",
- "iml-manager-client",
- "iml-manager-env",
- "iml-postgres",
- "iml-rabbit",
- "iml-tracing",
- "iml-wire-types",
- "itertools",
- "juniper",
- "lazy_static",
- "regex",
- "serde",
- "serde_json",
- "thiserror",
- "tokio",
- "tracing",
- "uuid",
- "warp",
-]
-
-[[package]]
-name = "iml-api-utils"
-version = "0.4.0"
-dependencies = [
- "lazy_static",
- "regex",
-]
-
-[[package]]
-name = "iml-change"
-version = "0.1.0"
-
-[[package]]
-name = "iml-cmd"
-version = "0.4.0"
-dependencies = [
- "futures",
- "tokio",
- "tracing",
- "warp",
-]
-
-[[package]]
-name = "iml-command-utils"
-version = "0.4.0"
-dependencies = [
- "futures",
- "iml-manager-client",
- "iml-tracing",
- "iml-wire-types",
- "thiserror",
- "tokio",
-]
-
-[[package]]
-name = "iml-corosync"
-version = "0.4.0"
-dependencies = [
- "futures",
- "iml-change",
- "iml-manager-env",
- "iml-postgres",
- "iml-rabbit",
- "iml-service-queue",
- "iml-tracing",
- "iml-wire-types",
- "serde",
- "serde_json",
- "thiserror",
- "tokio",
- "tokio-test",
-]
-
-[[package]]
-name = "iml-device"
-version = "0.4.0"
-dependencies = [
- "chrono",
- "device-types",
- "futures",
- "im",
- "iml-change",
- "iml-manager-env",
- "iml-postgres",
- "iml-rabbit",
- "iml-service-queue",
- "iml-tracing",
- "iml-wire-types",
- "insta",
- "serde",
- "serde_json",
- "thiserror",
- "tokio",
- "tokio-test",
- "url",
- "warp",
-]
-
-[[package]]
-name = "iml-fs"
-version = "0.4.0"
-dependencies = [
- "bytes",
- "futures",
- "tempdir",
- "tempfile",
- "tokio",
- "tokio-util",
-]
-
-[[package]]
-name = "iml-graphql-queries"
-version = "0.2.0"
-dependencies = [
- "humantime 2.0.1",
- "iml-wire-types",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "iml-influx"
-version = "0.2.0"
-dependencies = [
- "futures",
- "influx_db_client",
- "serde",
- "serde_json",
- "thiserror",
-]
-
-[[package]]
-name = "iml-job-scheduler-rpc"
-version = "0.4.0"
-dependencies = [
- "futures",
- "iml-rabbit",
- "iml-wire-types",
- "serde",
- "serde_json",
- "tokio",
- "tracing",
- "uuid",
-]
-
-[[package]]
-name = "iml-journal"
-version = "0.4.0"
-dependencies = [
- "chrono",
- "futures",
- "iml-manager-env",
- "iml-postgres",
- "iml-rabbit",
- "iml-service-queue",
- "iml-tracing",
- "iml-wire-types",
- "insta",
- "lazy_static",
- "regex",
- "serde",
- "serde_json",
- "thiserror",
- "tokio",
-]
-
-[[package]]
-name = "iml-mailbox"
-version = "0.4.0"
-dependencies = [
- "bytes",
- "futures",
- "iml-fs",
- "iml-manager-env",
- "iml-postgres",
- "iml-tracing",
- "iml-wire-types",
- "lazy_static",
- "serde",
- "serde_json",
- "tempdir",
- "thiserror",
- "tokio",
- "warp",
-]
-
-[[package]]
-name = "iml-manager-cli"
-version = "0.4.0"
-dependencies = [
- "chrono",
- "chrono-humanize",
- "combine 4.1.0",
- "console 0.11.3",
- "dialoguer",
- "dotenv",
- "futures",
- "hostlist-parser",
- "iml-api-utils",
- "iml-command-utils",
- "iml-graphql-queries",
- "iml-influx",
- "iml-manager-client",
- "iml-tracing",
- "iml-wire-types",
- "indicatif",
- "insta",
- "lazy_static",
- "liblustreapi",
- "number-formatter",
- "prettytable-rs",
- "regex",
- "reqwest",
- "serde",
- "serde_json",
- "serde_yaml",
- "structopt",
- "thiserror",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "iml-manager-client"
-version = "0.4.0"
-dependencies = [
- "iml-manager-env",
- "iml-request-retry",
- "reqwest",
- "serde",
- "serde_json",
- "tracing",
- "url",
-]
-
-[[package]]
-name = "iml-manager-env"
-version = "0.4.0"
-dependencies = [
- "lazy_static",
- "url",
-]
-
-[[package]]
-name = "iml-network"
-version = "0.4.0"
-dependencies = [
- "futures",
- "iml-influx",
- "iml-manager-env",
- "iml-postgres",
- "iml-rabbit",
- "iml-service-queue",
- "iml-tracing",
- "iml-wire-types",
- "insta",
- "tokio",
- "tracing",
- "url",
-]
-
-[[package]]
-name = "iml-ntp"
-version = "0.4.0"
-dependencies = [
- "futures",
- "iml-manager-env",
- "iml-postgres",
- "iml-rabbit",
- "iml-service-queue",
- "iml-tracing",
- "iml-wire-types",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "iml-ostpool"
-version = "0.4.0"
-dependencies = [
- "futures",
- "iml-postgres",
- "iml-rabbit",
- "iml-service-queue",
- "iml-tracing",
- "iml-wire-types",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "iml-postgres"
-version = "0.4.0"
-dependencies = [
- "dotenv",
- "futures",
- "iml-manager-env",
- "iml-wire-types",
- "sqlx",
- "tokio-postgres",
- "tracing",
-]
-
-[[package]]
-name = "iml-postoffice"
-version = "0.4.0"
-dependencies = [
- "futures",
- "iml-rabbit",
- "iml-service-queue",
- "iml-tracing",
- "iml-wire-types",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "iml-rabbit"
-version = "0.4.0"
-dependencies = [
- "deadpool-lapin",
- "futures",
- "iml-manager-env",
- "iml-wire-types",
- "lapin",
- "serde_json",
- "thiserror",
- "tokio",
- "tokio-amqp",
- "tracing",
- "warp",
-]
-
-[[package]]
-name = "iml-report"
-version = "0.1.0"
-dependencies = [
- "bytes",
- "futures",
- "iml-fs",
- "iml-manager-env",
- "iml-tracing",
- "tempdir",
- "tokio",
- "tracing",
- "warp",
-]
-
-[[package]]
-name = "iml-request-retry"
-version = "0.4.0"
-dependencies = [
- "futures",
- "http",
- "rand 0.7.3",
- "rand_xorshift 0.2.0",
- "reqwest",
- "serde",
- "serde_json",
- "tokio",
- "tokio-test",
- "tracing",
- "url",
- "warp",
-]
-
-[[package]]
-name = "iml-service-queue"
-version = "0.4.0"
-dependencies = [
- "futures",
- "iml-rabbit",
- "iml-wire-types",
- "serde",
- "serde_json",
- "thiserror",
- "tracing",
-]
-
-[[package]]
-name = "iml-sfa"
-version = "0.2.0"
-dependencies = [
- "async-trait",
- "futures",
- "iml-change",
- "iml-manager-env",
- "iml-postgres",
- "iml-request-retry",
- "iml-tracing",
- "iml-wire-types",
- "serde",
- "thiserror",
- "tokio",
- "unzip-n",
- "url",
- "wbem-client",
-]
-
-[[package]]
-name = "iml-snapshot"
-version = "0.4.0"
-dependencies = [
- "futures",
- "futures-util",
- "iml-command-utils",
- "iml-graphql-queries",
- "iml-influx",
- "iml-manager-client",
- "iml-manager-env",
- "iml-postgres",
- "iml-rabbit",
- "iml-service-queue",
- "iml-tracing",
- "iml-wire-types",
- "serde",
- "thiserror",
- "tokio",
- "url",
-]
-
-[[package]]
-name = "iml-ssh"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "dirs 3.0.1",
- "futures",
- "iml-fs",
- "iml-tracing",
- "thiserror",
- "thrussh",
- "thrussh-keys",
- "tokio",
-]
-
-[[package]]
-name = "iml-stats"
-version = "0.4.0"
-dependencies = [
- "futures",
- "iml-influx",
- "iml-manager-env",
- "iml-rabbit",
- "iml-service-queue",
- "iml-tracing",
- "iml-wire-types",
- "lustre_collector",
- "serde",
- "serde_json",
- "thiserror",
- "tokio",
- "tracing",
- "url",
-]
-
-[[package]]
-name = "iml-system-test-utils"
-version = "0.4.0"
-dependencies = [
- "async-trait",
- "futures",
- "iml-cmd",
- "iml-fs",
- "iml-graphql-queries",
- "iml-wire-types",
- "insta",
- "petgraph",
- "serde",
- "serde_json",
- "thiserror",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "iml-systemd"
-version = "0.4.0"
-dependencies = [
- "futures",
- "iml-cmd",
- "iml-wire-types",
- "serde",
- "serde_json",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "iml-task-runner"
-version = "0.1.0"
-dependencies = [
- "futures",
- "iml-action-client",
- "iml-manager-env",
- "iml-postgres",
- "iml-tracing",
- "iml-wire-types",
- "lazy_static",
- "serde_json",
- "thiserror",
- "tokio",
-]
-
-[[package]]
-name = "iml-timer"
-version = "0.4.0"
-dependencies = [
- "futures",
- "iml-cmd",
- "iml-manager-env",
- "iml-tracing",
- "serde",
- "serde_json",
- "tokio",
- "warp",
-]
-
-[[package]]
-name = "iml-tracing"
-version = "0.3.0"
-dependencies = [
- "tokio",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
-name = "iml-util"
-version = "0.4.0"
-dependencies = [
- "futures",
- "iml-wire-types",
- "serde",
- "serde_json",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "iml-warp-drive"
-version = "0.4.0"
-dependencies = [
- "futures",
- "im",
- "iml-manager-client",
- "iml-manager-env",
- "iml-postgres",
- "iml-rabbit",
- "iml-tracing",
- "iml-wire-types",
- "serde",
- "serde_json",
- "tokio",
- "tokio-runtime-shutdown",
- "tracing",
- "uuid",
- "warp",
-]
-
-[[package]]
-name = "iml-wire-types"
-version = "0.4.0"
-dependencies = [
- "bytes",
- "chrono",
- "humantime 2.0.1",
- "im",
- "iml-api-utils",
- "iml-change",
- "ipnetwork",
- "juniper",
- "serde",
- "serde_json",
- "serde_repr",
- "sqlx",
- "structopt",
- "thiserror",
- "wbem-client",
 ]
 
 [[package]]
@@ -5047,8 +5047,8 @@ version = "0.2.0"
 dependencies = [
  "async-trait",
  "bytes",
+ "emf-tracing",
  "futures",
- "iml-tracing",
  "insta",
  "quick-xml 0.19.0",
  "reqwest",

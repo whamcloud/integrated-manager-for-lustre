@@ -1,4 +1,4 @@
-from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
+from tests.unit.lib.emf_unit_test_case import EMFUnitTestCase
 
 from chroma_core.lib.storage_plugin.api import alert_conditions
 
@@ -8,7 +8,7 @@ class FakeResource:
         self.status = status
 
 
-class TestAlertConditions(IMLUnitTestCase):
+class TestAlertConditions(EMFUnitTestCase):
     def test_attrvalalertcondition_empty(self):
         avac = alert_conditions.ValueCondition("status", id="avac")
         self.assertListEqual(avac.alert_classes(), [])

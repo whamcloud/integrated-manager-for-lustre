@@ -22,7 +22,7 @@ from chroma_core.models import ClientCertificate, RegistrationToken, ServerProfi
 from chroma_core.models.utils import Version
 from chroma_core.services import log_register
 from chroma_core.services.crypto import Crypto
-from iml_common.lib.date_time import IMLDateTime
+from emf_common.lib.date_time import EMFDateTime
 
 log = log_register("agent_views")
 import logging
@@ -171,8 +171,8 @@ class MessageView(ValidatedClientView):
         fqdn = self.valid_fqdn(request)
         if not fqdn:
             return HttpForbidden()
-        server_boot_time = IMLDateTime.parse(request.GET["server_boot_time"])
-        client_start_time = IMLDateTime.parse(request.GET["client_start_time"])
+        server_boot_time = EMFDateTime.parse(request.GET["server_boot_time"])
+        client_start_time = EMFDateTime.parse(request.GET["client_start_time"])
 
         messages = []
 
@@ -266,7 +266,7 @@ def validate_token(key, credits=1):
         log.warning("Attempt to register with non-existent token %s" % key)
         return HttpForbidden(), None
     else:
-        now = IMLDateTime.utcnow()
+        now = EMFDateTime.utcnow()
 
         if token.expiry < now:
             log.warning("Attempt to register with expired token %s (now %s, expired at %s)" % (key, now, token.expiry))
@@ -298,7 +298,7 @@ def setup(request, key):
 
     try:
         if server_profile.managed:
-            repo_packages += " python2-iml-agent-management"
+            repo_packages += " python2-emf-agent-management"
     except (ServerProfile.DoesNotExist, KeyError) as e:
         if type(e) is KeyError:
             err = "Profile name not specified"

@@ -57,7 +57,7 @@ class HostValidation(Validation):
                         host_must_exist != ManagedHost.objects.filter(address=address).exists()
                     ):
                         errors["address"].append(
-                            "Host %s is %s in use by IML" % (address, "not" if host_must_exist else "already")
+                            "Host %s is %s in use" % (address, "not" if host_must_exist else "already")
                         )
                 else:
                     errors["address"].append(self.mandatory_message)

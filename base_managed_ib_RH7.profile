@@ -10,7 +10,7 @@
     "pacemaker": true,
     "ui_description": "A storage server suitable for creating new HA-enabled filesystem targets using Mellanox OFED",
     "packages": [
-        "python2-iml-agent-management",
+        "python2-emf-agent-management",
         "kernel-devel-lustre",
         "pcs",
         "mlnx-ofa_kernel-devel",

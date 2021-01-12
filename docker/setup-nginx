@@ -7,16 +7,16 @@ vars = {
     "HTTPS_FRONTEND_PORT": "7443",
     "HTTP_API_PROXY_PASS": "http://gunicorn:8001",
     "HTTP_AGENT_PROXY_PASS": "http://http-agent:8002",
-    "HTTP_AGENT2_PROXY_PASS": "http://iml-agent-comms:8003",
+    "HTTP_AGENT2_PROXY_PASS": "http://emf-agent-comms:8003",
     "REPO_PATH": "/var/lib/chroma/repo",
     "DEVICE_AGGREGATOR_PROXY_PASS": "http://device:8008",
-    "WARP_DRIVE_PROXY_PASS": "http://iml-warp-drive:8890",
-    "MAILBOX_PROXY_PASS": "http://iml-mailbox:8891",
+    "WARP_DRIVE_PROXY_PASS": "http://emf-warp-drive:8890",
+    "MAILBOX_PROXY_PASS": "http://emf-mailbox:8891",
     "GRAFANA_PROXY_PASS": "http://grafana:3000",
     "INFLUXDB_PROXY_PASS": "http://influxdb:8086",
-    "IML_API_PROXY_PASS": "http://iml-api:8004",
-    "REPORT_PATH": "/var/spool/iml/report",
-    "REPORT_PROXY_PASS": "http://iml-report:8893",
+    "EMF_API_PROXY_PASS": "http://emf-api:8004",
+    "REPORT_PATH": "/var/spool/emf/report",
+    "REPORT_PROXY_PASS": "http://emf-report:8893",
 }
 
 conf_template = "./chroma-manager.conf.template"
@@ -36,5 +36,5 @@ with open(conf_template, "r") as f:
 
     config = re.sub(r"{{(.+)}}", r"{{ .Env.\g<1> }}", config)
 
-    with open("iml.template", "w") as f2:
+    with open("emf.template", "w") as f2:
         f2.write(config)

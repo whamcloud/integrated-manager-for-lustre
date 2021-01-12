@@ -10,13 +10,13 @@ from chroma_core.models import ManagedTarget
 from chroma_api.authentication import CsrfAuthentication
 from chroma_core.services.job_scheduler import job_scheduler_notify
 from chroma_core.services.job_scheduler.disabled_connection import DISABLED_CONNECTION
-from iml_common.lib.agent_rpc import agent_result, agent_result_ok
+from emf_common.lib.agent_rpc import agent_result, agent_result_ok
 from synthentic_objects import synthetic_lnet_configuration
 from synthentic_objects import create_synthetic_device_info
 from chroma_core.services.log import log_register
 from tests.unit.chroma_core.helpers.test_api_client import TestApiClient
 from tests.unit.chroma_core.helpers import helper
-from iml_common.lib.date_time import IMLDateTime
+from emf_common.lib.date_time import EMFDateTime
 
 log = log_register("mock_agent_rpc")
 
@@ -191,7 +191,7 @@ class MockAgentRpc(object):
         elif cmd == "selinux_status":
             return {"status": "Disabled"}
         elif cmd == "reboot_server":
-            now = IMLDateTime.utcnow()
+            now = EMFDateTime.utcnow()
             log.info("rebooting %s; updating boot_time to %s" % (host, now))
             job_scheduler_notify.notify(host, now, {"boot_time": now})
         elif cmd == "which zfs":

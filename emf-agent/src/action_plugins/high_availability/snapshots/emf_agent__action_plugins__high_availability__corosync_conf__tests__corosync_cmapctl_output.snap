@@ -1,0 +1,33 @@
+---
+source: emf-agent/src/action_plugins/high_availability/corosync_conf.rs
+expression: y
+---
+(
+    Totem {
+        config_version: Some(
+            3,
+        ),
+        cluster_name: "lustre-ha-cluster",
+        token: 17000,
+    },
+    [
+        Interface {
+            ringnumber: 0,
+            bindnetaddr: "10.128.0.22",
+            mcastaddr: Some(
+                "226.94.0.1",
+            ),
+            broadcast: None,
+            mcastport: 40011,
+        },
+        Interface {
+            ringnumber: 1,
+            bindnetaddr: "10.73.10.0",
+            mcastaddr: Some(
+                "226.94.1.1",
+            ),
+            broadcast: None,
+            mcastport: 40011,
+        },
+    ],
+)

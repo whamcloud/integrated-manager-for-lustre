@@ -4,7 +4,7 @@ import os
 from django.conf import settings
 
 from chroma_core.services.log import custom_log_register
-from iml_common.lib.date_time import IMLDateTime
+from emf_common.lib.date_time import EMFDateTime
 
 REQUEST_LOG_PATH = os.path.join(settings.LOG_PATH, "requests.log")
 logger = custom_log_register(__name__, REQUEST_LOG_PATH, False)
@@ -47,7 +47,7 @@ class RequestLoggingMiddleware(object):
             # The following are required by Bunyan.
             "hostname": get_meta("HTTP_X_FORWARDED_HOST"),
             "name": "Request Log",
-            "time": IMLDateTime.utcnow().isoformat(),
+            "time": EMFDateTime.utcnow().isoformat(),
             "v": 0,
             "pid": os.getpid(),
             "msg": "Request made to {0} {1}".format(request.method, request.get_full_path()),

@@ -9,7 +9,7 @@ import datetime
 from django.db import models
 from django.db.models import CASCADE
 from chroma_core.models.server_profile import ServerProfile
-from iml_common.lib.date_time import IMLDateTime
+from emf_common.lib.date_time import EMFDateTime
 
 
 SECRET_LENGTH = 16  # Number of bytes in secret, double to get number of alphanumeric characters
@@ -18,7 +18,7 @@ DEFAULT_CREDITS = 1
 
 
 def _tzaware_future_offset(offset):
-    now = IMLDateTime.utcnow()
+    now = EMFDateTime.utcnow()
     return now + datetime.timedelta(seconds=offset)
 
 

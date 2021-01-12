@@ -3,7 +3,7 @@ import mock
 
 from django.utils.timezone import now
 
-from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
+from tests.unit.lib.emf_unit_test_case import EMFUnitTestCase
 from chroma_core.models import ManagedHost
 from chroma_core.models import HostOfflineAlert
 from chroma_core.models import StonithNotEnabledAlert
@@ -19,7 +19,7 @@ OFFLINE = "false"
 MOCKED_NOW_VALUE = now()
 
 
-class CorosyncTestCase(IMLUnitTestCase):
+class CorosyncTestCase(EMFUnitTestCase):
     def setUp(self):
         super(CorosyncTestCase, self).setUp()
 

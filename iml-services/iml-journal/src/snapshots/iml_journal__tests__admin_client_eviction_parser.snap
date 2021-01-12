@@ -1,8 +1,0 @@
----
-source: iml-services/iml-journal/src/lib.rs
-expression: admin_client_eviction_parser(x).unwrap()
----
-(
-    2689,
-    "client 26959b68-1208-1fca-1f07-da2dc872c55f evicted by the administrator",
-)

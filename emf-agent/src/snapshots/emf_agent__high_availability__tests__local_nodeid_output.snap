@@ -1,0 +1,7 @@
+---
+source: emf-agent/src/high_availability.rs
+expression: x
+---
+Some(
+    "1",
+)

@@ -1,0 +1,8 @@
+---
+source: emf-services/emf-journal/src/lib.rs
+expression: client_connection_parser(input).unwrap()
+---
+(
+    9150,
+    "client 26959b68-1208-1fca-1f07-da2dc872c55f from 192.168.122.218@tcp connected to target lustre-OST0000",
+)

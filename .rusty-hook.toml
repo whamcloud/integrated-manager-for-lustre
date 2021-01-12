@@ -3,10 +3,10 @@ pre-commit = [
   "cargo fmt --all -- --check",
   "cargo check --locked --all-targets",
   "cargo clippy -- -W warnings",
-  "cargo check --locked --manifest-path iml-system-rpm-tests/Cargo.toml --tests",
-  "cargo clippy --manifest-path iml-system-rpm-tests/Cargo.toml --tests -- -W warnings",
-  "cargo check --locked --manifest-path iml-system-docker-tests/Cargo.toml --tests",
-  "cargo clippy --manifest-path iml-system-docker-tests/Cargo.toml --tests -- -W warnings",
+  "cargo check --locked --manifest-path emf-system-rpm-tests/Cargo.toml --tests",
+  "cargo clippy --manifest-path emf-system-rpm-tests/Cargo.toml --tests -- -W warnings",
+  "cargo check --locked --manifest-path emf-system-docker-tests/Cargo.toml --tests",
+  "cargo clippy --manifest-path emf-system-docker-tests/Cargo.toml --tests -- -W warnings",
   "cargo check --locked --manifest-path device-scanner/Cargo.toml",
 ]
 

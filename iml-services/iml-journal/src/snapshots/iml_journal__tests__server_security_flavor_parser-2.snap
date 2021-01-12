@@ -1,8 +1,0 @@
----
-source: iml-services/iml-journal/src/lib.rs
-expression: server_security_flavor_parser(input).unwrap()
----
-(
-    380,
-    "with security flavor null",
-)

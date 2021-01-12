@@ -10,7 +10,7 @@
     "pacemaker": true,
     "ui_description": "A storage server suitable for creating new HA-enabled filesystem targets",
     "packages": [
-        "python2-iml-agent-management",
+        "python2-emf-agent-management",
         "kernel-devel-lustre",
         "pcs",
         "lustre-resource-agents",

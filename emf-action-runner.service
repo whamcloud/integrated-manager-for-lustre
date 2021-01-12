@@ -1,0 +1,21 @@
+[Unit]
+Description=EMF Action Runner Service
+PartOf=emf-manager.target
+After=rabbitmq-server.service
+After=emf-settings-populator.service
+Requires=emf-settings-populator.service
+Requires=emf-action-runner.socket
+BindsTo=emf-action-runner.socket
+After=emf-action-runner.socket
+
+
+[Service]
+Type=simple
+Environment=RUST_LOG=info,sqlx::query=warn
+EnvironmentFile=/var/lib/chroma/emf-settings.conf
+EnvironmentFile=-/var/lib/chroma/overrides.conf
+ExecStart=/bin/emf-action-runner
+Restart=always
+RestartSec=2
+StandardOutput=journal
+StandardError=journal

@@ -26,9 +26,9 @@ def _fetch_aggregator(timeout):
             return resp.json(), summary
         except ValueError as e:
             # This error might be casused by device-aggregator not being ready
-            # yet or communication breakdown inside IML server side
+            # yet or communication breakdown inside EMF server side
             log.error(
-                "iml-device-aggregator is not providing expected data, ensure "
+                "emf-device-aggregator is not providing expected data, ensure "
                 "this is not caused by race condition (%s)" % e
             )
             # So it is better to wait for service startup
@@ -51,7 +51,7 @@ def get_devices(fqdn, timeout=0):
             # This error might be caused by fact that device-aggregator
             # hasn't yet received device information update on startup
             log.error(
-                "iml-device-aggregator is not providing expected data for fqdn {}. Waited: {},"
+                "emf-device-aggregator is not providing expected data for fqdn {}. Waited: {},"
                 "Trying again for: {}, Error: {}".format(fqdn, summary, timeout - summary, e)
             )
             # So it is better to wait for it if possible

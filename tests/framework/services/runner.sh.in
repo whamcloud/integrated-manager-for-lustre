@@ -62,17 +62,17 @@ sed -i "s/host.*all.*all.*::1\/128.*ident/host    all             all           
 systemctl restart postgresql-9.6
 
 yum-config-manager --add-repo https://copr.fedorainfracloud.org/coprs/@MFL_COPR_REPO@/repo/epel-7/@MFL_COPR_NAME@-epel-7.repo
-yum -y install ed npm nginx libuv iml-gui iml-online-help rust-iml-api
+yum -y install ed npm nginx libuv emf-gui emf-online-help rust-emf-api
 
-cd /integrated-manager-for-lustre
-cp iml-corosync.service iml-gunicorn.service iml-http-agent.service iml-job-scheduler.service /lib/systemd/system
-cp iml-manager.target iml-plugin-runner.service /lib/systemd/system
-cp iml-settings-populator.service /lib/systemd/system
+cd /exascaler-management-framework
+cp emf-corosync.service emf-gunicorn.service emf-http-agent.service emf-job-scheduler.service /lib/systemd/system
+cp emf-manager.target emf-plugin-runner.service /lib/systemd/system
+cp emf-settings-populator.service /lib/systemd/system
 pip install -r requirements.txt
 pip install -r requirements.test
 echo -e "/^DEBUG =/s/= .*$/= True/\nwq" | ed settings.py
 
-rsync -ar --exclude='.cargo' --exclude='iml-gui/node_modules' /integrated-manager-for-lustre/ /usr/share/chroma-manager
+rsync -ar --exclude='.cargo' --exclude='emf-gui/node_modules' /exascaler-management-framework/ /usr/share/chroma-manager
 mkdir /var/log/chroma
 cd /usr/share/chroma-manager
 
@@ -81,7 +81,7 @@ echo "DATABASE_URL=postgres://chroma@localhost:5432/chroma" > .env
 python ./manage.py dev_setup
 cargo sqlx migrate run
 
-env CARGO_NET_RETRY=25 $(python manage.py print-settings 2> /dev/null | xargs) cargo run --bin iml-config nginx generate-config --path /integrated-manager-for-lustre/chroma-manager.conf.template --output /etc/nginx/conf.d/chroma-manager.conf
-systemctl start iml-api
+env CARGO_NET_RETRY=25 $(python manage.py print-settings 2> /dev/null | xargs) cargo run --bin emf-config nginx generate-config --path /exascaler-management-framework/chroma-manager.conf.template --output /etc/nginx/conf.d/chroma-manager.conf
+systemctl start emf-api
 
 PYTHONPATH=. nosetests tests/services/ --stop

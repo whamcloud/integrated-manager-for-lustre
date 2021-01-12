@@ -11,7 +11,7 @@ from django.db.models import CASCADE
 
 from picklefield.fields import PickledObjectField
 
-from iml_common.lib import util
+from emf_common.lib import util
 from chroma_core.lib.job import Step
 
 MAX_STATE_STRING = 32

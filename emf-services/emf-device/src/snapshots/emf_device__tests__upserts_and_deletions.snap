@@ -1,0 +1,67 @@
+---
+source: emf-services/emf-device/src/lib.rs
+expression: xs
+---
+[
+    Target {
+        state: "unmounted",
+        name: "mdt1",
+        dev_path: None,
+        active_host_id: None,
+        host_ids: [
+            2,
+        ],
+        filesystems: [
+            "fs1",
+        ],
+        uuid: "123456",
+        mount_path: Some(
+            "/mnt/mdt1",
+        ),
+        fs_type: Some(
+            Ldiskfs,
+        ),
+    },
+    Target {
+        state: "mounted",
+        name: "mdt2",
+        dev_path: None,
+        active_host_id: Some(
+            2,
+        ),
+        host_ids: [
+            1,
+        ],
+        filesystems: [
+            "fs1",
+        ],
+        uuid: "654321",
+        mount_path: Some(
+            "/mnt/mdt2",
+        ),
+        fs_type: Some(
+            Ldiskfs,
+        ),
+    },
+    Target {
+        state: "mounted",
+        name: "ost1",
+        dev_path: None,
+        active_host_id: Some(
+            3,
+        ),
+        host_ids: [
+            4,
+        ],
+        filesystems: [
+            "fs1",
+        ],
+        uuid: "567890",
+        mount_path: Some(
+            "/mnt/ost1",
+        ),
+        fs_type: Some(
+            Ldiskfs,
+        ),
+    },
+]

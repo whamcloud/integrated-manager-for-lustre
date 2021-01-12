@@ -1,0 +1,15 @@
+[package]
+authors = ["EMF Team <emf@whamcloud.com>"]
+description = "Utilities for working with the EMF API"
+edition = "2018"
+license = "MIT"
+name = "emf-api-utils"
+version = "0.4.0"
+
+[dependencies]
+lazy_static = "1.4.0"
+
+[dependencies.regex]
+default-features = false
+features = ["std", "unicode-perl"]
+version = "1.3"

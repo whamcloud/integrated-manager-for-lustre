@@ -12,13 +12,13 @@ from setuptools import setup, find_packages
 excludes = []
 
 setup(
-    name="iml-manager",
+    name="emf-manager",
     version="6.3.0",
     author="whamCloud",
-    author_email="iml@whamcloud.com",
-    url="https://pypi.python.org/pypi/iml-manager",
+    author_email="emf@whamcloud.com",
+    url="https://pypi.python.org/pypi/emf-manager",
     license="MIT",
-    description="The Integrated Manager for Lustre software Monitoring and Administration Interface",
+    description="The EXAScaler Management Framework software Monitoring and Administration Interface",
     long_description=open("README.txt").read(),
     packages=find_packages(exclude=excludes) + [""],
     package_data={

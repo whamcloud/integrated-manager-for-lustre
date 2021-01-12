@@ -79,7 +79,7 @@ class StratagemConfiguration(StatefulObject):
 
 
 def unit_name(fid):
-    return "iml-stratagem-{}".format(fid)
+    return "emf-stratagem-{}".format(fid)
 
 
 def timer_file(fid):
@@ -92,13 +92,13 @@ def service_file(fid):
 
 class ConfigureStratagemTimerStep(Step, CommandLine):
     def get_run_stratagem_command(self, cmd, config):
-        iml_cmd = "{} --filesystem {}".format(cmd, config.filesystem.id)
+        emf_cmd = "{} --filesystem {}".format(cmd, config.filesystem.id)
         if config.report_duration is not None and config.report_duration >= 0:
-            iml_cmd += " --report {}s".format(config.report_duration / 1000)
+            emf_cmd += " --report {}s".format(config.report_duration / 1000)
         if config.purge_duration is not None and config.purge_duration >= 0:
-            iml_cmd += " --purge {}s".format(config.purge_duration / 1000)
+            emf_cmd += " --purge {}s".format(config.purge_duration / 1000)
 
-        return iml_cmd
+        return emf_cmd
 
     def run(self, kwargs):
         job_log.debug("Configure stratagem timer step kwargs: {}".format(kwargs))
@@ -106,11 +106,11 @@ class ConfigureStratagemTimerStep(Step, CommandLine):
 
         config = kwargs["config"]
 
-        iml_cmd = self.get_run_stratagem_command("/usr/bin/iml stratagem scan", config)
+        emf_cmd = self.get_run_stratagem_command("/usr/bin/emf stratagem scan", config)
 
         interval_in_seconds = config.interval / 1000
         # Create timer file
-        timer_config = """# This file is part of IML
+        timer_config = """# This file is part of EMF
 # This file will be overwritten automatically
 
 [Unit]
@@ -128,7 +128,7 @@ WantedBy=timers.target
             config.filesystem.id, interval_in_seconds, interval_in_seconds
         )
 
-        service_config = """# This file is part of IML
+        service_config = """# This file is part of EMF
 # This file will be overwritten automatically
 
 [Unit]
@@ -137,15 +137,15 @@ Description=Start Stratagem run on {}
 
 [Service]
 Type=oneshot
-EnvironmentFile=/var/lib/chroma/iml-settings.conf
+EnvironmentFile=/var/lib/chroma/emf-settings.conf
 ExecStart={}
 """.format(
-            config.filesystem.id, "After=iml-manager.target" if not runningInDocker() else "", iml_cmd
+            config.filesystem.id, "After=emf-manager.target" if not runningInDocker() else "", emf_cmd
         )
 
         post_data = {
             "config_id": str(config.id),
-            "file_prefix": "iml-stratagem",
+            "file_prefix": "emf-stratagem",
             "timer_config": timer_config,
             "service_config": service_config,
         }
@@ -163,7 +163,7 @@ class UnconfigureStratagemTimerStep(Step, CommandLine):
         config = kwargs["config"]
 
         if runningInDocker():
-            result = requests.delete("{}/unconfigure/iml-stratagem/{}".format(TIMER_PROXY_PASS, config.id))
+            result = requests.delete("{}/unconfigure/emf-stratagem/{}".format(TIMER_PROXY_PASS, config.id))
 
             if not result.ok:
                 raise RuntimeError(result.reason)

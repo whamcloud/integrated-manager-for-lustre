@@ -1,5 +1,5 @@
 [Unit]
-Description=IML Block Device Populator
+Description=EMF Block Device Populator
 After=device-scanner.socket
 
 [Service]

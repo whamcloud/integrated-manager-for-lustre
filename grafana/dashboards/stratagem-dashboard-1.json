@@ -28,7 +28,7 @@
       "bars": true,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "iml-influx-iml_stratagem_scans",
+      "datasource": "emf-influx-emf_stratagem_scans",
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
@@ -283,7 +283,7 @@
       "bars": true,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "iml-influx-iml_stratagem_scans",
+      "datasource": "emf-influx-emf_stratagem_scans",
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {

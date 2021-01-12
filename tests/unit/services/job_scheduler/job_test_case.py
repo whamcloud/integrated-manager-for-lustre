@@ -16,10 +16,10 @@ from tests.unit.chroma_core.helpers.synthentic_objects import (
 )
 from tests.unit.chroma_core.helpers.helper import freshen, create_simple_fs, log, load_default_profile
 from tests.unit.chroma_core.helpers.mock_agent_ssh import MockAgentSsh
-from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
+from tests.unit.lib.emf_unit_test_case import EMFUnitTestCase
 
 
-class JobTestCase(IMLUnitTestCase):
+class JobTestCase(EMFUnitTestCase):
     mock_servers = None
     hosts = None
 

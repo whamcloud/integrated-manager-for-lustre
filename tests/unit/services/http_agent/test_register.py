@@ -10,12 +10,12 @@ from chroma_core.services.job_scheduler.job_scheduler_client import JobScheduler
 from chroma_agent_comms.views import ValidatedClientView
 from tests.unit.chroma_core.helpers.helper import generate_csr, load_default_profile
 from tests.unit.chroma_core.helpers.synthentic_objects import synthetic_host
-from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
+from tests.unit.lib.emf_unit_test_case import EMFUnitTestCase
 from tests.utils import patch, timed
 import settings
 
 
-class TestRegistration(IMLUnitTestCase):
+class TestRegistration(EMFUnitTestCase):
     """API unit tests for functionality used only by the agent"""
 
     mock_servers = {

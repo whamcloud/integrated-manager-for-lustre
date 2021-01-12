@@ -1,0 +1,17 @@
+---
+source: emf-services/emf-device/tests/integration_tests.rs
+expression: xs
+---
+[
+  {
+    "id": "<ID>",
+    "state_modified_at": "<STATE_MODIFIED_AT>",
+    "state": "unmounted",
+    "immutable_state": false,
+    "not_deleted": true,
+    "content_type_id": 41,
+    "filesystem": "fs0a9c",
+    "host_id": "<HOST_ID>",
+    "mountpoints": []
+  }
+]

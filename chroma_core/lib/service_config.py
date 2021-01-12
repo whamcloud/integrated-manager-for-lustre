@@ -41,10 +41,10 @@ from kombu.connection import BrokerConnection
 from chroma_core.services.crypto import Crypto
 from chroma_core.models import ServerProfile, ServerProfilePackage, ServerProfileValidation, Repo
 from chroma_core.lib.util import CommandLine, CommandError
-from iml_common.lib.ntp import NTPConfig
-from iml_common.lib.firewall_control import FirewallControl
-from iml_common.lib.service_control import ServiceControl, ServiceControlEL7
-from iml_common.lib.util import wait_for_result
+from emf_common.lib.ntp import NTPConfig
+from emf_common.lib.firewall_control import FirewallControl
+from emf_common.lib.service_control import ServiceControl, ServiceControlEL7
+from emf_common.lib.util import wait_for_result
 
 log = logging.getLogger("installation")
 try:
@@ -186,7 +186,7 @@ class ServiceConfig(CommandLine):
         If no server is passed then use the existing setting and if there is no existing setting ask the user
         which server they would like to use.
 
-        Enable NTPConfig to recognise legacy line marker used in previous IML manager NTP configurations routines by
+        Enable NTPConfig to recognise legacy line marker used in previous EMF manager NTP configurations routines by
         passing it as a parameter to the get_configured_server method call
         """
         ntp = NTPConfig(logger=log)
@@ -320,7 +320,7 @@ class ServiceConfig(CommandLine):
 
         # When changing any of the following also change: docker/influxdb/setup-influxdb.sh
         log.info("Creating InfluxDB database...")
-        self.try_shell(["influx", "-execute", "CREATE DATABASE {}".format(settings.INFLUXDB_IML_DB)])
+        self.try_shell(["influx", "-execute", "CREATE DATABASE {}".format(settings.INFLUXDB_EMF_DB)])
         self.try_shell(["influx", "-execute", "CREATE DATABASE {}".format(settings.INFLUXDB_STRATAGEM_SCAN_DB)])
         self.try_shell(
             [
@@ -333,18 +333,18 @@ class ServiceConfig(CommandLine):
                 ),
             ]
         )
-        self.try_shell(["influx", "-execute", "CREATE DATABASE {}".format(settings.INFLUXDB_IML_STATS_DB)])
+        self.try_shell(["influx", "-execute", "CREATE DATABASE {}".format(settings.INFLUXDB_EMF_STATS_DB)])
 
         try:
             self.try_shell(
                 [
                     "influx",
                     "-database",
-                    settings.INFLUXDB_IML_STATS_DB,
+                    settings.INFLUXDB_EMF_STATS_DB,
                     "-execute",
                     'CREATE RETENTION POLICY "long_term" ON "{}" DURATION {} REPLICATION 1 SHARD DURATION 5d'.format(
-                        settings.INFLUXDB_IML_STATS_DB,
-                        settings.INFLUXDB_IML_STATS_LONG_DURATION,
+                        settings.INFLUXDB_EMF_STATS_DB,
+                        settings.INFLUXDB_EMF_STATS_LONG_DURATION,
                     ),
                 ]
             )
@@ -353,11 +353,11 @@ class ServiceConfig(CommandLine):
                 [
                     "influx",
                     "-database",
-                    settings.INFLUXDB_IML_STATS_DB,
+                    settings.INFLUXDB_EMF_STATS_DB,
                     "-execute",
                     'ALTER RETENTION POLICY "long_term" ON "{}" DURATION {} REPLICATION 1 SHARD DURATION 5d'.format(
-                        settings.INFLUXDB_IML_STATS_DB,
-                        settings.INFLUXDB_IML_STATS_LONG_DURATION,
+                        settings.INFLUXDB_EMF_STATS_DB,
+                        settings.INFLUXDB_EMF_STATS_LONG_DURATION,
                     ),
                 ]
             )
@@ -366,31 +366,31 @@ class ServiceConfig(CommandLine):
             [
                 "influx",
                 "-database",
-                settings.INFLUXDB_IML_STATS_DB,
+                settings.INFLUXDB_EMF_STATS_DB,
                 "-execute",
                 "{}; {}; {}; {}; {}; {}; {}; {}".format(
-                    'DROP CONTINUOUS QUERY "downsample_means" ON "{}"'.format(settings.INFLUXDB_IML_STATS_DB),
-                    'DROP CONTINUOUS QUERY "downsample_lnet" ON "{}"'.format(settings.INFLUXDB_IML_STATS_DB),
-                    'DROP CONTINUOUS QUERY "downsample_samples" ON "{}"'.format(settings.INFLUXDB_IML_STATS_DB),
-                    'DROP CONTINUOUS QUERY "downsample_sums" ON "{}"'.format(settings.INFLUXDB_IML_STATS_DB),
+                    'DROP CONTINUOUS QUERY "downsample_means" ON "{}"'.format(settings.INFLUXDB_EMF_STATS_DB),
+                    'DROP CONTINUOUS QUERY "downsample_lnet" ON "{}"'.format(settings.INFLUXDB_EMF_STATS_DB),
+                    'DROP CONTINUOUS QUERY "downsample_samples" ON "{}"'.format(settings.INFLUXDB_EMF_STATS_DB),
+                    'DROP CONTINUOUS QUERY "downsample_sums" ON "{}"'.format(settings.INFLUXDB_EMF_STATS_DB),
                     'CREATE CONTINUOUS QUERY "downsample_means" ON "{}" BEGIN SELECT mean(*) INTO "{}"."long_term".:MEASUREMENT FROM "{}"."autogen"."target","{}"."autogen"."host","{}"."autogen"."node" GROUP BY time(30m),* END'.format(
-                        settings.INFLUXDB_IML_STATS_DB,
-                        settings.INFLUXDB_IML_STATS_DB,
-                        settings.INFLUXDB_IML_STATS_DB,
-                        settings.INFLUXDB_IML_STATS_DB,
-                        settings.INFLUXDB_IML_STATS_DB,
+                        settings.INFLUXDB_EMF_STATS_DB,
+                        settings.INFLUXDB_EMF_STATS_DB,
+                        settings.INFLUXDB_EMF_STATS_DB,
+                        settings.INFLUXDB_EMF_STATS_DB,
+                        settings.INFLUXDB_EMF_STATS_DB,
                     ),
                     'CREATE CONTINUOUS QUERY "downsample_lnet" ON "{}" BEGIN SELECT (last("send_count") - first("send_count")) / count("send_count") AS "mean_diff_send", (last("recv_count") - first("recv_count")) / count("recv_count") AS "mean_diff_recv" INTO "{}"."long_term"."lnet" FROM "lnet" WHERE "nid" != \'"0@lo"\' GROUP BY time(30m),"host","nid" END'.format(
-                        settings.INFLUXDB_IML_STATS_DB,
-                        settings.INFLUXDB_IML_STATS_DB,
+                        settings.INFLUXDB_EMF_STATS_DB,
+                        settings.INFLUXDB_EMF_STATS_DB,
                     ),
                     'CREATE CONTINUOUS QUERY "downsample_samples" ON "{}" BEGIN SELECT (last("samples") - first("samples")) / count("samples") AS "mean_diff_samples" INTO "{}"."long_term"."target" FROM "target" GROUP BY time(30m),* END'.format(
-                        settings.INFLUXDB_IML_STATS_DB,
-                        settings.INFLUXDB_IML_STATS_DB,
+                        settings.INFLUXDB_EMF_STATS_DB,
+                        settings.INFLUXDB_EMF_STATS_DB,
                     ),
                     'CREATE CONTINUOUS QUERY "downsample_sums" ON "{}" BEGIN SELECT (last("sum") - first("sum")) / count("sum") AS "mean_diff_sum" INTO "{}"."long_term"."target" FROM "target" WHERE "units"=\'"bytes"\' GROUP BY time(30m),* END'.format(
-                        settings.INFLUXDB_IML_STATS_DB,
-                        settings.INFLUXDB_IML_STATS_DB,
+                        settings.INFLUXDB_EMF_STATS_DB,
+                        settings.INFLUXDB_EMF_STATS_DB,
                     ),
                 ),
             ]
@@ -399,10 +399,10 @@ class ServiceConfig(CommandLine):
             [
                 "influx",
                 "-database",
-                settings.INFLUXDB_IML_STATS_DB,
+                settings.INFLUXDB_EMF_STATS_DB,
                 "-execute",
                 'ALTER RETENTION POLICY "autogen" ON "{}" DURATION 1d  REPLICATION 1 SHARD DURATION 2h DEFAULT'.format(
-                    settings.INFLUXDB_IML_STATS_DB
+                    settings.INFLUXDB_EMF_STATS_DB
                 ),
             ]
         )
@@ -432,8 +432,8 @@ class ServiceConfig(CommandLine):
         crypto.server_cert
 
     def _stop_services(self):
-        log.info("Stopping iml manager")
-        controller = ServiceControl.create("iml-manager.target")
+        log.info("Stopping emf manager")
+        controller = ServiceControl.create("emf-manager.target")
 
         error = controller.stop(validate_time=0.5)
         if error:
@@ -773,12 +773,12 @@ proxy=_none_
 
         self._setup_crypto()
 
-        # Many iml docker containers depend on the iml-settings file and its contents. However, redirecting the settings output
-        # into /var/lib/chroma/iml-settings.conf is not sufficient as the > operator is not atomic (the file will be created without content).
-        # The mv command is atomic, thus the contents will be created in a temp file and then moved into /var/lib/chroma/iml-settings.conf.
+        # Many emf docker containers depend on the emf-settings file and its contents. However, redirecting the settings output
+        # into /var/lib/chroma/emf-settings.conf is not sufficient as the > operator is not atomic (the file will be created without content).
+        # The mv command is atomic, thus the contents will be created in a temp file and then moved into /var/lib/chroma/emf-settings.conf.
         f = open("/tmp/temp-settings.conf", "w")
         self.try_shell(["python2", "./manage.py", "print-settings"], mystdout=f)
-        shutil.move("/tmp/temp-settings.conf", "/var/lib/chroma/iml-settings.conf")
+        shutil.move("/tmp/temp-settings.conf", "/var/lib/chroma/emf-settings.conf")
 
     def setup(self, username, password, ntp_server, check_db_space):
         if not self._check_name_resolution():
@@ -807,9 +807,9 @@ proxy=_none_
 
         self._setup_grafana()
 
-        log.info("Enabling + Starting IML manager...")
+        log.info("Enabling + Starting EMF manager...")
 
-        self.try_shell(["systemctl", "enable", "--now", "iml-manager.target"])
+        self.try_shell(["systemctl", "enable", "--now", "emf-manager.target"])
 
         return self.validate()
 
@@ -818,10 +818,10 @@ proxy=_none_
             log.error("Cannot start, database not configured")
             return
 
-        rc, _, err = self.try_shell(["systemctl", "start", "iml-manager.target"])
+        rc, _, err = self.try_shell(["systemctl", "start", "emf-manager.target"])
 
         if rc != 0:
-            log.warn("Problem starting iml-manager.target: {}".format(err))
+            log.warn("Problem starting emf-manager.target: {}".format(err))
 
     def stop(self):
         self._stop_services()
@@ -835,15 +835,15 @@ proxy=_none_
         elif not self._users_exist():
             errors.append("No user accounts exist")
 
-        controller = ServiceControl.create("iml-manager.target")
+        controller = ServiceControl.create("emf-manager.target")
 
         try:
             if not controller.enabled:
-                errors.append("iml-manager.target not set to start at boot")
+                errors.append("emf-manager.target not set to start at boot")
             if not controller.running:
-                errors.append("iml-manager.target is not running")
+                errors.append("emf-manager.target is not running")
         except KeyError:
-            errors.append("iml-manager.target not found")
+            errors.append("emf-manager.target not found")
 
         return errors
 

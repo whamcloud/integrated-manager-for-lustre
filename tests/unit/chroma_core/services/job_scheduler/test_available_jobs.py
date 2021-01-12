@@ -1,13 +1,13 @@
 from django.contrib.contenttypes.models import ContentType
 
-from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
+from tests.unit.lib.emf_unit_test_case import EMFUnitTestCase
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.models import RebootHostJob, ShutdownHostJob
 from tests.unit.chroma_core.helpers.synthentic_objects import synthetic_host
 from tests.unit.chroma_core.helpers.helper import create_simple_fs
 
 
-class TestAvailableJobs(IMLUnitTestCase):
+class TestAvailableJobs(EMFUnitTestCase):
     """Check that available jobs are reported correctly
 
     Testing the JobScheduler.available_jobs method

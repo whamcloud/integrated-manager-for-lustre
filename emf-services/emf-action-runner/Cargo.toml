@@ -1,0 +1,28 @@
+[package]
+authors = ["EMF Team <emf@whamcloud.com>"]
+edition = "2018"
+name = "emf-action-runner"
+version = "0.4.0"
+
+[dependencies]
+futures = "0.3"
+emf-manager-env = {path = "../../emf-manager-env", version = "0.4"}
+emf-postgres = {path = "../../emf-postgres", version = "0.4"}
+emf-rabbit = {path = "../../emf-rabbit", version = "0.4", features = ["warp-filters"]}
+emf-service-queue = {path = "../emf-service-queue", version = "0.4"}
+emf-tracing = {version = "0.3", path = "../../emf-tracing"}
+emf-util = {path = "../../emf-util", version = "0.4"}
+emf-wire-types = {path = "../../emf-wire-types", version = "0.4"}
+serde = {version = "1", features = ["derive"]}
+serde_json = "1.0"
+thiserror = "1.0"
+tokio = {version = "0.2", features = ["rt-threaded"]}
+tokio-runtime-shutdown = {path = "../../tokio-runtime-shutdown", version = "0.4"}
+tracing = "0.1"
+warp = "0.2"
+
+[dev-dependencies]
+dotenv = "0.15"
+emf-agent-comms = {path = "../../emf-agent-comms", version = "0.4"}
+rand = "0.7"
+tokio-test = "0.2"

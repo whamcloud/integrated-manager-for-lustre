@@ -44,7 +44,7 @@ class ServerProfile(models.Model):
         """
         Obtaining an iterable list of the base packages always installed on a host
         """
-        for package in ["python2-iml-agent", "rust-iml-agent"]:
+        for package in ["python2-emf-agent", "rust-emf-agent"]:
             yield package
 
     @property

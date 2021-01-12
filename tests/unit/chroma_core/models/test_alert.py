@@ -1,11 +1,11 @@
-from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
+from tests.unit.lib.emf_unit_test_case import EMFUnitTestCase
 
 from chroma_core.models import CommandRunningAlert
 from chroma_core.models import CommandCancelledAlert
 from chroma_core.models import AlertState
 
 
-class TestAlert(IMLUnitTestCase):
+class TestAlert(EMFUnitTestCase):
     def test_message_regeneration_on_cast(self):
         command = self.make_command(message="Houston we have a problem")
 

@@ -15,7 +15,7 @@ from chroma_core.models import (
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.services.job_scheduler.job_scheduler import JobScheduler
 from chroma_core.services.log import log_register
-from iml_common.lib.date_time import IMLDateTime
+from emf_common.lib.date_time import EMFDateTime
 
 log = log_register("test_helper")
 
@@ -75,7 +75,7 @@ def generate_csr(common_name):
 
 def fake_log_message(message):
     return LogMessage.objects.create(
-        datetime=IMLDateTime.utcnow(),
+        datetime=EMFDateTime.utcnow(),
         message=message,
         severity=0,
         facility=0,

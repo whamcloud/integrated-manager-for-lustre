@@ -1,5 +1,5 @@
 [package]
-authors = ["IML Team <iml@whamcloud.com>"]
+authors = ["EMF Team <emf@whamcloud.com>"]
 description = "device-scanner-daemon builds an in-memory representation of devices using udev and findmnt"
 edition = "2018"
 license = "MIT"

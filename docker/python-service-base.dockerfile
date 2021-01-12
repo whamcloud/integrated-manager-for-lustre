@@ -4,7 +4,7 @@ RUN apt-get update -y \
   && apt-get install jq -y
 COPY . .
 RUN cargo metadata --no-deps --offline --format-version 1 | jq '.workspace_members | .[]' | awk -F'[()]' '{gsub(/path\+file\:\/\//, ""); print $2}' | xargs rm -rf \
-  && rm -rf Cargo.{toml,lock} iml-gui/ device-scanner/
+  && rm -rf Cargo.{toml,lock} emf-gui/ device-scanner/
 
 FROM centos:8 as builder
 WORKDIR /build
@@ -25,7 +25,7 @@ ENV DB_PORT 5432
 ENV AMQP_BROKER_HOST rabbit
 ENV SERVER_FQDN nginx
 ENV LOG_PATH .
-ENV IML_API_HOST iml-api
+ENV EMF_API_HOST emf-api
 ENV PATH=/root/.local/bin:$PATH
 RUN dnf update -y \
   && dnf install -y https://download.postgresql.org/pub/repos/yum/reporpms/EL-8-x86_64/pgdg-redhat-repo-latest.noarch.rpm \

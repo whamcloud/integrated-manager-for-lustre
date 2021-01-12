@@ -1,6 +1,6 @@
 [package]
-authors = ["IML Team <iml@whamcloud.com>"]
-description = "shared device types used throughout device-scanner and IML"
+authors = ["EMF Team <emf@whamcloud.com>"]
+description = "shared device types used throughout device-scanner and EMF"
 edition = "2018"
 license = "MIT"
 name = "device-types"

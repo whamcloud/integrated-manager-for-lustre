@@ -22,7 +22,7 @@ from daemon import DaemonContext
 from django.core.management.base import BaseCommand
 from chroma_core.services.log import log_set_filename, log_register, log_enable_stdout
 from chroma_core.services.rpc import RpcClientFactory
-from iml_common.lib.date_time import IMLDateTime
+from emf_common.lib.date_time import EMFDateTime
 import chroma_core.services.log
 
 
@@ -102,7 +102,7 @@ class Command(BaseCommand):
             class Trace(object):
                 def __init__(self):
                     self.tracefile = open("trace.log", "w", buffering=0)
-                    self.tracefile.write("Started at %s: %s %s\n" % (IMLDateTime.utcnow(), args, options))
+                    self.tracefile.write("Started at %s: %s %s\n" % (EMFDateTime.utcnow(), args, options))
 
                 def __call__(self, frame, event, arg):
                     if event == "line":
@@ -123,7 +123,7 @@ class Command(BaseCommand):
         from chroma_core.lib.service_config import ServiceConfig
 
         if not ServiceConfig().configured():
-            sys.stderr.write("IML is not configured, please run chroma-config setup first\n")
+            sys.stderr.write("EMF is not configured, please run chroma-config setup first\n")
             sys.exit(-1)
 
         if not options["lightweight_rpc"]:

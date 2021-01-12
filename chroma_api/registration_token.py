@@ -13,7 +13,7 @@ from tastypie.exceptions import Unauthorized
 from chroma_api.authentication import AnonymousAuthentication
 from chroma_api.utils import CustomModelResource, DateSerializer
 from chroma_core.models import RegistrationToken
-from iml_common.lib.date_time import IMLDateTime
+from emf_common.lib.date_time import EMFDateTime
 
 import settings
 
@@ -110,6 +110,6 @@ class RegistrationTokenResource(CustomModelResource):
         detail_allowed_methods = ["patch", "get"]
         fields = ["id", "secret", "expiry", "credits", "cancelled", "profile", "register_command"]
         resource_name = "registration_token"
-        queryset = RegistrationToken.objects.filter(cancelled=False, expiry__gt=IMLDateTime.utcnow(), credits__gt=0)
+        queryset = RegistrationToken.objects.filter(cancelled=False, expiry__gt=EMFDateTime.utcnow(), credits__gt=0)
         validation = RegistrationTokenValidation()
         always_return_data = True

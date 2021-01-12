@@ -1,13 +1,13 @@
 import random
 
-from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
+from tests.unit.lib.emf_unit_test_case import EMFUnitTestCase
 from chroma_core.models import Volume
 from chroma_core.services.job_scheduler.job_scheduler import JobScheduler
 from tests.unit.chroma_core.helpers.synthentic_objects import synthetic_host, synthetic_volume_full
 from tests.unit.chroma_core.helpers.helper import load_default_profile
 
 
-class TestOrderedTargets(IMLUnitTestCase):
+class TestOrderedTargets(EMFUnitTestCase):
     """Check that the target ordering works correctly across volumes"""
 
     def setUp(self):

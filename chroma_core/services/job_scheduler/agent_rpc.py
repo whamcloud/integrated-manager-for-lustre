@@ -16,7 +16,7 @@ from chroma_core.services.http_agent import HttpAgentRpc
 from chroma_core.services.http_agent.queues import AgentTxQueue
 from chroma_core.services.queue import AgentRxQueue
 from chroma_core.services.rpc import RpcTimeout
-from iml_common.lib.util import ExpiringList
+from emf_common.lib.util import ExpiringList
 import settings
 
 

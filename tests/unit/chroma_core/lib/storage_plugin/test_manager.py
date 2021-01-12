@@ -1,13 +1,13 @@
 import os
 
 from tests.unit.chroma_core.lib.storage_plugin.helper import load_plugins
-from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
+from tests.unit.lib.emf_unit_test_case import EMFUnitTestCase
 from chroma_core.management.commands.validate_storage_plugin import Command as ValidateCommand
 import settings
 import shutil
 
 
-class TestCornerCases(IMLUnitTestCase):
+class TestCornerCases(EMFUnitTestCase):
     def test_0classes(self):
         manager = load_plugins(["unloadable_plugin_0classes"])
         self.assertEqual(manager.get_errored_plugins(), ["unloadable_plugin_0classes"])
@@ -28,21 +28,21 @@ class TestCornerCases(IMLUnitTestCase):
         mgr.get_plugin_class("loadable_submodule_plugin")
 
 
-class TestExample(IMLUnitTestCase):
+class TestExample(EMFUnitTestCase):
     def test_load(self):
         """Test that the example plugin used in documentation loads"""
         manager = load_plugins(["linux", "example_plugin"])
         self.assertEquals(manager.get_errored_plugins(), [])
 
 
-class TestThousandDrives(IMLUnitTestCase):
+class TestThousandDrives(EMFUnitTestCase):
     def test_load(self):
         """Test that the thousand_drives plugin used for stats load testing loads"""
         manager = load_plugins(["thousand_drives"])
         self.assertEquals(manager.get_errored_plugins(), [])
 
 
-class TestLoad(IMLUnitTestCase):
+class TestLoad(EMFUnitTestCase):
     def setUp(self):
         super(TestLoad, self).setUp()
 
@@ -119,7 +119,7 @@ class TestLoad(IMLUnitTestCase):
         self.assertEqual(self.manager.get_scannable_resource_ids("loadable_plugin"), [record.pk])
 
 
-class TestValidate(IMLUnitTestCase):
+class TestValidate(EMFUnitTestCase):
     def setUp(self):
         super(TestValidate, self).setUp()
         import chroma_core.lib.storage_plugin.manager

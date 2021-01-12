@@ -1,0 +1,17 @@
+[package]
+authors = ["EMF Team <emf@whamcloud.com>"]
+edition = "2018"
+name = "emf-task-runner"
+version = "0.1.0"
+
+[dependencies]
+futures = "0.3"
+emf-action-client = {path = "../emf-action-client", version = "0.1"}
+emf-manager-env = {path = "../emf-manager-env", version = "0.4"}
+emf-postgres = {path = "../emf-postgres", version = "0.4"}
+emf-tracing = {path = "../emf-tracing", version = "0.3"}
+emf-wire-types = {path = "../emf-wire-types", version = "0.4", features = ["postgres-interop"]}
+lazy_static = "1.4.0"
+serde_json = "1.0"
+thiserror = "1.0"
+tokio = {version = "0.2", features = ["rt-threaded", "macros"]}

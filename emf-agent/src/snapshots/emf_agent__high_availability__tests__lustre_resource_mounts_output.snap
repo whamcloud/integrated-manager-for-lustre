@@ -1,0 +1,7 @@
+---
+source: emf-agent/src/high_availability.rs
+expression: x
+---
+Some(
+    "/lustre/fs0a9c/ost0003",
+)

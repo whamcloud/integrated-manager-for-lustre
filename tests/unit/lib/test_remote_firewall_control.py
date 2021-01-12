@@ -5,7 +5,7 @@ from tests.utils.remote_firewall_control import RemoteFirewallControl
 from tests.utils.remote_firewall_control import RemoteFirewallControlIpTables
 from tests.utils.remote_firewall_control import RemoteFirewallControlFirewallCmd
 from tests.unit.remote_operations import RealRemoteOperations as RRO
-from iml_common.lib.shell import Shell
+from emf_common.lib.shell import Shell
 
 
 class TestRemoteFirewallControlIpTables(unittest.TestCase):

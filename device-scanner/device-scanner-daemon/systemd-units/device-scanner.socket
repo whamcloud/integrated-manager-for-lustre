@@ -1,5 +1,5 @@
 [Unit]
-Description=IML Device Scanner Socket
+Description=EMF Device Scanner Socket
 DefaultDependencies=false
 PartOf=device-scanner.target
 

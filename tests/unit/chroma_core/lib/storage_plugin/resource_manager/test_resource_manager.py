@@ -5,11 +5,11 @@ from chroma_core.models.host import ManagedHost
 from chroma_core.models.lnet_configuration import LNetConfiguration
 from chroma_core.models.storage_plugin import StorageResourceRecord
 from tests.unit.chroma_core.lib.storage_plugin.helper import load_plugins
-from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
+from tests.unit.lib.emf_unit_test_case import EMFUnitTestCase
 from chroma_core.services.plugin_runner import AgentPluginHandlerCollection
 
 
-class ResourceManagerTestCase(IMLUnitTestCase):
+class ResourceManagerTestCase(EMFUnitTestCase):
     def setUp(self, plugin_name="linux"):
         plugins_to_load = [
             "example_plugin",

@@ -1,0 +1,16 @@
+[package]
+authors = ["EMF Team <emf@whamcloud.com>"]
+edition = "2018"
+name = "emf-ssh"
+version = "0.1.0"
+
+[dependencies]
+anyhow = "1.0"
+dirs = "3"
+futures = "0.3"
+emf-fs = {version = "0.4", path = "../emf-fs"}
+emf-tracing = {version = "0.3", path = "../emf-tracing"}
+thiserror = "1.0"
+thrussh = "0.29.16"
+thrussh-keys = "0.18.12"
+tokio = {version = "0.2", features = ["fs"]}

@@ -1,8 +1,8 @@
 from tests.unit.chroma_core.helpers.synthentic_objects import synthetic_host
-from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
+from tests.unit.lib.emf_unit_test_case import EMFUnitTestCase
 
 
-class TestFetchJobs(IMLUnitTestCase):
+class TestFetchJobs(EMFUnitTestCase):
     """Test that JobScheduler._fetch_jobs works.
 
     This method looks for jobs that match a given obj class, and return

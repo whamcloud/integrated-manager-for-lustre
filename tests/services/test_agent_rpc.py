@@ -11,8 +11,8 @@ import time
 from collections import namedtuple
 from tests.services.systemd_test_case import SystemdTestCase
 from tests.services.agent_http_client import AgentHttpClient
-from iml_common.lib import util
-from iml_common.lib.date_time import IMLDateTime
+from emf_common.lib import util
+from emf_common.lib.date_time import EMFDateTime
 from chroma_core.services.http_agent import HostStatePoller
 from chroma_core.services.http_agent.host_state import HostState
 from chroma_core.services.job_scheduler.agent_rpc import AgentRpcMessenger
@@ -37,7 +37,7 @@ class TestAgentRpc(SystemdTestCase, AgentHttpClient):
     functionality in JobScheduler.
     """
 
-    SERVICES = ["iml-http-agent", "iml-job-scheduler"]
+    SERVICES = ["emf-http-agent", "emf-job-scheduler"]
     PLUGIN = AgentRpcMessenger.PLUGIN_NAME
 
     def __init__(self, *args, **kwargs):
@@ -95,7 +95,7 @@ class TestAgentRpc(SystemdTestCase, AgentHttpClient):
                 nodename=self.CLIENT_NAME,
                 address=self.CLIENT_NAME,
                 state="lnet_down",
-                state_modified_at=IMLDateTime.utcnow(),
+                state_modified_at=EMFDateTime.utcnow(),
                 server_profile=server_profile,
             )
             LNetConfiguration.objects.create(host=self.host, state="lnet_down")
@@ -123,7 +123,7 @@ class TestAgentRpc(SystemdTestCase, AgentHttpClient):
         """
 
         self._open_sessions()
-        self.restart("iml-job-scheduler")
+        self.restart("emf-job-scheduler")
 
         # Allow the message to filter through
         time.sleep(RABBITMQ_GRACE_PERIOD)
@@ -292,7 +292,7 @@ class TestAgentRpc(SystemdTestCase, AgentHttpClient):
         self._handle_action_receive(agent_session_id, first_request_action.actions[0])
 
         # Clean stop
-        self.stop("iml-job-scheduler")
+        self.stop("emf-job-scheduler")
 
         # Running command should have its AgentRpc errored
         running_command = self._get_command(first_request_action.command_id)
@@ -306,7 +306,7 @@ class TestAgentRpc(SystemdTestCase, AgentHttpClient):
         self.assertFalse(enqueued_command.errored)
 
         # Start it up again
-        self.start("iml-job-scheduler")
+        self.start("emf-job-scheduler")
 
         # It should have the http_agent service cancel its sessions
         response_message = self._receive_messages(1)[0]
@@ -326,7 +326,7 @@ class TestAgentRpc(SystemdTestCase, AgentHttpClient):
         self._handle_action_receive(agent_session_id, request_action.actions[0])
 
         # Clean stop
-        self.restart("iml-http-agent")
+        self.restart("emf-http-agent")
 
         # The agent should be told to terminate all
         response_message = self._receive_messages(1)[0]

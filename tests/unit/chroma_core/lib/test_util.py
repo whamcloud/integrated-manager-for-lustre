@@ -20,7 +20,7 @@ class TestInvokeRustAgent(TestCase):
             )
         else:
             socket_post.assert_called_once_with(
-                "http+unix://%2Fvar%2Frun%2Fiml-action-runner.sock/",
+                "http+unix://%2Fvar%2Frun%2Femf-action-runner.sock/",
                 json={"REMOTE": ("mds1.local", {"action": "ls", "args": {}, "type": "ACTION_START", "id": "1-2-3-4"})},
             )
 

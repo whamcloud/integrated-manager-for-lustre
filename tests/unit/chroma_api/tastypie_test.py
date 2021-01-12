@@ -38,11 +38,11 @@ from django.conf import settings
 from django.db import connection
 from tastypie.serializers import Serializer
 
-from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
+from tests.unit.lib.emf_unit_test_case import EMFUnitTestCase
 from tests.unit.chroma_core.helpers.test_api_client import TestApiClient
 
 
-class ResourceTestCase(IMLUnitTestCase):
+class ResourceTestCase(EMFUnitTestCase):
     """
     A useful base class for the start of testing Tastypie APIs.
     """

@@ -1,5 +1,5 @@
 -i https://pypi.org/simple
-./iml-common
+./emf-common
 amqp==2.4.0
 cffi==1.14.4
 cryptography==3.3.1

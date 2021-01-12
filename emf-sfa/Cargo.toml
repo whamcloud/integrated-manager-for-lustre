@@ -1,0 +1,21 @@
+[package]
+authors = ["EMF Team <emf@whamcloud.com>"]
+edition = "2018"
+name = "emf-sfa"
+version = "0.2.0"
+
+[dependencies]
+async-trait = "0.1"
+futures = "0.3"
+emf-change = {path = "../emf-change", version = "0.1"}
+emf-manager-env = {version = "0.4", path = "../emf-manager-env"}
+emf-postgres = {path = "../emf-postgres", version = "0.4"}
+emf-request-retry = {path = "../emf-request-retry", version = "0.4"}
+emf-tracing = {version = "0.3", path = "../emf-tracing"}
+emf-wire-types = {path = "../emf-wire-types", version = "0.4", features = ["wbem-interop", "postgres-interop"]}
+serde = "1"
+thiserror = "1.0"
+tokio = {version = "0.2", features = ["macros", "time", "rt-threaded"]}
+unzip-n = "0.1.2"
+url = "2.1"
+wbem-client = {version = "0.2", path = "../wbem-client"}

@@ -1,1 +1,1 @@
-This is the Integrated Manager for Lustre software Monitoring and Adminstration Interface
+This is the EXAScaler Management Framework software Monitoring and Adminstration Interface

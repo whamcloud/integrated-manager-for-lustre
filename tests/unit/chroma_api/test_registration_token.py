@@ -5,7 +5,7 @@ from django.contrib.auth.models import User, Group
 
 from tests.unit.chroma_api.chroma_api_test_case import ChromaApiTestCase
 from tests.unit.chroma_api.tastypie_test import TestApiClient
-from iml_common.lib.date_time import IMLDateTime
+from emf_common.lib.date_time import EMFDateTime
 
 
 class TestRegistrationTokenResource(ChromaApiTestCase):
@@ -42,7 +42,7 @@ class TestRegistrationTokenResource(ChromaApiTestCase):
         original_object = self.deserialize(response)
         token_uri = original_object["resource_uri"]
 
-        readonly_test_values = {"secret": "X" * SECRET_LENGTH * 2, "expiry": IMLDateTime.utcnow(), "credits": 666}
+        readonly_test_values = {"secret": "X" * SECRET_LENGTH * 2, "expiry": EMFDateTime.utcnow(), "credits": 666}
 
         for attribute, test_val in readonly_test_values.items():
             response = self.api_client.patch(token_uri, data={attribute: test_val})
@@ -59,7 +59,7 @@ class TestRegistrationTokenResource(ChromaApiTestCase):
         response = self.api_client.post(self.RESOURCE_PATH, data={"profile": self.profile["resource_uri"]})
         self.assertHttpCreated(response)
 
-        expiry_value = IMLDateTime.utcnow()
+        expiry_value = EMFDateTime.utcnow()
         expiry_value += datetime.timedelta(seconds=120)
         expiry_value = expiry_value.replace(microsecond=0)
 

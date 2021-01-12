@@ -1,0 +1,10 @@
+[Unit]
+Description=EMF Action Runner Socket
+PartOf=emf-manager.target
+
+[Socket]
+ListenStream=/var/run/emf-action-runner.sock
+RemoveOnStop=true
+
+[Install]
+WantedBy=sockets.target

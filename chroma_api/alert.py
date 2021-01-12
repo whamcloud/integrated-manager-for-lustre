@@ -20,7 +20,7 @@ from tastypie import http
 from tastypie.validation import Validation
 from chroma_api.authentication import AnonymousAuthentication, PatchedDjangoAuthorization
 from chroma_api.chroma_model_resource import ChromaModelResource
-from iml_common.lib import util
+from emf_common.lib import util
 
 
 class AlertSubscriptionValidation(Validation):

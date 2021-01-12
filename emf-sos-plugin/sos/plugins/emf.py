@@ -11,7 +11,7 @@ from sos.plugins import Plugin, RedHatPlugin, UbuntuPlugin, DebianPlugin
 class EMF(Plugin, RedHatPlugin, UbuntuPlugin, DebianPlugin):
     """EMF Framework"""
 
-    plugin_name = "iml"
+    plugin_name = "emf"
     profiles = ("lustre",)
     requires_root = True
 
@@ -32,7 +32,7 @@ class EMF(Plugin, RedHatPlugin, UbuntuPlugin, DebianPlugin):
             ]
 
         copy_globs += [
-            "/etc/iml/*.conf",
+            "/etc/emf/*.conf",
             "/var/lib/chroma/*.conf",
             "/var/lib/chroma/settings/*",
             "/var/lib/chroma/targets/*",
@@ -42,11 +42,11 @@ class EMF(Plugin, RedHatPlugin, UbuntuPlugin, DebianPlugin):
 
         self.add_cmd_output(
             [
-                "iml server list",
-                "iml target list",
-                "iml filesystem list",
-                "iml filesystem pool list",
-                "iml-agent ha list",
+                "emf server list",
+                "emf target list",
+                "emf filesystem list",
+                "emf filesystem pool list",
+                "emf-agent ha list",
                 "chroma-config validate",
                 "chroma-agent device_plugin --plugin=linux_network",
                 "lctl device_list",

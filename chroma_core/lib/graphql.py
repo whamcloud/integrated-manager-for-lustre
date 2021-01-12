@@ -31,7 +31,7 @@ def graphql_query(query, variables={}):
     Issue a GraphQL query
     """
     s = get_api_session_request()
-    path = os.path.join(settings.IML_API_PROXY_PASS, "graphql")
+    path = os.path.join(settings.EMF_API_PROXY_PASS, "graphql")
     q = {"query": query, "variables": variables}
     res = s.post(url=path, json=q)
 

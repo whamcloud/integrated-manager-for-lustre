@@ -1,0 +1,14 @@
+[package]
+authors = ["EMF Team <emf@whamcloud.com>"]
+edition = "2018"
+name = "emf-manager-client"
+version = "0.4.0"
+
+[dependencies]
+emf-manager-env = {path = "../emf-manager-env", version = "0.4"}
+emf-request-retry = {path = "../emf-request-retry", version = "0.4"}
+reqwest = {version = "0.10", default-features = false, features = ["rustls-tls", "json"]}
+serde = {version = "1", features = ["derive"]}
+serde_json = "1"
+tracing = "0.1"
+url = "2.1"

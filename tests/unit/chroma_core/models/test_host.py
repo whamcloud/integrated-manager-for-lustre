@@ -3,12 +3,12 @@ import json
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 
-from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
+from tests.unit.lib.emf_unit_test_case import EMFUnitTestCase
 
 from chroma_core.models.host import HostListMixin, ManagedHost
 
 
-class TestHostListMixin(IMLUnitTestCase):
+class TestHostListMixin(EMFUnitTestCase):
     @classmethod
     def setUpTestData(cls):
         cls.hosts = []

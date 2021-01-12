@@ -1,4 +1,4 @@
-name: iml-rust
+name: emf-rust
 on:
   pull_request:
   push:

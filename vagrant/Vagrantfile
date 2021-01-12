@@ -144,101 +144,101 @@ Vagrant.configure('2') do |config|
 
     provision_clush adm
 
-    create_iml_diagnostics adm
+    create_emf_diagnostics adm
 
       adm.vm.synced_folder '../',
-                           '/integrated-manager-for-lustre/',
+                           '/exascaler-management-framework/',
                            type: 'rsync',
                            rsync__exclude: [
                               '_topdir/',
                               '.cargo/',
                               '.env',
                               '.git/',
-                              'iml-gui/crate/.cargo/',
-                              'iml-gui/crate/target/',
-                              'iml-gui/node_modules/',
+                              'emf-gui/crate/.cargo/',
+                              'emf-gui/crate/target/',
+                              'emf-gui/node_modules/',
                               'target/',
                               'vagrant/'
                            ]
 
-    # Install IML onto the admin node
+    # Install EMF onto the admin node
     # Using a given repouri
-    adm.vm.provision 'install-iml-repouri',
+    adm.vm.provision 'install-emf-repouri',
                      type: 'shell',
                      run: 'never',
-                     path: 'scripts/install_iml_repouri.sh',
+                     path: 'scripts/install_emf_repouri.sh',
                      env: {"REPO_URI" => REPO_URI}
 
 
-    # Install IML onto the admin node
+    # Install EMF onto the admin node
     # Using the mfl devel repo
-    adm.vm.provision 'install-iml-devel',
+    adm.vm.provision 'install-emf-devel',
                      type: 'shell',
                      run: 'never',
-                     path: 'scripts/install_iml.sh',
-                     args: 'https://github.com/whamcloud/integrated-manager-for-lustre/releases/download/6.next/chroma_support.repo'
+                     path: 'scripts/install_emf.sh',
+                     args: 'https://github.com/whamcloud/exascaler-management-framework/releases/download/6.next/chroma_support.repo'
 
-    # Install IML 5.0 onto the admin node
+    # Install EMF 5.0 onto the admin node
     # Using the mfl 5.0 repo
-    adm.vm.provision 'install-iml-5',
+    adm.vm.provision 'install-emf-5',
                      type: 'shell',
                      run: 'never',
-                     path: 'scripts/install_iml.sh',
+                     path: 'scripts/install_emf.sh',
                      args: 'https://raw.githubusercontent.com/whamcloud/integrated-manager-for-lustre/v5.0.0/chroma_support.repo'
 
-    # Install IML 5.1 onto the admin node
+    # Install EMF 5.1 onto the admin node
     # Using the mfl 5.1 repo
-    adm.vm.provision 'install-iml-5.1',
+    adm.vm.provision 'install-emf-5.1',
                      type: 'shell',
                      run: 'never',
-                     path: 'scripts/install_iml.sh',
-                     args: 'https://github.com/whamcloud/integrated-manager-for-lustre/releases/download/v5.1.0/chroma_support.repo'
+                     path: 'scripts/install_emf.sh',
+                     args: 'https://github.com/whamcloud/exascaler-management-framework/releases/download/v5.1.0/chroma_support.repo'
 
-    # Install IML 6.0 onto the admin node
+    # Install EMF 6.0 onto the admin node
     # Using the mfl 6.0 repo
-    adm.vm.provision 'install-iml-6.0',
+    adm.vm.provision 'install-emf-6.0',
                      type: 'shell',
                      run: 'never',
-                     path: 'scripts/install_iml.sh',
-                     args: 'https://github.com/whamcloud/integrated-manager-for-lustre/releases/download/v6.0.0/chroma_support.repo'
+                     path: 'scripts/install_emf.sh',
+                     args: 'https://github.com/whamcloud/exascaler-management-framework/releases/download/v6.0.0/chroma_support.repo'
 
-    # Install IML 6.1 onto the admin node
+    # Install EMF 6.1 onto the admin node
     # Using the mfl 6.1 repo
-    adm.vm.provision 'install-iml-6.1',
+    adm.vm.provision 'install-emf-6.1',
                      type: 'shell',
                      run: 'never',
-                     path: 'scripts/install_iml.sh',
-                     args: 'https://github.com/whamcloud/integrated-manager-for-lustre/releases/download/v6.1.0/chroma_support.repo'
+                     path: 'scripts/install_emf.sh',
+                     args: 'https://github.com/whamcloud/exascaler-management-framework/releases/download/v6.1.0/chroma_support.repo'
 
-    # Install IML 6.2 onto the admin node
+    # Install EMF 6.2 onto the admin node
     # Using the mfl 6.2 repo
-    adm.vm.provision 'install-iml-6.2',
+    adm.vm.provision 'install-emf-6.2',
                      type: 'shell',
                      run: 'never',
-                     path: 'scripts/install_iml.sh',
-                     args: 'https://github.com/whamcloud/integrated-manager-for-lustre/releases/download/v6.2.0/chroma_support.repo'
+                     path: 'scripts/install_emf.sh',
+                     args: 'https://github.com/whamcloud/exascaler-management-framework/releases/download/v6.2.0/chroma_support.repo'
 
-    # Install IML 6.3 onto the admin node
+    # Install EMF 6.3 onto the admin node
     # Using the mfl 6.3 repo
-    adm.vm.provision 'install-iml-6.3',
+    adm.vm.provision 'install-emf-6.3',
                      type: 'shell',
                      run: 'never',
-                     path: 'scripts/install_iml.sh',
-                     args: 'https://github.com/whamcloud/integrated-manager-for-lustre/releases/download/v6.3.0/chroma_support.repo'
+                     path: 'scripts/install_emf.sh',
+                     args: 'https://github.com/whamcloud/exascaler-management-framework/releases/download/v6.3.0/chroma_support.repo'
 
-    # Install IML 4.0.10.x onto the admin node
+    # Install EMF 4.0.10.x onto the admin node
     # Using the mfl 4.0.10 copr repo
-    adm.vm.provision 'install-iml-4.0.10',
+    adm.vm.provision 'install-emf-4.0.10',
                      type: 'shell',
                      run: 'never',
-                     path: 'scripts/install_iml_tar.sh',
+                     path: 'scripts/install_emf_tar.sh',
                      args: '4.0.10.2'
 
-    # Install iml-docker onto the admin node
-    adm.vm.provision 'install-iml-docker-repouri',
+    # Install emf-docker onto the admin node
+    adm.vm.provision 'install-emf-docker-repouri',
                      type: 'shell',
                      run: 'never',
-                     path: 'scripts/install_iml_docker_repouri.sh',
+                     path: 'scripts/install_emf_docker_repouri.sh',
                      env: {"REPO_URI" => REPO_URI}
 
     adm.vm.provision 'deploy-managed-hosts',
@@ -269,7 +269,7 @@ Vagrant.configure('2') do |config|
         vbx.name = "mds#{i}"
       end
 
-      create_iml_diagnostics mds
+      create_emf_diagnostics mds
 
       provision_lnet_net mds, "1#{i}"
 
@@ -298,7 +298,7 @@ Vagrant.configure('2') do |config|
 
       install_lustre_ldiskfs mds
 
-      install_ldiskfs_no_iml mds
+      install_ldiskfs_no_emf mds
 
       configure_lustre_network mds
 
@@ -427,7 +427,7 @@ Vagrant.configure('2') do |config|
         vbx.name = "oss#{i}"
       end
 
-      create_iml_diagnostics oss
+      create_emf_diagnostics oss
 
       # Lustre / application network
       provision_lnet_net oss, "2#{i}"
@@ -457,7 +457,7 @@ Vagrant.configure('2') do |config|
 
       install_lustre_ldiskfs oss
 
-      install_ldiskfs_no_iml oss
+      install_ldiskfs_no_emf oss
 
       configure_lustre_network oss
 
@@ -740,8 +740,8 @@ end
 def cleanup_storage_server(config)
   config.vm.provision 'cleanup', type: 'shell', run: 'never', inline: <<-SHELL
     yum autoremove -y chroma-agent
-    rm -rf /etc/iml
-    rm -rf /var/lib/{chroma,iml}
+    rm -rf /etc/emf
+    rm -rf /var/lib/{chroma,emf}
     rm -rf /etc/yum.repos.d/Intel-Lustre-Agent.repo
   SHELL
 end
@@ -773,12 +773,12 @@ def install_lustre_ldiskfs(config)
                       inline: 'yum install -y lustre-ldiskfs'
 end
 
-def install_ldiskfs_no_iml(config)
-  config.vm.provision 'install-ldiskfs-no-iml',
+def install_ldiskfs_no_emf(config)
+  config.vm.provision 'install-ldiskfs-no-emf',
                       type: 'shell',
                       run: 'never',
                       reboot: true,
-                      path: './scripts/install_ldiskfs_no_iml.sh',
+                      path: './scripts/install_ldiskfs_no_emf.sh',
                       args: "#{LUSTRE}"
 end
 
@@ -907,10 +907,10 @@ def wait_for_ntp(config)
                           args: ["adm.local"]
 end
 
-def create_iml_diagnostics(config)
-  config.vm.provision 'create-iml-diagnostics',
+def create_emf_diagnostics(config)
+  config.vm.provision 'create-emf-diagnostics',
                           type: 'shell',
                           run: 'never',
-                          path: 'scripts/create_iml_diagnostics.sh',
+                          path: 'scripts/create_emf_diagnostics.sh',
                           args: ["10.73.10.1"]
 end

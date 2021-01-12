@@ -17,7 +17,7 @@ from chroma_core.models.jobs import StatefulObject
 from chroma_core.models.pacemaker import PacemakerConfiguration
 from chroma_core.models.utils import DeletableDowncastableMetaclass
 from chroma_help.help import help_text
-from iml_common.lib import util
+from emf_common.lib import util
 
 import settings
 

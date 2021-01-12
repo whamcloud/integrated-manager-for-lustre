@@ -22,7 +22,7 @@ APP_PATH = "/usr/share/chroma-manager"
 
 REPO_PATH = "/var/lib/chroma/repo"
 
-REPORT_PATH = "/var/spool/iml/report"
+REPORT_PATH = "/var/spool/emf/report"
 
 HTTP_FRONTEND_PORT = 80
 
@@ -42,11 +42,11 @@ HTTP_API_PORT = 8001
 
 HTTP_API_PROXY_PASS = "http://{}:{}".format(PROXY_HOST, HTTP_API_PORT)
 
-IML_API_PORT = 8004
+EMF_API_PORT = 8004
 
-IML_API_HOST = os.getenv("IML_API_HOST", PROXY_HOST)
+EMF_API_HOST = os.getenv("EMF_API_HOST", PROXY_HOST)
 
-IML_API_PROXY_PASS = "http://{}:{}".format(IML_API_HOST, IML_API_PORT)
+EMF_API_PROXY_PASS = "http://{}:{}".format(EMF_API_HOST, EMF_API_PORT)
 
 WARP_DRIVE_PORT = 8890
 
@@ -56,13 +56,13 @@ MAILBOX_PORT = 8891
 
 MAILBOX_PROXY_PASS = "http://{}:{}".format(PROXY_HOST, MAILBOX_PORT)
 
-INFLUXDB_IML_DB = "iml"
+INFLUXDB_EMF_DB = "emf"
 
-INFLUXDB_STRATAGEM_SCAN_DB = "iml_stratagem_scans"
+INFLUXDB_STRATAGEM_SCAN_DB = "emf_stratagem_scans"
 
-INFLUXDB_IML_STATS_DB = "iml_stats"
+INFLUXDB_EMF_STATS_DB = "emf_stats"
 
-INFLUXDB_IML_STATS_LONG_DURATION = os.getenv("INFLUXDB_IML_STATS_LONG_DURATION", "52w")
+INFLUXDB_EMF_STATS_LONG_DURATION = os.getenv("INFLUXDB_EMF_STATS_LONG_DURATION", "52w")
 
 INFLUXDB_SERVER_FQDN = os.getenv("INFLUXDB_SERVER_FQDN", PROXY_HOST)
 

@@ -49,7 +49,7 @@ class TestHttpAgent(SystemdTestCase, AgentHttpClient):
     it go back and forth
     """
 
-    SERVICES = ["iml-http-agent"]
+    SERVICES = ["emf-http-agent"]
     PLUGIN = "test_messaging"
     RX_QUEUE_NAME = "agent_test_messaging_rx"
     TX_QUEUE_NAME = "agent_tx"
@@ -323,7 +323,7 @@ class TestHttpAgent(SystemdTestCase, AgentHttpClient):
 
         first_session_id = self._open_session()
 
-        self.restart("iml-http-agent")
+        self.restart("emf-http-agent")
 
         # If we try to continue our session, it will tell us to terminate
         response = self._get()

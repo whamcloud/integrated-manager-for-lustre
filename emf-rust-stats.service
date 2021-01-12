@@ -1,0 +1,18 @@
+[Unit]
+Description=EMF Rust Stats Service
+PartOf=emf-manager.target
+After=emf-settings-populator.service
+Requires=emf-settings-populator.service
+After=rabbitmq-server.service
+
+
+[Service]
+Type=simple
+Environment=RUST_LOG=info
+EnvironmentFile=/var/lib/chroma/emf-settings.conf
+EnvironmentFile=-/var/lib/chroma/overrides.conf
+ExecStart=/bin/emf-stats
+Restart=always
+RestartSec=2
+StandardOutput=journal
+StandardError=journal

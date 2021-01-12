@@ -87,7 +87,7 @@ server {
     }
 
     location /help {
-        alias /usr/lib/iml-manager/iml-online-help;
+        alias /usr/lib/emf-manager/emf-online-help;
 
         gzip on;
         gzip_types text/plain text/xml text/css application/x-javascript application/javascript text/javascript application/json;
@@ -96,7 +96,7 @@ server {
     }
 
     location ~ ^/ui/(favicon.*|android-chrome.*|apple-touch-icon\.png|mstile-150x150\.png|safari-pinned-tab\.svg)$ {
-        try_files /branding/$1 /../../../usr/share/iml-manager/rust-iml-gui/$1;
+        try_files /branding/$1 /../../../usr/share/emf-manager/rust-emf-gui/$1;
     }
 
     location /ui {
@@ -175,7 +175,7 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-Server $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_pass {{IML_API_PROXY_PASS}}/conf;
+        proxy_pass {{EMF_API_PROXY_PASS}}/conf;
     }
 
     location /api/action {
@@ -185,7 +185,7 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-Server $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_pass {{IML_API_PROXY_PASS}}/action;
+        proxy_pass {{EMF_API_PROXY_PASS}}/action;
 
         gzip on;
         gzip_types application/json;
@@ -197,7 +197,7 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-Server $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_pass {{IML_API_PROXY_PASS}}/graphql_schema;
+        proxy_pass {{EMF_API_PROXY_PASS}}/graphql_schema;
     }
 
     location /graphql {
@@ -206,7 +206,7 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-Server $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_pass {{IML_API_PROXY_PASS}}/graphql;
+        proxy_pass {{EMF_API_PROXY_PASS}}/graphql;
 
         gzip on;
         gzip_types application/json;
@@ -218,7 +218,7 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-Server $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_pass {{IML_API_PROXY_PASS}}/graphiql;
+        proxy_pass {{EMF_API_PROXY_PASS}}/graphiql;
     }
 
     location /api {
@@ -383,7 +383,7 @@ upstream ui.fake {
 
 server {
     server_name ui.fake;
-    root /usr/share/iml-manager/rust-iml-gui;
+    root /usr/share/emf-manager/rust-emf-gui;
     index index.html;
 
     types {

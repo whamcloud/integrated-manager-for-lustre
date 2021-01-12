@@ -20,7 +20,7 @@ django-tastypie = "==0.14.1"
 gevent = "==1.3"
 greenlet = "==0.4.14"
 gunicorn = "==19.9.0"
-iml-common = {editable = true, path = "./iml-common"}
+emf-common = {editable = true, path = "./emf-common"}
 jsonschema = "==2.5.1"
 kombu = "==4.2.2.post1"
 lockfile = "==0.9.1"

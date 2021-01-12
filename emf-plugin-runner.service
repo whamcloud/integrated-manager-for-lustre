@@ -1,0 +1,13 @@
+[Unit]
+Description=EMF Plugin Runner Service
+PartOf=emf-manager.target
+After=rabbitmq-server.service
+
+[Service]
+Type=simple
+EnvironmentFile=-/var/lib/chroma/overrides.conf
+ExecStart=/bin/python /usr/share/chroma-manager/manage.py chroma_service --name=plugin_runner plugin_runner
+Restart=on-failure
+RestartSec=2
+StandardOutput=journal
+StandardError=journal

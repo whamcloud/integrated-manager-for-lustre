@@ -1,0 +1,6 @@
+---
+source: emf-agent/src/action_plugins/ldev.rs
+expression: data
+---
+mds1 - MGS zfs:mdt0/mdt0
+mds1 mds2 zfsmo-MDT0000 zfs:mdt0/mdt0

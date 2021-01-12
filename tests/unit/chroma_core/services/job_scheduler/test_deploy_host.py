@@ -1,4 +1,4 @@
-from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
+from tests.unit.lib.emf_unit_test_case import EMFUnitTestCase
 from chroma_core.models import DeployHostJob
 from chroma_core.models import ManagedHost
 from chroma_core.services.job_scheduler.job_scheduler import JobScheduler
@@ -7,7 +7,7 @@ from tests.unit.chroma_core.helpers.helper import freshen
 from tests.unit.chroma_core.helpers.helper import load_default_profile
 
 
-class TestDeployHostJob(IMLUnitTestCase):
+class TestDeployHostJob(EMFUnitTestCase):
     """Test JobScheduler.create_host_ssh() """
 
     def test_host_available_states_undeployed(self):

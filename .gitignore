@@ -34,8 +34,8 @@ deps
 dist/
 id_rsa
 id_rsa.pub
-iml-images.tar
-iml-images.tgz
+emf-images.tar
+emf-images.tgz
 install_build_deps-stamp
 local_settings.py
 localenv

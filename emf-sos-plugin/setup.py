@@ -12,8 +12,8 @@ setup(
     name="emf-sos-plugin",
     version=__version__,
     author="Whamcloud",
-    author_email="iml@whamcloud.com",
-    url="https://pypi.python.org/pypi/iml-sos-plugin",
+    author_email="emf@whamcloud.com",
+    url="https://pypi.python.org/pypi/emf-sos-plugin",
     packages=["sos.plugins", "sos"],
     include_package_data=True,
     license="MIT",
@@ -27,5 +27,5 @@ setup(
         "Programming Language :: Python :: 2",
         "Programming Language :: Python :: 2.7",
     ],
-    keywords="IML EMF lustre high-availability",
+    keywords="EMF EMF lustre high-availability",
 )

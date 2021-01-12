@@ -20,7 +20,7 @@ services:
     restart: on-failure
   http-agent:
     restart: on-failure
-  iml-agent-comms:
+  emf-agent-comms:
     restart: on-failure
   job-scheduler:
     restart: on-failure
@@ -28,20 +28,20 @@ services:
     restart: on-failure
   journal:
     restart: on-failure
-  iml-ostpool:
+  emf-ostpool:
     restart: on-failure
-  iml-stats:
+  emf-stats:
     restart: on-failure
-  iml-warp-drive:
+  emf-warp-drive:
     restart: on-failure
   setup:
     restart: on-failure
-  iml-action-runner:
+  emf-action-runner:
     restart: on-failure
-  iml-api:
+  emf-api:
     restart: on-failure
-  iml-postoffice:
+  emf-postoffice:
     restart: on-failure
 secrets:
-  iml_pw:
-    file: /tmp/iml_pw
+  emf_pw:
+    file: /tmp/emf_pw

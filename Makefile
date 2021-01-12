@@ -1,4 +1,4 @@
-NAME          := iml-manager
+NAME          := emf-manager
 MODULE_SUBDIR  = chroma_manager
 DEVELOP_DEPS  := version
 DEVELOP_POST  := ./manage.py dev_setup
@@ -32,7 +32,7 @@ DB_USER ?= $(DB_NAME)
 # Test runner options
 NOSE_ARGS ?= --stop
 
-all: rust-core-rpms python-rpms device-scanner-rpms iml-gui-rpm docker-rpms
+all: rust-core-rpms python-rpms device-scanner-rpms emf-gui-rpm docker-rpms
 
 MFL_COPR_REPO=managerforlustre/manager-for-lustre-devel
 MFL_REPO_OWNER := $(firstword $(subst /, ,$(MFL_COPR_REPO)))
@@ -77,50 +77,50 @@ check:
 	cargo fmt --all -- --check
 	cargo check --locked --all-targets
 	cargo clippy -- -W warnings
-	cargo check --locked --manifest-path iml-system-rpm-tests/Cargo.toml --tests
-	cargo clippy --manifest-path iml-system-rpm-tests/Cargo.toml --tests -- -W warnings
-	cargo check --locked --manifest-path iml-system-docker-tests/Cargo.toml --tests
-	cargo clippy --manifest-path iml-system-docker-tests/Cargo.toml --tests -- -W warnings
+	cargo check --locked --manifest-path emf-system-rpm-tests/Cargo.toml --tests
+	cargo clippy --manifest-path emf-system-rpm-tests/Cargo.toml --tests -- -W warnings
+	cargo check --locked --manifest-path emf-system-docker-tests/Cargo.toml --tests
+	cargo clippy --manifest-path emf-system-docker-tests/Cargo.toml --tests -- -W warnings
 
 fmt:
 	black ./
 	cargo fmt --all
-	cargo fmt --all --manifest-path iml-system-rpm-tests/Cargo.toml
-	cargo fmt --all --manifest-path iml-system-docker-tests/Cargo.toml
+	cargo fmt --all --manifest-path emf-system-rpm-tests/Cargo.toml
+	cargo fmt --all --manifest-path emf-system-docker-tests/Cargo.toml
 
-iml-gui-rpm:
+emf-gui-rpm:
 	mkdir -p ${TMPDIR}/_topdir/{SOURCES,SPECS}
 
-	cd iml-gui; \
+	cd emf-gui; \
 	yarn install; \
 	yarn build:release
-	tar cvf ${TMPDIR}/_topdir/SOURCES/iml-gui.tar -C ./iml-gui dist
+	tar cvf ${TMPDIR}/_topdir/SOURCES/emf-gui.tar -C ./emf-gui dist
 
-	cp iml-gui/rust-iml-gui.spec ${TMPDIR}/_topdir/SPECS/
-	rpmbuild -ba ${RPM_OPTS} -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/_topdir/SPECS/rust-iml-gui.spec
+	cp emf-gui/rust-emf-gui.spec ${TMPDIR}/_topdir/SPECS/
+	rpmbuild -ba ${RPM_OPTS} -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/_topdir/SPECS/rust-emf-gui.spec
 
 	rm -rf ${TMPDIR}/_topdir/SOURCES/*
 	cp -rf ${TMPDIR}/_topdir .
 	rm -rf ${TMPDIR}
 
-python-rpms: python-iml-agent-rpms python-iml-common-rpms python-iml-rpms sos-rpm
+python-rpms: python-emf-agent-rpms python-emf-common-rpms python-emf-rpms sos-rpm
 
-python-iml-rpms: substs
+python-emf-rpms: substs
 	mkdir -p ${TMPDIR}/_topdir/{SOURCES,SPECS}
 	mkdir -p ${TMPDIR}/{scratch,configuration}
 
 	cp -r ./{chroma_*,chroma-*,__init__.py,manage.py,scm_version.py,setup.py,settings.py,urls.py,wsgi.py,agent-bootstrap-script.template,*.profile} ${TMPDIR}/scratch
 	cp -r ./{*.repo,README.*,polymorphic,scripts,tests,MANIFEST.in} ${TMPDIR}/scratch
 
-	cp ./python-iml-manager.spec ${TMPDIR}/_topdir/SPECS
+	cp ./python-emf-manager.spec ${TMPDIR}/_topdir/SPECS
 
 	cp -r ./grafana ${TMPDIR}/configuration
 	cp -r ./nginx ${TMPDIR}/configuration
-	cp ./iml-*.service \
+	cp ./emf-*.service \
 		./rabbitmq-env.conf \
 		./rabbitmq-server-dropin.conf \
-		./iml-manager-redirect.conf \
-		./iml-manager.target \
+		./emf-manager-redirect.conf \
+		./emf-manager.target \
 		./chroma-config.1 \
 		./logrotate.cfg \
 		${TMPDIR}/configuration
@@ -128,29 +128,29 @@ python-iml-rpms: substs
 	tar -czvf ${TMPDIR}/_topdir/SOURCES/configuration.tar.gz -C ${TMPDIR}/configuration .
 	cd ${TMPDIR}/scratch; \
 	python setup.py sdist -d ${TMPDIR}/_topdir/SOURCES/
-	rpmbuild -ba ${RPM_OPTS} -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/_topdir/SPECS/python-iml-manager.spec
+	rpmbuild -ba ${RPM_OPTS} -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/_topdir/SPECS/python-emf-manager.spec
 	rm -rf ${TMPDIR}/_topdir/{SOURCES,BUILD,SPECS}/*
 	cp -rf ${TMPDIR}/_topdir .
 	rm -rf ${TMPDIR}
 
-python-iml-common-rpms:
+python-emf-common-rpms:
 	mkdir -p ${TMPDIR}/_topdir/SOURCES
 	mkdir -p ${TMPDIR}/scratch
-	cp -r iml-common/* ${TMPDIR}/scratch
+	cp -r emf-common/* ${TMPDIR}/scratch
 	cd ${TMPDIR}/scratch; \
 	python setup.py sdist -d ${TMPDIR}/_topdir/SOURCES/
-	rpmbuild -ba ${RPM_OPTS} -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/scratch/python-iml-common.spec
+	rpmbuild -ba ${RPM_OPTS} -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/scratch/python-emf-common.spec
 	rm -rf ${TMPDIR}/_topdir/{SOURCES,BUILD}/*
 	cp -rf ${TMPDIR}/_topdir .
 	rm -rf ${TMPDIR}
 
-python-iml-agent-rpms:
+python-emf-agent-rpms:
 	mkdir -p ${TMPDIR}/_topdir/SOURCES
 	mkdir -p ${TMPDIR}/scratch
-	cp -r python-iml-agent/* ${TMPDIR}/scratch
+	cp -r python-emf-agent/* ${TMPDIR}/scratch
 	cd ${TMPDIR}/scratch; \
 	python setup.py sdist -d ${TMPDIR}/_topdir/SOURCES/
-	rpmbuild -ba ${RPM_OPTS} -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/scratch/python-iml-agent.spec
+	rpmbuild -ba ${RPM_OPTS} -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/scratch/python-emf-agent.spec
 	rm -rf ${TMPDIR}/_topdir/{SOURCES,BUILD}/*
 	cp -rf ${TMPDIR}/_topdir .
 	rm -rf ${TMPDIR}
@@ -168,35 +168,35 @@ sos-rpm:
 rust-core-rpms:
 	mkdir -p ${TMPDIR}/release/rust-core
 	cargo build --release
-	cp ${TARGET}/release/iml-{action-runner,agent,agent-comms,agent-daemon,api,corosync,device,journal,mailbox,network,ntp,ostpool,postoffice,report,sfa,snapshot,stats,task-runner,warp-drive,timer} \
-		iml-action-runner.service \
-		iml-action-runner.socket \
-		iml-agent-comms.service \
-		iml-agent/systemd-units/* \
-		iml-api.service \
-		iml-device.service \
-		iml-journal.service \
-		iml-mailbox.service \
-		iml-network.service \
-		iml-ntp.service \
-		iml-ostpool.service \
-		iml-postoffice.service \
-		iml-report.conf \
-		iml-report.service \
-		iml-rust-corosync.service \
-		iml-rust-stats.service \
-		iml-sfa.service \
-		iml-snapshot.service \
-		iml-task-runner.service \
-		iml-timer.service \
-		iml-warp-drive/systemd-units/* \
+	cp ${TARGET}/release/emf-{action-runner,agent,agent-comms,agent-daemon,api,corosync,device,journal,mailbox,network,ntp,ostpool,postoffice,report,sfa,snapshot,stats,task-runner,warp-drive,timer} \
+		emf-action-runner.service \
+		emf-action-runner.socket \
+		emf-agent-comms.service \
+		emf-agent/systemd-units/* \
+		emf-api.service \
+		emf-device.service \
+		emf-journal.service \
+		emf-mailbox.service \
+		emf-network.service \
+		emf-ntp.service \
+		emf-ostpool.service \
+		emf-postoffice.service \
+		emf-report.conf \
+		emf-report.service \
+		emf-rust-corosync.service \
+		emf-rust-stats.service \
+		emf-sfa.service \
+		emf-snapshot.service \
+		emf-task-runner.service \
+		emf-timer.service \
+		emf-warp-drive/systemd-units/* \
 		${TMPDIR}/release/rust-core
-	cp ${TARGET}/release/iml ${TMPDIR}/release/rust-core
-	cp ${TARGET}/release/iml-config ${TMPDIR}/release/rust-core
+	cp ${TARGET}/release/emf ${TMPDIR}/release/rust-core
+	cp ${TARGET}/release/emf-config ${TMPDIR}/release/rust-core
 	mkdir -p ${TMPDIR}/_topdir/{SOURCES,SPECS}
 	tar -czvf ${TMPDIR}/_topdir/SOURCES/rust-core.tar.gz -C ${TMPDIR}/release/rust-core .
-	cp rust-iml.spec ${TMPDIR}/_topdir/SPECS/
-	rpmbuild -ba ${RPM_OPTS} -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/_topdir/SPECS/rust-iml.spec
+	cp rust-emf.spec ${TMPDIR}/_topdir/SPECS/
+	rpmbuild -ba ${RPM_OPTS} -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/_topdir/SPECS/rust-emf.spec
 	rm -rf ${TMPDIR}/_topdir/SOURCES/*
 	cp -rf ${TMPDIR}/_topdir .
 	rm -rf ${TMPDIR}
@@ -204,14 +204,14 @@ rust-core-rpms:
 docker-rpms:
 	$(MAKE) -C docker save
 	mkdir -p ${TMPDIR}/_topdir/{SOURCES,SPECS}
-	mkdir -p ${TMPDIR}/scratch/iml-docker
+	mkdir -p ${TMPDIR}/scratch/emf-docker
 
-	cp -r docker/{docker-compose.yml,iml-images.tgz,update-embedded.sh,copy-embedded-settings} ${TMPDIR}/scratch/iml-docker/
-	cp iml-docker.service ${TMPDIR}/scratch/iml-docker/
-	tar -czvf ${TMPDIR}/_topdir/SOURCES/iml-docker.tar.gz -C ${TMPDIR}/scratch/iml-docker .
+	cp -r docker/{docker-compose.yml,emf-images.tgz,update-embedded.sh,copy-embedded-settings} ${TMPDIR}/scratch/emf-docker/
+	cp emf-docker.service ${TMPDIR}/scratch/emf-docker/
+	tar -czvf ${TMPDIR}/_topdir/SOURCES/emf-docker.tar.gz -C ${TMPDIR}/scratch/emf-docker .
 
-	cp iml-docker.spec ${TMPDIR}/_topdir/SPECS/
-	rpmbuild -ba ${RPM_OPTS} -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/_topdir/SPECS/iml-docker.spec
+	cp emf-docker.spec ${TMPDIR}/_topdir/SPECS/
+	rpmbuild -ba ${RPM_OPTS} -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/_topdir/SPECS/emf-docker.spec
 
 	rm -rf ${TMPDIR}/_topdir/{SOURCES,SPECS}/*
 	cp -rf ${TMPDIR}/_topdir .
@@ -219,7 +219,7 @@ docker-rpms:
 	rm -rf ${TMPDIR}
 
 device-scanner-rpms:
-	mkdir -p ${TMPDIR}/release/iml-device-scanner
+	mkdir -p ${TMPDIR}/release/emf-device-scanner
 	cd device-scanner; \
 	cargo build --release; \
 	cp {device-scanner-daemon,mount-emitter}/systemd-units/* \
@@ -228,11 +228,11 @@ device-scanner-rpms:
 		${TARGET}/release/mount-emitter \
 		${TARGET}/release/swap-emitter \
 		${TARGET}/release/uevent-listener \
-		${TMPDIR}/release/iml-device-scanner
+		${TMPDIR}/release/emf-device-scanner
 	mkdir -p ${TMPDIR}/_topdir/{SOURCES,SPECS}
-	tar -czvf ${TMPDIR}/_topdir/SOURCES/iml-device-scanner.tar.gz -C ${TMPDIR}/release/iml-device-scanner .
-	cp device-scanner/iml-device-scanner.spec ${TMPDIR}/_topdir/SPECS/
-	rpmbuild -ba ${RPM_OPTS} -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/_topdir/SPECS/iml-device-scanner.spec
+	tar -czvf ${TMPDIR}/_topdir/SOURCES/emf-device-scanner.tar.gz -C ${TMPDIR}/release/emf-device-scanner .
+	cp device-scanner/emf-device-scanner.spec ${TMPDIR}/_topdir/SPECS/
+	rpmbuild -ba ${RPM_OPTS} -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/_topdir/SPECS/emf-device-scanner.spec
 	rm -rf ${TMPDIR}/_topdir/SOURCES/*
 	cp -rf ${TMPDIR}/_topdir .
 	rm -rf ${TMPDIR}

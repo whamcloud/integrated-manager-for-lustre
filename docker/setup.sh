@@ -9,7 +9,7 @@ until psql -h 'postgres' -U 'chroma' -c '\q'; do
 done
 
 echo "Starting setup"
-PW=$(cat /run/secrets/iml_pw)
+PW=$(cat /run/secrets/emf_pw)
 chroma-config container-setup admin $PW
 
 echo "Registering Repos/Profiles"

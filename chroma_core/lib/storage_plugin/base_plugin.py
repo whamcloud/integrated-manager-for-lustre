@@ -110,9 +110,9 @@ class BaseStoragePlugin(object):
         root_resource._handle_global = False
         self._root_resource = root_resource
 
-    ##############################################################################################
-    # Methods below are not called from within IML and not to be used by the plugins themselves. #
-    ##############################################################################################
+    ########################################################################################################
+    # Methods below are not called from within The Framework and not to be used by the plugins themselves. #
+    ########################################################################################################
     def do_agent_session_start(self, data):
         """
         Start a session based on information sent from an agent plugin.

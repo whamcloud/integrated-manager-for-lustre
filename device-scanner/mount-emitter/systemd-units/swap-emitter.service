@@ -1,5 +1,5 @@
 [Unit]
-Description=IML Swap Emitter
+Description=EMF Swap Emitter
 PartOf=device-scanner.target
 After=local-fs.target
 After=device-scanner.socket

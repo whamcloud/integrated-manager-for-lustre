@@ -32,7 +32,7 @@ class Command(BaseCommand):
 
         print(
             """Great success:
- * run `systemctl start iml-manager.target`
+ * run `systemctl start emf-manager.target`
  * open %s"""
             % settings.SERVER_HTTP_URL
         )

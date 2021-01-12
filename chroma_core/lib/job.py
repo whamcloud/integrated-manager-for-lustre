@@ -7,7 +7,7 @@ import django.db.models
 
 from chroma_core.services import log_register
 from chroma_core.lib.util import invoke_rust_agent, invoke_rust_local_action, RustAgentCancellation
-from iml_common.lib.agent_rpc import agent_result
+from emf_common.lib.agent_rpc import agent_result
 
 job_log = log_register("job")
 
@@ -203,7 +203,7 @@ class Step(object):
 
     def invoke_rust_local_action(self, command, args={}):
         """
-        Talks to the iml-action-runner service
+        Talks to the emf-action-runner service
         """
 
         return invoke_rust_local_action(command, args, self._cancel_event)
@@ -235,7 +235,7 @@ class Step(object):
 
     def invoke_rust_agent(self, host, command, args={}):
         """
-        Talks to the iml-action-runner service
+        Talks to the emf-action-runner service
         """
 
         from chroma_core.services.job_scheduler.agent_rpc import AgentException

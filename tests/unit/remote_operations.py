@@ -10,8 +10,8 @@ import subprocess
 
 from testconfig import config
 
-from iml_common.lib.util import ExceptionThrowingThread
-from iml_common.lib.shell import Shell
+from emf_common.lib.util import ExceptionThrowingThread
+from emf_common.lib.shell import Shell
 from tests.utils.remote_firewall_control import RemoteFirewallControl
 from tests.unit.constants import TEST_TIMEOUT
 from tests.unit.constants import LONG_TEST_TIMEOUT
@@ -20,7 +20,7 @@ logger = logging.getLogger("test")
 logger.setLevel(logging.DEBUG)
 
 stop_agent_cmd = """
-    systemctl stop iml-storage-server.target
+    systemctl stop emf-storage-server.target
     i=0
 
     while systemctl status chroma-agent && [ "$i" -lt {timeout} ]; do
@@ -106,7 +106,7 @@ class RealRemoteOperations(RemoteOperations):
             msg = (
                 "Error connecting to %s: %s.\n"
                 "Please add the following to "
-                "https://github.com/whamcloud/integrated-manager-for-lustre/issues/%s\n"
+                "https://github.com/whamcloud/exascaler-management-framework/issues/%s\n"
                 "Performing some diagnostics...\n"
                 "ping: %s\n"
                 "ifconfig -a: %s\n"
@@ -129,7 +129,7 @@ class RealRemoteOperations(RemoteOperations):
 
             DEVNULL = open(os.devnull, "wb")
             p = subprocess.Popen(["sendmail", "-t"], stdin=subprocess.PIPE, stdout=DEVNULL, stderr=DEVNULL)
-            p.communicate(input=b"To: iml@whamcloud.com\n" b"Subject: GH#%s\n\n" % issue_num + msg)
+            p.communicate(input=b"To: emf@whamcloud.com\n" b"Subject: GH#%s\n\n" % issue_num + msg)
             p.wait()
             DEVNULL.close()
 
@@ -280,9 +280,9 @@ class RealRemoteOperations(RemoteOperations):
         # Do not call this function directly, use restart_chroma_manager in ApiTestCaseWithTestReset class
         self._ssh_address(fqdn, "chroma-config restart")
 
-    def run_iml_diagnostics(self, server, verbose):
+    def run_emf_diagnostics(self, server, verbose):
         return self._ssh_fqdn(
-            server["fqdn"], "iml-diagnostics" + " --all-logs" if verbose else "", timeout=LONG_TEST_TIMEOUT
+            server["fqdn"], "emf-diagnostics" + " --all-logs" if verbose else "", timeout=LONG_TEST_TIMEOUT
         )
 
     def inject_log_message(self, fqdn, message):
@@ -415,7 +415,7 @@ class RealRemoteOperations(RemoteOperations):
         def has_primitive(items, fs_name):
 
             for p in items:
-                if os.environ.get("IML_4_INSTALLED", False):
+                if os.environ.get("EMF_4_INSTALLED", False):
                     if (
                         p.attrib["class"] == "ocf"
                         and p.attrib["provider"] == "chroma"
@@ -786,7 +786,7 @@ class RealRemoteOperations(RemoteOperations):
 
     def start_agents(self, server_list):
         for server in server_list:
-            self._ssh_address(server, "systemctl start iml-storage-server.target")
+            self._ssh_address(server, "systemctl start emf-storage-server.target")
 
     def catalog_rpms(self, server_list, location, sorted=False):
         """
@@ -863,8 +863,8 @@ class RealRemoteOperations(RemoteOperations):
             self._ssh_address(
                 server["address"],
                 """
-                              [ -f /etc/modprobe.d/iml_lnet_module_parameters.conf ] &&
-                              rm -f /etc/modprobe.d/iml_lnet_module_parameters.conf &&
+                              [ -f /etc/modprobe.d/emf_lnet_module_parameters.conf ] &&
+                              rm -f /etc/modprobe.d/emf_lnet_module_parameters.conf &&
                               lustre_rmmod
                               """,
                 expected_return_code=None,
@@ -922,8 +922,8 @@ class RealRemoteOperations(RemoteOperations):
     def yum_update(self, server):
         self._ssh_address(server["address"], "yum -y update")
 
-    def yum_upgrade_exclude_python2_iml(self, server):
-        self._ssh_address(server["address"], "yum -y upgrade --exclude=python2-iml*")
+    def yum_upgrade_exclude_python2_emf(self, server):
+        self._ssh_address(server["address"], "yum -y upgrade --exclude=python2-emf*")
 
     def yum_check_update(self, server):
         available_updates = self._ssh_address(

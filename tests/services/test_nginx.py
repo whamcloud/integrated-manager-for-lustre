@@ -15,7 +15,7 @@ from tests.services.systemd_test_case import SystemdTestCase
 
 class NginxTestCase(SystemdTestCase):
     # Require job_scheduler because it is queried for available_transitions when rendering /ui/
-    SERVICES = ["nginx", "iml-gunicorn", "iml-job-scheduler"]
+    SERVICES = ["nginx", "emf-gunicorn", "emf-job-scheduler"]
 
 
 class TestInsecureUrls(NginxTestCase):

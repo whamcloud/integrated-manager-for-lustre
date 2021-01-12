@@ -2,7 +2,7 @@
 
  set -e
 
-until [ -f /var/lib/chroma/iml-settings.conf ]; do
+until [ -f /var/lib/chroma/emf-settings.conf ]; do
   echo "Waiting for settings."
   sleep 1
 done
@@ -12,7 +12,7 @@ TMP2=$AMQP_BROKER_HOST
 TMP3=$DB_HOST
 
 set -a
-source /var/lib/chroma/iml-settings.conf
+source /var/lib/chroma/emf-settings.conf
 set +a
 
 

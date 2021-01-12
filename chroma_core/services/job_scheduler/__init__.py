@@ -15,7 +15,7 @@ from chroma_core.services.job_scheduler import job_scheduler_notify
 from chroma_core.services import ChromaService, ServiceThread, log_register
 from chroma_core.models.jobs import Job
 from chroma_core.models.command import Command
-from iml_common.lib.date_time import IMLDateTime
+from emf_common.lib.date_time import EMFDateTime
 
 import settings
 
@@ -50,7 +50,7 @@ class QueueHandler(object):
                     deserialized_update_attrs[attr] = value
                 else:
                     if isinstance(field, DateTimeField):
-                        deserialized_update_attrs[attr] = IMLDateTime.parse(value)
+                        deserialized_update_attrs[attr] = EMFDateTime.parse(value)
                     else:
                         deserialized_update_attrs[attr] = value
 

@@ -6,7 +6,7 @@ from chroma_core.models import ManagedHost
 from chroma_core.models import HostOfflineAlert
 from tests.unit.chroma_api.notification_test_case import NotificationTestCase
 from tests.unit.chroma_core.helpers.helper import freshen
-from iml_common.lib.date_time import IMLDateTime
+from emf_common.lib.date_time import EMFDateTime
 
 INFO = logging.INFO
 WARNING = logging.WARNING
@@ -73,7 +73,7 @@ class TestSubsequentLoadDismissables(NotificationTestCase):
         for ev in objects:
             self.assertEqual(ev["dismissed"], False)
             self.assertTrue(ev["severity"] in ["WARNING", "ERROR"])
-            self.assertTrue(IMLDateTime.parse(ev["begin"]) >= self.sample_date)
+            self.assertTrue(EMFDateTime.parse(ev["begin"]) >= self.sample_date)
 
 
 class TestPatchDismissables(NotificationTestCase):

@@ -1,16 +1,16 @@
 # Vagrantfiles
 
-## Setup IML with Vagrant and VirtualBox
+## Setup EMF with Vagrant and VirtualBox
 
-The IML Team typically uses [Vagrant](https://www.vagrantup.com) and [VirtualBox](https://www.virtualbox.org/wiki/Downloads) for day to day development tasks. The following guide will provide an overview of how to setup a development environment from scratch.
+The EMF Team typically uses [Vagrant](https://www.vagrantup.com) and [VirtualBox](https://www.virtualbox.org/wiki/Downloads) for day to day development tasks. The following guide will provide an overview of how to setup a development environment from scratch.
 
-1. Clone the [Integrated Manager For Lustre repo](https://github.com/whamcloud/integrated-manager-for-lustre) from Github:
+1. Clone the [EXAScaler Management Framework repo](https://github.com/whamcloud/exascaler-management-framework) from Github:
 
    ```sh
-   git clone https://github.com/whamcloud/Vagrantfiles.git
+   git clone https://github.com/whamcloud/exascaler-management-framework.git
    ```
 
-1. Navigate to the `integrated-manager-for-lustre/vagrant` directory
+1. Navigate to the `exascaler-management-framework/vagrant` directory
 
 ### MacOS
 
@@ -45,24 +45,24 @@ The IML Team typically uses [Vagrant](https://www.vagrantup.com) and [VirtualBox
    vagrant reload
    ```
 
-1. Install IML. IML Can be installed using either rpm-based / systemd or docker. Install IML by using one of the following provisioning scripts:
+1. Install EMF. EMF Can be installed using either rpm-based / systemd or docker. Install EMF by using one of the following provisioning scripts:
 
    1. Latest RPM from [copr-devel](https://copr.fedorainfracloud.org/coprs/managerforlustre/manager-for-lustre-devel/)
 
       ```sh
-      vagrant provision --provision-with=install-iml-devel
+      vagrant provision --provision-with=install-emf-devel
       ```
 
    1. RPM Install from a specific repo:
 
       ```sh
-      REPO_URI=<uri> vagrant provision --provision-with=install-iml-repouri
+      REPO_URI=<uri> vagrant provision --provision-with=install-emf-repouri
       ```
 
    1. Docker Install from a specific repo:
 
       ```sh
-      REPO_URI=<uri> vagrant provision --provision-with=install-iml-docker-repouri
+      REPO_URI=<uri> vagrant provision --provision-with=install-emf-docker-repouri
       ```
 
    \* Note there are other version specific provisioners available as well. See the Vagrantfile for these options.
@@ -87,14 +87,14 @@ The IML Team typically uses [Vagrant](https://www.vagrantup.com) and [VirtualBox
      vagrant provision --provision-with=mount-lustre-client-fs2
      ```
 
-At this point you should be able to access the IML GUI on your host at https://localhost:8443
+At this point you should be able to access the EMF GUI on your host at https://localhost:8443
 
 From here you can decide what type of setup to run.
 
 - Monitored Ldiskfs:
 
   ```sh
-  vagrant provision --provision-with=install-ldiskfs-no-iml,configure-lustre-network,create-ldiskfs-fs,create-ldiskfs-fs2,mount-ldiskfs-fs,mount-ldiskfs-fs2
+  vagrant provision --provision-with=install-ldiskfs-no-emf,configure-lustre-network,create-ldiskfs-fs,create-ldiskfs-fs2,mount-ldiskfs-fs,mount-ldiskfs-fs2
   ```
 
 - Managed Mode:
@@ -106,13 +106,13 @@ From here you can decide what type of setup to run.
 - Monitored Ldiskfs with LVM Metadata:
 
   ```sh
-   vagrant provision --provision-with=install-ldiskfs-no-iml,configure-lustre-network,create-ldiskfs-lvm-fs,mount-ldiskfs-lvm-fs
+   vagrant provision --provision-with=install-ldiskfs-no-emf,configure-lustre-network,create-ldiskfs-lvm-fs,mount-ldiskfs-lvm-fs
   ```
 
 - Monitored Ldiskfs with LVM Metadata and HA:
 
   ```sh
-   vagrant provision --provision-with=install-ldiskfs-no-iml,configure-lustre-network,create-ldiskfs-lvm-fs,ha-ldiskfs-lvm-fs-prep
+   vagrant provision --provision-with=install-ldiskfs-no-emf,configure-lustre-network,create-ldiskfs-lvm-fs,ha-ldiskfs-lvm-fs-prep
    VBOX_PASSWD=<ROOT_PW_HERE>
    vagrant provision --provision-with=ha-ldiskfs-lvm-fs-setup
   ```

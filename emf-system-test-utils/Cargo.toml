@@ -1,0 +1,22 @@
+[package]
+authors = ["EMF Team <emf@whamcloud.com>"]
+edition = "2018"
+name = "emf-system-test-utils"
+version = "0.4.0"
+
+[dependencies]
+async-trait = "0.1"
+futures = "0.3"
+emf-cmd = {version = "0.4", path = "../emf-cmd"}
+emf-fs = {version = "0.4", path = "../emf-fs"}
+emf-graphql-queries = {version = "0.2", path = "../emf-graphql-queries"}
+emf-wire-types = {version = "0.4", path = "../emf-wire-types"}
+petgraph = "0.5"
+serde = {version = "1", features = ["derive"]}
+serde_json = "1"
+thiserror = "1.0"
+tokio = {version = "0.2", features = ["process", "macros", "fs", "time"]}
+tracing = "0.1"
+
+[dev-dependencies]
+insta = "1"

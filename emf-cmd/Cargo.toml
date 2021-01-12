@@ -1,0 +1,14 @@
+[package]
+authors = ["EMF Team <emf@whamcloud.com>"]
+edition = "2018"
+name = "emf-cmd"
+version = "0.4.0"
+
+[dependencies]
+futures = "0.3"
+tokio = {version = "0.2", features = ["process", "rt-threaded"]}
+tracing = "0.1"
+warp = {version = "0.2", optional = true}
+
+[features]
+warp-errs = ["warp"]

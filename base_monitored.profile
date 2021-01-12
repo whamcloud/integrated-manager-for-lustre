@@ -10,7 +10,7 @@
   "pacemaker": false,
   "ui_description": "A storage server for monitoring and management of pre-existing resources",
   "packages": [
-    "python2-iml-agent-management"
+    "python2-emf-agent-management"
   ],
   "repolist": [ "base" ]
 }

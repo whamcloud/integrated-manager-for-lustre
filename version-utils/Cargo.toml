@@ -1,5 +1,5 @@
 [package]
-authors = ["IML Team <iml@whamcloud.com>"]
+authors = ["EMF Team <emf@whamcloud.com>"]
 edition = "2018"
 name = "version-utils"
 version = "0.2.0"

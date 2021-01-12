@@ -18,7 +18,7 @@ from chroma_core.models import LNetConfiguration
 version = 1
 
 
-# This is not used anymore it is here purely to satisfy the upgrade requirements of IML.
+# This is not used anymore it is here purely to satisfy the upgrade requirements of EMF.
 class NetworkInterface(resources.Resource):
     class Meta:
         identifier = ScopedId("name")

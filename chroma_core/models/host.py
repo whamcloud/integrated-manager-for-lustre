@@ -47,7 +47,7 @@ from chroma_core.models.utils import DeletableMetaclass
 from chroma_core.models.utils import get_all_sub_classes
 from chroma_help.help import help_text
 from chroma_core.services.job_scheduler import job_scheduler_notify
-from iml_common.lib.util import ExceptionThrowingThread
+from emf_common.lib.util import ExceptionThrowingThread
 from chroma_core.models.sparse_model import VariantDescriptor
 
 import settings
@@ -444,7 +444,7 @@ class AwaitRebootStep(Step):
 
 
 class DeployHostJob(StateChangeJob):
-    """Handles Deployment of the IML agent code base to a new host"""
+    """Handles Deployment of the EMF agent code base to a new host"""
 
     state_transition = StateChangeJob.StateTransition(ManagedHost, "undeployed", "unconfigured")
     stateful_object = "managed_host"
@@ -928,10 +928,10 @@ class DeleteHostStep(Step):
                 [host.id],
             )
 
-            influx_post(settings.INFLUXDB_IML_STATS_DB, "DELETE FROM /.*net/ WHERE \"host_id\"='{}'".format(host.id))
-            influx_post(settings.INFLUXDB_IML_STATS_DB, "DELETE FROM /.*lnet/ WHERE \"host\"='{}'".format(host.fqdn))
-            influx_post(settings.INFLUXDB_IML_STATS_DB, "DELETE FROM /.*host/ WHERE \"host\"='{}'".format(host.fqdn))
-            influx_post(settings.INFLUXDB_IML_STATS_DB, "DELETE FROM /.*target/ WHERE \"host\"='{}'".format(host.fqdn))
+            influx_post(settings.INFLUXDB_EMF_STATS_DB, "DELETE FROM /.*net/ WHERE \"host_id\"='{}'".format(host.id))
+            influx_post(settings.INFLUXDB_EMF_STATS_DB, "DELETE FROM /.*lnet/ WHERE \"host\"='{}'".format(host.fqdn))
+            influx_post(settings.INFLUXDB_EMF_STATS_DB, "DELETE FROM /.*host/ WHERE \"host\"='{}'".format(host.fqdn))
+            influx_post(settings.INFLUXDB_EMF_STATS_DB, "DELETE FROM /.*target/ WHERE \"host\"='{}'".format(host.fqdn))
 
 
 class CommonRemoveHostJob(StateChangeJob):
@@ -1051,12 +1051,12 @@ class ForceRemoveHostJob(AdvertisedJob):
     def get_confirmation(cls, instance):
         return """WARNING This command is destructive. This command should only be performed
 when the Remove command has been unsuccessful. This command will remove this server from the
-Integrated Manager for Lustre configuration, but Integrated Manager for Lustre software will not be removed
+EXAScaler Management Framework configuration, but EXAScaler Management Framework software will not be removed
 from this server.  All targets that depend on this server will also be removed without any attempt to
-unconfigure them. To completely remove the Integrated Manager for Lustre software from this server
+unconfigure them. To completely remove the EXAScaler Management Framework software from this server
 (allowing it to be added to another Lustre file system) you must first contact technical support.
 You should only perform this command if this server is permanently unavailable, or has never been
-successfully deployed using Integrated Manager for Lustre software."""
+successfully deployed using EXAScaler Management Framework software."""
 
 
 class RebootHostJob(AdvertisedJob):

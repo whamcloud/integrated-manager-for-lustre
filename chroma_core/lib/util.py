@@ -177,7 +177,7 @@ def post_data_to_tcp_or_socket(post_data):
     if runningInDocker():
         return requests.post("http://{}:{}".format(settings.PROXY_HOST, settings.ACTION_RUNNER_PORT), json=post_data)
 
-    SOCKET_PATH = "http+unix://%2Fvar%2Frun%2Fiml-action-runner.sock/"
+    SOCKET_PATH = "http+unix://%2Fvar%2Frun%2Femf-action-runner.sock/"
     return requests_unixsocket.post(SOCKET_PATH, json=post_data)
 
 
@@ -207,7 +207,7 @@ class RustAgentCancellation(Exception):
 
 def invoke_rust_local_action(command, args={}, cancel_event=Event()):
     """
-    Talks to the iml-action-runner service
+    Talks to the emf-action-runner service
     """
 
     request_id = uuid.uuid4()
@@ -249,7 +249,7 @@ def invoke_rust_local_action(command, args={}, cancel_event=Event()):
 
 def invoke_rust_agent(host, command, args={}, cancel_event=Event()):
     """
-    Talks to the iml-action-runner service
+    Talks to the emf-action-runner service
     """
 
     request_id = uuid.uuid4()

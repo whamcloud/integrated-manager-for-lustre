@@ -1,8 +1,0 @@
----
-source: iml-services/iml-journal/src/lib.rs
-expression: client_eviction_parser(input).unwrap()
----
-(
-    3636,
-    "client 0@lo evicted: lock callback timer expired after 101s",
-)

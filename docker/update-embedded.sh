@@ -1,5 +1,5 @@
 #!/bin/sh
 
-export $(sed '/^#/d' /etc/iml-docker/setup/config)
+export $(sed '/^#/d' /etc/emf-docker/setup/config)
 
-/usr/bin/docker stack deploy -c /etc/iml-docker/docker-compose.yml -c /etc/iml-docker/docker-compose.overrides.yml iml --resolve-image=never
+/usr/bin/docker stack deploy -c /etc/emf-docker/docker-compose.yml -c /etc/emf-docker/docker-compose.overrides.yml emf --resolve-image=never

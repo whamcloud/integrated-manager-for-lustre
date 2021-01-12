@@ -1,6 +1,6 @@
 
 [Unit]
-Description=IML Device Scanner Daemon
+Description=EMF Device Scanner Daemon
 RefuseManualStart=true
 DefaultDependencies=false
 Requires=device-scanner.socket

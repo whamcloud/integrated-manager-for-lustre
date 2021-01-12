@@ -1,0 +1,21 @@
+[package]
+authors = ["EMF Team <emf@whamcloud.com>"]
+edition = "2018"
+name = "emf-network"
+version = "0.4.0"
+
+[dependencies]
+futures = "0.3"
+emf-influx = {path = "../../emf-influx", version = "0.2", features = ["with-db-client"]}
+emf-manager-env = {path = "../../emf-manager-env", version = "0.4"}
+emf-postgres = {path = "../../emf-postgres", version = "0.4"}
+emf-rabbit = {path = "../../emf-rabbit", version = "0.4"}
+emf-service-queue = {path = "../emf-service-queue", version = "0.4"}
+emf-tracing = {version = "0.3", path = "../../emf-tracing"}
+emf-wire-types = {path = "../../emf-wire-types", version = "0.4"}
+tokio = {version = "0.2", features = ["rt-threaded", "blocking"]}
+tracing = "0.1"
+url = "2.1"
+
+[dev-dependencies]
+insta = "1"

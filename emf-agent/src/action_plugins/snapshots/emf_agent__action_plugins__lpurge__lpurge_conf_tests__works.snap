@@ -1,0 +1,11 @@
+---
+source: emf-agent/src/action_plugins/lpurge.rs
+expression: cnt
+---
+device=lima-OST0010
+freehi=123
+freelo=60
+emf_socket=foobar
+max_jobs=0
+pool=lima.santiago
+

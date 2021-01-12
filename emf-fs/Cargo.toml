@@ -1,0 +1,16 @@
+[package]
+authors = ["EMF Team <emf@whamcloud.com>"]
+edition = "2018"
+name = "emf-fs"
+version = "0.4.0"
+
+[dependencies]
+bytes = "0.5"
+futures = "0.3"
+tempfile = "3.1"
+tokio = {version = "0.2", features = ["blocking", "fs", "io-util", "stream", "rt-threaded"]}
+tokio-util = {version = "0.3", features = ["codec"]}
+
+[dev-dependencies]
+tempdir = "0.3"
+tokio = {version = "0.2", features = ["macros"]}

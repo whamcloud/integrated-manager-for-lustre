@@ -13,7 +13,7 @@ RUN apk update && apk upgrade && \
   && tar -C /usr/local/bin -xzvf dockerize-alpine-linux-amd64-$DOCKERIZE_VERSION.tar.gz \
   && rm dockerize-alpine-linux-amd64-$DOCKERIZE_VERSION.tar.gz \
   && apk del gettext
-COPY --from=rust-iml-gui /usr/share/iml-manager/rust-iml-gui /usr/share/iml-manager/rust-iml-gui
-COPY --from=imlteam/online-help:6.1 /root /usr/lib/iml-manager/iml-online-help
-COPY --from=builder /build/iml.template /etc/nginx/conf.d/iml.template
-CMD dockerize -template /etc/nginx/conf.d/iml.template:/etc/nginx/conf.d/default.conf -stdout /var/log/nginx/access.log -stderr /var/log/nginx/error.log -wait file:///var/lib/chroma/iml-settings.conf -timeout 10m nginx
+COPY --from=rust-emf-gui /usr/share/emf-manager/rust-emf-gui /usr/share/emf-manager/rust-emf-gui
+COPY --from=imlteam/online-help:6.1 /root /usr/lib/emf-manager/emf-online-help
+COPY --from=builder /build/emf.template /etc/nginx/conf.d/emf.template
+CMD dockerize -template /etc/nginx/conf.d/emf.template:/etc/nginx/conf.d/default.conf -stdout /var/log/nginx/access.log -stderr /var/log/nginx/error.log -wait file:///var/lib/chroma/emf-settings.conf -timeout 10m nginx

@@ -3,10 +3,10 @@ import mock
 from chroma_core.models import ManagedHost, Nid
 from tests.unit.chroma_core.helpers.synthentic_objects import synthetic_host
 from tests.unit.chroma_core.helpers.helper import create_simple_fs, load_default_profile
-from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
+from tests.unit.lib.emf_unit_test_case import EMFUnitTestCase
 
 
-class TestNidStrings(IMLUnitTestCase):
+class TestNidStrings(EMFUnitTestCase):
     def setUp(self):
         super(TestNidStrings, self).setUp()
 

@@ -1,0 +1,23 @@
+[package]
+authors = ["EMF Team <emf@whamcloud.com>"]
+edition = "2018"
+name = "emf-snapshot"
+version = "0.4.0"
+
+[dependencies]
+futures = "0.3"
+futures-util = "0.3"
+emf-command-utils = {path = "../../emf-command-utils", version = "0.4"}
+emf-graphql-queries = {path = "../../emf-graphql-queries", version = "0.2"}
+emf-influx = {path = "../../emf-influx", version = "0.2"}
+emf-manager-client = {path = "../../emf-manager-client", version = "0.4"}
+emf-manager-env = {path = "../../emf-manager-env", version = "0.4"}
+emf-postgres = {path = "../../emf-postgres", version = "0.4"}
+emf-rabbit = {path = "../../emf-rabbit", version = "0.4"}
+emf-service-queue = {path = "../emf-service-queue", version = "0.4"}
+emf-tracing = {version = "0.3", path = "../../emf-tracing"}
+emf-wire-types = {path = "../../emf-wire-types", version = "0.4"}
+serde = "1.0"
+thiserror = "1.0"
+tokio = {version = "0.2", features = ["rt-threaded"]}
+url = "2.1"

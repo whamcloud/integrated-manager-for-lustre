@@ -12,11 +12,11 @@ class TestStartStop(SystemdTestCase):
 
     def test_clean_stop(self):
         services = [
-            "iml-http-agent.service",
-            "iml-job-scheduler.service",
-            "iml-plugin-runner.service",
-            "iml-corosync.service",
-            "iml-gunicorn.service",
+            "emf-http-agent.service",
+            "emf-job-scheduler.service",
+            "emf-plugin-runner.service",
+            "emf-corosync.service",
+            "emf-gunicorn.service",
         ]
 
         for service in services:

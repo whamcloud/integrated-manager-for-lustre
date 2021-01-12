@@ -1,0 +1,26 @@
+apiVersion: 1
+
+datasources:
+  - name: "emf-influx-emf"
+    type: influxdb
+    access: proxy
+    database: emf
+    url: http://localhost:8086
+    jsonData: { httpMode: GET }
+
+  - name: "emf-influx-emf_stratagem_scans"
+    type: influxdb
+    access: proxy
+    database: "emf_stratagem_scans"
+    url: http://localhost:8086
+    jsonData: { httpMode: GET }
+
+  - name: "emf_stats"
+    type: influxdb
+    access: proxy
+    database: "emf_stats"
+    url: http://localhost:8086
+    jsonData: { httpMode: GET }
+
+version: 1
+editable: false

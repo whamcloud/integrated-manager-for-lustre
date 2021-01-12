@@ -23,7 +23,7 @@ jobs:
         uses: actions/checkout@v1
 
       - name: Build rpm
-        run: make RPM_DIST=".$(date '+%s')" iml-gui-rpm
+        run: make RPM_DIST=".$(date '+%s')" emf-gui-rpm
 
       - name: Archive rpm
         uses: actions/upload-artifact@v2
@@ -54,8 +54,8 @@ jobs:
           name: rust_rpm
           path: _topdir/RPMS/x86_64
           retention-days: 1
-  python_iml_manager_rpm_build:
-    name: Python IML manager RPM build
+  python_emf_manager_rpm_build:
+    name: Python EMF manager RPM build
     runs-on: ubuntu-latest
     container:
       image: emfteam/emf-centos7-deps
@@ -69,16 +69,16 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Build rpm
-        run: make RPM_DIST=".$(date '+%s')" python-iml-rpms
+        run: make RPM_DIST=".$(date '+%s')" python-emf-rpms
 
       - name: Archive rpm
         uses: actions/upload-artifact@v2
         with:
-          name: python_iml_manager_rpm
+          name: python_emf_manager_rpm
           path: _topdir/RPMS/noarch
           retention-days: 1
-  python_iml_common_rpm_build:
-    name: Python IML common RPM build
+  python_emf_common_rpm_build:
+    name: Python EMF common RPM build
     runs-on: ubuntu-latest
     container:
       image: emfteam/emf-centos7-deps
@@ -92,12 +92,12 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Build rpm
-        run: make RPM_DIST=".$(date '+%s')" python-iml-common-rpms
+        run: make RPM_DIST=".$(date '+%s')" python-emf-common-rpms
 
       - name: Archive rpm
         uses: actions/upload-artifact@v2
         with:
-          name: python_iml_common_rpm
+          name: python_emf_common_rpm
           path: _topdir/RPMS/noarch
           retention-days: 1
   python_agent_rpm_build:
@@ -115,16 +115,16 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Build rpm
-        run: make RPM_DIST=".$(date '+%s')" python-iml-agent-rpms
+        run: make RPM_DIST=".$(date '+%s')" python-emf-agent-rpms
 
       - name: Archive rpm
         uses: actions/upload-artifact@v2
         with:
-          name: python_iml_agent_rpm
+          name: python_emf_agent_rpm
           path: _topdir/RPMS/noarch
           retention-days: 1
-  iml_docker_image_build:
-    name: iml-docker image build
+  emf_docker_image_build:
+    name: emf-docker image build
     runs-on: ubuntu-latest
     steps:
       - name: Cancel Workflow Action
@@ -166,23 +166,23 @@ jobs:
           docker buildx bake -f docker-compose.yml --load
 
           COMPOSE_IMAGES=$(docker-compose config 2>/dev/null | awk '{if ($1 == "image:") print $2;}')
-          docker save -o iml-images.tar $(echo $COMPOSE_IMAGES)
-          gzip -9 < iml-images.tar > iml-images.tgz
+          docker save -o emf-images.tar $(echo $COMPOSE_IMAGES)
+          gzip -9 < emf-images.tar > emf-images.tgz
 
           docker image ls
 
       - name: Archive images
         uses: actions/upload-artifact@v2
         with:
-          name: iml_images
-          path: docker/iml-images.tgz
+          name: emf_images
+          path: docker/emf-images.tgz
           retention-days: 1
-  iml_docker_rpm_build:
-    name: iml-docker rpm build
+  emf_docker_rpm_build:
+    name: emf-docker rpm build
     runs-on: ubuntu-latest
     container:
       image: emfteam/emf-centos7-deps
-    needs: iml_docker_image_build
+    needs: emf_docker_image_build
     steps:
       - name: Cancel Workflow Action
         uses: styfle/cancel-workflow-action@0.6.0
@@ -193,24 +193,24 @@ jobs:
       - name: Download docker images
         uses: actions/download-artifact@v1
         with:
-          name: iml_images
+          name: emf_images
       - run: |
           mkdir -p /tmp/_topdir/{SOURCES,SPECS}
-          mkdir -p /tmp/scratch/iml-docker/
-          mv docker/{docker-compose.yml,update-embedded.sh,copy-embedded-settings} /tmp/scratch/iml-docker/
-          mv iml_images/iml-images.tgz /tmp/scratch/iml-docker/
-          mv iml-docker.service /tmp/scratch/iml-docker/
-          tar -czvf /tmp/_topdir/SOURCES/iml-docker.tar.gz -C /tmp/scratch/iml-docker .
-          mv iml-docker.spec /tmp/_topdir/SPECS/
+          mkdir -p /tmp/scratch/emf-docker/
+          mv docker/{docker-compose.yml,update-embedded.sh,copy-embedded-settings} /tmp/scratch/emf-docker/
+          mv emf_images/emf-images.tgz /tmp/scratch/emf-docker/
+          mv emf-docker.service /tmp/scratch/emf-docker/
+          tar -czvf /tmp/_topdir/SOURCES/emf-docker.tar.gz -C /tmp/scratch/emf-docker .
+          mv emf-docker.spec /tmp/_topdir/SPECS/
 
-          rpmbuild -bb -D "_topdir /tmp/_topdir" /tmp/_topdir/SPECS/iml-docker.spec
+          rpmbuild -bb -D "_topdir /tmp/_topdir" /tmp/_topdir/SPECS/emf-docker.spec
       - uses: geekyeggo/delete-artifact@v1
         with:
-          name: iml_images
+          name: emf_images
       - name: Archive rpm
         uses: actions/upload-artifact@v2
         with:
-          name: iml_docker_rpm
+          name: emf_docker_rpm
           path: /tmp/_topdir/RPMS/x86_64
           retention-days: 1
   device_scanner_rpm_build:
@@ -266,10 +266,10 @@ jobs:
       [
         device_scanner_rpm_build,
         gui_rpm_build,
-        iml_docker_rpm_build,
+        emf_docker_rpm_build,
         python_agent_rpm_build,
-        python_iml_common_rpm_build,
-        python_iml_manager_rpm_build,
+        python_emf_common_rpm_build,
+        python_emf_manager_rpm_build,
         rust_emf_rpm_build,
         sos_plugin_build,
       ]
@@ -299,22 +299,22 @@ jobs:
       - name: Download Python Manager RPMs
         uses: actions/download-artifact@v1
         with:
-          name: python_iml_manager_rpm
+          name: python_emf_manager_rpm
           path: emf_rpms
-      - name: Download python iml agent RPMs
+      - name: Download python emf agent RPMs
         uses: actions/download-artifact@v1
         with:
-          name: python_iml_agent_rpm
+          name: python_emf_agent_rpm
           path: emf_rpms
-      - name: Download iml common RPMs
+      - name: Download emf common RPMs
         uses: actions/download-artifact@v1
         with:
-          name: python_iml_common_rpm
+          name: python_emf_common_rpm
           path: emf_rpms
-      - name: Download iml-docker RPMs
+      - name: Download emf-docker RPMs
         uses: actions/download-artifact@v1
         with:
-          name: iml_docker_rpm
+          name: emf_docker_rpm
           path: emf_rpms
       - name: Download sos-plugin RPM
         uses: actions/download-artifact@v1
@@ -337,10 +337,10 @@ jobs:
             gui_rpm
             rust_rpm
             device_scanner_rpm
-            python_iml_manager_rpm
-            python_iml_agent_rpm
-            python_iml_common_rpm
-            iml_docker_rpm
+            python_emf_manager_rpm
+            python_emf_agent_rpm
+            python_emf_common_rpm
+            emf_docker_rpm
             sos_rpm
   rpm_testing:
     name: RPM Testing
@@ -383,7 +383,7 @@ jobs:
 
       - name: Test
         run: |
-          cd iml-system-rpm-tests
+          cd emf-system-rpm-tests
           set -e
           export REPO_URI='http://10.0.2.2:9000'
           export VBOX_PASSWD=lustre
@@ -450,7 +450,7 @@ jobs:
 
       - name: Test
         run: |
-          cd iml-system-docker-tests
+          cd emf-system-docker-tests
           set -e
           export REPO_URI='http://10.0.2.2:9000'
           export VBOX_PASSWD=lustre

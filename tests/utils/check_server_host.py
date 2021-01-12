@@ -5,7 +5,7 @@ from tests.unit.remote_operations import RealRemoteOperations
 logger = logging.getLogger("test")
 
 # This purpose of this file is to begin creating a set of robust tests to fire at a server or host that checkout what
-# is alive and what is dead etc. Perhaps it should really just run iml-diagnostics and it can be extended that way.
+# is alive and what is dead etc. Perhaps it should really just run emf-diagnostics and it can be extended that way.
 # Very robust catch everything.
 
 

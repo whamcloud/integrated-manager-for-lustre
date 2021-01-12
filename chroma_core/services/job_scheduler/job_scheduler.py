@@ -57,7 +57,7 @@ from chroma_core.services.queue import ServiceQueue
 from chroma_core.services.rpc import RpcError
 from chroma_core.services.log import log_register
 from disabled_connection import DISABLED_CONNECTION
-from iml_common.lib.date_time import IMLDateTime
+from emf_common.lib.date_time import EMFDateTime
 
 from chroma_help.help import help_text
 
@@ -808,7 +808,7 @@ class JobScheduler(object):
 
     def notify(self, content_type, object_id, time_serialized, update_attrs, from_states):
         with self._lock:
-            notification_time = IMLDateTime.parse(time_serialized)
+            notification_time = EMFDateTime.parse(time_serialized)
             self._notify(content_type, object_id, notification_time, update_attrs, from_states)
 
             self._run_next()

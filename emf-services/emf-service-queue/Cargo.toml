@@ -1,0 +1,14 @@
+[package]
+authors = ["EMF Team <emf@whamcloud.com>"]
+edition = "2018"
+name = "emf-service-queue"
+version = "0.4.0"
+
+[dependencies]
+futures = "0.3"
+emf-rabbit = {path = "../../emf-rabbit", version = "0.4"}
+emf-wire-types = {path = "../../emf-wire-types", version = "0.4"}
+serde = {version = "1", features = ["derive"]}
+serde_json = "1.0"
+thiserror = "1.0"
+tracing = "0.1"

@@ -2,7 +2,7 @@ import mock
 
 from tests.unit.chroma_core.helpers.synthentic_objects import synthetic_host
 from tests.unit.chroma_core.helpers.helper import load_default_profile
-from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
+from tests.unit.lib.emf_unit_test_case import EMFUnitTestCase
 from chroma_core.models import HostContactAlert, HostOfflineAlert, ServerProfile
 from chroma_core.models import (
     ManagedTarget,
@@ -15,7 +15,7 @@ from chroma_core.models import (
 from chroma_core.lib.cache import ObjectCache
 
 
-class TestAdvertisedCase(IMLUnitTestCase):
+class TestAdvertisedCase(EMFUnitTestCase):
     normal_host_state = "managed"
 
     def set_managed(self, managed):
@@ -143,7 +143,7 @@ class TestClientManagementJobs(TestAdvertisedCase):
         worker_profile = ServerProfile(
             name="test_worker_profile",
             ui_name="Managed Lustre client",
-            ui_description="Client available for IML admin tasks",
+            ui_description="Client available for EMF admin tasks",
             managed=True,
             worker=True,
             initial_state="managed",

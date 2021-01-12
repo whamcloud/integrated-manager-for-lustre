@@ -1,4 +1,4 @@
-from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
+from tests.unit.lib.emf_unit_test_case import EMFUnitTestCase
 from chroma_core.lib.storage_plugin.api import attributes
 from chroma_core.lib.storage_plugin.api.identifiers import GlobalId
 from chroma_core.lib.storage_plugin.base_resource import BaseStorageResource
@@ -43,7 +43,7 @@ class TestDefaultAndOptional(BaseStorageResource):
     name_default_callable_bob = attributes.String(default=lambda storage_dict: storage_dict["name"])
 
 
-class TestDisplayNames(IMLUnitTestCase):
+class TestDisplayNames(EMFUnitTestCase):
     def test_defaults(self):
         td1 = TestDefaults1(name="foo")
         self.assertEqual(td1.get_label(), "TestDefaults1 foo")
@@ -69,7 +69,7 @@ class TestDisplayNames(IMLUnitTestCase):
         self.assertEqual(test_defaults_and_optional.name_default_callable_bob, "Bob")
 
 
-class TestDeltaChanges(IMLUnitTestCase):
+class TestDeltaChanges(EMFUnitTestCase):
     def test_delta_changes(self):
         """Test changes are recorded in _delta when they occur."""
 

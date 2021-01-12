@@ -1,7 +1,7 @@
 from django.contrib.contenttypes.models import ContentType
 from django.db import reset_queries, connection
 
-from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
+from tests.unit.lib.emf_unit_test_case import EMFUnitTestCase
 from chroma_core.lib.cache import ObjectCache
 from chroma_core.models import ManagedMgs, ManagedFilesystem, ManagedOst, ManagedMdt, RebootHostJob, ShutdownHostJob
 from chroma_core.services.job_scheduler.job_scheduler import JobScheduler
@@ -9,7 +9,7 @@ from tests.unit.chroma_core.helpers.synthentic_objects import synthetic_host
 from tests.unit.chroma_core.helpers.helper import load_default_profile
 
 
-class TestAvailableTransitions(IMLUnitTestCase):
+class TestAvailableTransitions(EMFUnitTestCase):
     """Check that available transitions are reported correctly
 
     Testing the JobScheduler.available_tranistions method

@@ -1,8 +1,0 @@
----
-source: iml-services/iml-journal/src/lib.rs
-expression: client_connection_parser(input).unwrap()
----
-(
-    31793,
-    "client e5232e74-1e61-fad1-b59b-6e4a7d674016 from 192.168.122.218@tcp connected to target MGS",
-)

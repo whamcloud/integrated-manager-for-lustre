@@ -1,0 +1,37 @@
+# We are only handling block devices
+SUBSYSTEM!="block", GOTO="emf_device_scanner_end"
+
+# Ignore any devices we aren't interested in
+KERNEL=="fd*|loop*|ram*|sr[0-9]*", GOTO="emf_device_scanner_end"
+
+# Get scsi_id page 80 info. This is *only* needed to keep compat with existing EMF installs.
+ACTION=="add|change", PROGRAM="/lib/udev/scsi_id -g -p 0x80 -d $devnode", RESULT=="?*", ENV{EMF_SCSI_80}="$result"
+
+# Get scsi_id page 83 info. This is *only* needed to keep compat with existing EMF installs.
+ACTION=="add|change", PROGRAM="/lib/udev/scsi_id -g -p 0x83 -d $devnode", RESULT=="?*", ENV{EMF_SCSI_83}="$result"
+
+# Get target Major-minors for each dm slave (previously retrieved from dmsetup table)
+ACTION=="add|change", ENV{DM_UUID}=="?*", PROGRAM="/bin/bash -c 'for l in `ls /sys%p/slaves`; do cat /sys%p/slaves/$l/dev; done'", RESULT=="?*", ENV{EMF_DM_SLAVE_MMS}="$result"
+
+# Check if this device is a multipath device
+ACTION=="add|change", ENV{DM_UUID}=="mpath-?*", ENV{EMF_IS_MPATH}="1"
+
+# Get ro state whenever there is an add or change on the device
+ACTION=="add|change", PROGRAM="/sbin/blockdev --getro $devnode", RESULT=="?*", ENV{EMF_IS_RO}="$result"
+
+# Read rotational state property from /sys and add it to the device
+ACTION=="add|change", ENV{EMF_ROTATIONAL}="$attr{queue/rotational}"
+
+# Read size from /sys and add it to the device
+ACTION=="add|change", ENV{EMF_SIZE}="$attr{size}"
+
+# Mark a bios boot partition
+ACTION=="add|change", ENV{ID_PART_ENTRY_TYPE}=="21686148-6449-6e6f-744e-656564454649" ENV{EMF_IS_BIOS_BOOT}="1"
+
+# Mark a zfs reserved partition
+ACTION=="add|change", ENV{ID_PART_ENTRY_TYPE}=="6a945a3b-1dd2-11b2-99a6-080020736631" ENV{EMF_IS_ZFS_RESERVED}="1"
+
+# Sync up the device-scanner-daemon on add, remove or change of block device
+ACTION=="add|remove|change", RUN+="/usr/bin/uevent-listener"
+
+LABEL="emf_device_scanner_end"

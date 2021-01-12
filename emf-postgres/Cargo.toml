@@ -1,0 +1,17 @@
+[package]
+authors = ["EMF Team <emf@whamcloud.com>"]
+edition = "2018"
+name = "emf-postgres"
+version = "0.4.0"
+
+[dependencies]
+dotenv = {version = "0.15", optional = true}
+futures = "0.3"
+emf-manager-env = {path = "../emf-manager-env", version = "0.4"}
+emf-wire-types = {path = "../emf-wire-types", version = "0.4"}
+sqlx = {version = "0.4.2", default-features = false, features = ["json", "macros", "offline", "postgres", "runtime-tokio-rustls", "chrono", "migrate"]}
+tokio-postgres = "0.5"
+tracing = "0.1"
+
+[features]
+test = ["dotenv"]

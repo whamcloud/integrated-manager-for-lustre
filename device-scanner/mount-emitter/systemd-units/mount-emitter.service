@@ -1,5 +1,5 @@
 [Unit]
-Description=IML Mount Emitter
+Description=EMF Mount Emitter
 PartOf=device-scanner.target
 After=local-fs.target
 After=device-scanner.socket

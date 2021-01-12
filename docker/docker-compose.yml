@@ -8,7 +8,7 @@ x-deploy: &default-deploy
     window: 5s
 services:
   postgres:
-    image: "imlteam/postgres:6.3.0"
+    image: "emfteam/postgres:6.3.0"
     build:
       context: ../
       dockerfile: ./docker/postgres.dockerfile
@@ -29,7 +29,7 @@ services:
       retries: 5
       start_period: 10s
   influxdb:
-    image: "imlteam/influxdb:6.3.0"
+    image: "emfteam/influxdb:6.3.0"
     build:
       context: ../
       dockerfile: ./docker/influxdb.dockerfile
@@ -59,9 +59,9 @@ services:
       - INFLUXDB_REPORTING_DISABLED=true
       - INFLUXDB_HTTP_BIND_ADDRESS=influxdb:8086
       - INFLUXDB_HTTP_LOG_ENABLED=false
-      - INFLUXDB_IML_STATS_LONG_DURATION
+      - INFLUXDB_EMF_STATS_LONG_DURATION
   grafana:
-    image: "imlteam/grafana:6.3.0"
+    image: "emfteam/grafana:6.3.0"
     build:
       context: ../
       dockerfile: ./docker/grafana.dockerfile
@@ -79,7 +79,7 @@ services:
     ports:
       - 3000:3000
   rabbit:
-    image: "imlteam/rabbitmq:6.3.0"
+    image: "emfteam/rabbitmq:6.3.0"
     build:
       context: ../
       dockerfile: ./docker/rabbitmq.dockerfile
@@ -110,7 +110,7 @@ services:
       retries: 5
       start_period: 30s
   nginx:
-    image: "imlteam/manager-nginx:6.3.0"
+    image: "emfteam/manager-nginx:6.3.0"
     build:
       context: ../
       dockerfile: ./docker/nginx.dockerfile
@@ -118,19 +118,19 @@ services:
     logging: *default-logging
     deploy: *default-deploy
     volumes:
-      - "/etc/iml-docker/setup/branding:/var/lib/chroma/branding"
+      - "/etc/emf-docker/setup/branding:/var/lib/chroma/branding"
       - "manager-config:/var/lib/chroma"
-      - "report:/var/spool/iml/report"
-      - "static-config1:/usr/lib/iml-manager"
+      - "report:/var/spool/emf/report"
+      - "static-config1:/usr/lib/emf-manager"
       - "static-config2:/usr/lib/node_modules/@iml"
     ports:
       - "7443:7443"
   snapshot:
-    image: "imlteam/snapshot:6.3.0"
+    image: "emfteam/snapshot:6.3.0"
     hostname: "snapshot"
     build:
       context: ../
-      dockerfile: ./docker/iml-snapshot.dockerfile
+      dockerfile: ./docker/emf-snapshot.dockerfile
     deploy: *default-deploy
     logging: *default-logging
     environment:
@@ -138,11 +138,11 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
   device:
-    image: "imlteam/device:6.3.0"
+    image: "emfteam/device:6.3.0"
     hostname: "device"
     build:
       context: ../
-      dockerfile: ./docker/iml-device.dockerfile
+      dockerfile: ./docker/emf-device.dockerfile
     deploy: *default-deploy
     logging: *default-logging
     environment:
@@ -151,12 +151,12 @@ services:
       - RUST_LOG=info,sqlx::query=warn
     volumes:
       - "manager-config:/var/lib/chroma"
-  iml-corosync:
-    image: "imlteam/corosync:6.3.0"
-    hostname: "iml-corosync"
+  emf-corosync:
+    image: "emfteam/corosync:6.3.0"
+    hostname: "emf-corosync"
     build:
       context: ../
-      dockerfile: ./docker/iml-corosync.dockerfile
+      dockerfile: ./docker/emf-corosync.dockerfile
     deploy: *default-deploy
     logging: *default-logging
     environment:
@@ -164,11 +164,11 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
   network:
-    image: "imlteam/network:6.3.0"
-    hostname: "iml-network"
+    image: "emfteam/network:6.3.0"
+    hostname: "emf-network"
     build:
       context: ../
-      dockerfile: ./docker/iml-network.dockerfile
+      dockerfile: ./docker/emf-network.dockerfile
     deploy: *default-deploy
     logging: *default-logging
     volumes:
@@ -176,11 +176,11 @@ services:
     environment:
       - RUST_LOG=info,sqlx::query=warn
   ntp:
-    image: "imlteam/ntp:6.3.0"
-    hostname: "iml-ntp"
+    image: "emfteam/ntp:6.3.0"
+    hostname: "emf-ntp"
     build:
       context: ../
-      dockerfile: ./docker/iml-ntp.dockerfile
+      dockerfile: ./docker/emf-ntp.dockerfile
     deploy: *default-deploy
     logging: *default-logging
     volumes:
@@ -188,12 +188,12 @@ services:
     environment:
       - RUST_LOG=info,sqlx::query=warn
   sfa:
-    image: "imlteam/sfa:6.3.0"
-    hostname: "iml-sfa"
+    image: "emfteam/sfa:6.3.0"
+    hostname: "emf-sfa"
     logging: *default-logging
     build:
       context: ../
-      dockerfile: ./docker/iml-sfa.dockerfile
+      dockerfile: ./docker/emf-sfa.dockerfile
     deploy:
       restart_policy:
         condition: on-failure
@@ -205,7 +205,7 @@ services:
       - RUST_LOG=info,sqlx::query=warn
       - SFA_ENDPOINTS_1
   corosync:
-    image: "imlteam/manager-corosync:6.3.0"
+    image: "emfteam/manager-corosync:6.3.0"
     hostname: "corosync"
     logging: *default-logging
     build:
@@ -217,7 +217,7 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
   gunicorn:
-    image: "imlteam/manager-gunicorn:6.3.0"
+    image: "emfteam/manager-gunicorn:6.3.0"
     hostname: "gunicorn"
     logging: *default-logging
     build:
@@ -231,7 +231,7 @@ services:
     volumes:
       - "manager-config:/var/lib/chroma"
   http-agent:
-    image: "imlteam/manager-http-agent:6.3.0"
+    image: "emfteam/manager-http-agent:6.3.0"
     volumes:
       - "manager-config:/var/lib/chroma"
     hostname: "http-agent"
@@ -243,22 +243,22 @@ services:
     environment:
       - PROXY_HOST=http-agent
       - LOG_LEVEL
-  iml-agent-comms:
-    image: "imlteam/iml-agent-comms:6.3.0"
+  emf-agent-comms:
+    image: "emfteam/emf-agent-comms:6.3.0"
     volumes:
       - "manager-config:/var/lib/chroma"
-    hostname: "iml-agent-comms"
+    hostname: "emf-agent-comms"
     logging: *default-logging
     build:
       context: ../
-      dockerfile: ./docker/iml-agent-comms.dockerfile
+      dockerfile: ./docker/emf-agent-comms.dockerfile
     deploy: *default-deploy
     environment:
       - HTTP_AGENT2_PORT=8003
-      - PROXY_HOST=iml-agent-comms
-      - RUST_LOG=info,iml_agent_comms::api=warn
+      - PROXY_HOST=emf-agent-comms
+      - RUST_LOG=info,emf_agent_comms::api=warn
   job-scheduler:
-    image: "imlteam/manager-job-scheduler:6.3.0"
+    image: "emfteam/manager-job-scheduler:6.3.0"
     hostname: "job-scheduler"
     build:
       context: .
@@ -267,14 +267,14 @@ services:
     logging: *default-logging
     volumes:
       - "manager-config:/var/lib/chroma"
-      - "report:/var/spool/iml/report"
+      - "report:/var/spool/emf/report"
       - "/root/.ssh:/root/.ssh"
     environment:
       - DEVICE_AGGREGATOR_URL=http://device:8008
-      - PROXY_HOST=iml-action-runner
+      - PROXY_HOST=emf-action-runner
       - LOG_LEVEL
   plugin-runner:
-    image: "imlteam/manager-plugin-runner:6.3.0"
+    image: "emfteam/manager-plugin-runner:6.3.0"
     hostname: "plugin-runner"
     logging: *default-logging
     build:
@@ -287,7 +287,7 @@ services:
       - DEVICE_AGGREGATOR_URL=http://device:8008
       - LOG_LEVEL
   journal:
-    image: "imlteam/journal:6.3.0"
+    image: "emfteam/journal:6.3.0"
     hostname: "journal"
     logging: *default-logging
     build:
@@ -301,143 +301,143 @@ services:
       - LOG_LEVEL
       - DBLOG_HW
       - DBLOG_LW
-  iml-warp-drive:
-    image: "imlteam/iml-warp-drive:6.3.0"
-    hostname: "iml-warp-drive"
+  emf-warp-drive:
+    image: "emfteam/emf-warp-drive:6.3.0"
+    hostname: "emf-warp-drive"
     logging: *default-logging
     build:
       context: ../
-      dockerfile: ./docker/iml-warp-drive.dockerfile
+      dockerfile: ./docker/emf-warp-drive.dockerfile
     deploy: *default-deploy
     volumes:
       - "manager-config:/var/lib/chroma"
     environment:
-      - PROXY_HOST=iml-warp-drive
+      - PROXY_HOST=emf-warp-drive
       - RUST_LOG=info,sqlx::query=warn
-  iml-action-runner:
-    image: "imlteam/iml-action-runner:6.3.0"
-    hostname: "iml-action-runner"
+  emf-action-runner:
+    image: "emfteam/emf-action-runner:6.3.0"
+    hostname: "emf-action-runner"
     logging: *default-logging
     build:
       context: ../
-      dockerfile: ./docker/iml-action-runner.dockerfile
+      dockerfile: ./docker/emf-action-runner.dockerfile
     deploy: *default-deploy
     volumes:
       - "manager-config:/var/lib/chroma"
     environment:
-      - PROXY_HOST=iml-action-runner
+      - PROXY_HOST=emf-action-runner
       - ACTION_RUNNER_PORT=8009
       - RUST_LOG=info,sqlx::query=warn
-  iml-task-runner:
-    image: "imlteam/iml-task-runner:6.3.0"
-    hostname: "iml-task-runner"
+  emf-task-runner:
+    image: "emfteam/emf-task-runner:6.3.0"
+    hostname: "emf-task-runner"
     logging: *default-logging
     build:
       context: ../
-      dockerfile: ./docker/iml-task-runner.dockerfile
+      dockerfile: ./docker/emf-task-runner.dockerfile
     deploy: *default-deploy
     volumes:
       - "manager-config:/var/lib/chroma"
     environment:
       - RUST_LOG=info,sqlx::query=warn
-      - PROXY_HOST=iml-action-runner
+      - PROXY_HOST=emf-action-runner
       - ACTION_RUNNER_PORT=8009
-  iml-api:
-    image: "imlteam/iml-api:6.3.0"
-    hostname: "iml-api"
+  emf-api:
+    image: "emfteam/emf-api:6.3.0"
+    hostname: "emf-api"
     logging: *default-logging
     build:
       context: ../
-      dockerfile: ./docker/iml-api.dockerfile
+      dockerfile: ./docker/emf-api.dockerfile
     deploy: *default-deploy
     volumes:
       - "manager-config:/var/lib/chroma"
-      - "report:/var/spool/iml/report"
+      - "report:/var/spool/emf/report"
     environment:
-      - PROXY_HOST=iml-api
+      - PROXY_HOST=emf-api
       - RUST_LOG=info,sqlx::query=warn
       - BRANDING
       - USE_STRATAGEM
       - USE_SNAPSHOTS
       - EXA_VERSION
       - SFA_ENDPOINTS_1
-  iml-ostpool:
-    image: "imlteam/iml-ostpool:6.3.0"
-    hostname: "iml-ostpool"
+  emf-ostpool:
+    image: "emfteam/emf-ostpool:6.3.0"
+    hostname: "emf-ostpool"
     logging: *default-logging
     build:
       context: ../
-      dockerfile: ./docker/iml-ostpool.dockerfile
+      dockerfile: ./docker/emf-ostpool.dockerfile
     deploy: *default-deploy
     volumes:
       - "manager-config:/var/lib/chroma"
     environment:
       - RUST_LOG=info,sqlx::query=warn
-  iml-mailbox:
-    image: "imlteam/iml-mailbox:6.3.0"
-    hostname: "iml-mailbox"
+  emf-mailbox:
+    image: "emfteam/emf-mailbox:6.3.0"
+    hostname: "emf-mailbox"
     logging: *default-logging
     build:
       context: ../
-      dockerfile: ./docker/iml-mailbox.dockerfile
+      dockerfile: ./docker/emf-mailbox.dockerfile
     deploy: *default-deploy
     volumes:
       - "manager-config:/var/lib/chroma"
     environment:
-      - PROXY_HOST=iml-mailbox
+      - PROXY_HOST=emf-mailbox
       - RUST_LOG=info,sqlx::query=warn
-  iml-report:
-    image: "imlteam/iml-report:6.3.0"
-    hostname: "iml-report"
+  emf-report:
+    image: "emfteam/emf-report:6.3.0"
+    hostname: "emf-report"
     logging: *default-logging
     build:
       context: ../
-      dockerfile: ./docker/iml-report.dockerfile
+      dockerfile: ./docker/emf-report.dockerfile
     deploy: *default-deploy
     environment:
       - RUST_LOG=info
     volumes:
-      - "report:/var/spool/iml/report"
+      - "report:/var/spool/emf/report"
       - "/sys/fs/cgroup:/sys/fs/cgroup:ro"
       - "report_run:/run"
       - "manager-config:/var/lib/chroma"
-  iml-stats:
-    image: "imlteam/iml-stats:6.3.0"
-    hostname: "iml-stats"
+  emf-stats:
+    image: "emfteam/emf-stats:6.3.0"
+    hostname: "emf-stats"
     logging: *default-logging
     build:
       context: ../
-      dockerfile: ./docker/iml-stats.dockerfile
+      dockerfile: ./docker/emf-stats.dockerfile
     deploy: *default-deploy
     volumes:
       - "manager-config:/var/lib/chroma"
     environment:
       - RUST_LOG=info
-      - "PROXY_HOST=iml-stats"
-  iml-postoffice:
-    image: "imlteam/iml-postoffice:6.3.0"
-    hostname: "iml-postoffice"
+      - "PROXY_HOST=emf-stats"
+  emf-postoffice:
+    image: "emfteam/emf-postoffice:6.3.0"
+    hostname: "emf-postoffice"
     logging: *default-logging
     build:
       context: ../
-      dockerfile: ./docker/iml-postoffice.dockerfile
+      dockerfile: ./docker/emf-postoffice.dockerfile
     deploy: *default-deploy
     volumes:
       - "manager-config:/var/lib/chroma"
     environment:
-      - PROXY_HOST=iml-postoffice
+      - PROXY_HOST=emf-postoffice
       - RUST_LOG=info
-  iml-timer:
-    image: "imlteam/iml-timer:6.3.0"
-    hostname: "iml-timer"
+  emf-timer:
+    image: "emfteam/emf-timer:6.3.0"
+    hostname: "emf-timer"
     logging: *default-logging
     build:
       context: ../
-      dockerfile: ./docker/iml-timer.dockerfile
+      dockerfile: ./docker/emf-timer.dockerfile
     deploy: *default-deploy
     environment:
       - RUST_LOG=info
-      - PROXY_HOST=iml-timer
+      - PROXY_HOST=emf-timer
     volumes:
       - "/sys/fs/cgroup:/sys/fs/cgroup:ro"
       - "timer_run:/run"
@@ -445,7 +445,7 @@ services:
       - "timer_system:/etc/systemd/system"
       - "manager-config:/var/lib/chroma"
   setup:
-    image: "imlteam/manager-setup:6.3.0"
+    image: "emfteam/manager-setup:6.3.0"
     logging: *default-logging
     command: ["tail", "-f", "/dev/null"]
     build:
@@ -453,17 +453,17 @@ services:
       dockerfile: ./setup.dockerfile
     volumes:
       - "manager-config:/var/lib/chroma"
-      - "/etc/iml-docker/setup:/var/lib/chroma-setup"
+      - "/etc/emf-docker/setup:/var/lib/chroma-setup"
     secrets:
-      - iml_pw
+      - emf_pw
     environment:
       - BRANDING
       - USE_STRATAGEM
       - EXA_VERSION
-      - INFLUXDB_IML_STATS_LONG_DURATION
+      - INFLUXDB_EMF_STATS_LONG_DURATION
       - LOG_LEVEL
       - INFLUXDB_SERVER_FQDN=influxdb
-      - TIMER_SERVER_FQDN=iml-timer
+      - TIMER_SERVER_FQDN=emf-timer
     deploy:
       restart_policy:
         condition: on-failure
@@ -492,5 +492,5 @@ volumes:
   timer_system:
   timer_systemd:
 secrets:
-  iml_pw:
+  emf_pw:
     external: true

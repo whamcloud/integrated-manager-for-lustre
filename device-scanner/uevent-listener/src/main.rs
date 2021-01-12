@@ -110,18 +110,18 @@ pub fn build_uevent() -> UEvent {
         fs_label: optional_field("ID_FS_LABEL").and_then(empty_str_to_none),
         part_entry_number: optional_field("ID_PART_ENTRY_NUMBER").and_then(parse_to),
         part_entry_mm: optional_field("ID_PART_ENTRY_DISK").and_then(empty_str_to_none),
-        size: optional_field("IML_SIZE")
+        size: optional_field("EMF_SIZE")
             .and_then(empty_str_to_none)
             .and_then(parse_to)
             .map(|x: u64| x * 512),
-        rotational: optional_field("IML_ROTATIONAL").map(is_one),
-        scsi80: optional_field("IML_SCSI_80").map(|x| x.trim().to_string()),
-        scsi83: optional_field("IML_SCSI_83").map(|x| x.trim().to_string()),
-        read_only: optional_field("IML_IS_RO").map(is_one),
-        bios_boot: optional_field("IML_IS_BIOS_BOOT").map(is_one),
-        zfs_reserved: optional_field("IML_IS_ZFS_RESERVED").map(is_one),
-        is_mpath: optional_field("IML_IS_MPATH").map(is_one),
-        dm_slave_mms: optional_field("IML_DM_SLAVE_MMS")
+        rotational: optional_field("EMF_ROTATIONAL").map(is_one),
+        scsi80: optional_field("EMF_SCSI_80").map(|x| x.trim().to_string()),
+        scsi83: optional_field("EMF_SCSI_83").map(|x| x.trim().to_string()),
+        read_only: optional_field("EMF_IS_RO").map(is_one),
+        bios_boot: optional_field("EMF_IS_BIOS_BOOT").map(is_one),
+        zfs_reserved: optional_field("EMF_IS_ZFS_RESERVED").map(is_one),
+        is_mpath: optional_field("EMF_IS_MPATH").map(is_one),
+        dm_slave_mms: optional_field("EMF_DM_SLAVE_MMS")
             .map(|x| split_space(&x))
             .unwrap_or_else(Vector::new),
         dm_vg_size: Some(0),
@@ -190,8 +190,8 @@ mod tests {
             ("DEVPATH".to_string(), "/devices/virtual/block/md0".to_string()),
             ("DEVTYPE".to_string(), "disk".to_string()),
             ("ID_FS_TYPE".to_string(), "".to_string()),
-            ("IML_IS_RO".to_string(), "0".to_string()),
-            ("IML_SIZE".to_string(), "41910272".to_string()),
+            ("EMF_IS_RO".to_string(), "0".to_string()),
+            ("EMF_SIZE".to_string(), "41910272".to_string()),
             ("MAJOR".to_string(), "9".to_string()),
             ("MD_DEVICES".to_string(), "2".to_string()),
             ("MD_DEVICE_sda_DEV".to_string(), "/dev/sda".to_string()),

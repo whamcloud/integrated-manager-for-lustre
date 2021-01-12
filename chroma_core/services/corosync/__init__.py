@@ -15,7 +15,7 @@ from chroma_core.services.queue import AgentRxQueue
 from chroma_core.services.job_scheduler import job_scheduler_notify
 from chroma_core.models import CorosyncNoPeersAlert
 from chroma_core.models import StonithNotEnabledAlert
-from iml_common.lib.date_time import IMLDateTime
+from emf_common.lib.date_time import EMFDateTime
 
 log = log_register(__name__)
 
@@ -96,7 +96,7 @@ class Service(ChromaService):
             stonith_enabled = options["stonith_enabled"]
 
             try:
-                dt = IMLDateTime.parse(dt)
+                dt = EMFDateTime.parse(dt)
             except ValueError:
                 if dt != "":
                     log.warning("Invalid date or tz string from corosync plugin: %s" % dt)

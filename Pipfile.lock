@@ -184,9 +184,9 @@
             "index": "pypi",
             "version": "==19.9.0"
         },
-        "iml-common": {
+        "emf-common": {
             "editable": true,
-            "path": "./iml-common"
+            "path": "./emf-common"
         },
         "ipaddress": {
             "hashes": [

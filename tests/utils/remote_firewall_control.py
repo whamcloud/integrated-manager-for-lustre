@@ -6,7 +6,7 @@
 import abc
 from collections import namedtuple
 from operator import attrgetter
-from iml_common.lib import util
+from emf_common.lib import util
 import re
 
 
@@ -179,7 +179,7 @@ class RemoteFirewallControlFirewallCmd(RemoteFirewallControl):
         Process string from firewall-cmd application output on EL7, matches ANY source/dest address rule specifications
 
         Note: the expected input is line separated <port>/<proto> pairs, this will give any explicitly allowed rules
-        added by IML and other applications to the default zone but will not list named services enabled in firewalld
+        added by EMF and other applications to the default zone but will not list named services enabled in firewalld
         Empty string is a valid input indicating no explicitly added port/proto rules
 
         :return: None on success/valid input, error string otherwise
@@ -187,7 +187,7 @@ class RemoteFirewallControlFirewallCmd(RemoteFirewallControl):
         result = self.remote_access_func(self.address, self.firewall_list_cmd)
 
         if result.rc != 0:
-            from iml_common.lib.shell import Shell
+            from emf_common.lib.shell import Shell
 
             raise RuntimeError(
                 """process_rules(): remote shell command failed unexpectedly (%s), is firewall-cmd running? (%s) (%s)

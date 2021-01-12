@@ -17,5 +17,5 @@ EOF
 
 source /root/.bash_profile
 
-cd /integrated-manager-for-lustre \
+cd /exascaler-management-framework \
     && RPM_DIST=".$(date '+%s')" make copr-rpms

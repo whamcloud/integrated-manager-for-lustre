@@ -1,0 +1,51 @@
+---
+source: emf-agent/src/action_plugins/high_availability/corosync_conf.rs
+expression: conf
+---
+totem {
+    version: 2
+    cluster_name: lustre-ha-cluster
+    secauth: off
+    transport: udp
+    config_version: 5
+    rrp_mode: passive
+    token: 17000
+    fail_recv_const: 10
+
+    interface {
+        ringnumber: 0
+        bindnetaddr: 10.128.0.0
+        mcastaddr: 226.94.0.1
+        mcastport: 40001
+    }
+
+    interface {
+        ringnumber: 1
+        bindnetaddr: 10.73.10.0
+        mcastaddr: 226.94.1.1
+        mcastport: 40001
+    }
+}
+
+nodelist {
+    node {
+        ring0_addr: 10.128.0.21
+        nodeid: 1
+    }
+
+    node {
+        ring0_addr: 10.128.0.22
+        nodeid: 2
+    }
+}
+
+quorum {
+    provider: corosync_votequorum
+    two_node: 1
+}
+
+logging {
+    to_logfile: yes
+    logfile: /var/log/cluster/corosync.log
+    to_syslog: yes
+}

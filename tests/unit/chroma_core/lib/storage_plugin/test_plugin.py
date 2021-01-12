@@ -4,7 +4,7 @@ import sys
 import mock
 
 from chroma_core.services.plugin_runner.resource_manager import PluginSession
-from tests.unit.lib.iml_unit_test_case import IMLUnitTestCase
+from tests.unit.lib.emf_unit_test_case import EMFUnitTestCase
 from chroma_core.lib.storage_plugin.api import attributes
 from chroma_core.lib.storage_plugin.api import identifiers
 from chroma_core.lib.storage_plugin.api import resources
@@ -61,7 +61,7 @@ class TestPlugin(Plugin):
         self.teardown_called = True
 
 
-class TestCallbacks(IMLUnitTestCase):
+class TestCallbacks(EMFUnitTestCase):
     def setUp(self):
         super(TestCallbacks, self).setUp()
 
@@ -120,7 +120,7 @@ class TestCallbacks(IMLUnitTestCase):
         self.plugin.teardown.assert_called_once()
 
 
-class TestAddRemove(IMLUnitTestCase):
+class TestAddRemove(EMFUnitTestCase):
     def setUp(self):
         super(TestAddRemove, self).setUp()
 

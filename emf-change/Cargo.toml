@@ -1,0 +1,5 @@
+[package]
+authors = ["EMF Team <emf@whamcloud.com>"]
+edition = "2018"
+name = "emf-change"
+version = "0.1.0"

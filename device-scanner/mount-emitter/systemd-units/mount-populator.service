@@ -1,5 +1,5 @@
 [Unit]
-Description=IML Mount Populator
+Description=EMF Mount Populator
 After=device-scanner.socket
 
 [Service]
