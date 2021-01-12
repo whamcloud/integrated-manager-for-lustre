@@ -14,6 +14,11 @@ jobs:
     container:
       image: emfteam/emf-centos7-deps
     steps:
+      - name: Cancel Workflow Action
+        uses: styfle/cancel-workflow-action@0.6.0
+        with:
+          access_token: ${{ github.token }}
+
       - name: Checkout sources
         uses: actions/checkout@v1
 
@@ -32,6 +37,11 @@ jobs:
     container:
       image: emfteam/emf-centos7-deps
     steps:
+      - name: Cancel Workflow Action
+        uses: styfle/cancel-workflow-action@0.6.0
+        with:
+          access_token: ${{ github.token }}
+
       - name: Checkout sources
         uses: actions/checkout@v2
 
@@ -50,6 +60,11 @@ jobs:
     container:
       image: emfteam/emf-centos7-deps
     steps:
+      - name: Cancel Workflow Action
+        uses: styfle/cancel-workflow-action@0.6.0
+        with:
+          access_token: ${{ github.token }}
+
       - name: Checkout sources
         uses: actions/checkout@v2
 
@@ -68,6 +83,11 @@ jobs:
     container:
       image: emfteam/emf-centos7-deps
     steps:
+      - name: Cancel Workflow Action
+        uses: styfle/cancel-workflow-action@0.6.0
+        with:
+          access_token: ${{ github.token }}
+
       - name: Checkout sources
         uses: actions/checkout@v2
 
@@ -86,6 +106,11 @@ jobs:
     container:
       image: emfteam/emf-centos7-deps
     steps:
+      - name: Cancel Workflow Action
+        uses: styfle/cancel-workflow-action@0.6.0
+        with:
+          access_token: ${{ github.token }}
+
       - name: Checkout sources
         uses: actions/checkout@v2
 
@@ -102,6 +127,11 @@ jobs:
     name: iml-docker image build
     runs-on: ubuntu-latest
     steps:
+      - name: Cancel Workflow Action
+        uses: styfle/cancel-workflow-action@0.6.0
+        with:
+          access_token: ${{ github.token }}
+
       - uses: actions/checkout@v2
 
       - name: Set up Docker Buildx
@@ -154,6 +184,11 @@ jobs:
       image: emfteam/emf-centos7-deps
     needs: iml_docker_image_build
     steps:
+      - name: Cancel Workflow Action
+        uses: styfle/cancel-workflow-action@0.6.0
+        with:
+          access_token: ${{ github.token }}
+
       - uses: actions/checkout@v2
       - name: Download docker images
         uses: actions/download-artifact@v1
@@ -184,6 +219,11 @@ jobs:
     container:
       image: emfteam/emf-centos7-deps
     steps:
+      - name: Cancel Workflow Action
+        uses: styfle/cancel-workflow-action@0.6.0
+        with:
+          access_token: ${{ github.token }}
+
       - name: Checkout sources
         uses: actions/checkout@v1
 
@@ -202,6 +242,11 @@ jobs:
     container:
       image: emfteam/emf-centos7-deps
     steps:
+      - name: Cancel Workflow Action
+        uses: styfle/cancel-workflow-action@0.6.0
+        with:
+          access_token: ${{ github.token }}
+
       - name: Checkout sources
         uses: actions/checkout@v2
 
@@ -231,6 +276,11 @@ jobs:
     container:
       image: centos:7
     steps:
+      - name: Cancel Workflow Action
+        uses: styfle/cancel-workflow-action@0.6.0
+        with:
+          access_token: ${{ github.token }}
+
       - name: Download GUI RPMs
         uses: actions/download-artifact@v1
         with:
@@ -297,6 +347,11 @@ jobs:
     runs-on: self-hosted
     needs: create_emf_repo
     steps:
+      - name: Cancel Workflow Action
+        uses: styfle/cancel-workflow-action@0.6.0
+        with:
+          access_token: ${{ github.token }}
+
       - name: Cleanup old Workspace
         run: sudo rm -rf "${{ github.workspace }}/*"
 
@@ -359,6 +414,11 @@ jobs:
     runs-on: self-hosted
     needs: create_emf_repo
     steps:
+      - name: Cancel Workflow Action
+        uses: styfle/cancel-workflow-action@0.6.0
+        with:
+          access_token: ${{ github.token }}
+
       - name: Cleanup old Workspace
         run: sudo rm -rf "${{ github.workspace }}/*"
 
