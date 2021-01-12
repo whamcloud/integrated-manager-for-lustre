@@ -114,8 +114,8 @@ Vagrant.configure('2') do |config|
     provision_iscsi_net iscsi, '10'
 
     iscsi.vm.provider 'virtualbox' do |vbx|
-      name = get_vm_name('iscsi')
-      create_iscsi_disks(vbx, name)
+      id = get_vm_id('iscsi')
+      create_iscsi_disks(vbx, id)
     end
 
     iscsi.vm.provision 'bootstrap',
@@ -807,18 +807,17 @@ def get_machine_folder()
       .first
 end
 
-def get_vm_name(id)
+def get_vm_id(name)
   out, err = Open3.capture2e('VBoxManage list vms')
   raise out unless err.exitstatus.zero?
+  n = "vagrant_#{name}_"
 
-  path = path = File.dirname(__FILE__).split('/').last
-  name = out.split(/\n/)
-            .select { |x| x.start_with? "\"#{path}_#{id}" }
-            .map { |x| x.tr('"', '') }
-            .map { |x| x.split(' ')[0].strip }
-            .first
-
-  name
+  id = out.split(/\n/)
+         .map { |x| x.tr('"', '') }
+         .select { |x| x.start_with? n }
+         .map { |x| x.split(' ')[1].strip }
+         .first
+  id
 end
 
 # Checks if a scsi controller exists.
@@ -828,12 +827,12 @@ end
 def controller_exists(name, controller_name)
   return false if name.nil?
 
-  out, err = Open3.capture2e("VBoxManage showvminfo #{name}")
+  out, err = Open3.capture2e("VBoxManage showvminfo #{name} --machinereadable")
   raise out unless err.exitstatus.zero?
 
   out.split(/\n/)
-     .select { |x| x.start_with? 'Storage Controller Name' }
-     .map { |x| x.split(':')[1].strip }
+     .select { |x| x.start_with? 'storagecontrollername' }
+     .map { |x| x.split('"')[1].strip }
      .any? { |x| x == controller_name }
 end
 
@@ -857,9 +856,9 @@ def create_iscsi_disks(vbox, name)
     %w[mdt3_ 5120],
   ].concat(osts).each_with_index do |(name, size), i|
     file_to_disk = "#{dir}/#{name}.vdi"
-    port = (i + 1).to_s
+    port = (i).to_s
 
-    unless File.exist?(file_to_disk)
+    unless File.file?(file_to_disk)
       vbox.customize ['createmedium',
                       'disk',
                       '--filename',
