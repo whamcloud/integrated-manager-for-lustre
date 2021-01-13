@@ -1,0 +1,510 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# Mem in Mib allocated to each server VM
+NODE_MEM = (ENV['NODE_MEM'] || 6144).freeze
+# Num CPUs allocated to each server VM
+NODE_CPU = (ENV['NODE_CPU'] || 8).freeze
+
+# Mem in Mib allocated to each server VM
+CLIENT_MEM = (ENV['CLIENT_MEM'] || NODE_MEM).freeze
+# Num CPUs allocated to each server VM
+CLIENT_CPU = (ENV['CLIENT_CPU'] || NODE_CPU).freeze
+
+# User is required (default to root)
+# need either password or sshkey (or will assume sshkey)
+VBOX_USER   = (ENV['VBOX_USER']   || "root").freeze
+VBOX_PASSWD = (ENV['VBOX_PASSWD'] || "DDNSolutions4U").freeze
+VBOX_SSHKEY = (ENV['VBOX_SSHKEY'] || "").freeze
+
+LUSTRE = (ENV['LUSTRE'] || "2.12.5").freeze
+
+EXASCALER = (ENV['EXASCALER'] || "5.2.1").freeze
+
+REPO_URI = (ENV['REPO_URI'] || '').freeze
+
+require 'open3'
+require 'fileutils'
+
+# Create a set of /24 networks under a single /16 subnet range
+SUBNET_PREFIX = '10.73'.freeze
+
+# Management network for admin comms
+MGMT_NET_PFX = "#{SUBNET_PREFIX}.10".freeze
+
+# Lustre / HPC network
+LNET_PFX = "#{SUBNET_PREFIX}.20".freeze
+
+# COROSYNC RING 0 is #{SUBNET_PREFIX}.230
+
+Vagrant.configure('2') do |config|
+  config.vm.provider 'virtualbox' do |vbx|
+    vbx.linked_clone = true
+    vbx.memory = NODE_MEM
+    vbx.cpus = NODE_CPU
+  end
+
+  # Create a basic hosts file for the VMs.
+  open('hosts.nodes', 'w') do |f|
+    (1..4).each do |cidx|
+      f.puts "#{MGMT_NET_PFX}.1#{cidx} node#{cidx}.local node#{cidx}\n"
+    end
+  end
+
+  # Create a basic hosts file for the VMs.
+  open('hosts.clients', 'w') do |f|
+    (1..8).each do |cidx|
+      f.puts "#{MGMT_NET_PFX}.3#{cidx} client#{cidx}.local client#{cidx}\n"
+    end
+    (1..4).each do |cidx|
+      f.puts "#{MGMT_NET_PFX}.4#{cidx} ubuntu#{cidx}.local ubuntu#{cidx}\n"
+    end
+  end
+
+  system("ssh-keygen -t rsa -m PEM -N '' -f id_rsa") unless File.exist?('id_rsa')
+
+  config.vm.provision 'ssh', type: 'shell', path: './scripts/key_config.sh'
+  config.vm.synced_folder ".", "/vagrant", type: "rsync"
+
+  #
+  # Create the exascaler servers (HA group)
+  #
+  (1..4).each do |i|
+    config.vm.define "node#{i}" do |node|
+      node.vm.box = "exascaler/#{EXASCALER}"
+      node.vm.hostname = "node#{i}"
+
+      node.vm.provider 'virtualbox' do |vbx|
+        vbx.name = "node#{i}"
+      end
+
+      node.vm.provision "exa-file",
+                        type: "file",
+                        source: "./exascaler.conf",
+                        destination: "/tmp/exascaler.conf"
+
+      node.vm.provision "udev-file",
+                        type: "file",
+                        source: "./91-external-storage.rules",
+                        destination: "/tmp/91-external-storage.rules"
+
+      node.vm.provision "copy-files", type: 'shell', inline: <<-SHELL
+      mv /tmp/exascaler.conf /etc/ddn/
+      mv /tmp/91-external-storage.rules /etc/udev/rules.d/
+      SHELL
+
+      node.vm.provision 'udev-trigger', type: 'shell', inline: <<-SHELL
+      udevadm control --reload
+      udevadm trigger --subsystem-match=block
+      SHELL
+
+      node.vm.provider 'virtualbox' do |vbx|
+        name = "node#{i}"
+        # only execute create on node1 because this is fully processed
+        # prior to execution and check existance for each node will cause
+        # all of them to want to create if doing "vagrant up"
+        if i == 1
+          create_disks(vbx)
+        end
+        attach_disks(vbx)
+      end
+
+      provision_lnet_net node, "1#{i}"
+
+      # Admin / management network
+      provision_mgmt_net node, "1#{i}"
+
+      # Private network to simulate crossover.
+      # Used exclusively as additional cluster network
+      node.vm.network 'private_network',
+                     ip: "#{SUBNET_PREFIX}.230.1#{i}",
+                     netmask: '255.255.255.0',
+                     virtualbox__intnet: 'crossover-net',
+                     nm_controlled: false
+
+      cleanup_storage_server node
+
+      configure_lustre_network node
+
+      node.vm.provision 'es-install',
+                        type: 'shell',
+                        run: 'never',
+                        inline: <<-SHELL
+      /opt/ddn/es/tools/es_install --yes --steps os,kdump,nics,hosts,modprobe,logging,lustre,ha,mdt_backup
+      cat /vagrant/hosts.clients >> /etc/hosts
+      SHELL
+
+      # Non-default provisioners
+
+      create_sosreport node
+
+      # install new docker rpm
+      node.vm.provision 'install-docker-rpm',
+                        type: 'shell',
+                        run: 'never',
+                        inline: <<-SHELL
+                        yum update -y /vagrant/docker-rpms/*.rpm
+                        SHELL
+
+      # install agent - local
+      node.vm.provision 'install-agent-rpm',
+                        type: 'shell',
+                        run: 'never',
+                        path: './scripts/install_agent_local.sh'
+
+      if i == 1
+        # This sets up cluster after all nodes provisioned
+        node.vm.provision 'ha-setup',
+                          type: 'shell',
+                          run: 'never',
+                          inline: <<-SHELL
+                          [ -f /etc/corosync/authkey ] || config-corosync --gen-authkey
+                          sync-file /etc/corosync/authkey
+                          clush -a systemctl start corosync pacemaker
+                          config-pacemaker
+                          SHELL
+
+        node.vm.provision 'create-esui',
+                          type: 'shell',
+                          run: 'never',
+                          inline: <<-SHELL
+                          clush -a "es_install --steps esui --yes"
+                          config-pacemaker --type esui
+                          clush -a "es_install --steps esui_scan --yes"
+                          SHELL
+
+        node.vm.provision 'destroy-esui',
+                         type: 'shell',
+                         run: 'never',
+                         inline: <<-SHELL
+                           clush -a systemctl disable --now emf-storage-server.target
+                           crm config delete esui-docker docker esui-fs esui-ip
+                           clush -a sed -i '/nginx$/d' /etc/hosts
+                         SHELL
+
+        node.vm.provision 'start-lustre',
+                         type: 'shell',
+                         run: 'never',
+                         inline: <<-SHELL
+                           esctl cluster --action start
+                         SHELL
+
+        node.vm.provision 'stop-lustre',
+                         type: 'shell',
+                         run: 'never',
+                         inline: <<-SHELL
+                           esctl cluster --action stop
+                         SHELL
+
+      end
+    end
+  end
+
+  # Create a set of compute nodes.
+  # By default, only 2 compute nodes are created.
+  # The configuration supports a maximum of 8 compute nodes.
+  (1..8).each do |i|
+    config.vm.define "client#{i}",
+                     autostart: i <= 2 do |c|
+      c.vm.hostname = "client#{i}.local"
+      c.vm.box = "centos/7"
+
+      c.vm.provider 'virtualbox' do |vbx|
+        vbx.name = "client#{i}"
+        vbx.memory = CLIENT_MEM
+        vbx.cpus = CLIENT_CPU
+      end
+
+      # Admin / management network
+      provision_mgmt_net c, "3#{i}"
+
+      # Lustre / application network
+      provision_lnet_net c, "3#{i}"
+
+      configure_docker_network c
+
+      c.vm.provision 'hosts-update',
+                     type: 'shell',
+                     inline: 'cat /vagrant/hosts.nodes /vagrant/hosts.clients >> /etc/hosts'
+
+      c.vm.provision 'install-client-agent-local',
+            type: 'shell',
+            run: 'never',
+            path: './scripts/install_agent_local.sh'
+
+      c.vm.provision 'install-lustre-client',
+                     type: 'shell',
+                     run: 'never',
+                     inline: <<-SHELL
+                            yum-config-manager --add-repo https://downloads.whamcloud.com/public/lustre/lustre-#{LUSTRE}/el7/client/
+                            yum install -y --nogpgcheck lustre-client
+                     SHELL
+
+      c.vm.provision 'configure-lustre-client-network',
+                      type: 'shell',
+                      run: 'never',
+                      path: './scripts/configure_lustre_network.sh'
+
+      c.vm.provision 'enable-debug',
+                       type: 'shell',
+                       run: 'never',
+                       path: 'scripts/enable_debug.sh'
+
+      c.vm.provision 'mount-lustre-client',
+                      type: 'shell',
+                      run: 'never',
+                      path: './scripts/mount_lustre_client.sh'
+
+      c.vm.provision 'mount-lustre-client-fs2',
+                      type: 'shell',
+                      run: 'never',
+                      path: './scripts/mount_lustre_client.sh',
+                      args: 'fs2'
+    end
+  end
+
+  # @@ ubuntu client
+  # Create a set of compute nodes.
+  # By default, only 2 compute nodes are created.
+  # The configuration supports a maximum of 8 compute nodes.
+  (1..8).each do |i|
+    config.vm.define "ubuntu#{i}",
+                     autostart: i <= 1 do |c|
+      # setup client with Ubuntu
+      # 20.04 LTS
+      box_name = "ubuntu/focal64"
+
+      c.vm.box = box_name
+      c.vm.box_url = "https://vagrantcloud.com/#{box_name}"
+
+      c.vm.hostname = "ubuntu#{i}.local"
+
+      c.vm.provider 'virtualbox' do |vbx|
+        vbx.name = "ubuntu#{i}"
+        vbx.memory = CLIENT_MEM
+        vbx.cpus = CLIENT_CPU
+      end
+
+      # Admin / management network
+      provision_mgmt_net c, "4#{i}"
+
+      # Lustre / application network
+      provision_lnet_net c, "4#{i}"
+
+      configure_docker_network c
+
+      c.vm.provision 'hosts-update',
+                     type: 'shell',
+                     inline: 'cat /vagrant/hosts.nodes /vagrant/hosts.clients >> /etc/hosts'
+
+      c.vm.provision 'install-lustre-client',
+                     type: 'shell',
+                     run: 'never',
+                     path: './scripts/install_lustre_ubuntu.sh',
+                     args: EXASCALER
+
+      c.vm.provision 'configure-lustre-client-network',
+                      type: 'shell',
+                      run: 'never',
+                      path: './scripts/configure_lustre_network.sh'
+
+      # @@ NYI
+      c.vm.provision 'install-client-agent-local',
+                     type: 'shell',
+                     run: 'never',
+                     path: './scripts/install_agent_local_ubuntu.sh'
+
+      c.vm.provision 'mount-lustre-client',
+                      type: 'shell',
+                      run: 'never',
+                      path: './scripts/mount_lustre_client.sh'
+
+      c.vm.provision 'mount-lustre-client-fs2',
+                      type: 'shell',
+                      run: 'never',
+                      path: './scripts/mount_lustre_client.sh',
+                      args: 'fs2'
+    end
+  end
+end
+
+def provision_lnet_net(config, num)
+  config.vm.network 'private_network',
+                    ip: "#{LNET_PFX}.#{num}",
+                    netmask: '255.255.255.0',
+                    virtualbox__intnet: 'lnet-net'
+end
+
+module OS
+  def OS.windows?
+    (/cygwin|mswin|mingw|bccwin|wince|emx/ =~ RbConfig::CONFIG["host_os"]) != nil
+  end
+
+  def OS.mac?
+    (/darwin/ =~ RbConfig::CONFIG["host_os"]) != nil
+  end
+
+  def OS.unix?
+    !OS.windows?
+  end
+
+  def OS.linux?
+    OS.unix? and not OS.mac?
+  end
+end
+
+def provision_mgmt_net(config, num)
+  interface_name = if OS.windows? then 'VirtualBox Host-Only Ethernet Adapter' else 'vboxnet0' end
+
+  config.vm.network 'private_network',
+                    ip: "#{MGMT_NET_PFX}.#{num}",
+                    netmask: '255.255.255.0',
+                    name: interface_name,
+                    nm_controlled: false
+
+end
+
+def provision_fence_agents(config)
+  config.vm.provision 'fence-agents', type: 'shell', inline: <<-SHELL
+    yum install -y epel-release
+    yum clean all
+    yum install -y yum-plugin-copr
+    yum -y copr enable managerforlustre/manager-for-lustre-devel
+    yum install -y fence-agents-vbox
+    yum -y copr disable managerforlustre/manager-for-lustre-devel
+  SHELL
+end
+
+def cleanup_storage_server(config)
+  config.vm.provision 'cleanup', type: 'shell', run: 'never', inline: <<-SHELL
+    yum autoremove -y chroma-agent
+    rm -rf /etc/{emf,iml}
+    rm -rf /var/lib/{chroma,iml,emf}
+    rm -rf /etc/yum.repos.d/Intel-Lustre-Agent.repo
+  SHELL
+end
+
+def configure_lustre_network(config)
+  config.vm.provision 'configure-lustre-network',
+                      type: 'shell',
+                      run: 'never',
+                      path: './scripts/configure_lustre_network.sh'
+end
+
+def install_lustre_ldiskfs(config)
+  config.vm.provision 'install-lustre-ldiskfs',
+                      type: 'shell',
+                      run: 'never',
+                      inline: 'yum install -y lustre-ldiskfs'
+end
+
+def use_vault_7_6_1810(config)
+  config.vm.provision 'use-vault-7-6-1810',
+                      type: 'shell',
+                      run: 'never',
+                      path: './scripts/use_vault.sh',
+                      args: '7.6.1810'
+end
+
+def provision_yum_updates(config)
+  config.vm.provision 'yum-update',
+                     type: 'shell',
+                     run: 'never',
+                     inline: 'yum clean metadata; yum update -y'
+end
+
+def get_machine_folder()
+  out, err = Open3.capture2e('VBoxManage list systemproperties')
+  raise out unless err.exitstatus.zero?
+
+  out.split(/\n/)
+      .select { |x| x.start_with? 'Default machine folder:' }
+      .map { |x| x.split('Default machine folder:')[1].strip }
+      .first
+end
+
+# Creates Disks registers them so they can later attached as multiattach
+# c.f. https://www.virtualbox.org/ticket/18296
+def create_disks(vbox)
+  dir = "#{get_machine_folder()}/esvdisks"
+  FileUtils.mkdir_p dir unless File.directory?(dir)
+
+  osts = (1..20).map { |x| ["OST#{x}_", '5120'] }
+
+  [
+    %w[mgt_ 5800],
+    %w[mdt1_ 5120],
+    %w[mdt2_ 5120],
+    %w[mdt3_ 5120],
+  ].concat(osts).each_with_index do |(name, size), i|
+    file_to_disk = "#{dir}/#{name}.vdi"
+    port = (i).to_s
+
+    unless File.file?(file_to_disk)
+      vbox.customize ['createmedium',
+                      'disk',
+                      '--filename',
+                      file_to_disk,
+                      '--size',
+                      size,
+                      '--format',
+                      'VDI',
+                      '--variant',
+                      'standard']
+      # Attach then detach so it can be attached as multiattach
+      vbox.customize ['storageattach', :id,
+                      '--storagectl', 'SATA Controller',
+                      '--port', port,
+                      '--type', 'hdd',
+                      '--medium', file_to_disk,
+                      '--device', '0']
+      vbox.customize ['storageattach', :id,
+                      '--storagectl', 'SATA Controller',
+                      '--port', port,
+                      '--medium', 'none',
+                      '--device', '0']
+    end
+  end
+end
+
+def attach_disks(vbox)
+  dir = "#{get_machine_folder()}/esvdisks"
+
+  osts = (1..20).map { |x| ["OST#{x}_", '5120'] }
+
+  [
+    %w[mgt_ 5800],
+    %w[mdt1_ 5120],
+    %w[mdt2_ 5120],
+    %w[mdt3_ 5120],
+  ].concat(osts).each_with_index do |(name, size), i|
+    file_to_disk = "#{dir}/#{name}.vdi"
+    port = (i).to_s
+
+    vbox.customize ['storageattach', :id,
+                    '--storagectl', 'SATA Controller',
+                    '--port', port,
+                    '--type', 'hdd',
+                    '--mtype', 'multiattach',
+                    '--medium', file_to_disk,
+                    '--device', '0']
+
+    vbox.customize ['setextradata', :id,
+                    "VBoxInternal/Devices/ahci/0/Config/Port#{port}/SerialNumber",
+                    name.ljust(20, '0')]
+  end
+end
+
+def configure_docker_network(config)
+  config.vm.provision 'configure-docker-network', type: 'shell', run: 'never', inline: <<-SHELL
+    echo "10.73.10.10 nginx" >> /etc/hosts
+  SHELL
+end
+
+def create_sosreport(config)
+  config.vm.provision 'create-sosreport',
+                          type: 'shell',
+                          run: 'never',
+                          path: 'scripts/create_sosreport.sh',
+                          args: ["10.73.10.1"]
+end
