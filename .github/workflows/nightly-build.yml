@@ -1,6 +1,8 @@
-name: integration-testing
+name: nightly-build
 on:
-  pull_request:
+  schedule:
+    - cron: "* 0 * * *"
+  workflow_dispatch:
 defaults:
   run:
     shell: bash -eux {0}
@@ -260,16 +262,14 @@ jobs:
     name: create EMF repo
     runs-on: ubuntu-latest
     needs:
-      [
-        device_scanner_rpm_build,
-        gui_rpm_build,
-        emf_docker_rpm_build,
-        python_agent_rpm_build,
-        python_emf_common_rpm_build,
-        python_emf_manager_rpm_build,
-        rust_emf_rpm_build,
-        sos_plugin_build,
-      ]
+      - device_scanner_rpm_build
+      - gui_rpm_build
+      - emf_docker_rpm_build
+      - python_agent_rpm_build
+      - python_emf_common_rpm_build
+      - python_emf_manager_rpm_build
+      - rust_emf_rpm_build
+      - sos_plugin_build
     container:
       image: centos:7
     steps:
@@ -327,7 +327,7 @@ jobs:
         with:
           name: emf_repo
           path: emf_rpms
-          retention-days: 2
+          retention-days: 1
       - uses: geekyeggo/delete-artifact@v1
         with:
           name: |
@@ -339,137 +339,20 @@ jobs:
             python_emf_common_rpm
             emf_docker_rpm
             sos_rpm
-  rpm_testing:
-    name: RPM Testing
-    runs-on: self-hosted
+  trigger_jenkins_build:
+    name: Trigger jenkins build
+    runs-on: ubuntu-latest
     needs: create_emf_repo
     steps:
-      - name: Cancel Workflow Action
-        uses: styfle/cancel-workflow-action@0.6.0
-        with:
-          access_token: ${{ github.token }}
-
-      - name: Cleanup old Workspace
-        run: sudo rm -rf "${{ github.workspace }}/*"
-
       - name: Checkout sources
         uses: actions/checkout@v2
 
-      - name: Download Repo
-        uses: actions/download-artifact@v1
+      - name: Trigger build
+        uses: ./.github/actions/jenkins-build
         with:
-          name: emf_repo
-
-      - name: Setup
-        run: |
-          sudo yum install -y cargo || true
-          sudo yum-config-manager --add-repo=http://download.virtualbox.org/virtualbox/rpm/rhel/virtualbox.repo
-          sudo yum install -y VirtualBox-6.1 || true
-          sudo yum install -y https://releases.hashicorp.com/vagrant/2.2.10/vagrant_2.2.10_x86_64.rpm || true
-
-          sudo VBoxManage setproperty machinefolder /root/VirtualBox\ VMs
-
-          if [[ $(sudo VBoxManage list hostonlyifs | egrep -c 'vboxnet0') -eq 0 ]]; then
-            sudo VBoxManage hostonlyif create;
-          fi
-          sudo VBoxManage hostonlyif ipconfig vboxnet0 --ip 10.73.10.1
-
-          pushd emf_repo
-          python -m SimpleHTTPServer 9000 &> /dev/null &
-          popd
-
-      - name: Test
-        run: |
-          cd emf-system-rpm-tests
-          set -e
-          export REPO_URI='http://10.0.2.2:9000'
-          export VBOX_PASSWD=lustre
-          sudo --preserve-env=REPO_URI --preserve-env=VBOX_PASSWD cargo test -- --test-threads 1
-
-      - name: Archive SOS reports
-        if: ${{ success() || failure() }}
-        uses: actions/upload-artifact@v2
-        with:
-          name: sosreport_rpm
-          path: "**/vagrant/sosreport_rpm*/*.tar.xz"
-          retention-days: 2
-
-      - name: Cleanup
-        if: ${{ always() }}
-        run: |
-          kill -9 `ps -ef |grep SimpleHTTPServer |grep 9000 |awk '{print $2}'`
-
-          sudo vagrant suspend 2>/dev/null || true
-          sudo vagrant destroy -f 2>/dev/null || true
-          sudo vagrant global-status --prune 2>/dev/null || true
-
-          sudo vboxmanage list runningvms | sed -r 's/.*\{(.*)\}/\1/' | xargs -L1 -I {} sudo VBoxManage controlvm {} poweroff 2>/dev/null || true
-          sudo vboxmanage list vms | sed -r 's/.*\{(.*)\}/\1/' | xargs -L1 -I {} sudo VBoxManage unregistervm {} --delete 2>/dev/null || true
-          sudo rm -rf /root/VirtualBox\ VMs/
-  docker_testing:
-    name: Docker Testing
-    runs-on: self-hosted
-    needs: create_emf_repo
-    steps:
-      - name: Cancel Workflow Action
-        uses: styfle/cancel-workflow-action@0.6.0
-        with:
-          access_token: ${{ github.token }}
-
-      - name: Cleanup old Workspace
-        run: sudo rm -rf "${{ github.workspace }}/*"
-
-      - name: Checkout sources
-        uses: actions/checkout@v2
-
-      - name: Download Repo
-        uses: actions/download-artifact@v1
-        with:
-          name: emf_repo
-
-      - name: Setup
-        run: |
-          sudo yum install -y cargo || true
-          sudo yum-config-manager --add-repo=http://download.virtualbox.org/virtualbox/rpm/rhel/virtualbox.repo
-          sudo yum install -y VirtualBox-6.1 || true
-          sudo yum install -y https://releases.hashicorp.com/vagrant/2.2.10/vagrant_2.2.10_x86_64.rpm || true
-
-          sudo VBoxManage setproperty machinefolder /root/VirtualBox\ VMs
-
-          if [[ $(sudo VBoxManage list hostonlyifs | egrep -c 'vboxnet0') -eq 0 ]]; then
-            sudo VBoxManage hostonlyif create;
-          fi
-          sudo VBoxManage hostonlyif ipconfig vboxnet0 --ip 10.73.10.1
-
-          pushd emf_repo
-          python -m SimpleHTTPServer 9000 &> /dev/null &
-          popd
-
-      - name: Test
-        run: |
-          cd emf-system-docker-tests
-          set -e
-          export REPO_URI='http://10.0.2.2:9000'
-          export VBOX_PASSWD=lustre
-          sudo --preserve-env=REPO_URI --preserve-env=VBOX_PASSWD cargo test -- --test-threads 1
-
-      - name: Archive SOS reports
-        if: ${{ success() || failure() }}
-        uses: actions/upload-artifact@v2
-        with:
-          name: sosreport_docker
-          path: "**/vagrant/sosreport_docker*/*.tar.xz"
-          retention-days: 2
-
-      - name: Cleanup
-        if: ${{ always() }}
-        run: |
-          kill -9 `ps -ef |grep SimpleHTTPServer |grep 9000 |awk '{print $2}'`
-
-          sudo vagrant suspend 2>/dev/null || true
-          sudo vagrant destroy -f 2>/dev/null || true
-          sudo vagrant global-status --prune 2>/dev/null || true
-
-          sudo vboxmanage list runningvms | sed -r 's/.*\{(.*)\}/\1/' | xargs -L1 -I {} sudo VBoxManage controlvm {} poweroff 2>/dev/null || true
-          sudo vboxmanage list vms | sed -r 's/.*\{(.*)\}/\1/' | xargs -L1 -I {} sudo VBoxManage unregistervm {} --delete 2>/dev/null || true
-          sudo rm -rf /root/VirtualBox\ VMs/
+          jenkins-url: "https://build.whamcloud.com/"
+          jenkins-user: ${{ secrets.JENKINS_USER }}
+          jenkins-token: ${{ secrets.JENKINS_KEY }}
+          job-name: "emf-repo"
+          branch: ${{ github.head_ref }}
+          sha: ${{ GITHUB_SHA }}
