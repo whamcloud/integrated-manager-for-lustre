@@ -47,17 +47,17 @@ Vagrant.configure('2') do |config|
   # Create a basic hosts file for the VMs.
   open('hosts.nodes', 'w') do |f|
     (1..4).each do |cidx|
-      f.puts "#{MGMT_NET_PFX}.1#{cidx} node#{cidx}.local node#{cidx}\n"
+      f.puts "#{MGMT_NET_PFX}.1#{cidx} node#{cidx}\n"
     end
   end
 
   # Create a basic hosts file for the VMs.
   open('hosts.clients', 'w') do |f|
     (1..8).each do |cidx|
-      f.puts "#{MGMT_NET_PFX}.3#{cidx} client#{cidx}.local client#{cidx}\n"
+      f.puts "#{MGMT_NET_PFX}.3#{cidx} client#{cidx}\n"
     end
     (1..4).each do |cidx|
-      f.puts "#{MGMT_NET_PFX}.4#{cidx} ubuntu#{cidx}.local ubuntu#{cidx}\n"
+      f.puts "#{MGMT_NET_PFX}.4#{cidx} ubuntu#{cidx}\n"
     end
   end
 
