@@ -473,3 +473,60 @@ jobs:
           sudo vboxmanage list runningvms | sed -r 's/.*\{(.*)\}/\1/' | xargs -L1 -I {} sudo VBoxManage controlvm {} poweroff 2>/dev/null || true
           sudo vboxmanage list vms | sed -r 's/.*\{(.*)\}/\1/' | xargs -L1 -I {} sudo VBoxManage unregistervm {} --delete 2>/dev/null || true
           sudo rm -rf /root/VirtualBox\ VMs/
+
+  exa_base_testing:
+    name: EXA Testing
+    runs-on: self-hosted
+    steps:
+      - name: Cancel Workflow Action
+        uses: styfle/cancel-workflow-action@0.6.0
+        with:
+          access_token: ${{ github.token }}
+
+      - name: Cleanup old Workspace
+        run: sudo rm -rf "${{ github.workspace }}/*"
+
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Setup
+        run: |
+          sudo yum install -y cargo || true
+          sudo yum-config-manager --add-repo=http://download.virtualbox.org/virtualbox/rpm/rhel/virtualbox.repo
+          sudo yum install -y VirtualBox-6.1 || true
+          sudo yum install -y https://releases.hashicorp.com/vagrant/2.2.10/vagrant_2.2.10_x86_64.rpm || true
+
+          sudo VBoxManage setproperty machinefolder /root/VirtualBox\ VMs
+
+          if [[ $(sudo VBoxManage list hostonlyifs | egrep -c 'vboxnet0') -eq 0 ]]; then
+            sudo VBoxManage hostonlyif create;
+          fi
+          sudo VBoxManage hostonlyif ipconfig vboxnet0 --ip 10.73.10.1
+
+      - name: Test
+        run: |
+          cd es-vagrant
+          set -e
+          sudo vagrant up
+          sudo vagrant provision --provision-with=es-install
+          sudo vagrant provision --provision-with=ha-setup,start-lustre
+          sudo vagrant provision --provision-with=install-lustre-client,configure-lustre-client-network,mount-lustre-client
+
+      - name: Archive SOS reports
+        if: ${{ success() || failure() }}
+        uses: actions/upload-artifact@v2
+        with:
+          name: sosreport_rpm
+          path: "**/vagrant/sosreport_rpm*/*.tar.xz"
+          retention-days: 2
+
+      - name: Cleanup
+        if: ${{ always() }}
+        run: |
+          sudo vagrant suspend 2>/dev/null || true
+          sudo vagrant destroy -f 2>/dev/null || true
+          sudo vagrant global-status --prune 2>/dev/null || true
+
+          sudo vboxmanage list runningvms | sed -r 's/.*\{(.*)\}/\1/' | xargs -L1 -I {} sudo VBoxManage controlvm {} poweroff 2>/dev/null || true
+          sudo vboxmanage list vms | sed -r 's/.*\{(.*)\}/\1/' | xargs -L1 -I {} sudo VBoxManage unregistervm {} --delete 2>/dev/null || true
+          sudo rm -rf /root/VirtualBox\ VMs/
