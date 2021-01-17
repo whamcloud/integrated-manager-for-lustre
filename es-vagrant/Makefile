@@ -8,7 +8,7 @@ clean:
 
 destroy: clean
 	vagrant destroy --force || true
-	for s in mgt_ mdt{1..3}_ OST{1..20}_; do [ ! -f "${VBOX_DIR}/$$s.vdi" ] || VBoxManage closemedium disk "${VBOX_DIR}/$$s.vdi" --delete; done
+	for s in `find "${VBOX_DIR}/" -type f`; do VBoxManage closemedium disk "$$s" --delete; done
 
 docker-local: docker-rpms
 	vagrant rsync
