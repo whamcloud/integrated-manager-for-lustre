@@ -4,6 +4,7 @@
 
 pub mod api;
 pub mod api_utils;
+pub mod consul;
 pub mod display_utils;
 pub mod error;
 pub mod filesystem;
@@ -12,6 +13,7 @@ pub mod ostpool;
 pub mod profile;
 pub mod server;
 pub mod snapshot;
+pub mod ssh;
 pub mod stratagem;
 pub mod target;
 pub mod update_repo_file;

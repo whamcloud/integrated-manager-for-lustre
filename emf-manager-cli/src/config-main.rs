@@ -3,6 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use emf_manager_cli::{
+    consul,
     display_utils::display_error,
     nginx::{self, nginx_cli},
     selfname,
@@ -19,6 +20,11 @@ pub enum App {
         #[structopt(subcommand)]
         command: nginx::NginxCommand,
     },
+    /// Configure Consul
+    Consul {
+        #[structopt(subcommand)]
+        command: consul::Command,
+    },
 }
 
 #[tokio::main]
@@ -33,6 +39,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let r = match matches {
         App::Nginx { command } => nginx_cli(command).await,
+        App::Consul { command } => consul::cli(command).await,
     };
 
     if let Err(e) = r {

@@ -78,21 +78,27 @@ pub trait CheckedCommandExt {
 
 impl CheckedCommandExt for Command {
     /// Similar to `status`, but returns `Err` if the exit code is non-zero.
-    fn checked_status(&mut self) -> BoxFuture<Result<(), CmdError>> {
-        tracing::debug!("Running cmd: {:?}", self);
+    #[tracing::instrument]
 
+    fn checked_status(&mut self) -> BoxFuture<Result<(), CmdError>> {
         self.status()
-            .and_then(|x| async move { handle_status(x) })
+            .and_then(|x| async move {
+                tracing::debug!(status=?x);
+
+                handle_status(x)
+            })
             .err_into()
             .boxed()
     }
     /// Similar to `output`, but returns `Err` if the exit code is non-zero.
-    fn checked_output(&mut self) -> BoxFuture<Result<Output, CmdError>> {
-        tracing::debug!("Running cmd: {:?}", self);
+    #[tracing::instrument]
 
+    fn checked_output(&mut self) -> BoxFuture<Result<Output, CmdError>> {
         self.output()
             .err_into()
             .and_then(|x| async {
+                tracing::debug!(result=?x);
+
                 if x.status.success() {
                     Ok(x)
                 } else {
@@ -110,6 +116,8 @@ pub trait CheckedChildExt {
 }
 
 impl CheckedChildExt for Child {
+    #[tracing::instrument]
+
     fn wait_with_checked_output(
         self,
     ) -> Pin<Box<dyn Future<Output = Result<Output, CmdError>> + Send>> {
@@ -118,6 +126,8 @@ impl CheckedChildExt for Child {
         self.wait_with_output()
             .err_into()
             .and_then(|x| async {
+                tracing::debug!(result=?x);
+
                 if x.status.success() {
                     Ok(x)
                 } else {

@@ -59,6 +59,7 @@ impl std::error::Error for DurationParseError {}
 pub enum EmfManagerCliError {
     ApiError(String),
     ClientRequestError(#[from] emf_manager_client::EmfManagerClientError),
+    EmfCmdError(#[from] emf_cmd::CmdError),
     CmdUtilError(#[from] emf_command_utils::CmdUtilError),
     CombineEasyError(combine::stream::easy::Errors<char, &'static str, usize>),
     DoesNotExist(&'static str),
@@ -74,6 +75,7 @@ pub enum EmfManagerCliError {
     SerdeJsonError(#[from] serde_json::error::Error),
     TokioJoinError(#[from] tokio::task::JoinError),
     TokioTimerError(#[from] tokio::time::Error),
+    EmfSShError(#[from] emf_ssh::Error),
 }
 
 impl std::fmt::Display for EmfManagerCliError {
@@ -81,6 +83,7 @@ impl std::fmt::Display for EmfManagerCliError {
         match *self {
             EmfManagerCliError::ApiError(ref err) => write!(f, "{}", err),
             EmfManagerCliError::ClientRequestError(ref err) => write!(f, "{}", err),
+            EmfManagerCliError::EmfCmdError(ref err) => write!(f, "{}", err),
             EmfManagerCliError::CmdUtilError(ref err) => write!(f, "{}", err),
             EmfManagerCliError::CombineEasyError(ref err) => write!(f, "{}", err),
             EmfManagerCliError::DoesNotExist(ref err) => write!(f, "{} does not exist", err),
@@ -105,6 +108,7 @@ impl std::fmt::Display for EmfManagerCliError {
             EmfManagerCliError::SerdeJsonError(ref err) => write!(f, "{}", err),
             EmfManagerCliError::TokioJoinError(ref err) => write!(f, "{}", err),
             EmfManagerCliError::TokioTimerError(ref err) => write!(f, "{}", err),
+            EmfManagerCliError::EmfSShError(ref err) => write!(f, "{}", err),
         }
     }
 }
