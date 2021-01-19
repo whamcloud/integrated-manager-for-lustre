@@ -143,7 +143,7 @@ Vagrant.configure('2') do |config|
                         type: 'shell',
                         run: 'never',
                         inline: <<-SHELL
-                        yum update -y /vagrant/docker-rpms/*.rpm
+                        yum install -y /vagrant/docker-rpms/*.rpm
                         SHELL
 
       # install agent - local
