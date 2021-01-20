@@ -27,4 +27,5 @@ media
 requirements.dev
 tests
 vagrant/
+es-vagrant/
 python-emf-agent/
