@@ -167,20 +167,12 @@ Vagrant.configure('2') do |config|
         node.vm.provision 'create-esui',
                           type: 'shell',
                           run: 'never',
-                          inline: <<-SHELL
-                          clush -a "es_install --steps esui --yes"
-                          config-pacemaker --type esui
-                          clush -a "es_install --steps esui_scan --yes"
-                          SHELL
+                          path: './scripts/configure_esui.sh'
 
         node.vm.provision 'destroy-esui',
                          type: 'shell',
                          run: 'never',
-                         inline: <<-SHELL
-                           clush -a systemctl disable --now emf-storage-server.target
-                           crm config delete esui-docker docker esui-fs esui-ip
-                           clush -a sed -i '/nginx$/d' /etc/hosts
-                         SHELL
+                         path: './scripts/teardown_esui.sh'
 
         node.vm.provision 'start-lustre',
                          type: 'shell',
