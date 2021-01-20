@@ -88,6 +88,10 @@ fmt:
 	cargo fmt --all --manifest-path emf-system-rpm-tests/Cargo.toml
 	cargo fmt --all --manifest-path emf-system-docker-tests/Cargo.toml
 
+.PHONY: deb deb-repo
+deb deb-repo:
+	make -f Makefile.deb $@
+
 emf-gui-rpm:
 	mkdir -p ${TMPDIR}/_topdir/{SOURCES,SPECS}
 

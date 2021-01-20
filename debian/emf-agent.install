@@ -1,0 +1,7 @@
+/usr/bin/emf-agent-daemon
+/usr/bin/emf-agent
+/usr/lib/tmpfile.d/emf-agent.conf
+/lib/systemd/system/rust-emf-agent.service
+/lib/systemd/system/rust-emf-agent.path
+/lib/systemd/system-preset/00-rust-emf-agent.preset
+

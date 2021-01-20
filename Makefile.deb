@@ -1,0 +1,42 @@
+# To update debian/changelog by dch:
+export DEBEMAIL    = emf@whamcloud.com
+export DEBFULLNAME = EMF Team
+
+# noautodbgsym - On Ubuntu *.ddeb are produced which are not supported by reprepro.
+#                On Debian regular *.deb are made.
+#                Affects dh_strip from debhelper.
+export DEB_BUILD_OPTIONS += noautodbgsym
+
+DEB_LOCAL_VERSION ?=
+
+DEB_OUTDIR = $(CURDIR)/_deb
+DEB_REPO_DIR = $(DEB_OUTDIR)/repo
+
+export DH_DESTDIR = $(DEB_OUTDIR)/incoming
+_CHANGES = $(DH_DESTDIR)/emf.changes
+
+
+
+.PHONY: deb
+deb: $(_CHANGES)
+$(_CHANGES):
+ifneq (,$(DEB_LOCAL_VERSION))
+	dch -l '+$(DEB_LOCAL_VERSION)' 'Local (development) build.'
+endif
+	dch -r '' -Dunstable
+	mkdir -p '$(DH_DESTDIR)'
+	dpkg-buildpackage --build=binary --post-clean \
+		--no-sign \
+		--buildinfo-option='-u$(DH_DESTDIR)' \
+		--changes-option='-u$(DH_DESTDIR)' \
+		--changes-option='-O$@' \
+
+.PHONY: deb-repo
+deb-repo: $(DEB_REPO_DIR)/dists/emf/Release
+$(DEB_REPO_DIR)/dists/emf/Release: $(_CHANGES)
+	rm -rf '$(DEB_REPO_DIR)'
+	mkdir -p '$(DEB_REPO_DIR)'
+	cp -av reprepro/conf '$(DEB_REPO_DIR)/conf'
+	reprepro -vb '$(DEB_REPO_DIR)' include emf $<
+
+

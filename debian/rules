@@ -1,0 +1,40 @@
+#!/usr/bin/make -f
+
+export DH_VERBOSE=1
+
+export CARGO_TARGET_DIR=$(CURDIR)/debian/target
+
+DH_DESTDIR ?= ..
+
+
+%:
+	dh $@ --destdir='$(DH_DESTDIR)'
+
+
+override_dh_auto_configure:
+	export
+	cargo --version
+	rustc --version
+
+
+override_dh_auto_build:
+	make -f Makefile.build
+
+
+# While /lib is a symlink to /usr/lib, debhelper still relies on /lib
+override_dh_auto_install:
+	make -f Makefile.build install \
+		SYSTEMDDIR=/lib/systemd \
+		UDEVDIR=/lib/udev/rules.d \
+		DESTDIR=$(CURDIR)/debian/tmp
+
+
+override_dh_auto_clean:
+	make -f Makefile.build clean
+
+
+# No-ops:
+override_dh_auto_test:
+override_dh_update_autotools_config:
+override_dh_autoreconf:
+

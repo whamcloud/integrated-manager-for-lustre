@@ -474,6 +474,48 @@ jobs:
           sudo vboxmanage list vms | sed -r 's/.*\{(.*)\}/\1/' | xargs -L1 -I {} sudo VBoxManage unregistervm {} --delete 2>/dev/null || true
           sudo rm -rf /root/VirtualBox\ VMs/
 
+  ubuntu_packages:
+    name: Build packages for Ubuntu
+    runs-on: ubuntu-20.04
+    container:
+      image: emfteam/emf-ubuntu20.04-deps
+      options: --user=0
+    steps:
+      - name: Cancel Workflow Action
+        uses: styfle/cancel-workflow-action@0.6.0
+        with:
+          access_token: ${{ github.token }}
+
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Build packages
+        run: make deb DEB_LOCAL_VERSION=$(date +%s)
+
+      - name: Publish packages
+        run: make deb-repo
+
+      - name: Summary
+        run: |
+          find _deb -ls
+          echo
+          cat _deb/incoming/*.changes
+          for d in _deb/incoming/*.deb; do
+            echo
+            echo ">>>>>>>>>> $d <<<<<<<<<<"
+            dpkg -I "$d"
+            dpkg -c "$d"
+          done
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: apt_repo
+          if-no-files-found: error
+          path: |
+            _deb/repo/dists/
+            _deb/repo/pool/
+
   exa_base_testing:
     name: EXA Testing
     runs-on: self-hosted

@@ -1,0 +1,14 @@
+/usr/bin/device-scanner-daemon
+/usr/bin/mount-emitter
+/usr/bin/swap-emitter
+/usr/bin/uevent-listener
+/lib/systemd/system-preset/00-device-scanner.preset
+/lib/systemd/system/block-device-populator.service
+/lib/systemd/system/device-scanner.service
+/lib/systemd/system/device-scanner.socket
+/lib/systemd/system/device-scanner.target
+/lib/systemd/system/mount-emitter.service
+/lib/systemd/system/mount-populator.service
+/lib/systemd/system/swap-emitter.service
+/lib/udev/rules.d/99-emf-device-scanner.rules
+

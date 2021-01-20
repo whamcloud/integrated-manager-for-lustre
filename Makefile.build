@@ -1,0 +1,91 @@
+export CARGO_TARGET_DIR ?= $(CURDIR)/target
+
+PREFIX = /usr
+BINDIR = $(PREFIX)/bin
+SYSTEMDDIR = $(PREFIX)/lib/systemd
+TMPFILESDIR = $(PREFIX)/lib/tmpfile.d
+UDEVDIR = $(PREFIX)/lib/udev/rules.d
+
+INSTALL = install -v
+INSTALL_BIN = $(INSTALL)
+INSTALL_FILE = $(INSTALL) -m u=rw,g=r,o=r
+INSTALL_DIR = $(INSTALL) -d
+
+
+.PHONY: build
+build: build-device-scanner build-agent
+
+.PHONY: install
+install: install-device-scanner install-agent
+
+.PHONY: build-device-scanner
+build-device-scanner:
+	cd device-scanner && cargo build --release
+
+.PHONY: install-device-scanner
+install-device-scanner: build-device-scanner
+	$(INSTALL_DIR) '$(DESTDIR)$(BINDIR)'
+	for b in \
+		device-scanner-daemon \
+		mount-emitter \
+		swap-emitter \
+		uevent-listener \
+		; do \
+	$(INSTALL_BIN) "$(CARGO_TARGET_DIR)/release/$$b" '$(DESTDIR)$(BINDIR)'; \
+	done
+
+	$(INSTALL_DIR) '$(DESTDIR)$(SYSTEMDDIR)/system'
+	for s in \
+		device-scanner/device-scanner-daemon/systemd-units/block-device-populator.service  \
+		device-scanner/device-scanner-daemon/systemd-units/device-scanner.service \
+		device-scanner/device-scanner-daemon/systemd-units/device-scanner.socket \
+		device-scanner/device-scanner-daemon/systemd-units/device-scanner.target \
+		device-scanner/mount-emitter/systemd-units/mount-emitter.service \
+		device-scanner/mount-emitter/systemd-units/mount-populator.service \
+		device-scanner/mount-emitter/systemd-units/swap-emitter.service \
+		; do \
+	$(INSTALL_FILE) "$$s" '$(DESTDIR)$(SYSTEMDDIR)/system'; \
+	done
+
+	$(INSTALL_DIR) '$(DESTDIR)$(SYSTEMDDIR)/system-preset'
+	$(INSTALL_FILE) device-scanner/device-scanner-daemon/systemd-units/00-device-scanner.preset '$(DESTDIR)$(SYSTEMDDIR)/system-preset'
+
+	$(INSTALL_DIR) '$(DESTDIR)$(UDEVDIR)'
+	$(INSTALL_FILE) device-scanner/uevent-listener/udev-rules/99-emf-device-scanner.rules '$(DESTDIR)$(UDEVDIR)'
+
+
+
+.PHONY: build-agent
+build-agent:
+	cargo build --release -p emf-agent
+
+.PHONY: install-agent
+install-agent: build-agent
+	$(INSTALL_DIR) '$(DESTDIR)$(BINDIR)'
+	for b in \
+		emf-agent \
+		emf-agent-daemon \
+		; do \
+	$(INSTALL_BIN) "$(CARGO_TARGET_DIR)/release/$$b" '$(DESTDIR)$(BINDIR)'; \
+	done
+
+	$(INSTALL_DIR) '$(DESTDIR)$(SYSTEMDDIR)/system'
+	for s in \
+		emf-agent/systemd-units/rust-emf-agent.path \
+		emf-agent/systemd-units/rust-emf-agent.service \
+		; do \
+	$(INSTALL_FILE) "$$s" '$(DESTDIR)$(SYSTEMDDIR)/system'; \
+	done
+
+	$(INSTALL_DIR) '$(DESTDIR)$(SYSTEMDDIR)/system-preset'
+	$(INSTALL_FILE) emf-agent/systemd-units/00-rust-emf-agent.preset '$(DESTDIR)$(SYSTEMDDIR)/system-preset'
+
+	$(INSTALL_DIR) '$(DESTDIR)$(TMPFILESDIR)'
+	$(INSTALL_FILE) -T emf-agent/systemd-units/tmpfiles.conf '$(DESTDIR)$(TMPFILESDIR)/emf-agent.conf'
+
+
+.PHONY: clean
+clean:
+	rm -rf $(CARGO_TARGET_DIR)
+
+

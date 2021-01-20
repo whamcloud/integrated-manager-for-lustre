@@ -1,0 +1,18 @@
+Source: emf
+Section: admin
+Priority: optional
+Maintainer: EMF Team <emf@whamcloud.com>
+Standards-Version: 4.5.1
+Build-Depends: debhelper-compat (= 12)
+
+Package: emf-device-scanner
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: daemon with an in-memory representation of devices
+
+Package: emf-agent
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends},
+  emf-device-scanner (= ${source:Version})
+Description: EMF agent daemon and CLI
+

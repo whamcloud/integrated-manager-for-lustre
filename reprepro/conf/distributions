@@ -1,0 +1,9 @@
+Codename: emf
+Suite: unstable
+Version: unstable
+Origin: https://whamcloud.com/
+Label: EMF Development Repository
+Description: APT Repository for EMF
+Architectures: amd64
+Components: non-free
+
