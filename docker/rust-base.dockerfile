@@ -21,12 +21,12 @@ RUN cargo metadata --no-deps --offline --format-version 1 | jq '.workspace_membe
 
 
 FROM base-rust as planner
-RUN cargo install cargo-chef
+RUN cargo install cargo-chef --version 0.1.11
 COPY --from=mover /build/rust-only/ .
 RUN cargo chef prepare --recipe-path recipe.json
 
 FROM base-rust as cacher
-RUN cargo install cargo-chef
+RUN cargo install cargo-chef --version 0.1.11
 COPY --from=planner /build/recipe.json recipe.json
 RUN cargo chef cook --release --recipe-path recipe.json
 
