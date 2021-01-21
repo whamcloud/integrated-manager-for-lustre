@@ -354,5 +354,5 @@ jobs:
           jenkins-user: ${{ secrets.JENKINS_USER }}
           jenkins-token: ${{ secrets.JENKINS_KEY }}
           job-name: "emf-repo"
-          branch: ${{ github.head_ref }}
+          branch: master
           sha: ${{ github.sha }}
