@@ -355,4 +355,4 @@ jobs:
           jenkins-token: ${{ secrets.JENKINS_KEY }}
           job-name: "emf-repo"
           branch: ${{ github.head_ref }}
-          sha: ${{ GITHUB_SHA }}
+          sha: ${{ github.sha }}
