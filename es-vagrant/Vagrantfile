@@ -157,12 +157,7 @@ Vagrant.configure('2') do |config|
         node.vm.provision 'ha-setup',
                           type: 'shell',
                           run: 'never',
-                          inline: <<-SHELL
-                          [ -f /etc/corosync/authkey ] || config-corosync --gen-authkey
-                          sync-file /etc/corosync/authkey
-                          clush -a systemctl start corosync pacemaker
-                          config-pacemaker
-                          SHELL
+                          path: './scripts/configure_ha.sh'
 
         node.vm.provision 'create-esui',
                           type: 'shell',
