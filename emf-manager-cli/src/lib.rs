@@ -8,6 +8,7 @@ pub mod consul;
 pub mod display_utils;
 pub mod error;
 pub mod filesystem;
+pub mod influx;
 pub mod nginx;
 pub mod ostpool;
 pub mod profile;

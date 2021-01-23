@@ -5,6 +5,7 @@
 use emf_manager_cli::{
     consul,
     display_utils::display_error,
+    influx,
     nginx::{self, nginx_cli},
     selfname,
 };
@@ -14,6 +15,13 @@ use structopt::StructOpt;
 #[derive(Debug, StructOpt)]
 #[structopt(setting = structopt::clap::AppSettings::ColoredHelp)]
 pub enum App {
+    #[structopt(name = "influx")]
+    /// Influx config file generator
+    Influx {
+        #[structopt(subcommand)]
+        command: influx::Command,
+    },
+
     #[structopt(name = "nginx")]
     /// Nginx config file generator
     Nginx {
@@ -38,6 +46,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing::debug!("Matching args {:?}", matches);
 
     let r = match matches {
+        App::Influx { command } => influx::cli(command).await,
         App::Nginx { command } => nginx_cli(command).await,
         App::Consul { command } => consul::cli(command).await,
     };
