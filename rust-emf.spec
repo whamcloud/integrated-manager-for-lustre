@@ -317,8 +317,8 @@ Obsoletes: rust-iml-stats
 Summary: Streaming EMF messages with Server-Sent Events
 License: MIT
 Group: System Environment/Libraries
-Provides: rust-iml-stats
-Obsoletes: rust-iml-stats
+Provides: rust-iml-warp-drive
+Obsoletes: rust-iml-warp-drive
 
 %description warp-drive
 %{summary}
