@@ -15,7 +15,11 @@ use tokio::fs;
 pub enum Command {
     /// Generate Influx config
     #[structopt(name = "generate-config")]
-    GenerateConfig,
+    GenerateConfig {
+        /// Address influx should bind to on startup
+        #[structopt(short = "p", long = "bindaddr", env = "INFLUXDB_HTTP_BIND_ADDRESS")]
+        bindaddr: String,
+    },
 
     /// Start necessary units
     Start,
@@ -63,7 +67,9 @@ pub enum Command {
 
 pub async fn cli(command: Command) -> Result<(), EmfManagerCliError> {
     match command {
-        Command::GenerateConfig => generate_config("/etc/default/influxdb").await,
+        Command::GenerateConfig { bindaddr } => {
+            generate_config("/etc/default/influxdb", &bindaddr).await
+        }
         Command::Start => restart_unit("influxdb".to_string()).err_into().await,
         Command::Setup {
             maindb,
@@ -92,9 +98,9 @@ pub async fn cli(command: Command) -> Result<(), EmfManagerCliError> {
                 format!(r#"DROP CONTINUOUS QUERY "downsample_samples" ON "{}""#, statdb),
                 format!(r#"DROP CONTINUOUS QUERY "downsample_sums" ON "{}""#, statdb),
                 format!(r#"CREATE CONTINUOUS QUERY "downsample_means" ON "{}" BEGIN SELECT mean(*) INTO "{}"."long_term".:MEASUREMENT FROM "{}"."autogen"."target","{}"."autogen"."host","{}"."autogen"."node" GROUP BY time(30m),* END"#, statdb, statdb, statdb, statdb, statdb),
-                format!(r#"CREATE CONTINUOUS QUERY "downsample_lnet" ON "{}" BEGIN SELECT (last("send_count") - first("send_count")) / count("send_count") AS "mean_diff_send", (last("recv_count") - first("recv_count")) / count("recv_count") AS "mean_diff_recv" INTO "{}"."long_term"."lnet" FROM "lnet" WHERE "nid" != \'"0@lo"\' GROUP BY time(30m),"host","nid" END"#, statdb, statdb),
+                format!(r#"CREATE CONTINUOUS QUERY "downsample_lnet" ON "{}" BEGIN SELECT (last("send_count") - first("send_count")) / count("send_count") AS "mean_diff_send", (last("recv_count") - first("recv_count")) / count("recv_count") AS "mean_diff_recv" INTO "{}"."long_term"."lnet" FROM "lnet" WHERE "nid" != '"0@lo"' GROUP BY time(30m),"host","nid" END"#, statdb, statdb),
                 format!(r#"CREATE CONTINUOUS QUERY "downsample_samples" ON "{}" BEGIN SELECT (last("samples") - first("samples")) / count("samples") AS "mean_diff_samples" INTO "{}"."long_term"."target" FROM "target" GROUP BY time(30m),* END"#, statdb, statdb),
-                format!(r#"CREATE CONTINUOUS QUERY "downsample_sums" ON "{}" BEGIN SELECT (last("sum") - first("sum")) / count("sum") AS "mean_diff_sum" INTO "{}"."long_term"."target" FROM "target" WHERE "units"=\'"bytes"\' GROUP BY time(30m),* END"#, statdb, statdb),
+                format!(r#"CREATE CONTINUOUS QUERY "downsample_sums" ON "{}" BEGIN SELECT (last("sum") - first("sum")) / count("sum") AS "mean_diff_sum" INTO "{}"."long_term"."target" FROM "target" WHERE "units"='"bytes"' GROUP BY time(30m),* END"#, statdb, statdb),
                 ].join("; ");
             influx(&statdb, cmd).await?;
             influx(&statdb, format!(r#"ALTER RETENTION POLICY "autogen" ON "{}" DURATION 1d  REPLICATION 1 SHARD DURATION 2h DEFAULT"#, statdb)).await?;
@@ -105,13 +111,17 @@ pub async fn cli(command: Command) -> Result<(), EmfManagerCliError> {
 
 // Disable reporting
 // Disable influx http logging (of every write and every query)
-async fn generate_config(path: impl AsRef<Path>) -> Result<(), EmfManagerCliError> {
+async fn generate_config(path: impl AsRef<Path>, bindaddr: &str) -> Result<(), EmfManagerCliError> {
     fs::write(
         path,
-        r#"INFLUXDB_DATA_QUERY_LOG_ENABLED=false
+        format!(
+            r#"INFLUXDB_DATA_QUERY_LOG_ENABLED=false
+INFLUXDB_HTTP_BIND_ADDRESS={}
 INFLUXDB_REPORTING_DISABLED=true
 INFLUXDB_HTTP_LOG_ENABLED=false
 "#,
+            bindaddr
+        ),
     )
     .await?;
     Ok(())

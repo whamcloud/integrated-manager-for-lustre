@@ -47,7 +47,7 @@ pub enum Command {
 fn check_space(path: &str) -> Result<(), EmfManagerCliError> {
     let statvfs = statvfs(path)?;
 
-    let free = statvfs.blocks_free() * statvfs.fragment_size() / (1024 * 1024 * 1024);
+    let free = statvfs.blocks_free() as u64 * statvfs.fragment_size() / (1024 * 1024 * 1024);
 
     if free >= CHECK_SIZE_GB {
         Ok(())
