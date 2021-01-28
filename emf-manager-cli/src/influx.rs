@@ -4,6 +4,7 @@
 
 use crate::error::EmfManagerCliError;
 use emf_cmd::{self, CheckedCommandExt};
+use emf_systemd::restart_unit;
 use futures::TryFutureExt;
 use std::{path::Path, str};
 use structopt::StructOpt;
@@ -16,25 +17,44 @@ pub enum Command {
     #[structopt(name = "generate-config")]
     GenerateConfig,
 
+    /// Start necessary units
+    Start,
+
     /// Setup running influxdb
     #[structopt(name = "setup")]
     Setup {
         /// EMF database name
-        #[structopt(short = "e", long = "emfdb", env = "INFLUXDB_EMF_DB")]
+        #[structopt(
+            short = "e",
+            long = "emfdb",
+            default_value = "emf",
+            env = "INFLUXDB_EMF_DB"
+        )]
         maindb: String,
 
         /// EMF Stats database name
-        #[structopt(short = "s", long = "statsdb", env = "INFLUXDB_EMF_STATS_DB")]
+        #[structopt(
+            short = "s",
+            long = "statsdb",
+            default_value = "emf_stats",
+            env = "INFLUXDB_EMF_STATS_DB"
+        )]
         statdb: String,
 
         /// Stratagem Scan database name
-        #[structopt(short = "t", long = "scandb", env = "INFLUXDB_STRATAGEM_SCAN_DB")]
+        #[structopt(
+            short = "t",
+            long = "scandb",
+            default_value = "emf_stratagem_scans",
+            env = "INFLUXDB_STRATAGEM_SCAN_DB"
+        )]
         scandb: String,
 
         /// EMF database name
         #[structopt(
             short = "l",
             long = "long-duration",
+            default_value = "52w",
             env = "INFLUXDB_EMF_STATS_LONG_DURATION"
         )]
         duration: String,
@@ -44,6 +64,7 @@ pub enum Command {
 pub async fn cli(command: Command) -> Result<(), EmfManagerCliError> {
     match command {
         Command::GenerateConfig => generate_config("/etc/default/influxdb").await,
+        Command::Start => restart_unit("influxdb".to_string()).err_into().await,
         Command::Setup {
             maindb,
             statdb,

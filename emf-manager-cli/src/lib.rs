@@ -4,13 +4,16 @@
 
 pub mod api;
 pub mod api_utils;
+pub mod config_utils;
 pub mod consul;
 pub mod display_utils;
 pub mod error;
 pub mod filesystem;
+pub mod grafana;
 pub mod influx;
 pub mod nginx;
 pub mod ostpool;
+pub mod postgres;
 pub mod profile;
 pub mod server;
 pub mod snapshot;

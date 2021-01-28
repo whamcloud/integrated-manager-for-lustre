@@ -5,9 +5,9 @@
 use emf_manager_cli::{
     consul,
     display_utils::display_error,
-    influx,
+    grafana, influx,
     nginx::{self, nginx_cli},
-    selfname,
+    postgres, selfname,
 };
 use std::process::exit;
 use structopt::StructOpt;
@@ -15,29 +15,38 @@ use structopt::StructOpt;
 #[derive(Debug, StructOpt)]
 #[structopt(setting = structopt::clap::AppSettings::ColoredHelp)]
 pub enum App {
-    #[structopt(name = "influx")]
+    /// Configure Consul
+    Consul {
+        #[structopt(subcommand)]
+        command: consul::Command,
+    },
+    /// Grafana setup
+    Grafana {
+        #[structopt(subcommand)]
+        command: grafana::Command,
+    },
     /// Influx config file generator
     Influx {
         #[structopt(subcommand)]
         command: influx::Command,
     },
-
-    #[structopt(name = "nginx")]
     /// Nginx config file generator
     Nginx {
         #[structopt(subcommand)]
         command: nginx::NginxCommand,
     },
-    /// Configure Consul
-    Consul {
+    /// PostgreSQL config file generator
+    Postgres {
         #[structopt(subcommand)]
-        command: consul::Command,
+        command: postgres::Command,
     },
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     emf_tracing::init();
+
+    let _ = dotenv::from_path("/etc/emf/bootstrap.conf");
 
     let name = selfname(Some("config")).unwrap_or_else(|| "emf-config".to_string());
 
@@ -46,9 +55,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing::debug!("Matching args {:?}", matches);
 
     let r = match matches {
+        App::Consul { command } => consul::cli(command).await,
+        App::Grafana { command } => grafana::cli(command).await,
         App::Influx { command } => influx::cli(command).await,
         App::Nginx { command } => nginx_cli(command).await,
-        App::Consul { command } => consul::cli(command).await,
+        App::Postgres { command } => postgres::cli(command).await,
     };
 
     if let Err(e) = r {

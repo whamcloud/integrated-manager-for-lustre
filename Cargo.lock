@@ -1315,10 +1315,12 @@ dependencies = [
  "emf-api-utils",
  "emf-cmd",
  "emf-command-utils",
+ "emf-fs",
  "emf-graphql-queries",
  "emf-influx",
  "emf-manager-client",
  "emf-ssh",
+ "emf-systemd",
  "emf-tracing",
  "emf-wire-types",
  "futures",
@@ -1327,6 +1329,7 @@ dependencies = [
  "insta",
  "lazy_static",
  "liblustreapi",
+ "nix",
  "number-formatter",
  "prettytable-rs",
  "rand 0.8.2",
@@ -2837,6 +2840,18 @@ name = "new_debug_unreachable"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e4a24736216ec316047a1fc4252e27dabb04218aa4a3f37c6e7ddbf1f9782b54"
+
+[[package]]
+name = "nix"
+version = "0.19.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b2ccba0cfe4fdf15982d1674c69b1fd80bad427d293849982668dfe454bd61f2"
+dependencies = [
+ "bitflags",
+ "cc",
+ "cfg-if 1.0.0",
+ "libc",
+]
 
 [[package]]
 name = "nom"

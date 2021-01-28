@@ -14,10 +14,12 @@ dotenv = "0.15"
 emf-api-utils = {path = "../emf-api-utils", version = "0.4"}
 emf-cmd = {path = "../emf-cmd", version = "0.4"}
 emf-command-utils = {path = "../emf-command-utils", version = "0.4"}
+emf-fs = {path = "../emf-fs", version = "0.4"}
 emf-graphql-queries = {path = "../emf-graphql-queries", version = "0.2"}
 emf-influx = {path = "../emf-influx", version = "0.2"}
 emf-manager-client = {path = "../emf-manager-client", version = "0.4"}
 emf-ssh = {path = "../emf-ssh", version = "0.1"}
+emf-systemd = {path = "../emf-systemd", version = "0.4"}
 emf-tracing = {version = "0.3", path = "../emf-tracing"}
 emf-wire-types = {path = "../emf-wire-types", version = "0.4", features = ["cli"]}
 futures = "0.3"
@@ -26,6 +28,7 @@ indicatif = "0.15"
 lazy_static = "1.4"
 liblustreapi = {path = "../liblustreapi", version = "0.4"}
 number-formatter = {path = "../number-formatter", version = "0.2"}
+nix = "0.19"
 prettytable-rs = "0.8"
 rand = "0.8"
 reqwest = {version = "0.10", default-features = false, features = ["rustls-tls", "json"]}
