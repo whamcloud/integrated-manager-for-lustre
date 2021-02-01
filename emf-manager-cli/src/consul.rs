@@ -9,19 +9,11 @@ use crate::{
     ssh::SshOpts,
 };
 use emf_cmd::CheckedCommandExt;
+use emf_fs::create_tmp_dir;
 use emf_ssh::SshHandleExt;
 use futures::{stream, StreamExt, TryStreamExt};
-use rand::{distributions::Alphanumeric, thread_rng, Rng};
-use std::{
-    collections::BTreeSet,
-    env,
-    iter::{self, FromIterator},
-    path::Path,
-    process::Stdio,
-};
-use std::{io, path::PathBuf};
+use std::{collections::BTreeSet, io, iter::FromIterator, path::Path, process::Stdio};
 use structopt::StructOpt;
-use tokio::fs::create_dir_all;
 
 #[derive(Debug, StructOpt)]
 struct Config {
@@ -310,27 +302,4 @@ async fn create_agent_cert(
         .await?;
 
     Ok(())
-}
-
-/// Creates a random dir under `env::temp_dir()`. An optional `suffix` can be provided.
-async fn create_tmp_dir(suffix: impl Into<Option<String>>) -> Result<PathBuf, EmfManagerCliError> {
-    let mut rng = thread_rng();
-
-    let chars: String = iter::repeat(())
-        .map(|()| rng.sample(Alphanumeric))
-        .map(char::from)
-        .take(7)
-        .collect();
-
-    let suffix = match suffix.into() {
-        Some(x) => format!("-{}", x),
-        None => "".to_string(),
-    };
-
-    let mut dir = env::temp_dir();
-    dir.push(format!("{}{}", chars, suffix));
-
-    create_dir_all(&dir).await?;
-
-    Ok(dir)
 }

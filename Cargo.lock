@@ -1153,6 +1153,7 @@ name = "emf-cmd"
 version = "0.4.0"
 dependencies = [
  "futures",
+ "thiserror",
  "tokio",
  "tracing",
  "warp",
@@ -1219,6 +1220,7 @@ name = "emf-fs"
 version = "0.4.0"
 dependencies = [
  "bytes 0.5.6",
+ "emf-cmd",
  "futures",
  "tempdir",
  "tempfile",
@@ -1332,7 +1334,6 @@ dependencies = [
  "nix",
  "number-formatter",
  "prettytable-rs",
- "rand 0.8.2",
  "regex",
  "reqwest",
  "serde",

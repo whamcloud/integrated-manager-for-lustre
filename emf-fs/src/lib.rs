@@ -2,6 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use emf_cmd::{CheckedCommandExt as _, OutputExt as _};
 use futures::{io::AsyncBufReadExt, stream, Stream, StreamExt, TryFutureExt, TryStreamExt};
 use std::{
     io::{self, Write},
@@ -218,6 +219,26 @@ pub async fn file_write_bytes(path: PathBuf) -> Result<FramedWrite<File, BytesCo
     let file = fs::File::create(path).await?;
 
     Ok(FramedWrite::new(file, BytesCodec::new()))
+}
+
+/// Creates a random dir under system tmp dir. An optional `suffix` can be provided.
+pub async fn create_tmp_dir(
+    suffix: impl Into<Option<String>>,
+) -> Result<PathBuf, emf_cmd::CmdError> {
+    let mut cmd = emf_cmd::Command::new("mktemp");
+    cmd.arg("-d");
+
+    if let Some(suffix) = suffix.into() {
+        cmd.arg("--suffix").arg(format!("-, {}", suffix));
+    }
+
+    let x = cmd.checked_output().await?.stdout_string_lossy();
+    Ok(x.trim().into())
+}
+
+/// Recursively create a directory at the given path.
+pub async fn mkdirp<P: AsRef<Path>>(x: P) -> Result<(), io::Error> {
+    fs::DirBuilder::new().recursive(true).create(x).await
 }
 
 #[cfg(test)]

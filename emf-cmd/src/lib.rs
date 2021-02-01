@@ -4,18 +4,19 @@
 
 use futures::{future::BoxFuture, Future, FutureExt, TryFutureExt};
 use std::{
-    error, fmt, io,
+    fmt, io,
     pin::Pin,
     process::{ExitStatus, Output},
+    str::Utf8Error,
 };
 pub use tokio::process::{Child, Command};
 
 #[cfg(feature = "warp-errs")]
 use warp::reject;
 
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum CmdError {
-    Io(io::Error),
+    Io(#[from] io::Error),
     Output(Output),
 }
 
@@ -37,21 +38,6 @@ impl fmt::Display for CmdError {
     }
 }
 
-impl std::error::Error for CmdError {
-    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
-        match *self {
-            CmdError::Io(ref err) => Some(err),
-            CmdError::Output(_) => None,
-        }
-    }
-}
-
-impl From<io::Error> for CmdError {
-    fn from(err: io::Error) -> Self {
-        CmdError::Io(err)
-    }
-}
-
 impl From<Output> for CmdError {
     fn from(output: Output) -> Self {
         CmdError::Output(output)
@@ -68,6 +54,24 @@ fn handle_status(x: ExitStatus) -> Result<(), io::Error> {
         );
 
         Err(err)
+    }
+}
+
+pub trait OutputExt {
+    fn try_stdout_str(&self) -> Result<&str, Utf8Error>;
+    fn stdout_string_lossy(&self) -> String;
+    fn stderr_string_lossy(&self) -> String;
+}
+
+impl OutputExt for Output {
+    fn try_stdout_str(&self) -> Result<&str, Utf8Error> {
+        std::str::from_utf8(&self.stdout)
+    }
+    fn stdout_string_lossy(&self) -> String {
+        String::from_utf8_lossy(&self.stdout).to_string()
+    }
+    fn stderr_string_lossy(&self) -> String {
+        String::from_utf8_lossy(&self.stderr).to_string()
     }
 }
 

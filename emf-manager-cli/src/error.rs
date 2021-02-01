@@ -3,6 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use emf_wire_types::Command;
+use std::str::Utf8Error;
 use thiserror::Error;
 
 #[derive(Debug)]
@@ -79,6 +80,7 @@ pub enum EmfManagerCliError {
     TokioJoinError(#[from] tokio::task::JoinError),
     TokioTimerError(#[from] tokio::time::Error),
     EmfSShError(#[from] emf_ssh::Error),
+    Utf8Error(#[from] Utf8Error),
 }
 
 impl std::fmt::Display for EmfManagerCliError {
@@ -115,6 +117,7 @@ impl std::fmt::Display for EmfManagerCliError {
             EmfManagerCliError::TokioJoinError(ref err) => write!(f, "{}", err),
             EmfManagerCliError::TokioTimerError(ref err) => write!(f, "{}", err),
             EmfManagerCliError::EmfSShError(ref err) => write!(f, "{}", err),
+            EmfManagerCliError::Utf8Error(ref err) => write!(f, "{}", err),
         }
     }
 }

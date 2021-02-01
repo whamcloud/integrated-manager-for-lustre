@@ -4,7 +4,7 @@
 
 use crate::{config_utils::psql, error::EmfManagerCliError};
 use emf_cmd::CheckedCommandExt;
-use emf_fs::dir_exists;
+use emf_fs::{dir_exists, mkdirp};
 use emf_systemd::restart_unit;
 use nix::sys::statvfs::statvfs;
 use std::collections::HashSet;
@@ -76,10 +76,8 @@ pub async fn cli(command: Command) -> Result<(), EmfManagerCliError> {
                     )));
                 }
                 if !dir_exists(&dir).await {
-                    fs::DirBuilder::new()
-                        .recursive(true)
-                        .create("/etc/systemd/system/postgresql-13.service.d/")
-                        .await?;
+                    mkdirp("/etc/systemd/system/postgresql-13.service.d/").await?;
+
                     fs::write(
                         "/etc/systemd/system/postgresql-13.service.d/emf.conf",
                         format!(
