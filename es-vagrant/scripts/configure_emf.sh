@@ -1,7 +1,9 @@
 #!/bin/bash
 
-# default timeout 10 minutes
-TIMEOUT=600
+# default timeout 12 minutes
+TIMEOUT=720
+
+NAME=${1:-emf}
 
 waitstart () {
     IDS=$*
@@ -43,11 +45,11 @@ function locate_resource() {
     crm_resource -QW -r $res 2> /dev/null
 }
 
-clush -a "es_install --steps esui --yes"
+clush -a "es_install --steps ${NAME} --yes"
 
-config-pacemaker --type esui
+config-pacemaker --type ${NAME}
 
-waitstart esui-docker
+waitstart ${NAME}-docker
 
 # this probably will run on node1 (but not guaranteed)
-ssh $(locate_resource "esui-docker-grp") "es_install --steps esui_scan --yes"
+ssh $(locate_resource "${NAME}-docker-grp") "es_install --steps ${NAME}_scan --yes"

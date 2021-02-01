@@ -162,12 +162,26 @@ Vagrant.configure('2') do |config|
         node.vm.provision 'create-esui',
                           type: 'shell',
                           run: 'never',
-                          path: './scripts/configure_esui.sh'
+                          path: './scripts/configure_emf.sh',
+                          args: 'esui'
 
         node.vm.provision 'destroy-esui',
                          type: 'shell',
                          run: 'never',
-                         path: './scripts/teardown_esui.sh'
+                         path: './scripts/teardown_emf.sh',
+                         args: 'esui'
+
+        node.vm.provision 'create-emf',
+                          type: 'shell',
+                          run: 'never',
+                          path: './scripts/configure_emf.sh',
+                          args: 'emf'
+
+        node.vm.provision 'destroy-emf',
+                         type: 'shell',
+                         run: 'never',
+                         path: './scripts/teardown_emf.sh',
+                         args: 'emf'
 
         node.vm.provision 'start-lustre',
                          type: 'shell',

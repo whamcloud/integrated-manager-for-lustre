@@ -2,6 +2,8 @@
 
 TIMEOUT=300
 
+NAME=${1:-emf}
+
 waitstop () {
     IDS=$*
 
@@ -39,8 +41,8 @@ waitstop () {
 
 clush -a systemctl disable --now emf-storage-server.target iml-storage-server.target
 
-crm res stop esui-docker-grp
-waitstop esui-docker-grp
+crm res stop ${NAME}-docker-grp
+waitstop ${NAME}-docker-grp
 
-crm config delete esui-docker docker esui-fs esui-ip
+crm config delete ${NAME}-docker docker ${NAME}-fs ${NAME}-ip
 clush -a sed -i '/nginx$/d' /etc/hosts

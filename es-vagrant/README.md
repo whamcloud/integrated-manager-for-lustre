@@ -46,16 +46,28 @@ The EMF Team typically uses [Vagrant](https://www.vagrantup.com) and [VirtualBox
    make docker-local
    ```
    
-1. Setup EMF
+1. Setup ESUI
 
    ```sh
    vagrant provision --provision-with=create-esui
    ```
 
-1. Teardown EMF
+1. Teardown ESUI
 
    ```sh
    vagrant provision --provision-with=destroy-esui
+   ```
+
+1. Setup EMF
+
+   ```sh
+   vagrant provision --provision-with=create-emf
+   ```
+
+1. Teardown EMF
+
+   ```sh
+   vagrant provision --provision-with=destroy-emf
    ```
 
 1. Setup the clients (`install-lustre-client` on ubuntu clients involves building lustre client from source)
