@@ -1,0 +1,32 @@
+---
+source: emf-state-machine/src/lib.rs
+expression: mk_err_str(errs)
+---
+Invalid type.
+At instance path /version:
+  "s"
+
+At schema path /properties/version/type:
+  {
+    "type": "number",
+    "description": "The version of the state schema"
+  }
+
+Documentation for this node:
+  The version of the state schema
+
+
+
+Required properties "start" are missing
+At instance path /components/lnet/actions/start/state:
+  {
+    "strt": "own",
+    "end": "oops"
+  }
+
+At schema path /properties/components/patternProperties/^[_a-zA-Z0-9-]+$/properties/actions/patternProperties/^[_a-zA-Z0-9-]+$/properties/state/required:
+  [
+    "start"
+  ]
+
+

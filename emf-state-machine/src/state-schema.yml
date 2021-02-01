@@ -1,0 +1,135 @@
+version: 1
+components:
+  server:
+    states:
+      up:
+      down:
+    add:
+      input:
+        hostlist:
+          - string
+        auth: string
+        user: string
+        tags:
+          - string
+  client_mount:
+    states:
+      mounted:
+      unmounted:
+    create:
+      input:
+        hostlist:
+          - string
+        mountspec: string
+        mountpoint: string
+        tags:
+          - string
+  lnet:
+    states:
+      up:
+      down:
+      loaded:
+      unloaded:
+      configured:
+    actions:
+      start:
+        state:
+          start: down
+          end: up
+      stop:
+        state:
+          start: up
+          end: down
+      load:
+        state:
+          start:
+            - unloaded
+            - up
+          end: loaded
+      unload:
+        state:
+          start: loaded
+          end: unloaded
+      configure:
+        state:
+          start: loaded
+          end: configured
+        input:
+            - string
+      export:
+        state:
+          start: configured
+      unconfigure:
+        state:
+          start: configured
+          end: loaded
+      import:
+        input: string
+  mgt:
+    states:
+      mounted:
+        dependencies:
+          - this.lnet: up
+      unmounted:
+  ost:
+    states:
+      mounted:
+        dependencies:
+          - this.lnet: up
+      unmounted:
+    actions:
+      mount:
+        input:
+          name: String
+        state:
+          start: unmounted
+          end: mounted
+  mdt:
+    states:
+      mounted:
+        dependencies:
+          - this.lnet: up
+      unmounted:
+  mgt_mdt:
+    states:
+      mounted:
+        dependencies:
+          - this.lnet: up
+      unmounted:
+  filesystem:
+    states:
+      unavailable:
+      started:
+          dependencies:
+            - or:
+                - this.mgt: mounted
+                - this.mgt_mdt: mounted
+            - all:
+                - this.mdt: mounted
+            - all:
+                - this.ost: mounted
+      stopped:
+    actions:
+      start:
+        input:
+          name: String
+        state:
+          start:
+            - stopped
+            - unavailable
+          end: started
+      stop:
+        input:
+          name: String
+        state:
+          start: available
+          end: stopped
+      create:
+        input:
+          name: string
+          mgt_type: string # one of volume, target, combined
+          mgt: string
+          mdts_volumes:
+            - string
+          ost_volumes:
+            - string

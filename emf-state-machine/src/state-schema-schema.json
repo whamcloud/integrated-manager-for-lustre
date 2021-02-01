@@ -1,0 +1,135 @@
+{
+    "$schema": "http://json-schema.org/schema#",
+    "properties": {
+        "version": {
+            "type": "number",
+            "description": "The version of the state schema"
+        },
+        "components": {
+            "type": "object",
+            "description": "Components that can be loaded into the state machine.",
+            "patternProperties": {
+                "^[_a-zA-Z0-9-]+$": {
+                    "type": "object",
+                    "properties": {
+                        "states": {
+                            "type": "object",
+                            "description": "Valid states for the object.",
+                            "patternProperties": {
+                                "^_a-zA-Z0-9-]+$": {
+                                    "type": "object",
+                                    "description": "The state object for the component.",
+                                    "properties": {
+                                        "dependencies": {
+                                            "type": "array",
+                                            "description": "Dependency requirements for the state.",
+                                            "items": {
+                                                "type": "object",
+                                                "description": "A dependency qualifier",
+                                                "patternProperties": {
+                                                    "or": {
+                                                        "type": "array",
+                                                        "description": "A list of deps that can be used with the Or qualifier. The input supplied must match one of the items.",
+                                                        "items": {
+                                                            "type": "object",
+                                                            "description": "A reference to an input and the state it must be in.",
+                                                            "patternProperties": {
+                                                                "^this\\.[_a-zA-Z0-9-]+$": {
+                                                                    "type": "string",
+                                                                    "description": "The state that the reference input must be in."
+                                                                }
+                                                            }
+                                                        }
+                                                    },
+                                                    "and": {
+                                                        "type": "array",
+                                                        "description": "A list of deps that can be used with the And qualifier. A corresponding input must be specified for each item in this list.",
+                                                        "items": {
+                                                            "type": "object",
+                                                            "description": "A reference to an input and the state it must be in.",
+                                                            "patternProperties": {
+                                                                "^this\\.[_a-zA-Z0-9-]+$": {
+                                                                    "type": "string",
+                                                                    "description": "The state that the reference input must be in."
+                                                                }
+                                                            }
+                                                        }
+                                                    },
+                                                    "all": {
+                                                        "type": "array",
+                                                        "description": "A list of deps that can be used with the All qualifier. The corresponding input must be a list in which all items in the list are in the specified state.",
+                                                        "items": {
+                                                            "type": "object",
+                                                            "description": "A reference to an input and the state it must be in.",
+                                                            "patternProperties": {
+                                                                "^this\\.[_a-zA-Z0-9-]+$": {
+                                                                    "type": "string",
+                                                                    "description": "The state that the reference input must be in."
+                                                                }
+                                                            }
+                                                        }
+                                                    },
+                                                    "^this\\.[_a-zA-Z0-9-]+$": {
+                                                        "type": "string",
+                                                        "description": "The state that the reference input must be in."
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "actions": {
+                            "type": "object",
+                            "description": "Actions available to the component.",
+                            "patternProperties": {
+                                "^[_a-zA-Z0-9-]+$": {
+                                    "type": "object",
+                                    "description": "Action properties",
+                                    "properties": {
+                                        "input": {
+                                            "type": ["string", "array", "object"],
+                                            "description": "Input that must be provided to run the action.",
+                                            "items": {
+                                                "type": ["string", "number", "boolean"]
+                                            },
+                                            "patternProperties": {
+                                                "^[_a-zA-Z0-9-]+$": {
+                                                    "type": ["string", "number", "integer", "boolean", "null", "array", "object"],
+                                                    "description": "Input supplied to the action.",
+                                                    "items": {
+                                                        "type": ["string", "number", "boolean"]
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        "state": {
+                                            "type": "object",
+                                            "description": "State transition details.",
+                                            "properties": {
+                                                "start": {
+                                                    "type": ["string", "array"],
+                                                    "description": "List of start states.",
+                                                    "items": {
+                                                        "type": "string",
+                                                        "description": "Name of a valid start state for the action."
+                                                    }
+                                                },
+                                                "end": {
+                                                    "type": "string",
+                                                    "description": "The end state of the action."
+                                                }
+                                            },
+                                            "required": ["start"]
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

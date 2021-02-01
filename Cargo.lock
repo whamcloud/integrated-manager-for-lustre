@@ -1123,7 +1123,7 @@ dependencies = [
  "emf-wire-types",
  "futures",
  "humantime 2.1.0",
- "itertools",
+ "itertools 0.9.0",
  "juniper",
  "lazy_static",
  "regex",
@@ -1556,6 +1556,18 @@ dependencies = [
  "thrussh",
  "thrussh-keys",
  "tokio",
+]
+
+[[package]]
+name = "emf-state-machine"
+version = "0.1.0"
+dependencies = [
+ "insta",
+ "jsonschema-valid",
+ "lazy_static",
+ "serde_json",
+ "serde_yaml",
+ "thiserror",
 ]
 
 [[package]]
@@ -2160,7 +2172,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "be74e86935ec95be845e97e24463ef996ee81ad550e4e71d62471c10d4b1b30a"
 dependencies = [
  "combine 4.1.0",
- "itertools",
+ "itertools 0.9.0",
 ]
 
 [[package]]
@@ -2422,6 +2434,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "iri-string"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "402e5c3bd66bbe43ac90915097caa0347fc2666ecb8a0047154f4494ed577995"
+dependencies = [
+ "nom 5.1.2",
+ "serde",
+]
+
+[[package]]
+name = "itertools"
+version = "0.8.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f56a2d0bc861f9165be4eb3442afd3c236d8a98afd426f65d92324ae1091a484"
+dependencies = [
+ "either",
+]
+
+[[package]]
 name = "itertools"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2443,6 +2474,33 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf3d7383929f7c9c7c2d0fa596f325832df98c3704f2c60553080f7127a58175"
 dependencies = [
  "wasm-bindgen",
+]
+
+[[package]]
+name = "json-pointer"
+version = "0.3.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5fe841b94e719a482213cee19dd04927cf412f26d8dc84c5a446c081e49c2997"
+dependencies = [
+ "serde_json",
+]
+
+[[package]]
+name = "jsonschema-valid"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b2bf65524a5cfc44fa409f8bf9c5573f54cf873647ef46de2506b1ca260fe0ae"
+dependencies = [
+ "chrono",
+ "iri-string",
+ "itertools 0.8.2",
+ "json-pointer",
+ "lazy_static",
+ "percent-encoding",
+ "regex",
+ "serde_json",
+ "textwrap",
+ "url",
 ]
 
 [[package]]
@@ -2861,6 +2919,16 @@ checksum = "2ad2a91a8e869eeb30b9cb3119ae87773a8f4ae617f41b1eb9c154b2905f7bd6"
 dependencies = [
  "memchr",
  "version_check 0.1.5",
+]
+
+[[package]]
+name = "nom"
+version = "5.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ffb4262d26ed83a1c0a33a38fe2bb15797329c85770da05e6b828ddb782627af"
+dependencies = [
+ "memchr",
+ "version_check 0.9.2",
 ]
 
 [[package]]
