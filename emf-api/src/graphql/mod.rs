@@ -580,9 +580,10 @@ impl QueryRoot {
             r#"
                 SELECT jsonb_agg((r.repo_name, r.location))
                     AS repos, sp.*
-                    FROM chroma_core_repo AS r
-                    INNER JOIN chroma_core_serverprofile_repolist AS rl ON r.repo_name = rl.repo_id
-                    INNER JOIN chroma_core_serverprofile AS sp ON rl.serverprofile_id = sp.name
+                    FROM chroma_core_serverprofile AS sp
+                    LEFT OUTER JOIN chroma_core_serverprofile_repolist AS rl ON rl.serverprofile_id = sp.name
+                    LEFT OUTER JOIN chroma_core_repo AS r ON r.repo_name = rl.repo_id
+                    WHERE sp.user_selectable = true
                     GROUP BY sp.name;
             "#,
         )
@@ -592,7 +593,6 @@ impl QueryRoot {
         let server_profiles: Vec<_> = server_profile_records
             .into_iter()
             .filter_map(|spr| {
-                // TODO: Try to derive this somehow
                 let record = ServerProfileRecord {
                     corosync: spr.corosync,
                     corosync2: spr.corosync2,

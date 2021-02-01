@@ -2385,96 +2385,6 @@
       "nullable": []
     }
   },
-  "6f3c08f058a72efb6a3926dbe47380662c1eb80ec3001bf551792719fcd51e74": {
-    "query": "\n                SELECT jsonb_agg((r.repo_name, r.location))\n                    AS repos, sp.*\n                    FROM chroma_core_repo AS r\n                    INNER JOIN chroma_core_serverprofile_repolist AS rl ON r.repo_name = rl.repo_id\n                    INNER JOIN chroma_core_serverprofile AS sp ON rl.serverprofile_id = sp.name\n                    GROUP BY sp.name;\n            ",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "repos",
-          "type_info": "Jsonb"
-        },
-        {
-          "ordinal": 1,
-          "name": "name",
-          "type_info": "Varchar"
-        },
-        {
-          "ordinal": 2,
-          "name": "ui_name",
-          "type_info": "Varchar"
-        },
-        {
-          "ordinal": 3,
-          "name": "ui_description",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 4,
-          "name": "managed",
-          "type_info": "Bool"
-        },
-        {
-          "ordinal": 5,
-          "name": "worker",
-          "type_info": "Bool"
-        },
-        {
-          "ordinal": 6,
-          "name": "user_selectable",
-          "type_info": "Bool"
-        },
-        {
-          "ordinal": 7,
-          "name": "initial_state",
-          "type_info": "Varchar"
-        },
-        {
-          "ordinal": 8,
-          "name": "ntp",
-          "type_info": "Bool"
-        },
-        {
-          "ordinal": 9,
-          "name": "corosync",
-          "type_info": "Bool"
-        },
-        {
-          "ordinal": 10,
-          "name": "corosync2",
-          "type_info": "Bool"
-        },
-        {
-          "ordinal": 11,
-          "name": "pacemaker",
-          "type_info": "Bool"
-        },
-        {
-          "ordinal": 12,
-          "name": "default",
-          "type_info": "Bool"
-        }
-      ],
-      "parameters": {
-        "Left": []
-      },
-      "nullable": [
-        null,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false,
-        false
-      ]
-    }
-  },
   "7b3791ee979b58b8930bdfbad40e0b3ffba6faafb16c54aa1dfd309320387ac2": {
     "query": "SELECT * FROM corosync_resource_bans",
     "describe": {
@@ -3409,6 +3319,96 @@
         ]
       },
       "nullable": [
+        false
+      ]
+    }
+  },
+  "9e97cb08b8425823f4538b433e6c07d405986ad349342f36d542ea408082443a": {
+    "query": "\n                SELECT jsonb_agg((r.repo_name, r.location))\n                    AS repos, sp.*\n                    FROM chroma_core_serverprofile AS sp\n                    LEFT OUTER JOIN chroma_core_serverprofile_repolist AS rl ON rl.serverprofile_id = sp.name\n                    LEFT OUTER JOIN chroma_core_repo AS r ON r.repo_name = rl.repo_id\n                    WHERE sp.user_selectable = true\n                    GROUP BY sp.name;\n            ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "repos",
+          "type_info": "Jsonb"
+        },
+        {
+          "ordinal": 1,
+          "name": "name",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 2,
+          "name": "ui_name",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 3,
+          "name": "ui_description",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 4,
+          "name": "managed",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 5,
+          "name": "worker",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 6,
+          "name": "user_selectable",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 7,
+          "name": "initial_state",
+          "type_info": "Varchar"
+        },
+        {
+          "ordinal": 8,
+          "name": "ntp",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 9,
+          "name": "corosync",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 10,
+          "name": "corosync2",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 11,
+          "name": "pacemaker",
+          "type_info": "Bool"
+        },
+        {
+          "ordinal": 12,
+          "name": "default",
+          "type_info": "Bool"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        null,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
+        false,
         false
       ]
     }
