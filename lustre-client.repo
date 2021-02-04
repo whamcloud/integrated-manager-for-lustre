@@ -1,6 +1,0 @@
-[lustre-client]
-name=Lustre Client
-baseurl=https://downloads.whamcloud.com/public/lustre/lustre-2.12.4/el$releasever/client/
-enabled=1
-gpgcheck=0
-repo_gpgcheck=0

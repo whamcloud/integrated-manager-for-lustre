@@ -1,12 +1,5 @@
 group "default" {
-  targets = ["python-service-base", "systemd-base", "rust-base", "rust-service-base", "emf-gui"]
-}
-
-
-target "python-service-base" {
-  dockerfile = "docker/python-service-base.dockerfile"
-  context = "../"
-  tags = ["emfteam/python-service-base:6.3.0"]
+  targets = ["systemd-base", "rust-base", "rust-service-base", "emf-gui"]
 }
 
 target "systemd-base" {

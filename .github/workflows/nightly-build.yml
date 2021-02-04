@@ -53,75 +53,6 @@ jobs:
           name: rust_rpm
           path: _topdir/RPMS/x86_64
           retention-days: 1
-  python_emf_manager_rpm_build:
-    name: Python EMF manager RPM build
-    runs-on: ubuntu-latest
-    container:
-      image: emfteam/emf-centos7-deps
-    steps:
-      - name: Cancel Workflow Action
-        uses: styfle/cancel-workflow-action@0.6.0
-        with:
-          access_token: ${{ github.token }}
-
-      - name: Checkout sources
-        uses: actions/checkout@v2
-
-      - name: Build rpm
-        run: make RPM_DIST=".$(date '+%s')" python-emf-rpms
-
-      - name: Archive rpm
-        uses: actions/upload-artifact@v2
-        with:
-          name: python_emf_manager_rpm
-          path: _topdir/RPMS/noarch
-          retention-days: 1
-  python_emf_common_rpm_build:
-    name: Python EMF common RPM build
-    runs-on: ubuntu-latest
-    container:
-      image: emfteam/emf-centos7-deps
-    steps:
-      - name: Cancel Workflow Action
-        uses: styfle/cancel-workflow-action@0.6.0
-        with:
-          access_token: ${{ github.token }}
-
-      - name: Checkout sources
-        uses: actions/checkout@v2
-
-      - name: Build rpm
-        run: make RPM_DIST=".$(date '+%s')" python-emf-common-rpms
-
-      - name: Archive rpm
-        uses: actions/upload-artifact@v2
-        with:
-          name: python_emf_common_rpm
-          path: _topdir/RPMS/noarch
-          retention-days: 1
-  python_agent_rpm_build:
-    name: Python Agent RPM build
-    runs-on: ubuntu-latest
-    container:
-      image: emfteam/emf-centos7-deps
-    steps:
-      - name: Cancel Workflow Action
-        uses: styfle/cancel-workflow-action@0.6.0
-        with:
-          access_token: ${{ github.token }}
-
-      - name: Checkout sources
-        uses: actions/checkout@v2
-
-      - name: Build rpm
-        run: make RPM_DIST=".$(date '+%s')" python-emf-agent-rpms
-
-      - name: Archive rpm
-        uses: actions/upload-artifact@v2
-        with:
-          name: python_emf_agent_rpm
-          path: _topdir/RPMS/noarch
-          retention-days: 1
   emf_docker_image_build:
     name: emf-docker image build
     runs-on: ubuntu-latest
@@ -265,9 +196,6 @@ jobs:
       - device_scanner_rpm_build
       - gui_rpm_build
       - emf_docker_rpm_build
-      - python_agent_rpm_build
-      - python_emf_common_rpm_build
-      - python_emf_manager_rpm_build
       - rust_emf_rpm_build
       - sos_plugin_build
     container:
@@ -292,21 +220,6 @@ jobs:
         uses: actions/download-artifact@v1
         with:
           name: device_scanner_rpm
-          path: emf_rpms
-      - name: Download Python Manager RPMs
-        uses: actions/download-artifact@v1
-        with:
-          name: python_emf_manager_rpm
-          path: emf_rpms
-      - name: Download python emf agent RPMs
-        uses: actions/download-artifact@v1
-        with:
-          name: python_emf_agent_rpm
-          path: emf_rpms
-      - name: Download emf common RPMs
-        uses: actions/download-artifact@v1
-        with:
-          name: python_emf_common_rpm
           path: emf_rpms
       - name: Download emf-docker RPMs
         uses: actions/download-artifact@v1
@@ -334,9 +247,6 @@ jobs:
             gui_rpm
             rust_rpm
             device_scanner_rpm
-            python_emf_manager_rpm
-            python_emf_agent_rpm
-            python_emf_common_rpm
             emf_docker_rpm
             sos_rpm
   trigger_jenkins_build:

@@ -1,9 +1,0 @@
-[Unit]
-Description=EMF Settings Populator
-Wants=postgresql-9.6.service
-After=postgresql-9.6.service
-
-[Service]
-WorkingDirectory=/usr/share/chroma-manager
-ExecStart=/bin/bash -c "/bin/python ./manage.py print-settings > /tmp/temp-settings.conf && mv /tmp/temp-settings.conf /var/lib/chroma/emf-settings.conf"
-Type=oneshot

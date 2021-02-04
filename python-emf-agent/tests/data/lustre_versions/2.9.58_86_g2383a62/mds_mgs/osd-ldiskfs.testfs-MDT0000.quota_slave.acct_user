@@ -1,3 +1,0 @@
-usr_accounting:
-- id:      0
-  usage:   { inodes:                  258, kbytes:                 1508 }

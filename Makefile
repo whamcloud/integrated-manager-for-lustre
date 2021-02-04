@@ -32,7 +32,7 @@ DB_USER ?= $(DB_NAME)
 # Test runner options
 NOSE_ARGS ?= --stop
 
-all: rust-core-rpms python-rpms device-scanner-rpms emf-gui-rpm docker-rpms
+all: rust-core-rpms device-scanner-rpms emf-gui-rpm docker-rpms
 
 MFL_COPR_REPO=managerforlustre/manager-for-lustre-devel
 MFL_REPO_OWNER := $(firstword $(subst /, ,$(MFL_COPR_REPO)))
@@ -107,58 +107,6 @@ emf-gui-rpm:
 	rpmbuild -bb ${RPM_OPTS} -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/_topdir/SPECS/rust-emf-gui.spec
 
 	rm -rf ${TMPDIR}/_topdir/SOURCES/*
-	cp -rf ${TMPDIR}/_topdir .
-	rm -rf ${TMPDIR}
-
-python-rpms: python-emf-agent-rpms python-emf-common-rpms python-emf-rpms sos-rpm
-
-python-emf-rpms: substs
-	mkdir -p ${TMPDIR}/_topdir/{SOURCES,SPECS}
-	mkdir -p ${TMPDIR}/{scratch,configuration}
-
-	cp -r ./{chroma_*,chroma-*,__init__.py,manage.py,scm_version.py,setup.py,settings.py,urls.py,wsgi.py,agent-bootstrap-script.template,*.profile} ${TMPDIR}/scratch
-	cp -r ./{*.repo,README.*,polymorphic,scripts,tests,MANIFEST.in} ${TMPDIR}/scratch
-
-	cp ./python-emf-manager.spec ${TMPDIR}/_topdir/SPECS
-
-	cp -r ./grafana ${TMPDIR}/configuration
-	cp -r ./nginx ${TMPDIR}/configuration
-	cp ./emf-*.service \
-		./rabbitmq-env.conf \
-		./rabbitmq-server-dropin.conf \
-		./emf-manager-redirect.conf \
-		./emf-manager.target \
-		./chroma-config.1 \
-		./logrotate.cfg \
-		${TMPDIR}/configuration
-
-	tar -czvf ${TMPDIR}/_topdir/SOURCES/configuration.tar.gz -C ${TMPDIR}/configuration .
-	cd ${TMPDIR}/scratch; \
-	python setup.py sdist -d ${TMPDIR}/_topdir/SOURCES/
-	rpmbuild -bb ${RPM_OPTS} -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/_topdir/SPECS/python-emf-manager.spec
-	rm -rf ${TMPDIR}/_topdir/{SOURCES,BUILD,SPECS}/*
-	cp -rf ${TMPDIR}/_topdir .
-	rm -rf ${TMPDIR}
-
-python-emf-common-rpms:
-	mkdir -p ${TMPDIR}/_topdir/SOURCES
-	mkdir -p ${TMPDIR}/scratch
-	cp -r emf-common/* ${TMPDIR}/scratch
-	cd ${TMPDIR}/scratch; \
-	python setup.py sdist -d ${TMPDIR}/_topdir/SOURCES/
-	rpmbuild -bb ${RPM_OPTS} -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/scratch/python-emf-common.spec
-	rm -rf ${TMPDIR}/_topdir/{SOURCES,BUILD}/*
-	cp -rf ${TMPDIR}/_topdir .
-	rm -rf ${TMPDIR}
-
-python-emf-agent-rpms:
-	mkdir -p ${TMPDIR}/_topdir/SOURCES
-	mkdir -p ${TMPDIR}/scratch
-	cp -r python-emf-agent/* ${TMPDIR}/scratch
-	cd ${TMPDIR}/scratch; \
-	python setup.py sdist -d ${TMPDIR}/_topdir/SOURCES/
-	rpmbuild -bb ${RPM_OPTS} -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/scratch/python-emf-agent.spec
-	rm -rf ${TMPDIR}/_topdir/{SOURCES,BUILD}/*
 	cp -rf ${TMPDIR}/_topdir .
 	rm -rf ${TMPDIR}
 

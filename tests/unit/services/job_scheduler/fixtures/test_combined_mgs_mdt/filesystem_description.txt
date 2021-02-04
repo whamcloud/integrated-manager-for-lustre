@@ -1,9 +1,0 @@
-kp-lustre-1-8-mgs-1: Contains a combined MGS/MDT - test18fs-MDT0000, using scsi-1IET_00050001
-kp-lustre-1-8-oss-1: Contains two OSTs, test18fs-OST0000 and test18fs-OST0001, using scsi-1IET_00060001 and scsi-1IET_00070001
-kp-lustre-1-8-oss-2: Contains two OSTs, test18fs-OST0002 and test18fs-OST0003, using scsi-1IET_00080001 and scsi-1IET_00090001
-kp-lustre-1-8-oss-3: Contains two OSTs, test18fs-OST0004 and test18fs-OST0005, using scsi-1IET_000a0001 and scsi-1IET_000b0001
-kp-lustre-1-8-oss-4: Contains two OSTs, test18fs-OST0006 and test18fs-OST0007, using scsi-1IET_000c0001 and scsi-1IET_000d0001
-
-All devices are shared among all hosts.
-
-Filesystem detection should detect the MGS/MDT, and a total of 8 OSTs, two per OSS.

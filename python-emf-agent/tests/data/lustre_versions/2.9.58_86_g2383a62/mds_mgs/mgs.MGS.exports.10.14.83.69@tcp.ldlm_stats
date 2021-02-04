@@ -1,4 +1,0 @@
-snapshot_time             1497619329.612471591 secs.nsecs
-ldlm_enqueue              10 samples [reqs]
-ldlm_cancel               3 samples [reqs]
-ldlm_bl_callback          3 samples [reqs]

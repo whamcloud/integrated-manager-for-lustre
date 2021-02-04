@@ -1,6 +1,0 @@
-#!/bin/bash
-
-exec ed -s $1 <<EOF
-/<controller type='scsi' index='0'>/s/>/ model='virtio-scsi'>/
-wq
-EOF

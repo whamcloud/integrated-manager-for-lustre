@@ -1,9 +1,0 @@
-include LICENSE.txt
-include logrotate.cfg
-include chroma-agent.service
-include 50-chroma-agent.preset
-include emf-storage-server.target
-include 10-device-scanner.target.conf
-include python-emf-agent.spec
-include chroma_agent/templates/corosync.conf
-include chroma_agent/templates/ifcfg-nic

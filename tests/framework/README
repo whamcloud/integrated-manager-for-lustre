@@ -1,6 +1,0 @@
-This directory tree contains the framework code that is used to run our tests.
-This should not include any test code itself, but only the code to setup the
-test environment and initiate the running of the tests. This is where you
-will find the environmentally specific code, such as Jenkins steps,
-provisioner interface, etc. Some of these may be modified to be used in
-different environments, but by default are written to work in our team CI.

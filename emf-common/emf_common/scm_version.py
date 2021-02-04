@@ -1,4 +1,0 @@
-VERSION = "1.5.0"
-PACKAGE_VERSION = "1.5.0"
-BUILD = ""
-IS_RELEASE = True
