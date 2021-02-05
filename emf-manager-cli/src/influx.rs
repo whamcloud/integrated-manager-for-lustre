@@ -14,7 +14,7 @@ use tokio::fs;
 #[structopt(setting = structopt::clap::AppSettings::ColoredHelp)]
 pub enum Command {
     /// Generate Influx config
-    #[structopt(name = "generate-config")]
+    #[structopt(name = "generate-config", setting = structopt::clap::AppSettings::ColoredHelp)]
     GenerateConfig {
         /// Address influx should bind to on startup
         #[structopt(short = "p", long = "bindaddr", env = "INFLUXDB_HTTP_BIND_ADDRESS")]
@@ -22,10 +22,11 @@ pub enum Command {
     },
 
     /// Start necessary units
+    #[structopt(setting = structopt::clap::AppSettings::ColoredHelp)]
     Start,
 
     /// Setup running influxdb
-    #[structopt(name = "setup")]
+    #[structopt(setting = structopt::clap::AppSettings::ColoredHelp)]
     Setup {
         /// EMF database name
         #[structopt(
@@ -38,7 +39,7 @@ pub enum Command {
 
         /// EMF Stats database name
         #[structopt(
-            short = "s",
+            short = "t",
             long = "statsdb",
             default_value = "emf_stats",
             env = "INFLUXDB_EMF_STATS_DB"
@@ -47,7 +48,7 @@ pub enum Command {
 
         /// Stratagem Scan database name
         #[structopt(
-            short = "t",
+            short = "c",
             long = "scandb",
             default_value = "emf_stratagem_scans",
             env = "INFLUXDB_STRATAGEM_SCAN_DB"

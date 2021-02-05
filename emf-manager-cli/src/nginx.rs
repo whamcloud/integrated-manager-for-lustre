@@ -16,23 +16,23 @@ use tokio::fs;
 #[structopt(setting = structopt::clap::AppSettings::ColoredHelp)]
 pub enum NginxCommand {
     /// Generate Nginx conf
-    #[structopt(name = "generate-config")]
+    #[structopt(name = "generate-config", setting = structopt::clap::AppSettings::ColoredHelp)]
     GenerateConfig {
         /// Set the nginx config path
-        #[structopt(short = "p", long = "path")]
+        #[structopt(short = "p", long = "path", env = "NGINX_TEMPLATE_PATH")]
         template_path: String,
 
-        #[structopt(short = "o", long = "output")]
+        #[structopt(short = "o", long = "output", env = "NGINX_OUTPUT_PATH")]
         output_path: Option<String>,
     },
     /// Generate self-signed certificates.
-    #[structopt(name = "generate-self-certs")]
+    #[structopt(name = "generate-self-certs", setting = structopt::clap::AppSettings::ColoredHelp)]
     GenerateSelfSignedCerts {
         /// Certificate output directory
-        #[structopt(long, env = "NGINX_CRYPTO_DIR", parse(from_os_str))]
+        #[structopt(short, long, env = "NGINX_CRYPTO_DIR", parse(from_os_str))]
         out: PathBuf,
-        /// How many days should the certificate be valid for?
-        #[structopt(long, env = "NGINX_CERT_EXPIRE_DAYS")]
+        /// Days the certificate will be valid for
+        #[structopt(short, long, default_value = "3650", env = "NGINX_CERT_EXPIRE_DAYS")]
         days: u32,
     },
 }

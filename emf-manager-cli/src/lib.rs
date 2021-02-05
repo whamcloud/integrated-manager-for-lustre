@@ -5,7 +5,6 @@
 pub mod api;
 pub mod api_utils;
 pub mod config_utils;
-pub mod consul;
 pub mod display_utils;
 pub mod error;
 pub mod filesystem;

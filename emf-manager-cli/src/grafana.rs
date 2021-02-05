@@ -13,11 +13,11 @@ pub enum Command {
     #[structopt(setting = structopt::clap::AppSettings::ColoredHelp)]
     Setup {
         /// Postgres database to use for grafana info
-        #[structopt(default_value = "grafana", env = "EMF_GRAFANA_DB")]
+        #[structopt(short, long, default_value = "grafana", env = "EMF_GRAFANA_DB")]
         db: String,
 
         /// Postgres user to access database
-        #[structopt(default_value = "emf", env = "EMF_GRAFANA_DB_USER")]
+        #[structopt(short, long, default_value = "emf", env = "EMF_GRAFANA_DB_USER")]
         user: String,
     },
 }

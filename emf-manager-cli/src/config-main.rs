@@ -3,7 +3,6 @@
 // license that can be found in the LICENSE file.
 
 use emf_manager_cli::{
-    consul,
     display_utils::display_error,
     grafana, influx,
     nginx::{self, nginx_cli},
@@ -15,11 +14,6 @@ use structopt::StructOpt;
 #[derive(Debug, StructOpt)]
 #[structopt(setting = structopt::clap::AppSettings::ColoredHelp)]
 pub enum App {
-    /// Configure Consul
-    Consul {
-        #[structopt(subcommand)]
-        command: consul::Command,
-    },
     /// Grafana setup
     Grafana {
         #[structopt(subcommand)]
@@ -55,7 +49,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing::debug!("Matching args {:?}", matches);
 
     let r = match matches {
-        App::Consul { command } => consul::cli(command).await,
         App::Grafana { command } => grafana::cli(command).await,
         App::Influx { command } => influx::cli(command).await,
         App::Nginx { command } => nginx_cli(command).await,

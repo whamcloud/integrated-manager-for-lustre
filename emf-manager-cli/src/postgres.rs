@@ -23,23 +23,24 @@ pub enum Command {
         #[structopt(short, long, env = "EMF_PG_SKIP_CHECK")]
         skip_check: bool,
 
-        /// (optional) Directory for Postgres data
+        /// Override directory for Postgres data
         #[structopt(short, long, env = "EMF_PG_DATA_DIR")]
         data_dir: Option<String>,
     },
 
     /// Start requisite services
+    #[structopt(setting = structopt::clap::AppSettings::ColoredHelp)]
     Start,
 
     /// Setup running postgres
-    #[structopt(name = "setup", setting = structopt::clap::AppSettings::ColoredHelp)]
+    #[structopt(setting = structopt::clap::AppSettings::ColoredHelp)]
     Setup {
         /// Database name
-        #[structopt(default_value = "emf", env = "EMF_PG_DB")]
+        #[structopt(short, long, default_value = "emf", env = "EMF_PG_DB")]
         db: String,
 
         /// Database user name
-        #[structopt(default_value = "emf", env = "EMF_PG_USER")]
+        #[structopt(short, long, default_value = "emf", env = "EMF_PG_USER")]
         user: String,
     },
 }
