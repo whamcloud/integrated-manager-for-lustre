@@ -1,0 +1,4 @@
+name: Centos deb creation
+runs:
+  using: 'docker'
+  image: 'Dockerfile'

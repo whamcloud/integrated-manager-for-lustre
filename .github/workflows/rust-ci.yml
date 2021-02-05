@@ -159,7 +159,18 @@ jobs:
         with:
           command: sqlx
           args: prepare --merged --check -- --tests
+  emf-exa-parser_test:
+    name: EXAScaler parser test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
 
+      - name: Run ignored test
+        uses: ./.github/actions/es-api
+        env:
+          TASK: emf-exa-parser
+          WORKSPACE: ${{ github.workspace }}
   test:
     name: Test Suite
     runs-on: ubuntu-latest

@@ -56,4 +56,5 @@ exclude = [
   'emf-gui/crate',
   'emf-system-docker-tests',
   'emf-system-rpm-tests',
+  'emf-exa-parser',
 ]
