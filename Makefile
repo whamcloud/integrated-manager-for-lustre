@@ -101,7 +101,7 @@ emf-gui-rpm:
 	tar cvf ${TMPDIR}/_topdir/SOURCES/emf-gui.tar -C ./emf-gui dist
 
 	cp emf-gui/rust-emf-gui.spec ${TMPDIR}/_topdir/SPECS/
-	rpmbuild -ba ${RPM_OPTS} -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/_topdir/SPECS/rust-emf-gui.spec
+	rpmbuild -bb ${RPM_OPTS} -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/_topdir/SPECS/rust-emf-gui.spec
 
 	rm -rf ${TMPDIR}/_topdir/SOURCES/*
 	cp -rf ${TMPDIR}/_topdir .
@@ -132,7 +132,7 @@ python-emf-rpms: substs
 	tar -czvf ${TMPDIR}/_topdir/SOURCES/configuration.tar.gz -C ${TMPDIR}/configuration .
 	cd ${TMPDIR}/scratch; \
 	python setup.py sdist -d ${TMPDIR}/_topdir/SOURCES/
-	rpmbuild -ba ${RPM_OPTS} -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/_topdir/SPECS/python-emf-manager.spec
+	rpmbuild -bb ${RPM_OPTS} -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/_topdir/SPECS/python-emf-manager.spec
 	rm -rf ${TMPDIR}/_topdir/{SOURCES,BUILD,SPECS}/*
 	cp -rf ${TMPDIR}/_topdir .
 	rm -rf ${TMPDIR}
@@ -143,7 +143,7 @@ python-emf-common-rpms:
 	cp -r emf-common/* ${TMPDIR}/scratch
 	cd ${TMPDIR}/scratch; \
 	python setup.py sdist -d ${TMPDIR}/_topdir/SOURCES/
-	rpmbuild -ba ${RPM_OPTS} -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/scratch/python-emf-common.spec
+	rpmbuild -bb ${RPM_OPTS} -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/scratch/python-emf-common.spec
 	rm -rf ${TMPDIR}/_topdir/{SOURCES,BUILD}/*
 	cp -rf ${TMPDIR}/_topdir .
 	rm -rf ${TMPDIR}
@@ -154,7 +154,7 @@ python-emf-agent-rpms:
 	cp -r python-emf-agent/* ${TMPDIR}/scratch
 	cd ${TMPDIR}/scratch; \
 	python setup.py sdist -d ${TMPDIR}/_topdir/SOURCES/
-	rpmbuild -ba ${RPM_OPTS} -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/scratch/python-emf-agent.spec
+	rpmbuild -bb ${RPM_OPTS} -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/scratch/python-emf-agent.spec
 	rm -rf ${TMPDIR}/_topdir/{SOURCES,BUILD}/*
 	cp -rf ${TMPDIR}/_topdir .
 	rm -rf ${TMPDIR}
@@ -164,7 +164,7 @@ sos-rpm:
 	cd emf-sos-plugin; \
 	python setup.py sdist --formats bztar -d ${TMPDIR}/_topdir/SOURCES/
 	cp emf-sos-plugin/emf-sos-plugin.spec ${TMPDIR}/_topdir/SPECS/
-	rpmbuild -ba ${RPM_OPTS} -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/_topdir/SPECS/emf-sos-plugin.spec
+	rpmbuild -bb ${RPM_OPTS} -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/_topdir/SPECS/emf-sos-plugin.spec
 	rm -rf ${TMPDIR}/_topdir/{SOURCES,BUILD,SPECS}/*
 	cp -rf ${TMPDIR}/_topdir .
 	rm -rf ${TMPDIR}
@@ -200,7 +200,7 @@ rust-core-rpms:
 	mkdir -p ${TMPDIR}/_topdir/{SOURCES,SPECS}
 	tar -czvf ${TMPDIR}/_topdir/SOURCES/rust-core.tar.gz -C ${TMPDIR}/release/rust-core .
 	cp rust-emf.spec ${TMPDIR}/_topdir/SPECS/
-	rpmbuild -ba ${RPM_OPTS} -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/_topdir/SPECS/rust-emf.spec
+	rpmbuild -bb ${RPM_OPTS} -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/_topdir/SPECS/rust-emf.spec
 	rm -rf ${TMPDIR}/_topdir/SOURCES/*
 	cp -rf ${TMPDIR}/_topdir .
 	rm -rf ${TMPDIR}
@@ -215,11 +215,10 @@ docker-rpms:
 	tar -czvf ${TMPDIR}/_topdir/SOURCES/emf-docker.tar.gz -C ${TMPDIR}/scratch/emf-docker .
 
 	cp emf-docker.spec ${TMPDIR}/_topdir/SPECS/
-	rpmbuild -ba ${RPM_OPTS} -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/_topdir/SPECS/emf-docker.spec
+	rpmbuild -bb ${RPM_OPTS} -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/_topdir/SPECS/emf-docker.spec
 
 	rm -rf ${TMPDIR}/_topdir/{SOURCES,SPECS}/*
 	cp -rf ${TMPDIR}/_topdir .
-	cp -f ${TMPDIR}/_topdir/SRPMS/*.rpm .
 	rm -rf ${TMPDIR}
 
 device-scanner-rpms:
@@ -236,7 +235,7 @@ device-scanner-rpms:
 	mkdir -p ${TMPDIR}/_topdir/{SOURCES,SPECS}
 	tar -czvf ${TMPDIR}/_topdir/SOURCES/emf-device-scanner.tar.gz -C ${TMPDIR}/release/emf-device-scanner .
 	cp device-scanner/emf-device-scanner.spec ${TMPDIR}/_topdir/SPECS/
-	rpmbuild -ba ${RPM_OPTS} -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/_topdir/SPECS/emf-device-scanner.spec
+	rpmbuild -bb ${RPM_OPTS} -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/_topdir/SPECS/emf-device-scanner.spec
 	rm -rf ${TMPDIR}/_topdir/SOURCES/*
 	cp -rf ${TMPDIR}/_topdir .
 	rm -rf ${TMPDIR}
