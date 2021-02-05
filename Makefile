@@ -81,12 +81,15 @@ check:
 	cargo clippy --manifest-path emf-system-rpm-tests/Cargo.toml --tests -- -W warnings
 	cargo check --locked --manifest-path emf-system-docker-tests/Cargo.toml --tests
 	cargo clippy --manifest-path emf-system-docker-tests/Cargo.toml --tests -- -W warnings
+	cargo check --locked --manifest-path emf-gui/crate/Cargo.toml --tests
+	cargo clippy --manifest-path emf-gui/crate/Cargo.toml --tests -- -W warnings
 
 fmt:
 	black ./
 	cargo fmt --all
 	cargo fmt --all --manifest-path emf-system-rpm-tests/Cargo.toml
 	cargo fmt --all --manifest-path emf-system-docker-tests/Cargo.toml
+	cargo fmt --all --manifest-path emf-gui/crate/Cargo.toml
 
 .PHONY: deb deb-repo
 deb deb-repo:
