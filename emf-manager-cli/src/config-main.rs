@@ -4,7 +4,7 @@
 
 use emf_manager_cli::{
     display_utils::display_error,
-    grafana, influx,
+    grafana, influx, kuma,
     nginx::{self, nginx_cli},
     postgres, selfname,
 };
@@ -23,6 +23,11 @@ pub enum App {
     Influx {
         #[structopt(subcommand)]
         command: influx::Command,
+    },
+    /// Kuma config file generator
+    Kuma {
+        #[structopt(subcommand)]
+        command: kuma::Command,
     },
     /// Nginx config file generator
     Nginx {
@@ -51,6 +56,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let r = match matches {
         App::Grafana { command } => grafana::cli(command).await,
         App::Influx { command } => influx::cli(command).await,
+        App::Kuma { command } => kuma::cli(command).await,
         App::Nginx { command } => nginx_cli(command).await,
         App::Postgres { command } => postgres::cli(command).await,
     };

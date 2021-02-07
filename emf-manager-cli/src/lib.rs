@@ -10,6 +10,7 @@ pub mod error;
 pub mod filesystem;
 pub mod grafana;
 pub mod influx;
+pub mod kuma;
 pub mod nginx;
 pub mod ostpool;
 pub mod postgres;
