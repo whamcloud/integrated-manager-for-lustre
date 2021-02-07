@@ -1,0 +1,22 @@
+[Unit]
+Description=EMF host agent sidecar
+Requires=emf-host-agent.service
+PartOf=emf-host-agent.service
+
+[Service]
+EnvironmentFile=/etc/emf/bootstrap.conf
+EnvironmentFile=-/etc/emf/overrides.conf
+ExecStartPre=/bin/rm -f /tmp/kuma-al-emf-host-agent-*-default.sock
+ExecStart=/root/kuma-1.0.6/bin/kuma-dp run \
+    --cp-address=https://${CP_ADDR}:5678 \
+    --dataplane-file=/etc/emf/dataplanes/emf-host-agent.yml \
+    --dataplane-token-file=/etc/emf/tokens/dataplane-token \
+    --dataplane-var host_agent_port=${HOST_AGENT_PORT} \
+    --dataplane-var mgmt_address=${MGMT_ADDR} \
+    --dataplane-var host_agent_host_service_port=${HOST_AGENT_HOST_SERVICE_PORT} \
+    --dataplane-var node_id=%m \
+    --admin-port=
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal

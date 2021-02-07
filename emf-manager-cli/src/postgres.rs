@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{config_utils::psql, error::EmfManagerCliError};
+use crate::{config_utils::psql, display_utils::display_success, error::EmfManagerCliError};
 use emf_cmd::CheckedCommandExt;
 use emf_fs::{dir_exists, mkdirp};
 use emf_systemd::restart_unit;
@@ -36,11 +36,11 @@ pub enum Command {
     #[structopt(setting = structopt::clap::AppSettings::ColoredHelp)]
     Setup {
         /// Database name
-        #[structopt(short, long, default_value = "emf", env = "EMF_PG_DB")]
+        #[structopt(short, long, default_value = "emf", env = "PG_NAME")]
         db: String,
 
         /// Database user name
-        #[structopt(short, long, default_value = "emf", env = "EMF_PG_USER")]
+        #[structopt(short, long, default_value = "emf", env = "PG_USER")]
         user: String,
     },
 }
@@ -68,14 +68,25 @@ pub async fn cli(command: Command) -> Result<(), EmfManagerCliError> {
             skip_check,
             data_dir,
         } => {
+            println!("Configuring postgres...");
+
+            let use_custom_datadir = data_dir.is_some();
+            let dir = data_dir.unwrap_or_else(|| "/var/lib/pgsql/13/data".to_string());
+
+            if dir.contains(' ') {
+                return Err(EmfManagerCliError::ConfigError(format!(
+                    "Postgres data dir `{}' erroneously contains space",
+                    dir
+                )));
+            }
+
+            // check space
+            if !skip_check {
+                check_space(&dir)?;
+            }
+
             // (un)configure Postgres13 to use data dir
-            let dir = if let Some(dir) = data_dir {
-                if dir.contains(' ') {
-                    return Err(EmfManagerCliError::ConfigError(format!(
-                        "Postgres data dir `{}' erroneously contains space",
-                        dir
-                    )));
-                }
+            if use_custom_datadir {
                 if !dir_exists(&dir).await {
                     mkdirp("/etc/systemd/system/postgresql-13.service.d/").await?;
 
@@ -89,12 +100,10 @@ Environment=PGDATA={}"#,
                     )
                     .await?;
                 }
-                dir
             } else {
                 // Ignore result
                 let _ =
                     fs::remove_file("/etc/systemd/system/postgresql-13.service.d/emf.conf").await;
-                "/var/lib/pgsql/13/data".to_string()
             };
 
             // initdb
@@ -104,13 +113,7 @@ Environment=PGDATA={}"#,
                 .checked_status()
                 .await?;
 
-            // check space
-            if !skip_check {
-                check_space(&dir)?;
-            }
-
             // setup pg_hba.conf
-            // /var/lib/pgsql/13/data/pg_hba.conf
             fs::write(
                 format!("{}/pg_hba.conf", dir),
                 r#"local all all trust
@@ -120,9 +123,13 @@ host all all ::1/128 trust
 "#,
             )
             .await?;
+
+            display_success(format!("Successfully configured postgres"));
         }
         Command::Start => restart_unit("postgresql-13.service".to_string()).await?,
         Command::Setup { db, user } => {
+            println!("Setting up postgres...");
+
             let users: HashSet<String> = psql("SELECT rolname FROM pg_roles")
                 .await?
                 .lines()
@@ -143,6 +150,8 @@ host all all ::1/128 trust
             if !dbs.contains(&db) {
                 psql(&format!("CREATE DATABASE {} OWNER {}", db, user)).await?;
             }
+
+            display_success(format!("Successfully setup postgres"));
         }
     }
     Ok(())

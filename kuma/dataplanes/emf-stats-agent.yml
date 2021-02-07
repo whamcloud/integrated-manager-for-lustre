@@ -1,0 +1,14 @@
+type: Dataplane
+mesh: default
+name: emf-stats-agent-{{ node_id }}
+networking:
+  address: {{ mgmt_address }}
+  inbound:
+    - port: {{ stats_agent_port }}
+      tags:
+        kuma.io/service: emf-stats-agent-{{ node_id }}
+        kuma.io/protocol: http2
+  outbound:
+    - port: {{ stats_agent_stats_service_port }}
+      tags:
+        kuma.io/service: emf-stats-service

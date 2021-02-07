@@ -1,9 +1,0 @@
----
-source: emf-agent/src/daemon_plugins/ntp.rs
-expression: r
----
-Some(
-    String(
-        "Synced",
-    ),
-)

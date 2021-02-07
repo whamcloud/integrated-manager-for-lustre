@@ -19,7 +19,7 @@ pub async fn all(pool: &sqlx::PgPool) -> Result<Vec<SfaPowerSupply>, EmfSfaError
             health_state_reason,
             position,
             storage_system
-        FROM chroma_core_sfapowersupply
+        FROM sfapowersupply
         "#
     )
     .fetch_all(pool)
@@ -42,7 +42,7 @@ pub async fn batch_upsert(
 
     sqlx::query!(
         r#"
-        INSERT INTO chroma_core_sfapowersupply
+        INSERT INTO sfapowersupply
         (
             index,
             enclosure_index,
@@ -91,7 +91,7 @@ pub async fn batch_delete(
 
     sqlx::query!(
         r#"
-            DELETE from chroma_core_sfapowersupply
+            DELETE from sfapowersupply
             WHERE (index, storage_system, enclosure_index)
             IN (
                 SELECT *

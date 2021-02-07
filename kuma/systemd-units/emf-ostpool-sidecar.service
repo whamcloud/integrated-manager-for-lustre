@@ -1,0 +1,21 @@
+[Unit]
+Description=EMF ostpool service sidecar
+Requires=emf-ostpool.service
+PartOf=emf-ostpool.service
+
+[Service]
+EnvironmentFile=/etc/emf/bootstrap.conf
+EnvironmentFile=-/etc/emf/overrides.conf
+ExecStartPre=/bin/rm -f /tmp/kuma-al-emf-ostpool-service-default.sock
+ExecStart=/root/kuma-1.0.6/bin/kuma-dp run \
+    --cp-address=https://${CP_ADDR}:5678 \
+    --dataplane-file=/etc/emf/dataplanes/emf-ostpool-service.yml \
+    --dataplane-token-file=/etc/emf/tokens/dataplane-token \
+    --dataplane-var mgmt_address=${MGMT_ADDR} \
+    --dataplane-var ostpool_service_port=${OSTPOOL_SERVICE_PORT} \
+    --dataplane-var ostpool_service_pg_port=${OSTPOOL_SERVICE_PG_PORT} \
+    --admin-port=
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal

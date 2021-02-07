@@ -3,11 +3,11 @@
 // license that can be found in the LICENSE file.
 
 use emf_influx::{Client, Point, Points, Precision, Value};
-use emf_manager_env::{get_influxdb_addr, get_influxdb_metrics_db};
-use emf_service_queue::service_queue::consume_data;
+use emf_manager_env::get_influxdb_metrics_db;
+use emf_service_queue::spawn_service_consumer;
 use emf_stats::error::EmfStatsError;
 use emf_wire_types::Fqdn;
-use futures::stream::TryStreamExt;
+use futures::StreamExt;
 use lustre_collector::{
     HostStats, LNetStats, NodeStats, Record, Target, TargetStats,
     {
@@ -463,17 +463,17 @@ fn handle_node(node: NodeStats, host: &Fqdn) -> Option<Vec<Point>> {
 async fn main() -> Result<(), EmfStatsError> {
     emf_tracing::init();
 
-    let pool = emf_rabbit::connect_to_rabbit(1);
+    let mut rx =
+        spawn_service_consumer::<Vec<Record>>(emf_manager_env::get_port("STATS_SERVICE_PORT"));
 
-    let conn = emf_rabbit::get_conn(pool).await?;
+    let influx_url: String = format!(
+        "http://127.0.0.1:{}/query",
+        emf_manager_env::get_port("STATS_SERVICE_INFLUX_PORT")
+    );
 
-    let ch = emf_rabbit::create_channel(&conn).await?;
+    tracing::debug!(%influx_url);
 
-    let mut s = consume_data::<Vec<Record>>(&ch, "rust_agent_stats_rx");
-    let influx_url: String = format!("http://{}", get_influxdb_addr());
-    tracing::debug!("influx_url: {}", &influx_url);
-
-    while let Some((host, xs)) = s.try_next().await? {
+    while let Some((host, xs)) = rx.next().await {
         tracing::debug!("Incoming stats: {}: {:?}", host, xs);
         tracing::debug!("host: {:?}", host.0);
 

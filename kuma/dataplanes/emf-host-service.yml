@@ -1,0 +1,14 @@
+type: Dataplane
+mesh: default
+name: emf-host-service
+networking:
+  address: {{ mgmt_address }}
+  inbound:
+    - port: {{ host_service_port }}
+      tags:
+        kuma.io/service: emf-host-service
+        kuma.io/protocol: http2
+  outbound:
+    - port: {{ host_service_pg_port }}
+      tags:
+        kuma.io/service: postgres

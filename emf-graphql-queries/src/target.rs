@@ -4,7 +4,7 @@
 
 pub mod list {
     use crate::Query;
-    use emf_wire_types::{db::TargetRecord, SortDir};
+    use emf_wire_types::{SortDir, TargetRecord};
 
     pub static QUERY: &str = r#"
             query Targets($limit: Int, $offset: Int, $dir: SortDir, $fsname: String, $exclude_unmounted: Boolean) {

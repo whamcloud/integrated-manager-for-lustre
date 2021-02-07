@@ -4,8 +4,9 @@
 
 pub mod client_mount;
 pub mod filesystem;
+pub mod host;
 pub mod log;
-pub mod server_profile;
+pub mod ostpool;
 pub mod snapshot;
 pub mod stratagem;
 pub mod target;
@@ -36,7 +37,7 @@ pub struct Location {
 pub struct Error {
     message: String,
     locations: Vec<Location>,
-    path: Vec<String>,
+    path: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone, serde::Deserialize)]

@@ -5,8 +5,6 @@ pre-commit = [
   "cargo clippy -- -W warnings",
   "cargo check --locked --manifest-path emf-system-rpm-tests/Cargo.toml --tests",
   "cargo clippy --manifest-path emf-system-rpm-tests/Cargo.toml --tests -- -W warnings",
-  "cargo check --locked --manifest-path emf-system-docker-tests/Cargo.toml --tests",
-  "cargo clippy --manifest-path emf-system-docker-tests/Cargo.toml --tests -- -W warnings",
   "cargo check --locked --manifest-path device-scanner/Cargo.toml",
 ]
 

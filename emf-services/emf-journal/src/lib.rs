@@ -6,8 +6,7 @@ use emf_postgres::{
     alert,
     sqlx::{self, PgPool},
 };
-use emf_service_queue::service_queue::EmfServiceQueueError;
-use emf_wire_types::{AlertRecordType, AlertSeverity, MessageClass};
+use emf_wire_types::{AlertRecordType, AlertSeverity, ComponentType, MessageClass};
 use future::BoxFuture;
 use futures::{future, FutureExt, TryFutureExt};
 use lazy_static::lazy_static;
@@ -17,10 +16,6 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum EmfJournalError {
-    #[error(transparent)]
-    EmfRabbitError(#[from] emf_rabbit::EmfRabbitError),
-    #[error(transparent)]
-    EmfServiceQueueError(#[from] EmfServiceQueueError),
     #[error(transparent)]
     SerdeJsonError(#[from] serde_json::Error),
     #[error(transparent)]
@@ -37,7 +32,7 @@ lazy_static! {
 }
 
 type HandlerFut<'a> = BoxFuture<'a, Result<(), EmfJournalError>>;
-type Handler = for<'a> fn(&'a PgPool, &'a str, i32, i32) -> HandlerFut<'a>;
+type Handler = for<'a> fn(&'a PgPool, &'a str, i32) -> HandlerFut<'a>;
 
 lazy_static! {
     static ref HANDLERS: HashMap<&'static str, Handler> = {
@@ -71,13 +66,12 @@ fn port_used_handler<'a>(
     pool: &'a PgPool,
     _: &str,
     host_id: i32,
-    host_content_type_id: i32,
 ) -> BoxFuture<'a, Result<(), EmfJournalError>> {
     alert::raise(
         pool,
         AlertRecordType::SyslogEvent,
         "Lustre port already being used".into(),
-        host_content_type_id,
+        ComponentType::Host,
         None,
         AlertSeverity::ERROR,
         host_id,
@@ -86,18 +80,13 @@ fn port_used_handler<'a>(
     .boxed()
 }
 
-fn client_connection_handler<'a>(
-    pool: &'a PgPool,
-    msg: &str,
-    host_id: i32,
-    host_content_type_id: i32,
-) -> HandlerFut<'a> {
+fn client_connection_handler<'a>(pool: &'a PgPool, msg: &str, host_id: i32) -> HandlerFut<'a> {
     if let Some((lustre_pid, msg)) = client_connection_parser(msg) {
         return alert::raise(
             pool,
             AlertRecordType::ClientConnectEvent,
             msg,
-            host_content_type_id,
+            ComponentType::Host,
             Some(lustre_pid),
             AlertSeverity::INFO,
             host_id,
@@ -145,12 +134,7 @@ fn server_security_flavor_parser(msg: &str) -> Option<(i32, String)> {
     Some((lustre_pid, format!("with security flavor {}", flavor)))
 }
 
-fn server_security_flavor_handler<'a>(
-    pool: &'a PgPool,
-    msg: &str,
-    _: i32,
-    _: i32,
-) -> HandlerFut<'a> {
+fn server_security_flavor_handler<'a>(pool: &'a PgPool, msg: &str, _: i32) -> HandlerFut<'a> {
     let (lustre_pid, msg) = match server_security_flavor_parser(msg) {
         Some(x) => x,
         None => return future::ok(()).boxed(),
@@ -162,21 +146,25 @@ fn server_security_flavor_handler<'a>(
     }
 
     async move {
-        let row = sqlx::query_as!(Row,
-            "SELECT id, message FROM chroma_core_alertstate WHERE lustre_pid = $1 ORDER BY id DESC LIMIT 1",
+        let row = sqlx::query_as!(
+            Row,
+            "SELECT id, message FROM alertstate WHERE lustre_pid = $1 ORDER BY id DESC LIMIT 1",
             Some(lustre_pid)
         )
         .fetch_optional(pool)
         .await?;
 
         let (id, msg) = match row {
-            Some(Row { id, message: Some(message) }) => (id, format!("{} {}", message, msg)),
-            Some(Row { message:None, ..}) | None => return Ok(()),
+            Some(Row {
+                id,
+                message: Some(message),
+            }) => (id, format!("{} {}", message, msg)),
+            Some(Row { message: None, .. }) | None => return Ok(()),
         };
 
         sqlx::query!(
             r#"
-            UPDATE chroma_core_alertstate
+            UPDATE alertstate
             SET message = $1
             WHERE
                 id = $2
@@ -200,18 +188,13 @@ fn admin_client_eviction_parser(msg: &str) -> Option<(i32, String)> {
     Some((lustre_pid, x))
 }
 
-fn admin_client_eviction_handler<'a>(
-    pool: &'a PgPool,
-    msg: &str,
-    host_id: i32,
-    host_content_type_id: i32,
-) -> HandlerFut<'a> {
+fn admin_client_eviction_handler<'a>(pool: &'a PgPool, msg: &str, host_id: i32) -> HandlerFut<'a> {
     if let Some((lustre_pid, msg)) = admin_client_eviction_parser(msg) {
         return alert::raise(
             pool,
             AlertRecordType::ClientConnectEvent,
             msg,
-            host_content_type_id,
+            ComponentType::Host,
             Some(lustre_pid),
             AlertSeverity::WARNING,
             host_id,
@@ -233,18 +216,13 @@ fn client_eviction_parser(msg: &str) -> Option<(i32, String)> {
     Some((lustre_pid, format!("client {} evicted: {}", client, reason)))
 }
 
-fn client_eviction_handler<'a>(
-    pool: &'a PgPool,
-    msg: &str,
-    host_id: i32,
-    host_content_type_id: i32,
-) -> HandlerFut<'a> {
+fn client_eviction_handler<'a>(pool: &'a PgPool, msg: &str, host_id: i32) -> HandlerFut<'a> {
     if let Some((lustre_pid, msg)) = client_eviction_parser(msg) {
         return alert::raise(
             pool,
             AlertRecordType::ClientConnectEvent,
             msg,
-            host_content_type_id,
+            ComponentType::Host,
             Some(lustre_pid),
             AlertSeverity::WARNING,
             host_id,
@@ -273,7 +251,6 @@ fn find_one_in_many<'a>(msg: &str, handlers: &'a HashMap<&str, Handler>) -> Opti
 pub async fn execute_handlers(
     msg: &str,
     host_id: i32,
-    host_content_type_id: i32,
     pool: &PgPool,
 ) -> Result<(), EmfJournalError> {
     let handler = match find_one_in_many(msg, &HANDLERS) {
@@ -281,7 +258,7 @@ pub async fn execute_handlers(
         None => return Ok(()),
     };
 
-    handler(pool, msg, host_id, host_content_type_id).await?;
+    handler(pool, msg, host_id).await?;
 
     Ok(())
 }

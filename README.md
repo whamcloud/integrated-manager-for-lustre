@@ -6,10 +6,10 @@ Simple, but powerful, management tools that provide a unified, consistent view o
 
 A local db is required only when making changes to the SQLx queries in this repo.
 In order to interact with a running database add a `.env` file in this directory with a `DATABASE_URL` environment variable.
-For example, to connect to a local chroma db running on localhost the `.env` file would look like:
+For example, to connect to a local emf db running on localhost the `.env` file would look like:
 
 ```sh
-DATABASE_URL=postgres://chroma@localhost:5432/chroma
+DATABASE_URL=postgres://emf@localhost:5432/emf
 ```
 
 Once a change has been made to a query, run the following in this directory:

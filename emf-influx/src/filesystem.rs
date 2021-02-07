@@ -13,7 +13,7 @@ type ResponseTuple = (
     Option<u64>,
 );
 
-#[derive(Default, serde::Deserialize, Clone, Debug)]
+#[derive(Default, serde::Deserialize, serde::Serialize, Clone, Debug)]
 pub struct Response {
     pub bytes_total: Option<u64>,
     pub bytes_free: Option<u64>,

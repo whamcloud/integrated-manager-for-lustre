@@ -1,0 +1,21 @@
+[Unit]
+Description=EMF corosync service sidecar
+PartOf=emf-rust-corosync.service
+Requires=emf-rust-corosync.service
+
+[Service]
+EnvironmentFile=/etc/emf/bootstrap.conf
+EnvironmentFile=-/etc/emf/overrides.conf
+ExecStartPre=/bin/rm -f /tmp/kuma-al-emf-corosync-service-default.sock
+ExecStart=/root/kuma-1.0.6/bin/kuma-dp run \
+    --cp-address=https://${CP_ADDR}:5678 \
+    --dataplane-file=/etc/emf/dataplanes/emf-corosync-service.yml \
+    --dataplane-token-file=/etc/emf/tokens/dataplane-token \
+    --dataplane-var mgmt_address=${MGMT_ADDR} \
+    --dataplane-var corosync_service_port=${COROSYNC_SERVICE_PORT} \
+    --dataplane-var corosync_service_pg_port=${COROSYNC_SERVICE_PG_PORT} \
+    --admin-port=
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal

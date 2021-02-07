@@ -1,0 +1,22 @@
+[Unit]
+Description=EMF Device Agent Service
+PartOf=emf-agent.target
+After=network.target
+Wants=emf-device-agent-sidecar.service
+After=emf-device-agent-sidecar.service
+BindsTo=device-scanner.target
+After=device-scanner.target
+
+[Service]
+Type=simple
+Environment=RUST_LOG=info
+EnvironmentFile=/etc/emf/bootstrap.conf
+EnvironmentFile=-/etc/emf/overrides.conf
+ExecStart=/bin/emf-device-agent
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+Also=device-scanner.target

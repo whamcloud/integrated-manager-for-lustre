@@ -9,7 +9,6 @@ use crate::{
 };
 use console::Term;
 use emf_graphql_queries::target as target_queries;
-use emf_wire_types::{ApiList, Host};
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -30,15 +29,14 @@ pub async fn target_cli(command: TargetCommand) -> Result<(), EmfManagerCliError
             display_type,
             fsname,
         } => {
+            let hosts = get_hosts().await?;
+
             let query = target_queries::list::build(None, None, None, fsname, None);
-
-            let hosts: ApiList<Host> = wrap_fut("Fetching hosts...", get_hosts()).await?;
-
             let resp: emf_graphql_queries::Response<target_queries::list::Resp> =
                 wrap_fut("Fetching targets...", graphql(query)).await?;
 
             let targets = Result::from(resp)?.data.targets;
-            let x = (hosts.objects, targets).into_display_type(display_type);
+            let x = (hosts, targets).into_display_type(display_type);
 
             let term = Term::stdout();
             term.write_line(&x).unwrap();

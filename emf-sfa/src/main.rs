@@ -47,7 +47,7 @@ async fn main() -> Result<(), EmfSfaError> {
 
     let client = wbem_client::get_client(true)?;
 
-    let pool = get_db_pool(2).await?;
+    let pool = get_db_pool(2, emf_manager_env::get_port("SFA_PG_PORT")).await?;
 
     let mut interval = time::interval(Duration::from_secs(5));
 

@@ -53,96 +53,6 @@ jobs:
           name: rust_rpm
           path: _topdir/RPMS/x86_64
           retention-days: 1
-  emf_docker_image_build:
-    name: emf-docker image build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Cancel Workflow Action
-        uses: styfle/cancel-workflow-action@0.6.0
-        with:
-          access_token: ${{ github.token }}
-
-      - uses: actions/checkout@v2
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
-        id: buildx
-        with:
-          use: false
-
-      - name: Builder instance name
-        run: echo ${{ steps.buildx.outputs.name }}
-
-      - name: Cache Docker layers
-        uses: actions/cache@v2
-        id: cache
-        with:
-          path: /tmp/.rust-base-cache
-          key: ${{ runner.os }}-rust-base-${{ hashFiles('Cargo.lock') }}-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-rust-base-${{ hashFiles('Cargo.lock') }}
-            ${{ runner.os }}-rust-base-
-
-      - name: Build the images
-        working-directory: ./docker
-        run: |
-          docker buildx bake \
-            --builder ${{ steps.buildx.outputs.name }} \
-            --set='rust-base.cache-from=type=local,src=/tmp/.rust-base-cache' \
-            --set='rust-base.cache-to=type=local,dest=/tmp/.rust-base-cache' \
-            --load \
-            -f compose-deps.hcl
-
-          docker buildx bake -f docker-compose.yml --load
-
-          COMPOSE_IMAGES=$(docker-compose config 2>/dev/null | awk '{if ($1 == "image:") print $2;}')
-          docker save -o emf-images.tar $(echo $COMPOSE_IMAGES)
-          gzip -9 < emf-images.tar > emf-images.tgz
-
-          docker image ls
-
-      - name: Archive images
-        uses: actions/upload-artifact@v2
-        with:
-          name: emf_images
-          path: docker/emf-images.tgz
-          retention-days: 1
-  emf_docker_rpm_build:
-    name: emf-docker rpm build
-    runs-on: ubuntu-latest
-    container:
-      image: emfteam/emf-centos7-deps
-    needs: emf_docker_image_build
-    steps:
-      - name: Cancel Workflow Action
-        uses: styfle/cancel-workflow-action@0.6.0
-        with:
-          access_token: ${{ github.token }}
-
-      - uses: actions/checkout@v2
-      - name: Download docker images
-        uses: actions/download-artifact@v1
-        with:
-          name: emf_images
-      - run: |
-          mkdir -p /tmp/_topdir/{SOURCES,SPECS}
-          mkdir -p /tmp/scratch/emf-docker/
-          mv docker/{docker-compose.yml,update-embedded.sh,copy-embedded-settings} /tmp/scratch/emf-docker/
-          mv emf_images/emf-images.tgz /tmp/scratch/emf-docker/
-          mv emf-docker.service /tmp/scratch/emf-docker/
-          tar -czvf /tmp/_topdir/SOURCES/emf-docker.tar.gz -C /tmp/scratch/emf-docker .
-          mv emf-docker.spec /tmp/_topdir/SPECS/
-
-          rpmbuild -bb -D "_topdir /tmp/_topdir" /tmp/_topdir/SPECS/emf-docker.spec
-      - uses: geekyeggo/delete-artifact@v1
-        with:
-          name: emf_images
-      - name: Archive rpm
-        uses: actions/upload-artifact@v2
-        with:
-          name: emf_docker_rpm
-          path: /tmp/_topdir/RPMS/x86_64
-          retention-days: 1
   device_scanner_rpm_build:
     name: Device Scanner RPM build
     runs-on: ubuntu-latest
@@ -195,7 +105,6 @@ jobs:
     needs:
       - device_scanner_rpm_build
       - gui_rpm_build
-      - emf_docker_rpm_build
       - rust_emf_rpm_build
       - sos_plugin_build
     container:
@@ -221,11 +130,6 @@ jobs:
         with:
           name: device_scanner_rpm
           path: emf_rpms
-      - name: Download emf-docker RPMs
-        uses: actions/download-artifact@v1
-        with:
-          name: emf_docker_rpm
-          path: emf_rpms
       - name: Download sos-plugin RPM
         uses: actions/download-artifact@v1
         with:
@@ -247,7 +151,6 @@ jobs:
             gui_rpm
             rust_rpm
             device_scanner_rpm
-            emf_docker_rpm
             sos_rpm
   trigger_jenkins_build:
     name: Trigger jenkins build

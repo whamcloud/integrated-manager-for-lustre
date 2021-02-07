@@ -19,7 +19,7 @@ pub async fn all(pool: &sqlx::PgPool) -> Result<Vec<SfaDiskDrive>, EmfSfaError> 
                 member_index,
                 member_state as "member_state: _",
                 storage_system
-            FROM chroma_core_sfadiskdrive"#
+            FROM sfadiskdrive"#
     )
     .fetch_all(pool)
     .await?;
@@ -39,7 +39,7 @@ pub async fn batch_upsert(
 
     sqlx::query!(
         r#"
-        INSERT INTO chroma_core_sfadiskdrive
+        INSERT INTO sfadiskdrive
         (
             index,
             enclosure_index,
@@ -99,7 +99,7 @@ pub async fn batch_delete(
 
     sqlx::query!(
         r#"
-            DELETE from chroma_core_sfadiskdrive
+            DELETE from sfadiskdrive
             WHERE (index, storage_system)
             IN (
                 SELECT *

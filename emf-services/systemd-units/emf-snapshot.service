@@ -1,0 +1,19 @@
+[Unit]
+Description=EMF Snapshot Service
+PartOf=emf-manager.target
+Wants=emf-snapshot-sidecar.service
+After=emf-snapshot-sidecar.service
+
+[Service]
+Type=simple
+Environment=RUST_LOG=info,sqlx::query=warn
+EnvironmentFile=/etc/emf/bootstrap.conf
+EnvironmentFile=-/etc/emf/overrides.conf
+ExecStart=/bin/emf-snapshot
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=emf-manager.target

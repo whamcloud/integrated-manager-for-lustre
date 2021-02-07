@@ -4,46 +4,25 @@
 
 pub mod alert;
 
-use emf_manager_env::get_db_conn_string;
-use emf_wire_types::Fqdn;
-use futures::{
-    lock::Mutex,
-    task::{Context, Poll},
-    Stream,
-};
+use emf_wire_types::{BannedTargetResource, Fqdn, TargetResource};
+use futures::{future, TryStreamExt};
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 pub use sqlx::{self, postgres::PgPool};
-use std::{pin::Pin, sync::Arc};
-pub use tokio_postgres::{
-    error::DbError,
-    row::Row,
-    types::{self, FromSql, IsNull, ToSql, Type},
-    AsyncMessage, Client, Error, Transaction,
-};
-use tokio_postgres::{tls::NoTlsStream, Connection, NoTls, Socket};
+use std::collections::HashSet;
 
-pub async fn get_db_pool(pool_size: u32) -> Result<PgPool, sqlx::Error> {
-    let mut opts = PgConnectOptions::default().username(&emf_manager_env::get_db_user());
+pub async fn get_db_pool(pool_size: u32, port: u16) -> Result<PgPool, sqlx::Error> {
+    let mut opts = PgConnectOptions::default()
+        .username(&emf_manager_env::get_pg_user())
+        .host("127.0.0.1")
+        .port(port);
 
-    opts = if let Some(x) = emf_manager_env::get_db_host() {
-        opts.host(&x)
-    } else {
-        opts
-    };
-
-    opts = if let Some(x) = emf_manager_env::get_db_port() {
-        opts.port(x)
-    } else {
-        opts
-    };
-
-    opts = if let Some(x) = emf_manager_env::get_db_name() {
+    opts = if let Some(x) = emf_manager_env::get_pg_name() {
         opts.database(&x)
     } else {
         opts
     };
 
-    opts = if let Some(x) = emf_manager_env::get_db_password() {
+    opts = if let Some(x) = emf_manager_env::get_pg_password() {
         opts.password(&x)
     } else {
         opts
@@ -57,68 +36,20 @@ pub async fn get_db_pool(pool_size: u32) -> Result<PgPool, sqlx::Error> {
     Ok(x)
 }
 
-/// Connect to the postgres instance running on the EMF manager
-///
-/// This fn is useful for production code as it reads in env vars
-/// to make a connection.
-///
-pub async fn connect() -> Result<(Client, Connection<Socket, NoTlsStream>), Error> {
-    tokio_postgres::connect(&get_db_conn_string(), NoTls).await
-}
-
-pub type SharedClient = Arc<Mutex<Client>>;
-
-/// Allows for the client to be shared across threads.
-pub fn shared_client(client: Client) -> SharedClient {
-    Arc::new(Mutex::new(client))
-}
-
-/// Wraps the `Connection` `poll_message` fn so it can be
-/// used as a stream
-pub struct NotifyStream(pub Connection<Socket, NoTlsStream>);
-
-impl Stream for NotifyStream {
-    type Item = Result<AsyncMessage, Error>;
-
-    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<Self::Item>> {
-        self.0.poll_message(cx)
-    }
-}
-
-pub async fn select_all<'a, I>(
-    client: &mut Client,
-    query: &str,
-    params: I,
-) -> Result<impl Stream<Item = Result<Row, Error>>, Error>
-where
-    I: IntoIterator<Item = &'a dyn ToSql>,
-    I::IntoIter: ExactSizeIterator,
-{
-    let s = client.prepare(&query).await?;
-
-    client.query_raw(&s, params).await
-}
-
 pub async fn fqdn_by_host_id(pool: &PgPool, id: i32) -> Result<String, sqlx::Error> {
-    let fqdn = sqlx::query!(
-        r#"SELECT fqdn FROM chroma_core_managedhost WHERE id=$1 and not_deleted = 't'"#,
-        id
-    )
-    .fetch_one(pool)
-    .await?
-    .fqdn;
+    let fqdn = sqlx::query!(r#"SELECT fqdn FROM host WHERE id=$1"#, id)
+        .fetch_one(pool)
+        .await?
+        .fqdn;
 
     Ok(fqdn)
 }
 
 pub async fn host_id_by_fqdn(fqdn: &Fqdn, pool: &PgPool) -> Result<Option<i32>, sqlx::Error> {
-    let id = sqlx::query!(
-        "select id from chroma_core_managedhost where fqdn = $1 and not_deleted = 't'",
-        fqdn.to_string()
-    )
-    .fetch_optional(pool)
-    .await?
-    .map(|x| x.id);
+    let id = sqlx::query!("select id from host where fqdn = $1", fqdn.to_string())
+        .fetch_optional(pool)
+        .await?
+        .map(|x| x.id);
 
     Ok(id)
 }
@@ -149,6 +80,92 @@ pub async fn active_mgs_host_fqdn(
     }
 }
 
+pub async fn get_fs_target_resources(
+    pool: &PgPool,
+    fs_name: Option<String>,
+) -> Result<Vec<TargetResource>, sqlx::Error> {
+    let banned_resources = get_banned_targets(pool).await?;
+
+    let xs = sqlx::query!(r#"
+            SELECT
+                rh.cluster_id,
+                r.name as resource_id,
+                t.id as target_id,
+                t.name,
+                t.mount_path,
+                t.filesystems,
+                t.uuid,
+                t.state,
+                array_agg(DISTINCT rh.host_id) AS "cluster_hosts!"
+            FROM target t
+            INNER JOIN corosync_resource r ON r.mount_point = t.mount_path
+            INNER JOIN corosync_resource_host rh ON rh.corosync_resource_id = r.name AND rh.host_id = ANY(t.host_ids)
+            WHERE CARDINALITY(t.filesystems) > 0
+            GROUP BY rh.cluster_id, t.name, r.name, t.mount_path, t.uuid, t.filesystems, t.state, t.id
+        "#)
+            .fetch(pool)
+            .try_filter(|x| {
+                let x = match fs_name.as_ref() {
+                    None => true,
+                    Some(fs) => (&x.filesystems).contains(fs)
+                };
+
+                future::ready(x)
+            })
+            .map_ok(|mut x| {
+                let xs:HashSet<_> = banned_resources
+                    .iter()
+                    .filter(|y| {
+                        y.cluster_id == x.cluster_id && y.resource == x.resource_id &&  x.mount_path == y.mount_point
+                    })
+                    .map(|y| y.host_id)
+                    .collect();
+
+                x.cluster_hosts.retain(|id| !xs.contains(id));
+
+                x
+            })
+            .map_ok(|x| {
+                TargetResource {
+                    cluster_id: x.cluster_id,
+                    fs_names: x.filesystems,
+                    uuid: x.uuid,
+                    name: x.name,
+                    resource_id: x.resource_id,
+                    target_id: x.target_id,
+                    state: x.state,
+                    cluster_hosts: x.cluster_hosts
+                }
+            }).try_collect()
+            .await?;
+
+    Ok(xs)
+}
+
+pub async fn get_banned_targets(pool: &PgPool) -> Result<Vec<BannedTargetResource>, sqlx::Error> {
+    let xs = sqlx::query!(
+        r#"
+            SELECT b.id, b.resource, b.node, b.cluster_id, nh.host_id, t.mount_point
+            FROM corosync_resource_bans b
+            INNER JOIN corosync_node_host nh ON (nh.corosync_node_id).name = b.node
+            AND nh.cluster_id = b.cluster_id
+            INNER JOIN corosync_resource t ON t.name = b.resource AND b.cluster_id = t.cluster_id
+            WHERE t.mount_point is not NULL
+        "#
+    )
+    .fetch(pool)
+    .map_ok(|x| BannedTargetResource {
+        resource: x.resource,
+        cluster_id: x.cluster_id,
+        host_id: x.host_id,
+        mount_point: x.mount_point,
+    })
+    .try_collect()
+    .await?;
+
+    Ok(xs)
+}
+
 #[cfg(feature = "test")]
 use dotenv::dotenv;
 
@@ -160,7 +177,7 @@ use dotenv::dotenv;
 pub async fn test_setup() -> Result<PgPool, sqlx::Error> {
     dotenv().ok();
 
-    let pool = get_db_pool(1).await?;
+    let pool = get_db_pool(1, 5432).await?;
 
     sqlx::query("BEGIN TRANSACTION").execute(&pool).await?;
 

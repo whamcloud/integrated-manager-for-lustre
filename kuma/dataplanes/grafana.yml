@@ -1,0 +1,10 @@
+type: Dataplane
+mesh: default
+name: grafana
+networking:
+  address: {{ mgmt_address }}
+  inbound:
+    - port: {{ grafana_port }}
+      tags:
+        kuma.io/service: grafana
+        kuma.io/protocol: http

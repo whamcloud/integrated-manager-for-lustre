@@ -19,7 +19,7 @@ pub async fn all(pool: &sqlx::PgPool) -> Result<Vec<SfaController>, EmfSfaError>
             health_state_reason,
             child_health_state as "child_health_state: _",
             storage_system
-        FROM chroma_core_sfacontroller
+        FROM sfacontroller
         "#
     )
     .fetch_all(pool)
@@ -42,7 +42,7 @@ pub async fn batch_upsert(
 
     sqlx::query!(
         r#"
-        INSERT INTO chroma_core_sfacontroller
+        INSERT INTO sfacontroller
         (
             index,
             enclosure_index,
@@ -90,7 +90,7 @@ pub async fn batch_delete(
 
     sqlx::query!(
         r#"
-            DELETE from chroma_core_sfacontroller
+            DELETE from sfacontroller
             WHERE (index, storage_system)
             IN (
                 SELECT *

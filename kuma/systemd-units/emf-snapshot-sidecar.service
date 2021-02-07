@@ -1,0 +1,22 @@
+[Unit]
+Description=EMF snapshot service sidecar
+Requires=emf-snapshot.service
+PartOf=emf-snapshot.service
+
+[Service]
+EnvironmentFile=/etc/emf/bootstrap.conf
+EnvironmentFile=-/etc/emf/overrides.conf
+ExecStartPre=/bin/rm -f /tmp/kuma-al-emf-snapshot-service-default.sock
+ExecStart=/root/kuma-1.0.6/bin/kuma-dp run \
+    --cp-address=https://${CP_ADDR}:5678 \
+    --dataplane-file=/etc/emf/dataplanes/emf-snapshot-service.yml \
+    --dataplane-token-file=/etc/emf/tokens/dataplane-token \
+    --dataplane-var mgmt_address=${MGMT_ADDR} \
+    --dataplane-var snapshot_service_port=${SNAPSHOT_SERVICE_PORT} \
+    --dataplane-var snapshot_service_pg_port=${SNAPSHOT_SERVICE_PG_PORT} \
+    --dataplane-var snapshot_service_influx_port=${SNAPSHOT_SERVICE_INFLUX_PORT} \
+    --admin-port=
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal

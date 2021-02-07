@@ -23,6 +23,12 @@ lazy_static! {
     );
 }
 
+pub fn get_port(name: &str) -> u16 {
+    get_var(name)
+        .parse::<u16>()
+        .expect(&format!("Could not parse {}", name))
+}
+
 /// Get the environment variable or panic
 fn get_var(name: &str) -> String {
     env::var(name).unwrap_or_else(|_| panic!("{} environment variable is required.", name))
@@ -97,73 +103,9 @@ pub fn get_exa_version() -> Option<String> {
     env::var("EXA_VERSION").ok()
 }
 
-/// Get the broker URL from the env or panic
-pub fn get_amqp_broker_url() -> String {
-    get_var("AMQP_BROKER_URL")
-}
-
-/// Get the broker user from the env or panic
-pub fn get_user() -> String {
-    get_var("AMQP_BROKER_USER")
-}
-
-/// Get the broker password from the env or panic
-pub fn get_password() -> String {
-    get_var("AMQP_BROKER_PASSWORD")
-}
-
-/// Get the broker vhost from the env or panic
-pub fn get_vhost() -> String {
-    get_var("AMQP_BROKER_VHOST")
-}
-
-/// Get the broker host from the env or panic
-pub fn get_host() -> String {
-    get_var("AMQP_BROKER_HOST")
-}
-
-/// Get the broker port from the env or panic
-pub fn get_port() -> String {
-    get_var("AMQP_BROKER_PORT")
-}
-
-/// Get the EMF API port from the env or panic
-pub fn get_emf_api_port() -> String {
-    get_var("EMF_API_PORT")
-}
-
-/// Get the EMF API address from the env or panic
-pub fn get_emf_api_addr() -> SocketAddr {
-    to_socket_addr(&get_server_host(), &get_emf_api_port())
-}
-
-/// Get the `http_agent2` port from the env or panic
-pub fn get_http_agent2_port() -> String {
-    get_var("HTTP_AGENT2_PORT")
-}
-
-pub fn get_http_agent2_addr() -> SocketAddr {
-    to_socket_addr(&get_server_host(), &get_http_agent2_port())
-}
-
 /// Get the server host from the env or panic
 pub fn get_server_host() -> String {
     get_var("PROXY_HOST")
-}
-
-/// Get the AMQP server address or panic
-pub fn get_addr() -> SocketAddr {
-    to_socket_addr(&get_host(), &get_port())
-}
-
-/// Get the warp drive port from the env or panic
-pub fn get_warp_drive_port() -> String {
-    get_var("WARP_DRIVE_PORT")
-}
-
-/// Get the warp drive address from the env or panic
-pub fn get_warp_drive_addr() -> SocketAddr {
-    to_socket_addr(&get_server_host(), &get_warp_drive_port())
 }
 
 /// Get the mailbox port from the env or panic
@@ -189,66 +131,25 @@ pub fn get_timer_addr() -> SocketAddr {
     to_socket_addr(&get_timer_fqdn(), &get_timer_port())
 }
 
-/// Get the influxdb port from the env or panic
-pub fn get_influxdb_port() -> String {
-    get_var("INFLUXDB_PORT")
-}
-
-pub fn get_influxdb_server_fqdn() -> String {
-    get_var("INFLUXDB_SERVER_FQDN")
-}
-
-/// Get the influxdb address from the env or panic
-pub fn get_influxdb_addr() -> SocketAddr {
-    to_socket_addr(&get_influxdb_server_fqdn(), &get_influxdb_port())
-}
-
 /// Get the metrics influxdb database name
 pub fn get_influxdb_metrics_db() -> String {
     get_var("INFLUXDB_EMF_STATS_DB")
-}
-
-/// Get the devices port or panic
-pub fn get_device_aggregator_port() -> String {
-    get_var("DEVICE_AGGREGATOR_PORT")
-}
-
-pub fn get_device_aggregator_addr() -> SocketAddr {
-    to_socket_addr(&get_server_host(), &get_device_aggregator_port())
-}
-
-/// Get the api key from the env or panic
-pub fn get_api_key() -> String {
-    get_var("API_KEY")
-}
-
-/// Get the api user from the env or panic
-pub fn get_api_user() -> String {
-    get_var("API_USER")
 }
 
 pub fn get_manager_url() -> String {
     get_var("SERVER_HTTP_URL")
 }
 
-pub fn get_db_user() -> String {
-    get_var("DB_USER")
+pub fn get_pg_user() -> String {
+    get_var("PG_USER")
 }
 
-pub fn get_db_host() -> Option<String> {
-    empty_str_to_none(get_var("DB_HOST"))
+pub fn get_pg_name() -> Option<String> {
+    empty_str_to_none(get_var("PG_NAME"))
 }
 
-pub fn get_db_port() -> Option<u16> {
-    env::var("DB_PORT").ok().map(|l| l.parse().ok()).flatten()
-}
-
-pub fn get_db_name() -> Option<String> {
-    empty_str_to_none(get_var("DB_NAME"))
-}
-
-pub fn get_db_password() -> Option<String> {
-    empty_str_to_none(get_var("DB_PASSWORD"))
+pub fn get_pg_password() -> Option<String> {
+    empty_str_to_none(get_var("PG_PASSWORD"))
 }
 
 pub fn get_pool_limit() -> Option<u32> {
@@ -319,23 +220,18 @@ pub fn get_sfa_endpoints() -> Option<Vec<Vec<Url>>> {
 }
 
 /// Gets a hash of db connection values
-pub fn get_db_conn_hash() -> HashMap<String, String> {
+pub fn get_db_conn_hash(port: u16) -> HashMap<String, String> {
     let mut xs = HashMap::new();
 
-    xs.insert("user".to_string(), get_db_user());
+    xs.insert("user".to_string(), get_pg_user());
 
-    let host = match get_db_host() {
-        Some(x) => x,
-        None => "/var/run/postgresql".into(),
-    };
+    xs.insert("host".to_string(), format!("http://127.0.0.1:{}", port));
 
-    xs.insert("host".to_string(), host);
-
-    if let Some(x) = get_db_name() {
+    if let Some(x) = get_pg_name() {
         xs.insert("dbname".to_string(), x);
     }
 
-    if let Some(x) = get_db_password() {
+    if let Some(x) = get_pg_password() {
         xs.insert("password".to_string(), x);
     }
 
@@ -351,13 +247,4 @@ pub fn get_db_conn_hash() -> HashMap<String, String> {
     }
 
     xs
-}
-
-/// Gets a connection string from the EMF env
-pub fn get_db_conn_string() -> String {
-    let xs = get_db_conn_hash();
-    xs.iter()
-        .map(|(k, v)| format!("{}={}", k, v))
-        .collect::<Vec<String>>()
-        .join(" ")
 }

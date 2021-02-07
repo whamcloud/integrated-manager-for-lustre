@@ -47,9 +47,6 @@ install-device-scanner: build-device-scanner
 	$(INSTALL_FILE) "$$s" '$(DESTDIR)$(SYSTEMDDIR)/system'; \
 	done
 
-	$(INSTALL_DIR) '$(DESTDIR)$(SYSTEMDDIR)/system-preset'
-	$(INSTALL_FILE) device-scanner/device-scanner-daemon/systemd-units/00-device-scanner.preset '$(DESTDIR)$(SYSTEMDDIR)/system-preset'
-
 	$(INSTALL_DIR) '$(DESTDIR)$(UDEVDIR)'
 	$(INSTALL_FILE) device-scanner/uevent-listener/udev-rules/99-emf-device-scanner.rules '$(DESTDIR)$(UDEVDIR)'
 
@@ -76,9 +73,6 @@ install-agent: build-agent
 		; do \
 	$(INSTALL_FILE) "$$s" '$(DESTDIR)$(SYSTEMDDIR)/system'; \
 	done
-
-	$(INSTALL_DIR) '$(DESTDIR)$(SYSTEMDDIR)/system-preset'
-	$(INSTALL_FILE) emf-agent/systemd-units/00-rust-emf-agent.preset '$(DESTDIR)$(SYSTEMDDIR)/system-preset'
 
 	$(INSTALL_DIR) '$(DESTDIR)$(TMPFILESDIR)'
 	$(INSTALL_FILE) -T emf-agent/systemd-units/tmpfiles.conf '$(DESTDIR)$(TMPFILESDIR)/emf-agent.conf'

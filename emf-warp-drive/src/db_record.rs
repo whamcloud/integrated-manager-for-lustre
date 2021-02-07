@@ -4,18 +4,8 @@
 
 use emf_wire_types::{
     db::{
-        AlertStateRecord, AuthGroupRecord, AuthUserGroupRecord, AuthUserRecord, ContentTypeRecord,
-        CorosyncConfigurationRecord, CorosyncResourceBanRecord, CorosyncResourceRecord, FsRecord,
-        LnetConfigurationRecord, ManagedHostRecord, ManagedTargetRecord, OstPoolOstsRecord,
-        OstPoolRecord, PacemakerConfigurationRecord, StratagemConfiguration, TableName,
-        TargetRecord, VolumeNodeRecord, VolumeRecord, ALERT_STATE_TABLE_NAME,
-        AUTH_GROUP_TABLE_NAME, AUTH_USER_GROUP_TABLE_NAME, AUTH_USER_TABLE_NAME,
-        CONTENT_TYPE_TABLE_NAME, COROSYNC_CONFIGURATION_TABLE_NAME,
-        COROSYNC_RESOURCE_BAN_TABLE_NAME, COROSYNC_RESOURCE_TABLE_NAME,
-        LNET_CONFIGURATION_TABLE_NAME, MANAGED_FILESYSTEM_TABLE_NAME, MANAGED_HOST_TABLE_NAME,
-        MANAGED_TARGET_TABLE_NAME, OSTPOOL_OSTS_TABLE_NAME, OSTPOOL_TABLE_NAME,
-        PACEMAKER_CONFIGURATION_TABLE_NAME, STRATAGEM_CONFIGURATION_TABLE_NAME, TARGET_TABLE_NAME,
-        VOLUME_NODE_TABLE_NAME, VOLUME_TABLE_NAME,
+        AuthGroupRecord, AuthUserGroupRecord, AuthUserRecord, TableName, AUTH_GROUP_TABLE_NAME,
+        AUTH_USER_GROUP_TABLE_NAME, AUTH_USER_TABLE_NAME,
     },
     sfa::{
         SfaController, SfaDiskDrive, SfaEnclosure, SfaJob, SfaPowerSupply, SfaStorageSystem,
@@ -26,6 +16,11 @@ use emf_wire_types::{
         SnapshotInterval, SnapshotRecord, SnapshotRetention, SNAPSHOT_INTERVAL_TABLE_NAME,
         SNAPSHOT_RETENTION_TABLE_NAME, SNAPSHOT_TABLE_NAME,
     },
+    AlertState, CorosyncResourceBanRecord, CorosyncResourceRecord, Filesystem, Host, Lnet,
+    OstPoolOstsRecord, OstPoolRecord, StratagemConfiguration, TargetRecord, ALERT_STATE_TABLE_NAME,
+    COROSYNC_RESOURCE_BAN_TABLE_NAME, COROSYNC_RESOURCE_TABLE_NAME, FILESYSTEM_TABLE_NAME,
+    HOST_TABLE_NAME, LNET_TABLE_NAME, OSTPOOL_OSTS_TABLE_NAME, OSTPOOL_TABLE_NAME,
+    STRATAGEM_CONFIGURATION_TABLE_NAME, TARGET_TABLE_NAME,
 };
 use serde::de::Error;
 use std::convert::TryFrom;
@@ -34,34 +29,28 @@ use std::convert::TryFrom;
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug)]
 pub enum DbRecord {
+    AlertState(AlertState),
     AuthGroup(AuthGroupRecord),
     AuthUser(AuthUserRecord),
     AuthUserGroup(AuthUserGroupRecord),
-    AlertState(AlertStateRecord),
-    ContentType(ContentTypeRecord),
-    CorosyncConfiguration(CorosyncConfigurationRecord),
     CorosyncResource(CorosyncResourceRecord),
     CorosyncResourceBan(CorosyncResourceBanRecord),
-    LnetConfiguration(LnetConfigurationRecord),
-    ManagedFilesystem(FsRecord),
-    ManagedHost(ManagedHostRecord),
-    ManagedTarget(ManagedTargetRecord),
+    Filesystem(Filesystem),
+    Host(Host),
+    Lnet(Lnet),
     OstPool(OstPoolRecord),
     OstPoolOsts(OstPoolOstsRecord),
-    PacemakerConfiguration(PacemakerConfigurationRecord),
+    SfaController(SfaController),
     SfaDiskDrive(SfaDiskDrive),
     SfaEnclosure(SfaEnclosure),
-    SfaStorageSystem(SfaStorageSystem),
     SfaJob(SfaJob),
     SfaPowerSupply(SfaPowerSupply),
-    SfaController(SfaController),
+    SfaStorageSystem(SfaStorageSystem),
     Snapshot(SnapshotRecord),
     SnapshotInterval(SnapshotInterval),
     SnapshotRetention(SnapshotRetention),
     StratagemConfiguration(StratagemConfiguration),
-    TargetRecord(TargetRecord),
-    Volume(VolumeRecord),
-    VolumeNode(VolumeNodeRecord),
+    Target(TargetRecord),
 }
 
 impl TryFrom<(TableName<'_>, serde_json::Value)> for DbRecord {
@@ -73,13 +62,8 @@ impl TryFrom<(TableName<'_>, serde_json::Value)> for DbRecord {
         tracing::debug!("Incoming NOTIFY on {}: {:?}", table_name, x);
 
         match table_name {
-            MANAGED_FILESYSTEM_TABLE_NAME => {
-                serde_json::from_value(x).map(DbRecord::ManagedFilesystem)
-            }
-            VOLUME_TABLE_NAME => serde_json::from_value(x).map(DbRecord::Volume),
-            VOLUME_NODE_TABLE_NAME => serde_json::from_value(x).map(DbRecord::VolumeNode),
-            MANAGED_TARGET_TABLE_NAME => serde_json::from_value(x).map(DbRecord::ManagedTarget),
-            MANAGED_HOST_TABLE_NAME => serde_json::from_value(x).map(DbRecord::ManagedHost),
+            FILESYSTEM_TABLE_NAME => serde_json::from_value(x).map(DbRecord::Filesystem),
+            HOST_TABLE_NAME => serde_json::from_value(x).map(DbRecord::Host),
             ALERT_STATE_TABLE_NAME => serde_json::from_value(x).map(DbRecord::AlertState),
             OSTPOOL_TABLE_NAME => serde_json::from_value(x).map(DbRecord::OstPool),
             OSTPOOL_OSTS_TABLE_NAME => serde_json::from_value(x).map(DbRecord::OstPoolOsts),
@@ -101,25 +85,16 @@ impl TryFrom<(TableName<'_>, serde_json::Value)> for DbRecord {
             SNAPSHOT_RETENTION_TABLE_NAME => {
                 serde_json::from_value(x).map(DbRecord::SnapshotRetention)
             }
-            TARGET_TABLE_NAME => serde_json::from_value(x).map(DbRecord::TargetRecord),
-            LNET_CONFIGURATION_TABLE_NAME => {
-                serde_json::from_value(x).map(DbRecord::LnetConfiguration)
-            }
-            CONTENT_TYPE_TABLE_NAME => serde_json::from_value(x).map(DbRecord::ContentType),
+            TARGET_TABLE_NAME => serde_json::from_value(x).map(DbRecord::Target),
+            LNET_TABLE_NAME => serde_json::from_value(x).map(DbRecord::Lnet),
             AUTH_GROUP_TABLE_NAME => serde_json::from_value(x).map(DbRecord::AuthGroup),
             AUTH_USER_GROUP_TABLE_NAME => serde_json::from_value(x).map(DbRecord::AuthUserGroup),
             AUTH_USER_TABLE_NAME => serde_json::from_value(x).map(DbRecord::AuthUser),
-            COROSYNC_CONFIGURATION_TABLE_NAME => {
-                serde_json::from_value(x).map(DbRecord::CorosyncConfiguration)
-            }
             COROSYNC_RESOURCE_TABLE_NAME => {
                 serde_json::from_value(x).map(DbRecord::CorosyncResource)
             }
             COROSYNC_RESOURCE_BAN_TABLE_NAME => {
                 serde_json::from_value(x).map(DbRecord::CorosyncResourceBan)
-            }
-            PACEMAKER_CONFIGURATION_TABLE_NAME => {
-                serde_json::from_value(x).map(DbRecord::PacemakerConfiguration)
             }
             x => Err(serde_json::Error::custom(format!(
                 "No matching table representation for {}",

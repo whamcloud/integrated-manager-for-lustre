@@ -1,0 +1,19 @@
+[Unit]
+Description=EMF Journal Service
+PartOf=emf-manager.target
+Wants=emf-journal-sidecar.service
+After=emf-journal-sidecar.service
+
+[Service]
+Type=simple
+Environment=RUST_LOG=info,sqlx::query=warn
+EnvironmentFile=/etc/emf/bootstrap.conf
+EnvironmentFile=-/etc/emf/overrides.conf
+ExecStart=/bin/emf-journal
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=emf-manager.target

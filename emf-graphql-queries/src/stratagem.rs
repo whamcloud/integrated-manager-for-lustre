@@ -42,6 +42,47 @@ pub mod list_reports {
     pub type Resp = super::Resp<StratagemReports>;
 }
 
+pub mod stratagem_configurations {
+    use crate::Query;
+    use emf_wire_types::StratagemConfigurationOutput;
+
+    pub static QUERY: &str = r#"
+        query StratagemConfigurations($fs_id: Int) {
+          stratagem {
+            stratagemConfigurations(fs_id: $fs_id) {
+              id
+              filesystem_id: filesystemId
+              interval
+              report_duration: reportDuration
+              purge_duration: purgeDuration
+              state
+              state_modified_at: stateModifiedAt,
+            }
+          }
+        }
+    "#;
+
+    #[derive(Debug, serde::Serialize)]
+    pub struct Vars {
+        fs_id: Option<i32>,
+    }
+
+    pub fn build(fs_id: Option<i32>) -> Query<Vars> {
+        Query {
+            query: QUERY.to_string(),
+            variables: Some(Vars { fs_id }),
+        }
+    }
+
+    #[derive(Debug, Clone, serde::Deserialize)]
+    pub struct StratagemConfigurations {
+        #[serde(rename(deserialize = "stratagemConfigurations"))]
+        pub stratagem_configurations: Vec<StratagemConfigurationOutput>,
+    }
+
+    pub type Resp = super::Resp<StratagemConfigurations>;
+}
+
 pub mod delete_report {
     use crate::Query;
 

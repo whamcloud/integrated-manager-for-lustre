@@ -14,13 +14,11 @@ pub mod kuma;
 pub mod nginx;
 pub mod ostpool;
 pub mod postgres;
-pub mod profile;
 pub mod server;
 pub mod snapshot;
 pub mod ssh;
 pub mod stratagem;
 pub mod target;
-pub mod update_repo_file;
 
 use std::{collections::BTreeSet, env};
 

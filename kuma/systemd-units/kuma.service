@@ -1,0 +1,17 @@
+[Unit]
+Description=kuma control-plane
+Wants=postgresql-13.service
+After=postgresql-13.service
+
+[Service]
+EnvironmentFile=/etc/emf/bootstrap.conf
+EnvironmentFile=-/etc/emf/overrides.conf
+Environment=KUMA_STORE_TYPE=postgres
+Environment=KUMA_STORE_POSTGRES_HOST=localhost
+Environment=KUMA_DNS_SERVER_CIDR=127.0.0.1/8
+ExecStartPre=/root/kuma-1.0.6/bin/kuma-cp migrate up
+ExecStart=/root/kuma-1.0.6/bin/kuma-cp run
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal

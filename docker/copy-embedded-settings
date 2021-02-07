@@ -1,9 +1,0 @@
-#!/usr/bin/env bash
-set -eu
-
-/bin/mkdir -p /etc/emf
-
-until /usr/bin/docker cp emf_nginx.1.$(/usr/bin/docker service ps -f "name=emf_nginx.1" emf_nginx -q --no-trunc 2>/dev/null | head -n1):/var/lib/chroma/emf-settings.conf /etc/emf/emf-settings.conf 2>/dev/null; do
-    echo "copy-embedded-settings: Waiting for EMF startup..."
-    sleep 5
-done

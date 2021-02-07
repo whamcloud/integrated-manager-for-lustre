@@ -3,14 +3,14 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    command::get_command,
     error::EmfApiError,
     graphql::{fs_id_by_name, insert_fidlist, insert_task, Context, SendJob},
 };
 use emf_manager_env::get_report_path;
 use emf_postgres::{sqlx, PgPool};
 use emf_wire_types::{
-    graphql_duration::GraphQLDuration, stratagem, task::TaskArgs, Command, StratagemReport,
+    graphql_duration::GraphQLDuration, stratagem, task::TaskArgs, Command, StratagemConfiguration,
+    StratagemConfigurationOutput, StratagemReport,
 };
 use futures::{
     future::{self, try_join_all},
@@ -25,6 +25,26 @@ pub(crate) struct StratagemQuery;
 
 #[juniper::graphql_object(Context = Context)]
 impl StratagemQuery {
+    /// List all stratagem configurations
+    async fn stratagem_configurations(
+        context: &Context,
+        fs_id: Option<i32>,
+    ) -> juniper::FieldResult<Vec<StratagemConfigurationOutput>> {
+        let xs = sqlx::query_as!(
+            StratagemConfiguration,
+            r#"
+            SELECT * from stratagemconfiguration
+            WHERE ($1::int IS NULL OR filesystem_id = $1)
+        "#,
+            fs_id
+        )
+        .fetch(&context.pg_pool)
+        .map_ok(|x| x.into())
+        .try_collect()
+        .await?;
+
+        Ok(xs)
+    }
     /// List completed Stratagem reports that currently reside on the manager node.
     /// Note: All report names must be valid unicode.
     async fn stratagem_reports(_context: &Context) -> juniper::FieldResult<Vec<StratagemReport>> {
@@ -169,18 +189,7 @@ impl StratagemMutation {
                 .into_iter()
                 .collect();
 
-        let command_id: i32 = emf_job_scheduler_rpc::call(
-            &context.rabbit_pool.get().await?,
-            "run_jobs",
-            vec![jobs],
-            Some(kwargs),
-        )
-        .map_err(EmfApiError::EmfJobSchedulerRpcError)
-        .await?;
-
-        let command = get_command(&context.pg_pool, command_id).await?;
-
-        Ok(command)
+        unimplemented!();
     }
     async fn run_cloudsync(
         context: &Context,
@@ -266,18 +275,7 @@ impl StratagemMutation {
                 .into_iter()
                 .collect();
 
-        let command_id: i32 = emf_job_scheduler_rpc::call(
-            &context.rabbit_pool.get().await?,
-            "run_jobs",
-            vec![jobs],
-            Some(kwargs),
-        )
-        .map_err(EmfApiError::EmfJobSchedulerRpcError)
-        .await?;
-
-        let command = get_command(&context.pg_pool, command_id).await?;
-
-        Ok(command)
+        unimplemented!();
     }
     async fn run_fast_file_scan(
         context: &Context,
@@ -507,18 +505,7 @@ impl StratagemMutation {
                 .into_iter()
                 .collect();
 
-        let command_id: i32 = emf_job_scheduler_rpc::call(
-            &context.rabbit_pool.get().await?,
-            "run_jobs",
-            vec![jobs],
-            Some(kwargs),
-        )
-        .map_err(EmfApiError::EmfJobSchedulerRpcError)
-        .await?;
-
-        let command = get_command(&context.pg_pool, command_id).await?;
-
-        Ok(command)
+        unimplemented!();
     }
     async fn run_stratagem(
         context: &Context,
@@ -622,18 +609,7 @@ impl StratagemMutation {
                 .into_iter()
                 .collect();
 
-        let command_id: i32 = emf_job_scheduler_rpc::call(
-            &context.rabbit_pool.get().await?,
-            "run_jobs",
-            vec![jobs],
-            Some(kwargs),
-        )
-        .map_err(EmfApiError::EmfJobSchedulerRpcError)
-        .await?;
-
-        let command = get_command(&context.pg_pool, command_id).await?;
-
-        Ok(command)
+        unimplemented!();
     }
 
     /// Delete a stratagem report
@@ -683,10 +659,9 @@ async fn get_target_hosts_by_fsname(
         r#"
             SELECT t.name, t.dev_path, h.fqdn
             FROM target t
-            INNER JOIN chroma_core_managedhost h
+            INNER JOIN host h
             ON t.active_host_id = h.id
             WHERE $1 = ANY(t.filesystems)
-            AND h.not_deleted = 't'
         "#,
         fsname
     )

@@ -44,10 +44,9 @@ async fn available_workers(
     let clients = sqlx::query_as!(
         LustreClient,
         r#"
-        SELECT * FROM chroma_core_lustreclientmount
+        SELECT * FROM lustreclientmount
         WHERE
             state = 'mounted'
-            AND not_deleted = 't'
             AND id != ALL($1)
         LIMIT $2
         "#,
@@ -65,7 +64,7 @@ async fn tasks_per_worker(
     worker: &LustreClient,
 ) -> Result<Vec<Task>, error::EmfTaskRunnerError> {
     let fs_id = sqlx::query!(
-        "select id from chroma_core_managedfilesystem where name = $1 and not_deleted = 't'",
+        "select id from filesystem where name = $1",
         &worker.filesystem
     )
     .fetch_optional(pool)
@@ -80,8 +79,8 @@ async fn tasks_per_worker(
     let tasks = sqlx::query_as!(
         Task,
         r#"
-        select * from chroma_core_task 
-        where 
+        select * from task
+        where
             filesystem_id = $1
             and state <> 'closed'
             and fids_total > fids_completed 
@@ -99,13 +98,10 @@ async fn worker_fqdn(
     pool: &PgPool,
     worker: &LustreClient,
 ) -> Result<String, error::EmfTaskRunnerError> {
-    let fqdn = sqlx::query!(
-        "SELECT fqdn FROM chroma_core_managedhost WHERE id = $1",
-        worker.host_id
-    )
-    .fetch_one(pool)
-    .await
-    .map(|x| x.fqdn)?;
+    let fqdn = sqlx::query!("SELECT fqdn FROM host WHERE id = $1", worker.host_id)
+        .fetch_one(pool)
+        .await
+        .map(|x| x.fqdn)?;
 
     Ok(fqdn)
 }
@@ -132,7 +128,7 @@ async fn send_work(
 
         let cnt = sqlx::query!(
             r#"
-            UPDATE chroma_core_task
+            UPDATE task
             SET running_on_id = $1
                 WHERE id = $2
                 AND running_on_id is Null"#,
@@ -177,14 +173,15 @@ async fn send_work(
     let rowlist = sqlx::query_as!(
         FidTaskQueue,
         r#"
-        DELETE FROM chroma_core_fidtaskqueue 
+        DELETE FROM fidtaskqueue 
         WHERE id in ( 
-            SELECT id FROM chroma_core_fidtaskqueue WHERE task_id = $1 LIMIT $2 FOR UPDATE SKIP LOCKED 
+            SELECT id FROM fidtaskqueue WHERE task_id = $1 LIMIT $2 FOR UPDATE SKIP LOCKED 
         ) RETURNING id, fid as "fid: _", data, task_id"#,
-        task.id, FID_LIMIT,
+        task.id,
+        FID_LIMIT,
     )
-        .fetch_all(&mut trans)
-        .await?;
+    .fetch_all(&mut trans)
+    .await?;
 
     tracing::debug!(
         "send_work({}, {}, {}) found {} fids",
@@ -246,17 +243,15 @@ async fn send_work(
 
                                 // #FIXME: This would be better as a bulk insert
                                 if let Err(e) = trans
-                                    .execute(
-                                        sqlx::query!(
-                                            r#"
-                                                INSERT INTO chroma_core_fidtaskerror (fid, task_id, data, errno)
+                                    .execute(sqlx::query!(
+                                        r#"
+                                                INSERT INTO fidtaskerror (fid, task_id, data, errno)
                                                 VALUES ($1, $2, $3, $4)"#,
-                                            fid as LustreFid,
-                                            task_id,
-                                            err.data,
-                                            err.errno
-                                        )
-                                    )
+                                        fid as LustreFid,
+                                        task_id,
+                                        err.data,
+                                        err.errno
+                                    ))
                                     .await
                                 {
                                     tracing::info!(
@@ -284,7 +279,7 @@ async fn send_work(
     if completed > 0 || failed > 0 {
         sqlx::query!(
             r#"
-            UPDATE chroma_core_task
+            UPDATE task
             SET 
                 fids_completed = fids_completed + $1,
                 fids_failed = fids_failed + $2
@@ -333,7 +328,11 @@ async fn run_tasks(
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     emf_tracing::init();
 
-    let pg_pool = get_db_pool(*POOL_LIMIT).await?;
+    let pg_pool = get_db_pool(
+        *POOL_LIMIT,
+        emf_manager_env::get_port("TASK_RUNNER_SERVICE_PORT"),
+    )
+    .await?;
     let active_clients = Arc::new(Mutex::new(HashSet::new()));
     let mut interval = time::interval(DELAY);
 

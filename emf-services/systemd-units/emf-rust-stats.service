@@ -1,0 +1,19 @@
+[Unit]
+Description=EMF Rust Stats Service
+PartOf=emf-manager.target
+Wants=emf-stats-sidecar.service
+After=emf-stats-sidecar.service
+
+[Service]
+Type=simple
+Environment=RUST_LOG=info
+EnvironmentFile=/etc/emf/bootstrap.conf
+EnvironmentFile=-/etc/emf/overrides.conf
+ExecStart=/bin/emf-stats
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=emf-manager.target

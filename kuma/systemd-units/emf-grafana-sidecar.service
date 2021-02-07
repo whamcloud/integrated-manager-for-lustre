@@ -1,0 +1,21 @@
+[Unit]
+Description=EMF Grafana sidecar
+Requires=grafana-server.service
+PartOf=grafana-server.service
+PartOf=emf-manager.target
+
+[Service]
+EnvironmentFile=/etc/emf/bootstrap.conf
+EnvironmentFile=-/etc/emf/overrides.conf
+ExecStartPre=/bin/rm -f /tmp/kuma-al-grafana-default.sock
+ExecStart=/root/kuma-1.0.6/bin/kuma-dp run \
+    --cp-address=https://${CP_ADDR}:5678 \
+    --dataplane-file=/etc/emf/dataplanes/grafana.yml \
+    --dataplane-token-file=/etc/emf/tokens/dataplane-token \
+    --dataplane-var grafana_port=${GRAFANA_PORT} \
+    --dataplane-var mgmt_address=${MGMT_ADDR} \
+    --admin-port=
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal

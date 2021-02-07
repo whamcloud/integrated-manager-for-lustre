@@ -18,7 +18,7 @@ pub async fn all(pool: &sqlx::PgPool) -> Result<Vec<SfaEnclosure>, EmfSfaError> 
             enclosure_type as "enclosure_type: _",
             canister_location,
             storage_system
-        FROM chroma_core_sfaenclosure"#,
+        FROM sfaenclosure"#,
     )
     .fetch_all(pool)
     .await?;
@@ -61,7 +61,7 @@ pub async fn batch_upsert(
 
     sqlx::query!(
         r#"
-        INSERT INTO chroma_core_sfaenclosure
+        INSERT INTO sfaenclosure
         (
             index,
             element_name,
@@ -123,7 +123,7 @@ pub async fn batch_delete(
 
     sqlx::query!(
         r#"
-            DELETE from chroma_core_sfaenclosure
+            DELETE from sfaenclosure
             WHERE (index, storage_system)
             IN (
                 SELECT *

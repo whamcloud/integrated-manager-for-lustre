@@ -3,7 +3,6 @@
 // license that can be found in the LICENSE file.
 
 use emf_postgres::{sqlx, PgPool};
-use emf_service_queue::service_queue::EmfServiceQueueError;
 use emf_wire_types::high_availability::{Ban, Node, Resource};
 use std::{collections::HashMap, fmt};
 use thiserror::Error;
@@ -30,10 +29,6 @@ impl From<(String, String)> for CorosyncNodeKey {
 #[derive(Error, Debug)]
 pub enum EmfCorosyncError {
     #[error(transparent)]
-    EmfRabbitError(#[from] emf_rabbit::EmfRabbitError),
-    #[error(transparent)]
-    EmfServiceQueueError(#[from] EmfServiceQueueError),
-    #[error(transparent)]
     SerdeJsonError(#[from] serde_json::Error),
     #[error(transparent)]
     SqlxCoreError(#[from] sqlx::Error),
@@ -49,7 +44,7 @@ pub async fn delete_cluster(
     sqlx::query!(
         r#"
             DELETE FROM corosync_cluster
-            USING corosync_node_managed_host
+            USING corosync_node_host
             WHERE host_id = $1
             AND cluster_id = id
             AND corosync_nodes != $2::corosync_node_key[]
@@ -104,7 +99,7 @@ pub async fn delete_corosync_resource_bans(
     sqlx::query!(
         r#"
             DELETE FROM corosync_resource_bans
-            USING corosync_node_managed_host
+            USING corosync_node_host
             WHERE host_id = $1
             AND node = (corosync_node_id).name
             AND name != ALL($2)
@@ -126,7 +121,7 @@ pub async fn delete_nodes(
     sqlx::query!(
         r#"
             DELETE FROM corosync_node
-            USING corosync_node_managed_host
+            USING corosync_node_host
             WHERE id = corosync_node_id
             AND host_id = $1
             AND corosync_node_id != ALL($2::corosync_node_key[])
@@ -148,7 +143,7 @@ pub async fn delete_target_resources(
     sqlx::query!(
         r#"
             DELETE FROM corosync_resource
-            USING corosync_resource_managed_host
+            USING corosync_resource_host
             WHERE name = corosync_resource_id
             AND corosync_resource_id != ALL($1)
             AND host_id = $2
@@ -161,7 +156,7 @@ pub async fn delete_target_resources(
 
     sqlx::query!(
         r#"
-            DELETE FROM corosync_resource_managed_host
+            DELETE FROM corosync_resource_host
             WHERE corosync_resource_id != ALL($1)
             AND host_id = $2
         "#,
@@ -504,7 +499,7 @@ pub async fn upsert_node_managed_host(
 ) -> Result<(), EmfCorosyncError> {
     sqlx::query!(
         r#"
-            INSERT INTO corosync_node_managed_host (host_id, cluster_id, corosync_node_id)
+            INSERT INTO corosync_node_host (host_id, cluster_id, corosync_node_id)
             VALUES($1, $2, $3::corosync_node_key)
             ON CONFLICT (host_id, corosync_node_id, cluster_id)
             DO NOTHING
@@ -527,7 +522,7 @@ pub async fn upsert_target_resource_managed_host(
 ) -> Result<(), EmfCorosyncError> {
     sqlx::query!(
         r#"
-                INSERT INTO corosync_resource_managed_host (host_id, cluster_id, corosync_resource_id)
+                INSERT INTO corosync_resource_host (host_id, cluster_id, corosync_resource_id)
                 SELECT $1, $2, corosync_resource_id FROM UNNEST($3::text[]) as corosync_resource_id
                 ON CONFLICT (host_id, corosync_resource_id, cluster_id)
                 DO NOTHING
@@ -562,7 +557,7 @@ pub async fn update_chroma_ticket(
 
     sqlx::query!(
         r#"
-            UPDATE chroma_core_ticket t
+            UPDATE ticket t
             SET state = updates.state
             FROM (
                 SELECT state, id
@@ -572,7 +567,6 @@ pub async fn update_chroma_ticket(
             WHERE
                 t.ha_label = updates.id
                 AND t.cluster_id = $3
-                AND t.not_deleted = 't'
         "#,
         &x.0,
         &x.1,

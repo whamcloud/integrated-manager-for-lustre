@@ -3,11 +3,11 @@
 // license that can be found in the LICENSE file.
 
 use emf_influx::{Client, Error as InfluxError, Point, Points, Precision, Value};
-use emf_manager_env::{get_influxdb_addr, get_influxdb_metrics_db, get_pool_limit};
+use emf_manager_env::{get_influxdb_metrics_db, get_pool_limit};
 use emf_postgres::{get_db_pool, host_id_by_fqdn, sqlx, PgPool};
-use emf_service_queue::service_queue::consume_data;
+use emf_service_queue::spawn_service_consumer;
 use emf_wire_types::{LNet, LNetState as _, NetworkData, NetworkInterface};
-use futures::TryStreamExt;
+use futures::StreamExt;
 use url::Url;
 
 // Default pool limit if not overridden by POOL_LIMIT
@@ -230,19 +230,18 @@ async fn update_lnet_data(
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     emf_tracing::init();
 
-    let pool = get_db_pool(get_pool_limit().unwrap_or(DEFAULT_POOL_LIMIT)).await?;
-
-    let rabbit_pool = emf_rabbit::connect_to_rabbit(1);
-
-    let conn = emf_rabbit::get_conn(rabbit_pool).await?;
-
-    let ch = emf_rabbit::create_channel(&conn).await?;
-
-    let mut s = consume_data::<NetworkData>(&ch, "rust_agent_network_rx");
+    let pg_port = emf_manager_env::get_port("NETWORK_SERVICE_PG_PORT");
+    let pool = get_db_pool(get_pool_limit().unwrap_or(DEFAULT_POOL_LIMIT), pg_port).await?;
 
     sqlx::migrate!("../../migrations").run(&pool).await?;
 
-    let influx_url: String = format!("http://{}", get_influxdb_addr());
+    let mut rx =
+        spawn_service_consumer::<NetworkData>(emf_manager_env::get_port("NETWORK_SERVICE_PORT"));
+
+    let influx_url: String = format!(
+        "http://127.0.0.1:{}",
+        emf_manager_env::get_port("NETWORK_SERVICE_INFLUX_PORT")
+    );
     let influx_client = Client::new(
         Url::parse(&influx_url).expect("Influx URL is invalid."),
         get_influxdb_metrics_db(),
@@ -254,7 +253,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             network_interfaces,
             lnet_data,
         },
-    )) = s.try_next().await?
+    )) = rx.next().await
     {
         tracing::debug!(
             "fqdn: {:?} interfaces: {:?}, lnet_data: {:?}",

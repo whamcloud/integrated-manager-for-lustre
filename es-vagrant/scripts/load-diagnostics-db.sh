@@ -5,7 +5,7 @@ chroma-config stop
 
 
 cd /tmp && \
-sudo -u postgres -- pg_dump -U chroma -F p -w -f other-db-bits.sql -t 'chroma_core_series' -t 'chroma_core_sample_*' -t 'chroma_core_logmessage'
+sudo -u postgres -- pg_dump -U chroma -F p -w -f other-db-bits.sql -t 'logmessage'
 
 sudo -u postgres -- dropdb chroma
 sudo -u postgres -- createdb chroma

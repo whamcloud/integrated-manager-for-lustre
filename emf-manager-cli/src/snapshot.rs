@@ -4,7 +4,6 @@
 
 use crate::{
     api_utils::graphql,
-    api_utils::wait_for_cmds_success,
     display_utils::{DisplayType, IntoDisplayType as _},
     error::EmfManagerCliError,
 };
@@ -206,7 +205,8 @@ pub async fn snapshot_cli(command: SnapshotCommand) -> Result<(), EmfManagerCliE
             let resp: emf_graphql_queries::Response<snapshot_queries::create::Resp> =
                 graphql(query).await?;
             let x = Result::from(resp)?.data.create_snapshot;
-            wait_for_cmds_success(&[x]).await?;
+
+            unimplemented!();
 
             Ok(())
         }
@@ -216,7 +216,8 @@ pub async fn snapshot_cli(command: SnapshotCommand) -> Result<(), EmfManagerCliE
             let resp: emf_graphql_queries::Response<snapshot_queries::destroy::Resp> =
                 graphql(query).await?;
             let x = Result::from(resp)?.data.destroy_snapshot;
-            wait_for_cmds_success(&[x]).await?;
+
+            unimplemented!();
 
             Ok(())
         }
@@ -225,7 +226,8 @@ pub async fn snapshot_cli(command: SnapshotCommand) -> Result<(), EmfManagerCliE
             let resp: emf_graphql_queries::Response<snapshot_queries::mount::Resp> =
                 graphql(query).await?;
             let x = Result::from(resp)?.data.mount_snapshot;
-            wait_for_cmds_success(&[x]).await?;
+
+            unimplemented!();
 
             Ok(())
         }
@@ -234,7 +236,8 @@ pub async fn snapshot_cli(command: SnapshotCommand) -> Result<(), EmfManagerCliE
             let resp: emf_graphql_queries::Response<snapshot_queries::unmount::Resp> =
                 graphql(query).await?;
             let x = Result::from(resp)?.data.unmount_snapshot;
-            wait_for_cmds_success(&[x]).await?;
+
+            unimplemented!();
 
             Ok(())
         }

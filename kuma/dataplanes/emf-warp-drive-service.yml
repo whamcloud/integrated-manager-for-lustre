@@ -1,0 +1,14 @@
+type: Dataplane
+mesh: default
+name: emf-warp-drive-service
+networking:
+  address: {{ mgmt_address }}
+  inbound:
+    - port: {{ warp_drive_service_port }}
+      tags:
+        kuma.io/service: emf-warp-drive-service
+        kuma.io/protocol: http
+  outbound:
+    - port: {{ warp_drive_service_pg_port }}
+      tags:
+        kuma.io/service: postgres

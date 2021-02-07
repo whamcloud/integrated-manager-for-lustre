@@ -3,17 +3,13 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    api_utils::{delete, first, get, graphql, post, wait_for_cmd_display},
+    api_utils::{get_filesystem, graphql},
     display_utils::{wrap_fut, DisplayType, IntoDisplayType as _},
-    error::{
-        DurationParseError, EmfManagerCliError, RunStratagemCommandResult,
-        RunStratagemValidationError,
-    },
+    error::{DurationParseError, EmfManagerCliError},
 };
 use console::Term;
 use emf_graphql_queries::stratagem as stratagem_queries;
-use emf_manager_client::EmfManagerClientError;
-use emf_wire_types::{ApiList, CmdWrapper, EndpointName, Filesystem, StratagemConfiguration};
+use emf_wire_types::{StratagemConfiguration, StratagemConfigurationOutput};
 use liblustreapi::LlapiFid;
 use serde::Serialize;
 use std::path::PathBuf;
@@ -183,59 +179,34 @@ fn parse_duration(src: &str) -> Result<u64, EmfManagerCliError> {
     }
 }
 
-/// Given some params, does a fetch for the item in the API
-async fn fetch_one<T: EndpointName + std::fmt::Debug + serde::de::DeserializeOwned>(
-    params: impl serde::Serialize,
-) -> Result<T, EmfManagerCliError> {
-    let x = get(T::endpoint_name(), params).await?;
+pub async fn get_stratagem_configs(
+    fs_id: Option<i32>,
+) -> Result<Vec<StratagemConfigurationOutput>, EmfManagerCliError> {
+    let query = stratagem_queries::stratagem_configurations::build(fs_id);
+    let resp: emf_graphql_queries::Response<stratagem_queries::stratagem_configurations::Resp> =
+        wrap_fut("Fetching Stratagem Configurations...", graphql(query)).await?;
 
-    first(x)
+    let xs = Result::from(resp)?.data.stratagem.stratagem_configurations;
+
+    Ok(xs)
 }
 
 async fn get_stratagem_config_by_fs_name(
     name: &str,
-) -> Result<StratagemConfiguration, EmfManagerCliError> {
-    let fs: Filesystem = fetch_one(serde_json::json!({
-        "name": name,
-        "dehydrate__mgt": false
-    }))
-    .await?;
+) -> Result<StratagemConfigurationOutput, EmfManagerCliError> {
+    let fs = get_filesystem(name).await?;
 
-    fetch_one(serde_json::json!({ "filesystem": fs.id })).await
-}
-
-async fn handle_cmd_resp(
-    resp: emf_manager_client::Response,
-) -> Result<CmdWrapper, EmfManagerCliError> {
-    let status = resp.status();
-
-    let body = resp.text().await.map_err(EmfManagerClientError::from)?;
-
-    if status.is_success() {
-        Ok(serde_json::from_str::<CmdWrapper>(&body)?)
-    } else if status.is_client_error() {
-        tracing::debug!("body: {:?}", body);
-
-        serde_json::from_str::<RunStratagemValidationError>(&body)
-            .map(std::convert::Into::into)
-            .map(Err)?
-    } else if status.is_server_error() {
-        Err(RunStratagemValidationError {
-            code: RunStratagemCommandResult::ServerError,
-            message: "Internal server error.".into(),
-        }
-        .into())
-    } else {
-        Err(RunStratagemValidationError {
-            code: RunStratagemCommandResult::UnknownError,
-            message: "Unknown error.".into(),
-        }
-        .into())
-    }
+    get_stratagem_configs(Some(fs.id))
+        .await?
+        .into_iter()
+        .next()
+        .ok_or_else(|| {
+            EmfManagerCliError::DoesNotExist(format!("Stratagem config fs name: {}", &name))
+        })
 }
 
 fn list_stratagem_configurations(
-    stratagem_configs: Vec<StratagemConfiguration>,
+    stratagem_configs: Vec<StratagemConfigurationOutput>,
     display_type: DisplayType,
 ) {
     let term = Term::stdout();
@@ -278,43 +249,22 @@ async fn report_cli(cmd: ReportCommand) -> Result<(), EmfManagerCliError> {
 async fn interval_cli(cmd: IntervalCommand) -> Result<(), EmfManagerCliError> {
     match cmd {
         IntervalCommand::List { display_type } => {
-            let r: ApiList<StratagemConfiguration> = wrap_fut(
-                "Finding existing intervals...",
-                get(
-                    StratagemConfiguration::endpoint_name(),
-                    serde_json::json!({ "limit": 0 }),
-                ),
-            )
-            .await?;
+            let xs = get_stratagem_configs(None).await?;
 
-            if r.objects.is_empty() {
+            if xs.is_empty() {
                 println!("No Stratagem intervals found");
             } else {
-                list_stratagem_configurations(r.objects, display_type);
+                list_stratagem_configurations(xs, display_type);
             }
             Ok(())
         }
         IntervalCommand::Create(c) => {
-            let r = post(StratagemConfiguration::endpoint_name(), c).await?;
-
-            let CmdWrapper { command } = handle_cmd_resp(r).await?;
-
-            wait_for_cmd_display(command).await?;
-            Ok(())
+            unimplemented!();
         }
         IntervalCommand::Remove(StratagemRemoveData { filesystem }) => {
             let x = get_stratagem_config_by_fs_name(&filesystem).await?;
 
-            let r = delete(
-                &format!("{}/{}", StratagemConfiguration::endpoint_name(), x.id),
-                Vec::<(String, String)>::new(),
-            )
-            .await?;
-
-            let CmdWrapper { command } = handle_cmd_resp(r).await?;
-
-            wait_for_cmd_display(command).await?;
-            Ok(())
+            unimplemented!();
         }
     }
 }
@@ -333,7 +283,7 @@ pub async fn stratagem_cli(command: StratagemCommand) -> Result<(), EmfManagerCl
 
             let command = Result::from(resp)?.data.stratagem.run_fast_file_scan;
 
-            wait_for_cmd_display(command).await?;
+            unimplemented!();
         }
         StratagemCommand::Filesync(data) => match data.expression {
             Some(ref exp) => {
@@ -349,7 +299,7 @@ pub async fn stratagem_cli(command: StratagemCommand) -> Result<(), EmfManagerCl
 
                 let command = Result::from(resp)?.data.stratagem.run_filesync;
 
-                wait_for_cmd_display(command).await?;
+                unimplemented!();
             }
             None => {
                 #[derive(Serialize, Debug)]
@@ -412,7 +362,7 @@ pub async fn stratagem_cli(command: StratagemCommand) -> Result<(), EmfManagerCl
 
                 tracing::debug!("run_cloudsync: {:?}", command);
 
-                wait_for_cmd_display(command).await?;
+                unimplemented!();
             }
             None => {
                 #[derive(Serialize, Debug)]

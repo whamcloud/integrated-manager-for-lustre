@@ -6,24 +6,27 @@ version = "0.4.0"
 
 [dependencies]
 device-types = {path = "../../device-scanner/device-types", version = "0.3"}
-futures = "0.3"
-im = {version = "15.0", features = ["serde"]}
 emf-change = {path = "../../emf-change", version = "0.1"}
 emf-manager-env = {path = "../../emf-manager-env", version = "0.4"}
 emf-postgres = {path = "../../emf-postgres", version = "0.4"}
-emf-rabbit = {path = "../../emf-rabbit", version = "0.4"}
 emf-service-queue = {path = "../emf-service-queue", version = "0.4"}
 emf-tracing = {version = "0.3", path = "../../emf-tracing"}
 emf-wire-types = {path = "../../emf-wire-types", version = "0.4", features = ["postgres-interop"]}
+futures = "0.3"
+im = {version = "15.0", features = ["serde"]}
+lazy_static = "1.4.0"
 serde = {version = "1", features = ["derive"]}
 serde_json = "1.0"
 thiserror = "1.0"
 tokio = {version = "0.2", features = ["macros", "rt-threaded"]}
-url = "2.1.1"
-warp = "0.2"
 
 [dev-dependencies]
 chrono = "0.4"
 emf-postgres = {path = "../../emf-postgres", version = "0.4", features = ["test"]}
 insta = {version = "1", features = ["redactions"]}
 tokio-test = "0.2"
+
+[dependencies.regex]
+default-features = false
+features = ["std"]
+version = "1.4"

@@ -20,9 +20,6 @@ struct ClientMount {
     id: i32,
     state_modified_at: DateTime<Utc>,
     state: String,
-    immutable_state: bool,
-    not_deleted: Option<bool>,
-    content_type_id: Option<i32>,
     filesystem: String,
     host_id: i32,
     mountpoints: Vec<String>,
@@ -33,34 +30,19 @@ struct ClientMount {
 async fn test_insert() -> Result<(), Box<dyn Error>> {
     let pool = emf_postgres::test_setup().await?;
 
-    sqlx::query!(r#"
-        INSERT INTO chroma_core_serverprofile
-        (name, ui_name, ui_description, managed, worker, user_selectable, initial_state, ntp, corosync, corosync2, pacemaker, "default")
-        VALUES
-        ('foo', 'foo', 'foo', 'f', 'f', 't', 'bar', 'f', 'f', 'f', 'f', 't')
-        ON CONFLICT DO NOTHING
-    "#).execute(&pool).await?;
-
     sqlx::query!(
-        r#"INSERT INTO chroma_core_managedhost
+        r#"INSERT INTO host
         (
-            state_modified_at,
+            machine_id,
             state,
-            immutable_state,
-            not_deleted,
-            address,
             fqdn,
-            nodename,
-            boot_time,
-            needs_update,
-            corosync_ring0,
-            install_method,
-            content_type_id,
-            server_profile_id)
-        VALUES
-        ('2020-07-02 15:50:34.356076-04', 'unconfigured', 'f', 't', 'foo', 'foo.bar', '', Null, 'f', '', '', Null, 'foo')
+            boot_time
+        ) VALUES
+        ('1234', 'unconfigured', 'foo.bar', now())
         ON CONFLICT DO NOTHING"#
-    ).execute(&pool).await?;
+    )
+    .execute(&pool)
+    .await?;
 
     let mut mounts = im::HashSet::new();
 
@@ -86,14 +68,11 @@ async fn test_insert() -> Result<(), Box<dyn Error>> {
     ));
 
     // Add some mounts
-    update_client_mounts(&pool, Some(41), &Fqdn("foo.bar".into()), &mounts).await?;
+    update_client_mounts(&pool, &Fqdn("foo.bar".into()), &mounts).await?;
 
-    let xs = sqlx::query_as!(
-        ClientMount,
-        r#"SELECT * FROM chroma_core_lustreclientmount"#
-    )
-    .fetch_all(&pool)
-    .await?;
+    let xs = sqlx::query_as!(ClientMount, r#"SELECT * FROM lustreclientmount"#)
+        .fetch_all(&pool)
+        .await?;
 
     assert_json_snapshot!(xs, {
         "[].id" => "<ID>",
@@ -102,19 +81,16 @@ async fn test_insert() -> Result<(), Box<dyn Error>> {
     });
 
     // Remove Some mounts
-    update_client_mounts(&pool, Some(41), &Fqdn("foo.bar".into()), &im::hashset![Mount::new(
+    update_client_mounts(&pool, &Fqdn("foo.bar".into()), &im::hashset![Mount::new(
         MountPoint("/mnt/fs0a9c2".into()),
         DevicePath("172.60.0.40@o2ib,172.60.0.44@o2ib:172.60.0.42@o2ib,172.60.0.46@o2ib:172.60.0.43@o2ib,172.60.0.47@o2ib:172.60.0.41@o2ib,172.60.0.45@o2ib:/fs0a9c".into()),
         FsType("lustre".into()),
         MountOpts("rw,flock,lazystatfs".into())
     )]).await?;
 
-    let xs = sqlx::query_as!(
-        ClientMount,
-        r#"SELECT * FROM chroma_core_lustreclientmount"#
-    )
-    .fetch_all(&pool)
-    .await?;
+    let xs = sqlx::query_as!(ClientMount, r#"SELECT * FROM lustreclientmount"#)
+        .fetch_all(&pool)
+        .await?;
 
     assert_json_snapshot!(xs, {
         "[].id" => "<ID>",
@@ -123,14 +99,11 @@ async fn test_insert() -> Result<(), Box<dyn Error>> {
     });
 
     // Remove all mounts
-    update_client_mounts(&pool, Some(41), &Fqdn("foo.bar".into()), &im::hashset![]).await?;
+    update_client_mounts(&pool, &Fqdn("foo.bar".into()), &im::hashset![]).await?;
 
-    let xs = sqlx::query_as!(
-        ClientMount,
-        r#"SELECT * FROM chroma_core_lustreclientmount"#
-    )
-    .fetch_all(&pool)
-    .await?;
+    let xs = sqlx::query_as!(ClientMount, r#"SELECT * FROM lustreclientmount"#)
+        .fetch_all(&pool)
+        .await?;
 
     assert_json_snapshot!(xs, {
         "[].id" => "<ID>",

@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 pub mod error;
-pub mod linux_plugin_transforms;
+pub mod filesystems;
 
 use device_types::{
     devices::{Device, DeviceId},
@@ -35,7 +35,7 @@ struct FsRecord {
 /// Given a db pool, create a new cache and fill it with initial data.
 /// This will start the device tree with the previous items it left off with.
 pub async fn create_cache(pool: &PgPool) -> Result<Cache, EmfDeviceError> {
-    let data = sqlx::query!("select * from chroma_core_device")
+    let data = sqlx::query!("select * from device")
         .fetch_all(pool)
         .await?
         .into_iter()
@@ -68,7 +68,7 @@ pub async fn update_devices(
 
     sqlx::query!(
         r#"
-        INSERT INTO chroma_core_device
+        INSERT INTO device
         (fqdn, devices)
         VALUES ($1, $2)
         ON CONFLICT (fqdn) DO UPDATE
@@ -83,28 +83,16 @@ pub async fn update_devices(
     Ok(())
 }
 
-pub async fn client_mount_content_id(pool: &PgPool) -> Result<Option<i32>, EmfDeviceError> {
-    let id = sqlx::query!("select id from django_content_type where model = 'lustreclientmount'")
-        .fetch_optional(pool)
-        .await?
-        .map(|x| x.id);
-
-    Ok(id)
-}
-
 pub async fn update_client_mounts(
     pool: &PgPool,
-    ct_id: Option<i32>,
     host: &Fqdn,
     mounts: &HashSet<Mount>,
 ) -> Result<(), EmfDeviceError> {
-    let host_id: Option<i32> = sqlx::query!(
-        "select id from chroma_core_managedhost where fqdn = $1 and not_deleted = 't'",
-        host.to_string()
-    )
-    .fetch_optional(pool)
-    .await?
-    .map(|x| x.id);
+    let host_id: Option<i32> =
+        sqlx::query!("select id from host where fqdn = $1", host.to_string())
+            .fetch_optional(pool)
+            .await?
+            .map(|x| x.id);
 
     let host_id = match host_id {
         Some(id) => id,
@@ -136,29 +124,32 @@ pub async fn update_client_mounts(
 
     tracing::debug!("Client mounts at {}({}): {:?}", host, host_id, &mount_map);
 
-    let xs = mount_map.into_iter().map(|(fs_name, mountpoints)| async move {
-        let mountpoints:Vec<String> = mountpoints.into_iter().collect();
+    let xs = mount_map
+        .into_iter()
+        .map(|(fs_name, mountpoints)| async move {
+            let mountpoints: Vec<String> = mountpoints.into_iter().collect();
 
-        let x = sqlx::query!(
-            r#"
-        INSERT INTO chroma_core_lustreclientmount
-        (host_id, filesystem, mountpoints, state, state_modified_at, immutable_state, not_deleted, content_type_id)
-        VALUES ($1, $2, $3, 'mounted', now(), 'f', 't', $4)
-        ON CONFLICT (host_id, filesystem, not_deleted) DO UPDATE
+            let x = sqlx::query!(
+                r#"
+        INSERT INTO lustreclientmount
+        (host_id, filesystem, mountpoints, state, state_modified_at)
+        VALUES ($1, $2, $3, 'mounted', now())
+        ON CONFLICT (host_id, filesystem) DO UPDATE
         SET 
             mountpoints = excluded.mountpoints,
             state = excluded.state,
             state_modified_at = excluded.state_modified_at
         RETURNING id
     "#,
-            host_id,
-            &fs_name,
-            &mountpoints,
-            ct_id,
-        ).fetch_all(pool).await?;
+                host_id,
+                &fs_name,
+                &mountpoints
+            )
+            .fetch_all(pool)
+            .await?;
 
-        Ok::<_, EmfDeviceError>(x)
-    });
+            Ok::<_, EmfDeviceError>(x)
+        });
 
     let xs: Vec<_> = try_join_all(xs)
         .await?
@@ -169,7 +160,7 @@ pub async fn update_client_mounts(
 
     let updated = sqlx::query!(
         r#"
-            UPDATE chroma_core_lustreclientmount
+            UPDATE lustreclientmount
             SET 
                 mountpoints = array[]::text[],
                 state = 'unmounted',

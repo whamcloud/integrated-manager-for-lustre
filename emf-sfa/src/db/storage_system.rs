@@ -17,7 +17,7 @@ pub async fn upsert(x: SfaStorageSystem, pool: &PgPool) -> Result<(), EmfSfaErro
 
     sqlx::query!(
         r#"
-        INSERT INTO chroma_core_sfastoragesystem
+        INSERT INTO sfastoragesystem
         (
             uuid,
             platform,

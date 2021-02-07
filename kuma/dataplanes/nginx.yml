@@ -1,0 +1,21 @@
+type: Dataplane
+mesh: default
+name: nginx
+networking:
+  address: {{ mgmt_address }}
+  gateway:
+    tags:
+      kuma.io/service: nginx
+  outbound:
+    - port: {{ nginx_influx_port }}
+      tags:
+        kuma.io/service: influx
+    - port: {{ nginx_grafana_port }}
+      tags:
+        kuma.io/service: grafana
+    - port: {{ nginx_api_service_port }}
+      tags:
+        kuma.io/service: emf-api-service
+    - port: {{ nginx_warp_drive_service_port }}
+      tags:
+        kuma.io/service: emf-warp-drive-service

@@ -1,0 +1,14 @@
+type: Dataplane
+mesh: default
+name: emf-corosync-service
+networking:
+  address: {{ mgmt_address }}
+  inbound:
+    - port: {{ corosync_service_port }}
+      tags:
+        kuma.io/service: emf-corosync-service
+        kuma.io/protocol: http2
+  outbound:
+    - port: {{ corosync_service_pg_port }}
+      tags:
+        kuma.io/service: postgres

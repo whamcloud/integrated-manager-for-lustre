@@ -1,0 +1,21 @@
+[Unit]
+Description=EMF stats service sidecar
+Requires=emf-rust-stats.service
+PartOf=emf-rust-stats.service
+
+[Service]
+EnvironmentFile=/etc/emf/bootstrap.conf
+EnvironmentFile=-/etc/emf/overrides.conf
+ExecStartPre=/bin/rm -f /tmp/kuma-al-emf-stats-service-default.sock
+ExecStart=/root/kuma-1.0.6/bin/kuma-dp run \
+    --cp-address=https://${CP_ADDR}:5678 \
+    --dataplane-file=/etc/emf/dataplanes/emf-stats-service.yml \
+    --dataplane-token-file=/etc/emf/tokens/dataplane-token \
+    --dataplane-var mgmt_address=${MGMT_ADDR} \
+    --dataplane-var stats_service_port=${STATS_SERVICE_PORT} \
+    --dataplane-var stats_service_influx_port=${STATS_SERVICE_INFLUX_PORT} \
+    --admin-port=
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal

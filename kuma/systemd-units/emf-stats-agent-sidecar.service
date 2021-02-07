@@ -1,0 +1,22 @@
+[Unit]
+Description=EMF stats agent sidecar
+Requires=emf-stats-agent.service
+PartOf=emf-stats-agent.service
+
+[Service]
+EnvironmentFile=/etc/emf/bootstrap.conf
+EnvironmentFile=-/etc/emf/overrides.conf
+ExecStartPre=/bin/rm -f /tmp/kuma-al-emf-stats-agent-*-default.sock
+ExecStart=/root/kuma-1.0.6/bin/kuma-dp run \
+    --cp-address=https://${CP_ADDR}:5678 \
+    --dataplane-file=/etc/emf/dataplanes/emf-stats-agent.yml \
+    --dataplane-token-file=/etc/emf/tokens/dataplane-token \
+    --dataplane-var stats_agent_port=${STATS_AGENT_PORT} \
+    --dataplane-var mgmt_address=${MGMT_ADDR} \
+    --dataplane-var stats_agent_stats_service_port=${STATS_AGENT_STATS_SERVICE_PORT} \
+    --dataplane-var node_id=%m \
+    --admin-port=
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal

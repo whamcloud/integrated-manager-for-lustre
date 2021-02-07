@@ -3,19 +3,16 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    db::CorosyncResourceRecord,
-    db::{
-        AuthGroupRecord, AuthUserGroupRecord, AuthUserRecord, ContentTypeRecord,
-        CorosyncConfigurationRecord, CorosyncResourceBanRecord, Id, LnetConfigurationRecord,
-        ManagedTargetRecord, OstPoolOstsRecord, OstPoolRecord, PacemakerConfigurationRecord,
-        StratagemConfiguration, TargetRecord, VolumeNodeRecord, VolumeRecord,
-    },
+    db::{AuthGroupRecord, AuthUserGroupRecord, AuthUserRecord, Id},
     sfa::{SfaController, SfaDiskDrive, SfaEnclosure, SfaJob, SfaPowerSupply, SfaStorageSystem},
     snapshot::{SnapshotInterval, SnapshotRecord, SnapshotRetention},
-    Alert, CompositeId, EndpointNameSelf, Filesystem, Host, Label, LockChange, ToCompositeId,
+    AlertState, ComponentType, CompositeId, CorosyncResourceBanRecord, CorosyncResourceRecord,
+    Filesystem, Host, Label, Lnet, OstPoolOstsRecord, OstPoolRecord, StratagemConfiguration,
+    TargetRecord, ToCompositeId,
 };
-use im::{HashMap, HashSet};
+use im::HashMap;
 use std::{
+    fmt,
     hash::{BuildHasher, Hash},
     iter::FusedIterator,
     ops::Deref,
@@ -87,20 +84,15 @@ where
     hm.iter().map(|(k, v)| (*k, (**v).clone())).collect()
 }
 
-/// The current state of locks based on data from the locks queue
-pub type Locks = HashMap<String, HashSet<LockChange>>;
-
 #[derive(serde::Serialize, serde::Deserialize, Default, PartialEq, Clone, Debug)]
 pub struct Cache {
-    pub content_type: HashMap<i32, ContentTypeRecord>,
-    pub corosync_configuration: HashMap<i32, CorosyncConfigurationRecord>,
     pub corosync_resource: HashMap<i32, CorosyncResourceRecord>,
     pub corosync_resource_ban: HashMap<i32, CorosyncResourceBanRecord>,
-    pub active_alert: HashMap<i32, Alert>,
+    pub active_alert: HashMap<i32, AlertState>,
     pub filesystem: HashMap<i32, Filesystem>,
     pub group: HashMap<i32, AuthGroupRecord>,
     pub host: HashMap<i32, Host>,
-    pub lnet_configuration: HashMap<i32, LnetConfigurationRecord>,
+    pub lnet: HashMap<i32, Lnet>,
     pub ost_pool: HashMap<i32, OstPoolRecord>,
     pub ost_pool_osts: HashMap<i32, OstPoolOstsRecord>,
     pub sfa_disk_drive: HashMap<i32, SfaDiskDrive>,
@@ -113,29 +105,22 @@ pub struct Cache {
     pub snapshot_interval: HashMap<i32, SnapshotInterval>,
     pub snapshot_retention: HashMap<i32, SnapshotRetention>,
     pub stratagem_config: HashMap<i32, StratagemConfiguration>,
-    pub target: HashMap<i32, ManagedTargetRecord>,
-    pub target_record: HashMap<i32, TargetRecord>,
+    pub target: HashMap<i32, TargetRecord>,
     pub user: HashMap<i32, AuthUserRecord>,
     pub user_group: HashMap<i32, AuthUserGroupRecord>,
-    pub pacemaker_configuration: HashMap<i32, PacemakerConfigurationRecord>,
-    pub volume: HashMap<i32, VolumeRecord>,
-    pub volume_node: HashMap<i32, VolumeNodeRecord>,
 }
 
 #[derive(Default, PartialEq, Clone, Debug)]
 pub struct ArcCache {
-    pub content_type: HashMap<i32, Arc<ContentTypeRecord>>,
-    pub corosync_configuration: HashMap<i32, Arc<CorosyncConfigurationRecord>>,
     pub corosync_resource: HashMap<i32, Arc<CorosyncResourceRecord>>,
     pub corosync_resource_ban: HashMap<i32, Arc<CorosyncResourceBanRecord>>,
-    pub active_alert: HashMap<i32, Arc<Alert>>,
+    pub active_alert: HashMap<i32, Arc<AlertState>>,
     pub filesystem: HashMap<i32, Arc<Filesystem>>,
     pub group: HashMap<i32, Arc<AuthGroupRecord>>,
     pub host: HashMap<i32, Arc<Host>>,
-    pub lnet_configuration: HashMap<i32, Arc<LnetConfigurationRecord>>,
+    pub lnet: HashMap<i32, Arc<Lnet>>,
     pub ost_pool: HashMap<i32, Arc<OstPoolRecord>>,
     pub ost_pool_osts: HashMap<i32, Arc<OstPoolOstsRecord>>,
-    pub pacemaker_configuration: HashMap<i32, Arc<PacemakerConfigurationRecord>>,
     pub sfa_disk_drive: HashMap<i32, Arc<SfaDiskDrive>>,
     pub sfa_enclosure: HashMap<i32, Arc<SfaEnclosure>>,
     pub sfa_storage_system: HashMap<i32, Arc<SfaStorageSystem>>,
@@ -146,12 +131,9 @@ pub struct ArcCache {
     pub snapshot_interval: HashMap<i32, Arc<SnapshotInterval>>,
     pub snapshot_retention: HashMap<i32, Arc<SnapshotRetention>>,
     pub stratagem_config: HashMap<i32, Arc<StratagemConfiguration>>,
-    pub target: HashMap<i32, Arc<ManagedTargetRecord>>,
-    pub target_record: HashMap<i32, Arc<TargetRecord>>,
+    pub target: HashMap<i32, Arc<TargetRecord>>,
     pub user: HashMap<i32, Arc<AuthUserRecord>>,
     pub user_group: HashMap<i32, Arc<AuthUserGroupRecord>>,
-    pub volume: HashMap<i32, Arc<VolumeRecord>>,
-    pub volume_node: HashMap<i32, Arc<VolumeNodeRecord>>,
 }
 
 impl Cache {
@@ -159,10 +141,6 @@ impl Cache {
     pub fn remove_record(&mut self, x: RecordId) -> Option<Record> {
         match x {
             RecordId::ActiveAlert(id) => self.active_alert.remove(&id).map(Record::ActiveAlert),
-            RecordId::CorosyncConfiguration(id) => self
-                .corosync_configuration
-                .remove(&id)
-                .map(Record::CorosyncConfiguration),
             RecordId::CorosyncResource(id) => self
                 .corosync_resource
                 .remove(&id)
@@ -174,17 +152,9 @@ impl Cache {
             RecordId::Filesystem(id) => self.filesystem.remove(&id).map(Record::Filesystem),
             RecordId::Group(id) => self.group.remove(&id).map(Record::Group),
             RecordId::Host(id) => self.host.remove(&id).map(Record::Host),
-            RecordId::LnetConfiguration(id) => self
-                .lnet_configuration
-                .remove(&id)
-                .map(Record::LnetConfiguration),
-            RecordId::ContentType(id) => self.content_type.remove(&id).map(Record::ContentType),
+            RecordId::Lnet(id) => self.lnet.remove(&id).map(Record::Lnet),
             RecordId::OstPool(id) => self.ost_pool.remove(&id).map(Record::OstPool),
             RecordId::OstPoolOsts(id) => self.ost_pool_osts.remove(&id).map(Record::OstPoolOsts),
-            RecordId::PacemakerConfiguration(id) => self
-                .pacemaker_configuration
-                .remove(&id)
-                .map(Record::PacemakerConfiguration),
             RecordId::SfaDiskDrive(id) => self.sfa_disk_drive.remove(&id).map(Record::SfaDiskDrive),
             RecordId::SfaEnclosure(id) => self.sfa_enclosure.remove(&id).map(Record::SfaEnclosure),
             RecordId::SfaStorageSystem(id) => self
@@ -213,11 +183,8 @@ impl Cache {
                 .remove(&id)
                 .map(Record::SnapshotRetention),
             RecordId::Target(id) => self.target.remove(&id).map(Record::Target),
-            RecordId::TargetRecord(id) => self.target_record.remove(&id).map(Record::TargetRecord),
             RecordId::User(id) => self.user.remove(&id).map(Record::User),
             RecordId::UserGroup(id) => self.user_group.remove(&id).map(Record::UserGroup),
-            RecordId::Volume(id) => self.volume.remove(&id).map(Record::Volume),
-            RecordId::VolumeNode(id) => self.volume_node.remove(&id).map(Record::VolumeNode),
         }
     }
     /// Inserts the record into the cache
@@ -225,9 +192,6 @@ impl Cache {
         match x {
             Record::ActiveAlert(x) => {
                 self.active_alert.insert(x.id, x);
-            }
-            Record::CorosyncConfiguration(x) => {
-                self.corosync_configuration.insert(x.id, x);
             }
             Record::CorosyncResource(x) => {
                 self.corosync_resource.insert(x.id, x);
@@ -244,20 +208,14 @@ impl Cache {
             Record::Group(x) => {
                 self.group.insert(x.id, x);
             }
-            Record::ContentType(x) => {
-                self.content_type.insert(x.id(), x);
-            }
-            Record::LnetConfiguration(x) => {
-                self.lnet_configuration.insert(x.id(), x);
+            Record::Lnet(x) => {
+                self.lnet.insert(x.id(), x);
             }
             Record::OstPool(x) => {
                 self.ost_pool.insert(x.id(), x);
             }
             Record::OstPoolOsts(x) => {
                 self.ost_pool_osts.insert(x.id(), x);
-            }
-            Record::PacemakerConfiguration(x) => {
-                self.pacemaker_configuration.insert(x.id, x);
             }
             Record::SfaDiskDrive(x) => {
                 self.sfa_disk_drive.insert(x.id(), x);
@@ -292,20 +250,11 @@ impl Cache {
             Record::Target(x) => {
                 self.target.insert(x.id, x);
             }
-            Record::TargetRecord(x) => {
-                self.target_record.insert(x.id, x);
-            }
             Record::User(x) => {
                 self.user.insert(x.id, x);
             }
             Record::UserGroup(x) => {
                 self.user_group.insert(x.id, x);
-            }
-            Record::Volume(x) => {
-                self.volume.insert(x.id, x);
-            }
-            Record::VolumeNode(x) => {
-                self.volume_node.insert(x.id(), x);
             }
         }
     }
@@ -314,8 +263,8 @@ impl Cache {
 /// A `Record` with it's concrete type erased.
 /// The returned item implements the `Label` and `EndpointName`
 /// traits.
-pub trait ErasedRecord: Label + EndpointNameSelf + Id + core::fmt::Debug {}
-impl<T: Label + EndpointNameSelf + Id + ToCompositeId + core::fmt::Debug> ErasedRecord for T {}
+pub trait ErasedRecord: Label + Id + fmt::Debug {}
+impl<T: Label + Id + ToCompositeId + fmt::Debug> ErasedRecord for T {}
 
 fn erase(x: Arc<impl ErasedRecord + 'static>) -> Arc<dyn ErasedRecord> {
     x
@@ -326,21 +275,14 @@ impl ArcCache {
     pub fn remove_record(&mut self, x: RecordId) -> bool {
         match x {
             RecordId::ActiveAlert(id) => self.active_alert.remove(&id).is_some(),
-            RecordId::CorosyncConfiguration(id) => {
-                self.corosync_configuration.remove(&id).is_some()
-            }
             RecordId::CorosyncResource(id) => self.corosync_resource.remove(&id).is_some(),
             RecordId::CorosyncResourceBan(id) => self.corosync_resource_ban.remove(&id).is_some(),
             RecordId::Filesystem(id) => self.filesystem.remove(&id).is_some(),
             RecordId::Group(id) => self.group.remove(&id).is_some(),
             RecordId::Host(id) => self.host.remove(&id).is_some(),
-            RecordId::ContentType(id) => self.content_type.remove(&id).is_some(),
-            RecordId::LnetConfiguration(id) => self.lnet_configuration.remove(&id).is_some(),
+            RecordId::Lnet(id) => self.lnet.remove(&id).is_some(),
             RecordId::OstPool(id) => self.ost_pool.remove(&id).is_some(),
             RecordId::OstPoolOsts(id) => self.ost_pool_osts.remove(&id).is_some(),
-            RecordId::PacemakerConfiguration(id) => {
-                self.pacemaker_configuration.remove(&id).is_some()
-            }
             RecordId::SfaDiskDrive(id) => self.sfa_disk_drive.remove(&id).is_some(),
             RecordId::SfaEnclosure(id) => self.sfa_enclosure.remove(&id).is_some(),
             RecordId::SfaStorageSystem(id) => self.sfa_storage_system.remove(&id).is_some(),
@@ -352,11 +294,8 @@ impl ArcCache {
             RecordId::SnapshotRetention(id) => self.snapshot_retention.remove(&id).is_some(),
             RecordId::StratagemConfig(id) => self.stratagem_config.remove(&id).is_some(),
             RecordId::Target(id) => self.target.remove(&id).is_some(),
-            RecordId::TargetRecord(id) => self.target_record.remove(&id).is_some(),
             RecordId::User(id) => self.user.remove(&id).is_some(),
             RecordId::UserGroup(id) => self.user_group.remove(&id).is_some(),
-            RecordId::Volume(id) => self.volume.remove(&id).is_some(),
-            RecordId::VolumeNode(id) => self.volume_node.remove(&id).is_some(),
         }
     }
     /// Inserts the record into the cache
@@ -364,9 +303,6 @@ impl ArcCache {
         match x {
             Record::ActiveAlert(x) => {
                 self.active_alert.insert(x.id, Arc::new(x));
-            }
-            Record::CorosyncConfiguration(x) => {
-                self.corosync_configuration.insert(x.id, Arc::new(x));
             }
             Record::CorosyncResource(x) => {
                 self.corosync_resource.insert(x.id, Arc::new(x));
@@ -383,20 +319,14 @@ impl ArcCache {
             Record::Host(x) => {
                 self.host.insert(x.id, Arc::new(x));
             }
-            Record::ContentType(x) => {
-                self.content_type.insert(x.id(), Arc::new(x));
-            }
-            Record::LnetConfiguration(x) => {
-                self.lnet_configuration.insert(x.id(), Arc::new(x));
+            Record::Lnet(x) => {
+                self.lnet.insert(x.id(), Arc::new(x));
             }
             Record::OstPool(x) => {
                 self.ost_pool.insert(x.id(), Arc::new(x));
             }
             Record::OstPoolOsts(x) => {
                 self.ost_pool_osts.insert(x.id(), Arc::new(x));
-            }
-            Record::PacemakerConfiguration(x) => {
-                self.pacemaker_configuration.insert(x.id, Arc::new(x));
             }
             Record::SfaDiskDrive(x) => {
                 self.sfa_disk_drive.insert(x.id(), Arc::new(x));
@@ -431,50 +361,22 @@ impl ArcCache {
             Record::Target(x) => {
                 self.target.insert(x.id, Arc::new(x));
             }
-            Record::TargetRecord(x) => {
-                self.target_record.insert(x.id, Arc::new(x));
-            }
             Record::User(x) => {
                 self.user.insert(x.id, Arc::new(x));
             }
             Record::UserGroup(x) => {
                 self.user_group.insert(x.id, Arc::new(x));
             }
-            Record::Volume(x) => {
-                self.volume.insert(x.id, Arc::new(x));
-            }
-            Record::VolumeNode(x) => {
-                self.volume_node.insert(x.id(), Arc::new(x));
-            }
         }
     }
     /// Given a `CompositeId`, returns an `ErasedRecord` if
     /// a matching one exists.
     pub fn get_erased_record(&self, composite_id: &CompositeId) -> Option<Arc<dyn ErasedRecord>> {
-        let content_type = self.content_type.get(&composite_id.0)?;
-
-        match content_type.model.as_ref() {
-            "managedfilesystem" => self.filesystem.get(&composite_id.1).cloned().map(erase),
-            "managedhost" => self.host.get(&composite_id.1).cloned().map(erase),
-            "lnetconfiguration" => self
-                .lnet_configuration
-                .get(&composite_id.1)
-                .cloned()
-                .map(erase),
-            "pacemakerconfiguration" => self
-                .pacemaker_configuration
-                .get(&composite_id.1)
-                .cloned()
-                .map(erase),
-            "corosync2configuration" => self
-                .corosync_configuration
-                .get(&composite_id.1)
-                .cloned()
-                .map(erase),
-            "managedtarget" | "managedost" | "managedmdt" | "managedmgt" | "managedmgs" => {
-                self.target.get(&composite_id.1).cloned().map(erase)
-            }
-            _ => None,
+        match &composite_id.0 {
+            ComponentType::Filesystem => self.filesystem.get(&composite_id.1).cloned().map(erase),
+            ComponentType::Host => self.host.get(&composite_id.1).cloned().map(erase),
+            ComponentType::Lnet => self.lnet.get(&composite_id.1).cloned().map(erase),
+            ComponentType::Target => self.target.get(&composite_id.1).cloned().map(erase),
         }
     }
 }
@@ -482,18 +384,15 @@ impl ArcCache {
 impl From<&Cache> for ArcCache {
     fn from(cache: &Cache) -> Self {
         Self {
-            content_type: hashmap_to_arc_hashmap(&cache.content_type),
-            corosync_configuration: hashmap_to_arc_hashmap(&cache.corosync_configuration),
             corosync_resource: hashmap_to_arc_hashmap(&cache.corosync_resource),
             corosync_resource_ban: hashmap_to_arc_hashmap(&cache.corosync_resource_ban),
             active_alert: hashmap_to_arc_hashmap(&cache.active_alert),
             filesystem: hashmap_to_arc_hashmap(&cache.filesystem),
             group: hashmap_to_arc_hashmap(&cache.group),
             host: hashmap_to_arc_hashmap(&cache.host),
-            lnet_configuration: hashmap_to_arc_hashmap(&cache.lnet_configuration),
+            lnet: hashmap_to_arc_hashmap(&cache.lnet),
             ost_pool: hashmap_to_arc_hashmap(&cache.ost_pool),
             ost_pool_osts: hashmap_to_arc_hashmap(&cache.ost_pool_osts),
-            pacemaker_configuration: hashmap_to_arc_hashmap(&cache.pacemaker_configuration),
             sfa_disk_drive: hashmap_to_arc_hashmap(&cache.sfa_disk_drive),
             sfa_enclosure: hashmap_to_arc_hashmap(&cache.sfa_enclosure),
             sfa_storage_system: hashmap_to_arc_hashmap(&cache.sfa_storage_system),
@@ -505,11 +404,8 @@ impl From<&Cache> for ArcCache {
             snapshot_retention: hashmap_to_arc_hashmap(&cache.snapshot_retention),
             stratagem_config: hashmap_to_arc_hashmap(&cache.stratagem_config),
             target: hashmap_to_arc_hashmap(&cache.target),
-            target_record: hashmap_to_arc_hashmap(&cache.target_record),
             user: hashmap_to_arc_hashmap(&cache.user),
             user_group: hashmap_to_arc_hashmap(&cache.user_group),
-            volume: hashmap_to_arc_hashmap(&cache.volume),
-            volume_node: hashmap_to_arc_hashmap(&cache.volume_node),
         }
     }
 }
@@ -517,18 +413,15 @@ impl From<&Cache> for ArcCache {
 impl From<&ArcCache> for Cache {
     fn from(cache: &ArcCache) -> Self {
         Self {
-            content_type: arc_hashmap_to_hashmap(&cache.content_type),
-            corosync_configuration: arc_hashmap_to_hashmap(&cache.corosync_configuration),
             corosync_resource: arc_hashmap_to_hashmap(&cache.corosync_resource),
             corosync_resource_ban: arc_hashmap_to_hashmap(&cache.corosync_resource_ban),
             active_alert: arc_hashmap_to_hashmap(&cache.active_alert),
             filesystem: arc_hashmap_to_hashmap(&cache.filesystem),
             group: arc_hashmap_to_hashmap(&cache.group),
             host: arc_hashmap_to_hashmap(&cache.host),
-            lnet_configuration: arc_hashmap_to_hashmap(&cache.lnet_configuration),
+            lnet: arc_hashmap_to_hashmap(&cache.lnet),
             ost_pool: arc_hashmap_to_hashmap(&cache.ost_pool),
             ost_pool_osts: arc_hashmap_to_hashmap(&cache.ost_pool_osts),
-            pacemaker_configuration: arc_hashmap_to_hashmap(&cache.pacemaker_configuration),
             sfa_disk_drive: arc_hashmap_to_hashmap(&cache.sfa_disk_drive),
             sfa_enclosure: arc_hashmap_to_hashmap(&cache.sfa_enclosure),
             sfa_storage_system: arc_hashmap_to_hashmap(&cache.sfa_storage_system),
@@ -540,11 +433,8 @@ impl From<&ArcCache> for Cache {
             snapshot_retention: arc_hashmap_to_hashmap(&cache.snapshot_retention),
             stratagem_config: arc_hashmap_to_hashmap(&cache.stratagem_config),
             target: arc_hashmap_to_hashmap(&cache.target),
-            target_record: arc_hashmap_to_hashmap(&cache.target_record),
             user: arc_hashmap_to_hashmap(&cache.user),
             user_group: arc_hashmap_to_hashmap(&cache.user_group),
-            volume: arc_hashmap_to_hashmap(&cache.volume),
-            volume_node: arc_hashmap_to_hashmap(&cache.volume_node),
         }
     }
 }
@@ -553,18 +443,15 @@ impl From<&ArcCache> for Cache {
 #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq)]
 #[serde(tag = "tag", content = "payload")]
 pub enum Record {
-    ActiveAlert(Alert),
-    ContentType(ContentTypeRecord),
-    CorosyncConfiguration(CorosyncConfigurationRecord),
+    ActiveAlert(AlertState),
     CorosyncResource(CorosyncResourceRecord),
     CorosyncResourceBan(CorosyncResourceBanRecord),
     Filesystem(Filesystem),
     Group(AuthGroupRecord),
     Host(Host),
-    LnetConfiguration(LnetConfigurationRecord),
+    Lnet(Lnet),
     OstPool(OstPoolRecord),
     OstPoolOsts(OstPoolOstsRecord),
-    PacemakerConfiguration(PacemakerConfigurationRecord),
     SfaDiskDrive(SfaDiskDrive),
     SfaEnclosure(SfaEnclosure),
     SfaStorageSystem(SfaStorageSystem),
@@ -575,28 +462,22 @@ pub enum Record {
     SnapshotInterval(SnapshotInterval),
     SnapshotRetention(SnapshotRetention),
     StratagemConfig(StratagemConfiguration),
-    Target(ManagedTargetRecord),
-    TargetRecord(TargetRecord),
+    Target(TargetRecord),
     User(AuthUserRecord),
     UserGroup(AuthUserGroupRecord),
-    Volume(VolumeRecord),
-    VolumeNode(VolumeNodeRecord),
 }
 
 #[derive(Debug, Clone)]
 pub enum ArcRecord {
-    ActiveAlert(Arc<Alert>),
-    ContentType(Arc<ContentTypeRecord>),
-    CorosyncConfiguration(Arc<CorosyncConfigurationRecord>),
+    ActiveAlert(Arc<AlertState>),
     CorosyncResource(Arc<CorosyncResourceRecord>),
     CorosyncResourceBan(Arc<CorosyncResourceBanRecord>),
     Filesystem(Arc<Filesystem>),
     Group(Arc<AuthGroupRecord>),
     Host(Arc<Host>),
-    LnetConfiguration(Arc<LnetConfigurationRecord>),
+    Lnet(Arc<Lnet>),
     OstPool(Arc<OstPoolRecord>),
     OstPoolOsts(Arc<OstPoolOstsRecord>),
-    PacemakerConfiguration(Arc<PacemakerConfigurationRecord>),
     SfaDiskDrive(Arc<SfaDiskDrive>),
     SfaEnclosure(Arc<SfaEnclosure>),
     SfaStorageSystem(Arc<SfaStorageSystem>),
@@ -607,29 +488,23 @@ pub enum ArcRecord {
     SnapshotInterval(Arc<SnapshotInterval>),
     SnapshotRetention(Arc<SnapshotRetention>),
     StratagemConfig(Arc<StratagemConfiguration>),
-    Target(Arc<ManagedTargetRecord>),
-    TargetRecord(Arc<TargetRecord>),
+    Target(Arc<TargetRecord>),
     User(Arc<AuthUserRecord>),
     UserGroup(Arc<AuthUserGroupRecord>),
-    Volume(Arc<VolumeRecord>),
-    VolumeNode(Arc<VolumeNodeRecord>),
 }
 
 impl From<Record> for ArcRecord {
     fn from(record: Record) -> Self {
         match record {
             Record::ActiveAlert(x) => Self::ActiveAlert(Arc::new(x)),
-            Record::ContentType(x) => Self::ContentType(Arc::new(x)),
-            Record::CorosyncConfiguration(x) => Self::CorosyncConfiguration(Arc::new(x)),
             Record::CorosyncResource(x) => Self::CorosyncResource(Arc::new(x)),
             Record::CorosyncResourceBan(x) => Self::CorosyncResourceBan(Arc::new(x)),
             Record::Filesystem(x) => Self::Filesystem(Arc::new(x)),
             Record::Group(x) => Self::Group(Arc::new(x)),
             Record::Host(x) => Self::Host(Arc::new(x)),
-            Record::LnetConfiguration(x) => Self::LnetConfiguration(Arc::new(x)),
+            Record::Lnet(x) => Self::Lnet(Arc::new(x)),
             Record::OstPool(x) => Self::OstPool(Arc::new(x)),
             Record::OstPoolOsts(x) => Self::OstPoolOsts(Arc::new(x)),
-            Record::PacemakerConfiguration(x) => Self::PacemakerConfiguration(Arc::new(x)),
             Record::SfaDiskDrive(x) => Self::SfaDiskDrive(Arc::new(x)),
             Record::SfaEnclosure(x) => Self::SfaEnclosure(Arc::new(x)),
             Record::SfaStorageSystem(x) => Self::SfaStorageSystem(Arc::new(x)),
@@ -641,11 +516,8 @@ impl From<Record> for ArcRecord {
             Record::SnapshotInterval(x) => Self::SnapshotInterval(Arc::new(x)),
             Record::SnapshotRetention(x) => Self::SnapshotRetention(Arc::new(x)),
             Record::Target(x) => Self::Target(Arc::new(x)),
-            Record::TargetRecord(x) => Self::TargetRecord(Arc::new(x)),
             Record::User(x) => Self::User(Arc::new(x)),
             Record::UserGroup(x) => Self::UserGroup(Arc::new(x)),
-            Record::Volume(x) => Self::Volume(Arc::new(x)),
-            Record::VolumeNode(x) => Self::VolumeNode(Arc::new(x)),
         }
     }
 }
@@ -654,17 +526,14 @@ impl From<Record> for ArcRecord {
 #[serde(tag = "tag", content = "payload")]
 pub enum RecordId {
     ActiveAlert(i32),
-    ContentType(i32),
-    CorosyncConfiguration(i32),
     CorosyncResource(i32),
     CorosyncResourceBan(i32),
     Filesystem(i32),
     Group(i32),
     Host(i32),
-    LnetConfiguration(i32),
+    Lnet(i32),
     OstPool(i32),
     OstPoolOsts(i32),
-    PacemakerConfiguration(i32),
     SfaDiskDrive(i32),
     SfaEnclosure(i32),
     SfaStorageSystem(i32),
@@ -676,28 +545,22 @@ pub enum RecordId {
     SnapshotInterval(i32),
     SnapshotRetention(i32),
     Target(i32),
-    TargetRecord(i32),
     User(i32),
     UserGroup(i32),
-    Volume(i32),
-    VolumeNode(i32),
 }
 
 impl From<&Record> for RecordId {
     fn from(record: &Record) -> Self {
         match record {
             Record::ActiveAlert(x) => RecordId::ActiveAlert(x.id),
-            Record::ContentType(x) => RecordId::ContentType(x.id),
-            Record::CorosyncConfiguration(x) => RecordId::CorosyncConfiguration(x.id),
             Record::CorosyncResource(x) => RecordId::CorosyncResource(x.id),
             Record::CorosyncResourceBan(x) => RecordId::CorosyncResourceBan(x.id),
             Record::Filesystem(x) => RecordId::Filesystem(x.id),
             Record::Group(x) => RecordId::Group(x.id),
             Record::Host(x) => RecordId::Host(x.id),
-            Record::LnetConfiguration(x) => RecordId::LnetConfiguration(x.id),
+            Record::Lnet(x) => RecordId::Lnet(x.id),
             Record::OstPool(x) => RecordId::OstPool(x.id),
             Record::OstPoolOsts(x) => RecordId::OstPoolOsts(x.id),
-            Record::PacemakerConfiguration(x) => RecordId::PacemakerConfiguration(x.id),
             Record::SfaDiskDrive(x) => RecordId::SfaDiskDrive(x.id),
             Record::SfaEnclosure(x) => RecordId::SfaEnclosure(x.id),
             Record::SfaStorageSystem(x) => RecordId::SfaStorageSystem(x.id),
@@ -709,11 +572,8 @@ impl From<&Record> for RecordId {
             Record::SnapshotInterval(x) => RecordId::SnapshotInterval(x.id),
             Record::SnapshotRetention(x) => RecordId::SnapshotRetention(x.id),
             Record::Target(x) => RecordId::Target(x.id),
-            Record::TargetRecord(x) => RecordId::TargetRecord(x.id),
             Record::User(x) => RecordId::User(x.id),
             Record::UserGroup(x) => RecordId::UserGroup(x.id),
-            Record::Volume(x) => RecordId::Volume(x.id),
-            Record::VolumeNode(x) => RecordId::VolumeNode(x.id),
         }
     }
 }
@@ -724,8 +584,6 @@ impl Deref for RecordId {
     fn deref(&self) -> &i32 {
         match self {
             Self::ActiveAlert(x)
-            | Self::ContentType(x)
-            | Self::CorosyncConfiguration(x)
             | Self::CorosyncResource(x)
             | Self::CorosyncResourceBan(x)
             | Self::Filesystem(x)
@@ -733,7 +591,6 @@ impl Deref for RecordId {
             | Self::Host(x)
             | Self::OstPool(x)
             | Self::OstPoolOsts(x)
-            | Self::PacemakerConfiguration(x)
             | Self::SfaDiskDrive(x)
             | Self::SfaEnclosure(x)
             | Self::SfaStorageSystem(x)
@@ -745,12 +602,9 @@ impl Deref for RecordId {
             | Self::SnapshotInterval(x)
             | Self::SnapshotRetention(x)
             | Self::Target(x)
-            | Self::TargetRecord(x)
             | Self::User(x)
             | Self::UserGroup(x)
-            | Self::Volume(x)
-            | Self::VolumeNode(x)
-            | Self::LnetConfiguration(x) => x,
+            | Self::Lnet(x) => x,
         }
     }
 }
@@ -768,7 +622,6 @@ pub enum RecordChange {
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 #[serde(tag = "tag", content = "payload")]
 pub enum Message {
-    Locks(Locks),
     Records(Cache),
     RecordChange(RecordChange),
 }
@@ -776,8 +629,8 @@ pub enum Message {
 #[cfg(test)]
 mod tests {
     use crate::{
-        db::{OstPoolOstsRecord, OstPoolRecord},
         warp_drive::{ArcCache, ArcValuesExt, Cache},
+        OstPoolOstsRecord, OstPoolRecord,
     };
     use std::sync::Arc;
 
@@ -793,12 +646,12 @@ mod tests {
         let rec1 = Arc::new(OstPoolOstsRecord {
             id: 1,
             ostpool_id: 1,
-            managedost_id: 1,
+            ost_id: 1,
         });
         let rec2 = Arc::new(OstPoolOstsRecord {
             id: 2,
             ostpool_id: 2,
-            managedost_id: 2,
+            ost_id: 2,
         });
         let rec18 = Arc::clone(&c1.ost_pool_osts.get(&18).unwrap());
         let rec19 = Arc::clone(&c1.ost_pool_osts.get(&19).unwrap());
@@ -840,8 +693,6 @@ mod tests {
                 id: 18,
                 name: "pool".to_string(),
                 filesystem_id: 1,
-                not_deleted: Some(true),
-                content_type_id: Some(41),
             },
         );
         cache.ost_pool_osts.insert(
@@ -849,7 +700,7 @@ mod tests {
             OstPoolOstsRecord {
                 id: 18,
                 ostpool_id: 18,
-                managedost_id: 13,
+                ost_id: 13,
             },
         );
         cache.ost_pool_osts.insert(
@@ -857,7 +708,7 @@ mod tests {
             OstPoolOstsRecord {
                 id: 19,
                 ostpool_id: 18,
-                managedost_id: 14,
+                ost_id: 14,
             },
         );
         cache

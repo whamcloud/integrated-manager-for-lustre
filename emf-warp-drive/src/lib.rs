@@ -6,7 +6,6 @@ pub mod cache;
 pub mod db_record;
 pub mod error;
 pub mod listen;
-pub mod locks;
 pub mod request;
 pub mod users;
 

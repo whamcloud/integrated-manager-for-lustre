@@ -2,7 +2,6 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use emf_wire_types::Command;
 use std::str::Utf8Error;
 use thiserror::Error;
 
@@ -64,8 +63,7 @@ pub enum EmfManagerCliError {
     EmfCmdError(#[from] emf_cmd::CmdError),
     CmdUtilError(#[from] emf_command_utils::CmdUtilError),
     CombineEasyError(combine::stream::easy::Errors<char, &'static str, usize>),
-    DoesNotExist(&'static str),
-    FailedCommandError(Vec<Command>),
+    DoesNotExist(String),
     FromUtf8Error(#[from] std::string::FromUtf8Error),
     Infallible(#[from] std::convert::Infallible),
     EmfGraphqlQueriesErrors(#[from] emf_graphql_queries::Errors),
@@ -93,14 +91,6 @@ impl std::fmt::Display for EmfManagerCliError {
             EmfManagerCliError::CmdUtilError(ref err) => write!(f, "{}", err),
             EmfManagerCliError::CombineEasyError(ref err) => write!(f, "{}", err),
             EmfManagerCliError::DoesNotExist(ref err) => write!(f, "{} does not exist", err),
-            EmfManagerCliError::FailedCommandError(ref xs) => {
-                let failed_msg = xs.iter().fold(
-                    String::from("The following commands have failed:\n"),
-                    |acc, x| format!("{}{}\n", acc, x.message),
-                );
-
-                write!(f, "{}", failed_msg)
-            }
             EmfManagerCliError::FromUtf8Error(ref err) => write!(f, "{}", err),
             EmfManagerCliError::EmfGraphqlQueriesErrors(ref err) => write!(f, "{}", err),
             EmfManagerCliError::Infallible(_) => {
@@ -137,11 +127,5 @@ impl std::error::Error for RunStratagemValidationError {
 impl From<combine::stream::easy::Errors<char, &str, usize>> for EmfManagerCliError {
     fn from(err: combine::stream::easy::Errors<char, &str, usize>) -> Self {
         EmfManagerCliError::CombineEasyError(err.map_range(|_| ""))
-    }
-}
-
-impl From<Vec<Command>> for EmfManagerCliError {
-    fn from(xs: Vec<Command>) -> Self {
-        EmfManagerCliError::FailedCommandError(xs)
     }
 }

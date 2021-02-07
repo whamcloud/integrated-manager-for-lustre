@@ -8,26 +8,24 @@ repository = "https://github.com/whamcloud/exascaler-management-framework/tree/m
 version = "0.4.0"
 
 [dependencies]
-async-trait = "0.1"
 byte-unit = "=2.1"
 bytes = "0.5"
 chrono = "0.4"
 combine = "=4.1.0"
 console = "0.12"
 device-types = {path = "../device-scanner/device-types", version = "0.3.0"}
-dns-lookup = "1"
 dotenv = "0.15"
-dyn-clone = "1"
 elementtree = "0.5"
-exitcode = "1.1"
-futures = "0.3"
-http = "0.2"
 emf-cmd = {path = "../emf-cmd", version = "0.4.0"}
 emf-fs = {path = "../emf-fs", version = "0.4.0"}
+emf-request-retry = {path = "../emf-request-retry", version = "0.4.0"}
 emf-systemd = {path = "../emf-systemd", version = "0.4.0"}
 emf-tracing = {version = "0.3", path = "../emf-tracing"}
 emf-util = {path = "../emf-util", version = "0.4.0"}
 emf-wire-types = {path = "../emf-wire-types", version = "0.4", features = ["cli"]}
+exitcode = "1.1"
+futures = "0.3"
+http = "0.2"
 inotify = "0.8"
 ipnetwork = "0.17"
 lazy_static = "1.4.0"
@@ -65,9 +63,45 @@ tempfile = "3.1.0"
 tokio = {version = "0.2", features = ["rt-threaded"]}
 
 [[bin]]
-name = "emf-agent-daemon"
-path = "src/main.rs"
-
-[[bin]]
 name = "emf-agent"
 path = "src/cli.rs"
+
+[[bin]]
+name = "emf-corosync-agent"
+path = "src/services/corosync-agent.rs"
+
+[[bin]]
+name = "emf-device-agent"
+path = "src/services/device-agent.rs"
+
+[[bin]]
+name = "emf-journal-agent"
+path = "src/services/journal-agent.rs"
+
+[[bin]]
+name = "emf-network-agent"
+path = "src/services/network-agent.rs"
+
+[[bin]]
+name = "emf-ntp-agent"
+path = "src/services/ntp-agent.rs"
+
+[[bin]]
+name = "emf-ostpool-agent"
+path = "src/services/ostpool-agent.rs"
+
+[[bin]]
+name = "emf-postoffice-agent"
+path = "src/services/postoffice-agent.rs"
+
+[[bin]]
+name = "emf-snapshot-agent"
+path = "src/services/snapshot-agent.rs"
+
+[[bin]]
+name = "emf-stats-agent"
+path = "src/services/stats-agent.rs"
+
+[[bin]]
+name = "emf-host-agent"
+path = "src/services/host-agent.rs"

@@ -1,0 +1,21 @@
+[Unit]
+Description=EMF Influx sidecar
+Before=influxdb.service
+Requires=influxdb.service
+PartOf=emf-manager.target
+
+[Service]
+EnvironmentFile=/etc/emf/bootstrap.conf
+EnvironmentFile=-/etc/emf/overrides.conf
+ExecStartPre=/bin/rm -f /tmp/kuma-al-influx-default.sock
+ExecStart=/root/kuma-1.0.6/bin/kuma-dp run \
+    --cp-address=https://${CP_ADDR}:5678 \
+    --dataplane-file=/etc/emf/dataplanes/influx.yml \
+    --dataplane-token-file=/etc/emf/tokens/dataplane-token \
+    --dataplane-var influx_port=${INFLUXDB_SERVICE_PORT} \
+    --dataplane-var mgmt_address=${MGMT_ADDR} \
+    --admin-port=
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal

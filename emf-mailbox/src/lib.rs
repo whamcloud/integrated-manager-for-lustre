@@ -48,13 +48,9 @@ pub fn line_stream<'a>() -> BoxedFilter<(BoxStream<'a, Result<String, warp::Reje
 }
 
 async fn get_task_by_name(x: impl ToString, pool: &PgPool) -> Result<Option<Task>, MailboxError> {
-    let x = sqlx::query_as!(
-        Task,
-        "SELECT * FROM chroma_core_task WHERE name = $1",
-        &x.to_string()
-    )
-    .fetch_optional(pool)
-    .await?;
+    let x = sqlx::query_as!(Task, "SELECT * FROM task WHERE name = $1", &x.to_string())
+        .fetch_optional(pool)
+        .await?;
 
     Ok(x)
 }
@@ -120,7 +116,7 @@ async fn insert_lines(
 
     sqlx::query!(
         r#"
-            INSERT INTO chroma_core_fidtaskqueue (fid, data, task_id)
+            INSERT INTO fidtaskqueue (fid, data, task_id)
             SELECT row(seq, oid, ver)::lustre_fid, data, $5
             FROM UNNEST($1::bigint[], $2::int[], $3::int[], $4::jsonb[])
             AS t(seq, oid, ver, data)"#,
@@ -169,7 +165,7 @@ pub async fn ingest_data(
 
     sqlx::query!(
         r#"
-        UPDATE chroma_core_task
+        UPDATE task
         SET fids_total = fids_total + $1
         WHERE id = $2
     "#,

@@ -1,0 +1,17 @@
+[Unit]
+Description=EMF Host Agent Service
+PartOf=emf-agent.target
+After=network.target
+Wants=emf-host-agent-sidecar.service
+After=emf-host-agent-sidecar.service
+
+[Service]
+Type=simple
+Environment=RUST_LOG=info
+EnvironmentFile=/etc/emf/bootstrap.conf
+EnvironmentFile=-/etc/emf/overrides.conf
+ExecStart=/bin/emf-host-agent
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal

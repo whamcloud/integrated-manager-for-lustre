@@ -45,7 +45,7 @@ The EMF Team typically uses [Vagrant](https://www.vagrantup.com) and [VirtualBox
    ```sh
    make docker-local
    ```
-   
+
 1. Setup ESUI
 
    ```sh

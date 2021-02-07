@@ -1,0 +1,20 @@
+[Unit]
+Description=EMF Corosync Agent Service
+PartOf=emf-agent.target
+After=network.target
+Wants=emf-corosync-agent-sidecar.service
+After=emf-corosync-agent-sidecar.service
+
+[Service]
+Type=simple
+Environment=RUST_LOG=info
+EnvironmentFile=/etc/emf/bootstrap.conf
+EnvironmentFile=-/etc/emf/overrides.conf
+ExecStart=/bin/emf-corosync-agent
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=emf-agent.target

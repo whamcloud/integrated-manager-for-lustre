@@ -1,0 +1,14 @@
+type: Dataplane
+mesh: default
+name: emf-host-agent-{{ node_id }}
+networking:
+  address: {{ mgmt_address }}
+  inbound:
+    - port: {{ host_agent_port }}
+      tags:
+        kuma.io/service: emf-host-agent-{{ node_id }}
+        kuma.io/protocol: http2
+  outbound:
+    - port: {{ host_agent_host_service_port }}
+      tags:
+        kuma.io/service: emf-host-service

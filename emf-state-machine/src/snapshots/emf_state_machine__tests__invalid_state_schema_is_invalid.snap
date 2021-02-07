@@ -1,6 +1,7 @@
 ---
 source: emf-state-machine/src/lib.rs
 expression: mk_err_str(errs)
+
 ---
 Invalid type.
 At instance path /version:

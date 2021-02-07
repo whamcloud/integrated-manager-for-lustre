@@ -1,0 +1,18 @@
+[Unit]
+Description=EMF Postoffice Agent Service
+PartOf=emf-agent.target
+After=network.target
+
+[Service]
+Type=simple
+Environment=RUST_LOG=info
+EnvironmentFile=/etc/emf/bootstrap.conf
+EnvironmentFile=-/etc/emf/overrides.conf
+ExecStart=/bin/emf-postoffice-agent
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=emf-agent.target

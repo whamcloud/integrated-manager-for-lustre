@@ -5,10 +5,8 @@
 use chrono_humanize::{Accuracy, HumanTime, Tense};
 use console::style;
 use emf_wire_types::{
-    db::TargetRecord,
-    graphql::ServerProfile,
     snapshot::{ReserveUnit, Snapshot, SnapshotInterval, SnapshotRetention},
-    Command, Filesystem, Host, OstPool, StratagemConfiguration, StratagemReport,
+    Filesystem, Host, OstPoolGraphql, StratagemConfigurationOutput, StratagemReport, TargetRecord,
 };
 use futures::{Future, FutureExt};
 use indicatif::ProgressBar;
@@ -23,20 +21,6 @@ pub fn wrap_fut<T>(msg: &str, fut: impl Future<Output = T>) -> impl Future<Outpu
     pb.set_message(msg);
 
     fut.inspect(move |_| pb.finish_and_clear())
-}
-
-pub fn format_cmd_state(cmd: &Command) -> String {
-    if cmd.errored {
-        format_error(format!("{} errored", cmd.message))
-    } else if cmd.cancelled {
-        format_cancelled(&format!("{} cancelled", cmd.message))
-    } else {
-        format_success(format!("{} successful", cmd.message))
-    }
-}
-
-pub fn display_cmd_state(cmd: &Command) {
-    println!("{}", format_cmd_state(&cmd));
 }
 
 pub fn format_cancelled(message: impl Display) -> String {
@@ -200,27 +184,28 @@ impl IntoTable for Vec<StratagemReport> {
 impl IntoTable for Vec<Host> {
     fn into_table(self) -> Table {
         generate_table(
-            &["Id", "FQDN", "State", "Nids"],
+            &["Id", "FQDN", "State", "Last Boot Time", "Machine Id"],
             self.into_iter().map(|h| {
                 vec![
                     h.id.to_string(),
                     h.fqdn,
                     h.state,
-                    h.nids.unwrap_or_default().join(" "),
+                    h.boot_time.to_rfc2822(),
+                    h.machine_id,
                 ]
             }),
         )
     }
 }
 
-impl IntoTable for Vec<StratagemConfiguration> {
+impl IntoTable for Vec<StratagemConfigurationOutput> {
     fn into_table(self) -> Table {
         generate_table(
             &["Id", "Filesystem", "State", "Interval", "Purge", "Report"],
             self.into_iter().map(|x| {
                 vec![
                     x.id.to_string(),
-                    x.filesystem,
+                    x.filesystem_id.to_string(),
                     x.state,
                     x.interval.to_string(),
                     x.purge_duration.map(|x| x.to_string()).unwrap_or_default(),
@@ -231,7 +216,7 @@ impl IntoTable for Vec<StratagemConfiguration> {
     }
 }
 
-impl IntoTable for Vec<OstPool> {
+impl IntoTable for Vec<OstPoolGraphql> {
     fn into_table(self) -> Table {
         generate_table(
             &["Filesystem", "Pool Name", "OST Count"],
@@ -241,38 +226,27 @@ impl IntoTable for Vec<OstPool> {
     }
 }
 
-impl IntoTable for Vec<Filesystem> {
+impl IntoTable for Vec<(Filesystem, emf_influx::filesystem::Response)> {
     fn into_table(self) -> Table {
         generate_table(
             &[
                 "Name", "State", "Space", "Inodes", "Clients", "MDTs", "OSTs",
             ],
-            self.into_iter().map(|x| {
+            self.into_iter().map(|(fs, x)| {
                 vec![
-                    x.label,
-                    x.state,
+                    fs.name,
+                    fs.state,
                     usage(
                         x.bytes_free.map(|x| x as u64),
                         x.bytes_total.map(|x| x as u64),
                         format_bytes,
                     ),
                     usage(x.files_free, x.files_total, format_number),
-                    format!("{}", x.client_count.unwrap_or(0)),
-                    x.mdts.len().to_string(),
-                    x.osts.len().to_string(),
+                    format!("{}", x.clients.unwrap_or(0)),
+                    fs.mdt_ids.len().to_string(),
+                    fs.ost_ids.len().to_string(),
                 ]
             }),
-        )
-    }
-}
-
-impl IntoTable for Vec<ServerProfile> {
-    fn into_table(self) -> Table {
-        generate_table(
-            &["Profile", "Name", "Description"],
-            self.into_iter()
-                .filter(|x| x.user_selectable)
-                .map(|x| vec![x.name, x.ui_name, x.ui_description]),
         )
     }
 }

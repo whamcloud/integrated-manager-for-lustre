@@ -1,0 +1,14 @@
+type: Dataplane
+mesh: default
+name: emf-ntp-service
+networking:
+  address: {{ mgmt_address }}
+  inbound:
+    - port: {{ ntp_service_port }}
+      tags:
+        kuma.io/service: emf-ntp-service
+        kuma.io/protocol: http2
+  outbound:
+    - port: {{ ntp_service_pg_port }}
+      tags:
+        kuma.io/service: postgres

@@ -3,15 +3,14 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    api_utils::{delete, get, get_all, get_one, post, put, wait_for_cmds_success},
+    api_utils::graphql,
     display_utils::{wrap_fut, DisplayType, IntoDisplayType as _},
     error::EmfManagerCliError,
 };
 use console::{style, Term};
-use emf_wire_types::{ApiList, Command, EndpointName, Filesystem, FlatQuery, OstPool, OstPoolApi};
-use futures::future::try_join_all;
+use emf_graphql_queries::ostpool as ostpool_queries;
+use emf_wire_types::{Command, OstPoolGraphql};
 use prettytable::{Row, Table};
-use std::iter::FromIterator;
 use structopt::StructOpt;
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
@@ -79,96 +78,28 @@ struct Target {
     name: String,
 }
 
-async fn pool_lookup(fsname: &str, poolname: &str) -> Result<OstPoolApi, EmfManagerCliError> {
-    let fs: Filesystem =
-        wrap_fut("Fetching Filesystem ...", get_one(vec![("name", fsname)])).await?;
+async fn get_pool(fsname: &str, poolname: &str) -> Result<OstPoolGraphql, EmfManagerCliError> {
+    let query = ostpool_queries::list::build(Some(fsname.into()), Some(poolname.into()));
+    let resp: emf_graphql_queries::Response<ostpool_queries::list::Resp> =
+        wrap_fut("Fetching OstPools...", graphql(query)).await?;
+    let xs: Vec<OstPoolGraphql> = Result::from(resp)?.data.ost_pool.list;
 
-    let mut pool: OstPoolApi = wrap_fut(
-        "Fetching OstPool...",
-        get_one(vec![
-            ("filesystem", fs.id.to_string().as_str()),
-            ("name", poolname),
-        ]),
-    )
-    .await?;
-
-    let osts: Vec<String> = try_join_all(pool.ost.osts.into_iter().map(|o| async move {
-        wrap_fut(
-            "Fetching OST...",
-            get(&o, vec![("limit", "0"), ("dehydrate__volume", "false")]),
-        )
-        .await
-        .map(|m: Target| m.name)
-    }))
-    .await?;
-    pool.ost.osts = osts;
-    Ok(pool)
+    xs.into_iter().next().ok_or_else(|| {
+        EmfManagerCliError::DoesNotExist(format!(
+            "Ostpool fs name:{}, pool name: {}",
+            fsname, poolname
+        ))
+    })
 }
 
 async fn ostpool_list(
     fsname: Option<String>,
     display_type: DisplayType,
 ) -> Result<(), EmfManagerCliError> {
-    let xs: Vec<OstPool> = match fsname {
-        Some(fsname) => {
-            let fs: Filesystem =
-                wrap_fut("Fetching Filesystem ...", get_one(vec![("name", &fsname)])).await?;
-
-            let pools: ApiList<OstPoolApi> = wrap_fut(
-                "Fetching OstPools...",
-                get(
-                    OstPoolApi::endpoint_name(),
-                    vec![("limit", 0), ("filesystem", fs.id)],
-                ),
-            )
-            .await?;
-
-            pools
-                .objects
-                .into_iter()
-                .map(|mut x| {
-                    x.ost.filesystem = fs.name.clone();
-                    x.ost
-                })
-                .collect()
-        }
-        None => {
-            let pools: ApiList<OstPoolApi> = wrap_fut("Fetching OstPools...", get_all()).await?;
-
-            let fs_ids = pools
-                .objects
-                .iter()
-                .filter_map(|p| {
-                    let id = emf_api_utils::extract_id(&p.ost.filesystem);
-
-                    id.map(|x| x.to_string())
-                })
-                .collect::<std::collections::HashSet<String>>();
-
-            let fs_ids = Vec::from_iter(fs_ids).join(",");
-
-            let mut query = Filesystem::query();
-
-            query.push(("id__in", &fs_ids));
-
-            let fs: ApiList<Filesystem> = get(Filesystem::endpoint_name(), query).await?;
-
-            pools
-                .objects
-                .into_iter()
-                .filter_map(move |mut p| {
-                    fs.objects
-                        .iter()
-                        .find(|f| f.resource_uri == p.ost.filesystem)
-                        .map(move |fs| {
-                            p.ost.filesystem = fs.name.clone();
-
-                            p.ost
-                        })
-                })
-                .collect()
-        }
-    };
+    let query = ostpool_queries::list::build(fsname, None);
+    let resp: emf_graphql_queries::Response<ostpool_queries::list::Resp> =
+        wrap_fut("Fetching OstPools...", graphql(query)).await?;
+    let xs: Vec<OstPoolGraphql> = Result::from(resp)?.data.ost_pool.list;
 
     let term = Term::stdout();
 
@@ -182,14 +113,14 @@ async fn ostpool_list(
 }
 
 async fn ostpool_show(fsname: String, poolname: String) -> Result<(), EmfManagerCliError> {
-    let mut pool = pool_lookup(&fsname, &poolname).await?;
+    let mut pool = get_pool(&fsname, &poolname).await?;
 
-    pool.ost.osts.sort_unstable();
+    pool.osts.sort_unstable();
 
     let mut table = Table::new();
     table.add_row(Row::from(&["Filesystem".to_string(), fsname]));
     table.add_row(Row::from(&["Name".to_string(), poolname]));
-    table.add_row(Row::from(&["OSTs".to_string(), pool.ost.osts.join("\n")]));
+    table.add_row(Row::from(&["OSTs".to_string(), pool.osts.join("\n")]));
     table.printstd();
 
     Ok(())
@@ -200,13 +131,11 @@ async fn ostpool_destroy(
     fsname: String,
     poolname: String,
 ) -> Result<(), EmfManagerCliError> {
-    let pool = pool_lookup(&fsname, &poolname).await?;
-    let resp = delete(&pool.resource_uri, "").await?;
-    term.write_line(&format!("{} ost pool...", style("Destroying").green()))?;
-    let objs: ObjCommands = resp.json().await?;
-    wait_for_cmds_success(&objs.commands).await?;
+    let pool = get_pool(&fsname, &poolname).await?;
 
-    Ok(())
+    term.write_line(&format!("{} ost pool...", style("Destroying").green()))?;
+
+    unimplemented!();
 }
 
 pub async fn ostpool_cli(command: OstPoolCommand) -> Result<(), EmfManagerCliError> {
@@ -223,19 +152,7 @@ pub async fn ostpool_cli(command: OstPoolCommand) -> Result<(), EmfManagerCliErr
             poolname,
             osts,
         } => {
-            let pool = OstPoolApi {
-                ost: OstPool {
-                    filesystem: fsname,
-                    name: poolname,
-                    osts,
-                },
-                ..Default::default()
-            };
-            let resp = post(OstPoolApi::endpoint_name(), pool).await?;
-
-            term.write_line(&format!("{} ost pool...", style("Creating").green()))?;
-            let objs: ObjCommand = resp.json().await?;
-            wait_for_cmds_success(&[objs.command]).await?;
+            unimplemented!();
         }
         OstPoolCommand::Destroy { fsname, poolname } => {
             ostpool_destroy(&term, fsname, poolname).await?;
@@ -245,36 +162,31 @@ pub async fn ostpool_cli(command: OstPoolCommand) -> Result<(), EmfManagerCliErr
             poolname,
             osts,
         } => {
-            let mut pool = pool_lookup(&fsname, &poolname).await?;
-            let mut newlist = pool.ost.osts;
+            let mut pool = get_pool(&fsname, &poolname).await?;
+            let mut newlist = pool.osts;
             newlist.extend(osts);
             newlist.sort();
             newlist.dedup();
-            pool.ost.osts = newlist;
+            pool.osts = newlist;
 
             tracing::debug!("POOL: {:?}", pool);
             term.write_line(&format!("{} ost pool...", style("Growing").green()))?;
-            let uri = pool.resource_uri.clone();
-            let resp = put(&uri, pool).await?;
-            let objs: ObjCommand = resp.json().await?;
-            wait_for_cmds_success(&[objs.command]).await?;
+
+            unimplemented!();
         }
         OstPoolCommand::Shrink {
             fsname,
             poolname,
             osts,
         } => {
-            let mut pool = pool_lookup(&fsname, &poolname).await?;
+            let mut pool = get_pool(&fsname, &poolname).await?;
 
-            pool.ost.osts.retain(|o| !osts.contains(o));
+            pool.osts.retain(|o| !osts.contains(o));
 
             tracing::debug!("POOL: {:?}", pool);
             term.write_line(&format!("{} ost pool...", style("Shrinking").green()))?;
-            let uri = pool.resource_uri.clone();
-            let resp = put(&uri, pool).await?;
 
-            let objs: ObjCommand = resp.json().await?;
-            wait_for_cmds_success(&[objs.command]).await?;
+            unimplemented!();
         }
     };
 

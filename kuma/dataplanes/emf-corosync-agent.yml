@@ -1,0 +1,14 @@
+type: Dataplane
+mesh: default
+name: emf-corosync-agent-{{ node_id }}
+networking:
+  address: {{ mgmt_address }}
+  inbound:
+    - port: {{ corosync_agent_port }}
+      tags:
+        kuma.io/service: emf-corosync-agent-{{ node_id }}
+        kuma.io/protocol: http2
+  outbound:
+    - port: {{ corosync_agent_corosync_service_port }}
+      tags:
+        kuma.io/service: emf-corosync-service

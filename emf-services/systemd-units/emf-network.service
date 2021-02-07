@@ -1,0 +1,19 @@
+[Unit]
+Description=EMF Network Service
+PartOf=emf-manager.target
+Wants=emf-network-sidecar.service
+After=emf-network-sidecar.service
+
+[Service]
+Type=simple
+Environment=RUST_LOG=info,sqlx::query=warn
+EnvironmentFile=/etc/emf/bootstrap.conf
+EnvironmentFile=-/etc/emf/overrides.conf
+ExecStart=/bin/emf-network
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=emf-manager.target

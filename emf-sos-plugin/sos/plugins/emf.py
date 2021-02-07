@@ -20,23 +20,7 @@ class EMF(Plugin, RedHatPlugin, UbuntuPlugin, DebianPlugin):
         all_logs = self.get_option("all_logs", default=False)
         tailit = self.get_option("tailit", default=False)
 
-        if all_logs:
-            copy_globs = [
-                "/var/log/chroma/",
-                "/var/log/chroma-agent*",
-            ]
-        else:
-            copy_globs = [
-                "/var/log/chroma/*.log",
-                "/var/log/chroma-agent*.log",
-            ]
-
-        copy_globs += [
-            "/etc/emf/*.conf",
-            "/var/lib/chroma/*.conf",
-            "/var/lib/chroma/settings/*",
-            "/var/lib/chroma/targets/*",
-        ]
+        copy_globs = ["/etc/emf/*.conf"]
 
         self.add_copy_spec(copy_globs, sizelimit=limit, tailit=tailit)
 
@@ -47,8 +31,6 @@ class EMF(Plugin, RedHatPlugin, UbuntuPlugin, DebianPlugin):
                 "emf filesystem list",
                 "emf filesystem pool list",
                 "emf-agent ha list",
-                "chroma-config validate",
-                "chroma-agent device_plugin --plugin=linux_network",
                 "lctl device_list",
                 "lctl debug_kernel",
                 "lctl list_nids",
@@ -60,13 +42,10 @@ class EMF(Plugin, RedHatPlugin, UbuntuPlugin, DebianPlugin):
         )
 
         time_stamp = datetime.now().strftime("%Y%m%dT%H%M%S")
-        db_file_name = "chromadb_%s.sql.gz" % time_stamp
+        db_file_name = "emfdb_%s.sql.gz" % time_stamp
         db_dest = path.join(self.get_cmd_output_path(), db_file_name)
 
-        cmd = (
-            "pg_dump -U chroma -F p -Z 9 -w -f %s -T chroma_core_logmessage* -T chroma_core_series* -T chroma_core_sample_* chroma"
-            % db_dest
-        )
+        cmd = "pg_dump -U emf -F p -Z 9 -w -f %s -T logmessage* emf" % db_dest
 
         self.add_cmd_output(cmd, chroot=self.tmp_in_sysroot())
 

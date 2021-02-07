@@ -21,7 +21,7 @@ pub async fn all(pool: &sqlx::PgPool) -> Result<Vec<SfaJob>, EmfSfaError> {
             job_type as "job_type: _",
             state as "state: _",
             storage_system
-        FROM chroma_core_sfajob
+        FROM sfajob
     "#
     )
     .fetch_all(pool)
@@ -35,7 +35,7 @@ pub async fn batch_upsert(x: Upserts<&SfaJob>, pool: sqlx::PgPool) -> Result<(),
 
     sqlx::query!(
         r#"
-        INSERT INTO chroma_core_sfajob
+        INSERT INTO sfajob
         (
             index,
             sub_target_index,
@@ -80,7 +80,7 @@ pub async fn batch_delete(xs: Deletions<&SfaJob>, pool: sqlx::PgPool) -> Result<
 
     sqlx::query!(
         r#"
-            DELETE from chroma_core_sfajob
+            DELETE from sfajob
             WHERE (index, storage_system)
             IN (
                 SELECT *

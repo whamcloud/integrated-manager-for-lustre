@@ -31,12 +31,10 @@ devices using udev and findmnt.
 %install
 mkdir -p %{buildroot}%{_bindir}
 mkdir -p %{buildroot}%{_unitdir}
-mkdir -p %{buildroot}%{_presetdir}
 mkdir -p %{buildroot}%{_sysconfdir}/udev/rules.d
 
 cp device-scanner.{target,socket,service} %{buildroot}%{_unitdir}
 cp block-device-populator.service %{buildroot}%{_unitdir}
-cp 00-device-scanner.preset %{buildroot}%{_presetdir}
 cp device-scanner-daemon %{buildroot}%{_bindir}
 
 cp 99-emf-device-scanner.rules %{buildroot}%{_sysconfdir}/udev/rules.d
@@ -56,7 +54,6 @@ cp swap-emitter %{buildroot}%{_bindir}
 %attr(0644,root,root)%{_unitdir}/mount-emitter.service
 %attr(0644,root,root)%{_unitdir}/mount-populator.service
 %attr(0644,root,root)%{_unitdir}/swap-emitter.service
-%attr(0644,root,root)%{_presetdir}/00-device-scanner.preset
 %attr(0644,root,root)%{_sysconfdir}/udev/rules.d/99-emf-device-scanner.rules
 %attr(0755,root,root)%{_bindir}/device-scanner-daemon
 %attr(0755,root,root)%{_bindir}/uevent-listener

@@ -4,9 +4,9 @@
 
 use emf_manager_env::get_pool_limit;
 use emf_postgres::{alert, get_db_pool, sqlx};
-use emf_service_queue::service_queue::consume_data;
-use emf_wire_types::{db::ManagedHostRecord, time::State, AlertRecordType, AlertSeverity};
-use futures::TryStreamExt;
+use emf_service_queue::spawn_service_consumer;
+use emf_wire_types::{time::State, AlertRecordType, AlertSeverity, ComponentType};
+use futures::StreamExt;
 
 // Default pool limit if not overridden by POOL_LIMIT
 const DEFAULT_POOL_LIMIT: u32 = 2;
@@ -15,26 +15,20 @@ const DEFAULT_POOL_LIMIT: u32 = 2;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     emf_tracing::init();
 
-    let pool = get_db_pool(get_pool_limit().unwrap_or(DEFAULT_POOL_LIMIT)).await?;
+    let pool = get_db_pool(
+        get_pool_limit().unwrap_or(DEFAULT_POOL_LIMIT),
+        emf_manager_env::get_port("NTP_SERVICE_PG_PORT"),
+    )
+    .await?;
 
-    let rabbit_pool = emf_rabbit::connect_to_rabbit(1);
+    let mut rx = spawn_service_consumer::<State>(emf_manager_env::get_port("NTP_SERVICE_PORT"));
 
-    let conn = emf_rabbit::get_conn(rabbit_pool).await?;
-
-    let ch = emf_rabbit::create_channel(&conn).await?;
-
-    let mut s = consume_data::<State>(&ch, "rust_agent_ntp_rx");
-
-    while let Some((fqdn, state)) = s.try_next().await? {
+    while let Some((fqdn, state)) = rx.next().await {
         tracing::debug!("fqdn: {:?} state: {:?}", fqdn, state);
 
-        let host: Option<ManagedHostRecord> = sqlx::query_as!(
-            ManagedHostRecord,
-            "select * from chroma_core_managedhost where fqdn = $1 and not_deleted = 't'",
-            fqdn.to_string()
-        )
-        .fetch_optional(&pool)
-        .await?;
+        let host = sqlx::query!("select * from host where fqdn = $1", fqdn.to_string())
+            .fetch_optional(&pool)
+            .await?;
 
         let host = match host {
             Some(x) => x,
@@ -71,18 +65,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 )
                 .await?;
 
-                if host.is_setup() {
-                    alert::raise(
-                        &pool,
-                        AlertRecordType::NoTimeSyncAlert,
-                        format!("No running time sync clients found on {}", fqdn),
-                        host.content_type_id.expect("Host has no content_type_id"),
-                        None,
-                        AlertSeverity::ERROR,
-                        host.id,
-                    )
-                    .await?;
-                }
+                alert::raise(
+                    &pool,
+                    AlertRecordType::NoTimeSyncAlert,
+                    format!("No running time sync clients found on {}", fqdn),
+                    ComponentType::Host,
+                    None,
+                    AlertSeverity::ERROR,
+                    host.id,
+                )
+                .await?;
             }
             State::Multiple => {
                 alert::lower(
@@ -96,18 +88,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 )
                 .await?;
 
-                if host.is_setup() {
-                    alert::raise(
-                        &pool,
-                        AlertRecordType::MultipleTimeSyncAlert,
-                        format!("Multiple running time sync clients found on {}", fqdn),
-                        host.content_type_id.expect("Host has no content_type_id"),
-                        None,
-                        AlertSeverity::ERROR,
-                        host.id,
-                    )
-                    .await?;
-                }
+                alert::raise(
+                    &pool,
+                    AlertRecordType::MultipleTimeSyncAlert,
+                    format!("Multiple running time sync clients found on {}", fqdn),
+                    ComponentType::Host,
+                    None,
+                    AlertSeverity::ERROR,
+                    host.id,
+                )
+                .await?;
             }
             State::Unsynced(_) => {
                 alert::lower(
@@ -121,18 +111,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 )
                 .await?;
 
-                if host.is_setup() {
-                    alert::raise(
-                        &pool,
-                        AlertRecordType::TimeOutOfSyncAlert,
-                        format!("Time is out of sync on server {}", fqdn),
-                        host.content_type_id.expect("Host has no content_type_id"),
-                        None,
-                        AlertSeverity::ERROR,
-                        host.id,
-                    )
-                    .await?;
-                }
+                alert::raise(
+                    &pool,
+                    AlertRecordType::TimeOutOfSyncAlert,
+                    format!("Time is out of sync on server {}", fqdn),
+                    ComponentType::Host,
+                    None,
+                    AlertSeverity::ERROR,
+                    host.id,
+                )
+                .await?;
             }
             State::Unknown => {
                 alert::lower(
@@ -146,18 +134,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 )
                 .await?;
 
-                if host.is_setup() {
-                    alert::raise(
-                        &pool,
-                        AlertRecordType::UnknownTimeSyncAlert,
-                        format!("Unable to determine time sync status on {}", fqdn),
-                        host.content_type_id.expect("Host has no content_type_id"),
-                        None,
-                        AlertSeverity::ERROR,
-                        host.id,
-                    )
-                    .await?;
-                }
+                alert::raise(
+                    &pool,
+                    AlertRecordType::UnknownTimeSyncAlert,
+                    format!("Unable to determine time sync status on {}", fqdn),
+                    ComponentType::Host,
+                    None,
+                    AlertSeverity::ERROR,
+                    host.id,
+                )
+                .await?;
             }
         };
     }

@@ -54,7 +54,7 @@ Description=Create snapshot on filesystem {}
 
 [Service]
 Type=oneshot
-EnvironmentFile=/var/lib/chroma/emf-settings.conf
+EnvironmentFile=/etc/emf/bootstrap.conf
 ExecStart={}
 "#,
         fsname,

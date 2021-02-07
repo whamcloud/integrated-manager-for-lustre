@@ -1,0 +1,10 @@
+type: Dataplane
+mesh: default
+name: influx
+networking:
+  address: {{ mgmt_address }}
+  inbound:
+    - port: {{ influx_port }}
+      tags:
+        kuma.io/service: influx
+        kuma.io/protocol: http

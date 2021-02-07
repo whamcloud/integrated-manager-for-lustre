@@ -3,14 +3,14 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    api_utils::{get_all, get_hosts, get_influx, get_one, graphql, put, wait_for_cmds_success},
+    api_utils::{get_filesystem, get_filesystems, get_hosts, get_influx, graphql},
     display_utils::{usage, wrap_fut, DisplayType, IntoDisplayType as _},
     error::EmfManagerCliError,
     ostpool::{ostpool_cli, OstPoolCommand},
 };
 use console::Term;
-use emf_graphql_queries::{client_mount, filesystem as fs_queries, target as target_queries};
-use emf_wire_types::{db::TargetKind, CmdWrapper, Filesystem};
+use emf_graphql_queries::{client_mount, target as target_queries};
+use emf_wire_types::TargetKind;
 use futures::future::{try_join, try_join5};
 use number_formatter::{format_bytes, format_number};
 use prettytable::{Row, Table};
@@ -42,9 +42,6 @@ pub enum FilesystemCommand {
         #[structopt(subcommand)]
         command: OstPoolCommand,
     },
-    /// Detect existing filesystem
-    #[structopt(name = "detect")]
-    Detect,
     /// Forget existing filesystem
     /// This will remove knowledge of the filesystem
     /// from the manager, but will not effect it on storage servers
@@ -65,79 +62,46 @@ fn option_sub(a: Option<u64>, b: Option<u64>) -> Option<u64> {
     Some(a?.saturating_sub(b?))
 }
 
-async fn detect_filesystem() -> Result<(), EmfManagerCliError> {
-    let query = fs_queries::detect::build();
-
-    let resp: emf_graphql_queries::Response<fs_queries::detect::Resp> =
-        wrap_fut("Detecting Filesystem...", graphql(query)).await?;
-
-    let _ = Result::from(resp)?;
-
-    let term = Term::stdout();
-
-    term.write_line("Detected Filesystems").unwrap();
-
-    Ok(())
-}
-
 async fn forget_filesystem(fsname: String) -> Result<(), EmfManagerCliError> {
-    let fs = wrap_fut(
-        "Fetching Filesystem...",
-        get_one::<Filesystem>(vec![("name", &fsname)]),
-    )
-    .await?;
+    let fs = get_filesystem(&fsname).await?;
 
-    let r = put(
-        &fs.resource_uri,
-        StateChange {
-            state: "forgotten".into(),
-        },
-    )
-    .await?
-    .error_for_status()?;
-
-    let CmdWrapper { command } = r.json().await?;
-
-    wait_for_cmds_success(&[command]).await?;
-
-    Ok(())
+    unimplemented!();
 }
 
 pub async fn filesystem_cli(command: FilesystemCommand) -> Result<(), EmfManagerCliError> {
     match command {
         FilesystemCommand::List { display_type } => {
-            let fut_fs = get_all::<Filesystem>();
+            let fut_fs = get_filesystems();
             let query = emf_influx::filesystems::query();
             let fut_st =
                 get_influx::<emf_influx::filesystems::InfluxResponse>("emf_stats", query.as_str());
 
-            let (mut filesystems, influx_resp) =
+            let (filesystems, influx_resp) =
                 wrap_fut("Fetching filesystems...", try_join(fut_fs, fut_st)).await?;
             let stats = emf_influx::filesystems::Response::from(influx_resp);
 
             tracing::debug!("FSs: {:?}", filesystems);
             tracing::debug!("Stats: {:?}", stats);
 
-            filesystems.objects.iter_mut().for_each(|x| {
-                let s = stats.get(&x.name).cloned().unwrap_or_default();
+            tracing::debug!(?filesystems);
 
-                x.bytes_free = s.bytes_free.map(|x| x as f64);
-                x.bytes_total = s.bytes_total.map(|x| x as f64);
-                x.files_free = s.files_free;
-                x.files_total = s.files_total;
-                x.client_count = s.clients;
-            });
+            let xs: Vec<_> = filesystems
+                .into_iter()
+                .map(|x| {
+                    let s = stats.get(&x.name).cloned().unwrap_or_default();
+
+                    (x, s)
+                })
+                .collect();
 
             let term = Term::stdout();
 
-            tracing::debug!("Filesystems: {:?}", filesystems);
-
-            let x = filesystems.objects.into_display_type(display_type);
+            let x = xs.into_display_type(display_type);
 
             term.write_line(&x).unwrap();
         }
         FilesystemCommand::Show { fsname } => {
-            let fut_fs = get_one::<Filesystem>(vec![("name", &fsname)]);
+            let fut_fs = get_filesystem(&fsname);
 
             let query = emf_influx::filesystem::query(&fsname);
             let fut_st =
@@ -184,7 +148,7 @@ pub async fn filesystem_cli(command: FilesystemCommand) -> Result<(), EmfManager
                             TargetKind::Mgt => {
                                 if let Some(x) = x
                                     .active_host_id
-                                    .and_then(|x| hosts.objects.iter().find(|y| y.id == x))
+                                    .and_then(|x| hosts.iter().find(|y| y.id == x))
                                     .map(|x| x.fqdn.as_str())
                                 {
                                     acc.0 = x;
@@ -198,7 +162,7 @@ pub async fn filesystem_cli(command: FilesystemCommand) -> Result<(), EmfManager
                     });
 
             Table::init(vec![
-                Row::from(&["Name".to_string(), fs.label]),
+                Row::from(&["Name".to_string(), fs.name]),
                 Row::from(&[
                     "Space Used/Avail".to_string(),
                     usage(
@@ -234,7 +198,6 @@ pub async fn filesystem_cli(command: FilesystemCommand) -> Result<(), EmfManager
             term.write_line(&cmd).unwrap();
         }
         FilesystemCommand::Pool { command } => ostpool_cli(command).await?,
-        FilesystemCommand::Detect => detect_filesystem().await?,
         FilesystemCommand::Forget { fs_name } => forget_filesystem(fs_name).await?,
     };
 

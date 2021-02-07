@@ -2,20 +2,14 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use emf_job_scheduler_rpc::EmfJobSchedulerRpcError;
 use emf_manager_client::EmfManagerClientError;
 use emf_postgres::sqlx;
-use emf_rabbit::{self, EmfRabbitError};
 use futures::channel::oneshot;
 use thiserror::Error;
 use warp::reject;
 
 #[derive(Debug, Error)]
 pub enum EmfApiError {
-    #[error(transparent)]
-    EmfJobSchedulerRpcError(#[from] EmfJobSchedulerRpcError),
-    #[error(transparent)]
-    EmfRabbitError(#[from] EmfRabbitError),
     #[error(transparent)]
     EmfManagerClientError(#[from] EmfManagerClientError),
     #[error("Not Found")]

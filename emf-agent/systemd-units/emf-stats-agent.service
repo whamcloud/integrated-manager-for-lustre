@@ -1,0 +1,17 @@
+[Unit]
+Description=EMF Stats Agent Service
+PartOf=emf-agent.target
+After=network.target
+Wants=emf-stats-agent-sidecar.service
+After=emf-stats-agent-sidecar.service
+
+[Service]
+Type=simple
+Environment=RUST_LOG=info
+EnvironmentFile=/etc/emf/bootstrap.conf
+EnvironmentFile=-/etc/emf/overrides.conf
+ExecStart=/bin/emf-stats-agent
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal

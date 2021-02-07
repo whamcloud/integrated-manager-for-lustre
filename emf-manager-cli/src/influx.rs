@@ -1,4 +1,4 @@
-// Copyright (c) 2020 DDN. All rights reserved.
+// Copyright (c) 2021 DDN. All rights reserved.
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
@@ -16,9 +16,9 @@ pub enum Command {
     /// Generate Influx config
     #[structopt(name = "generate-config", setting = structopt::clap::AppSettings::ColoredHelp)]
     GenerateConfig {
-        /// Address influx should bind to on startup
-        #[structopt(short = "p", long = "bindaddr", env = "INFLUXDB_HTTP_BIND_ADDRESS")]
-        bindaddr: String,
+        /// Port influx should bind to on startup
+        #[structopt(long, env = "INFLUXDB_SERVICE_PORT")]
+        bindport: u16,
     },
 
     /// Start necessary units
@@ -68,10 +68,14 @@ pub enum Command {
 
 pub async fn cli(command: Command) -> Result<(), EmfManagerCliError> {
     match command {
-        Command::GenerateConfig { bindaddr } => {
-            generate_config("/etc/default/influxdb", &bindaddr).await
+        Command::GenerateConfig { bindport } => {
+            generate_config("/etc/default/influxdb", bindport).await
         }
-        Command::Start => restart_unit("influxdb".to_string()).err_into().await,
+        Command::Start => {
+            restart_unit("influxdb.service".to_string())
+                .err_into()
+                .await
+        }
         Command::Setup {
             maindb,
             statdb,
@@ -112,16 +116,16 @@ pub async fn cli(command: Command) -> Result<(), EmfManagerCliError> {
 
 // Disable reporting
 // Disable influx http logging (of every write and every query)
-async fn generate_config(path: impl AsRef<Path>, bindaddr: &str) -> Result<(), EmfManagerCliError> {
+async fn generate_config(path: impl AsRef<Path>, bindport: u16) -> Result<(), EmfManagerCliError> {
     fs::write(
         path,
         format!(
             r#"INFLUXDB_DATA_QUERY_LOG_ENABLED=false
-INFLUXDB_HTTP_BIND_ADDRESS={}
+INFLUXDB_HTTP_BIND_ADDRESS=127.0.0.1:{}
 INFLUXDB_REPORTING_DISABLED=true
 INFLUXDB_HTTP_LOG_ENABLED=false
 "#,
-            bindaddr
+            bindport
         ),
     )
     .await?;

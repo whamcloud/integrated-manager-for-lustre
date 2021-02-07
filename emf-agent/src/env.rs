@@ -24,6 +24,12 @@ lazy_static! {
         Url::parse(&get_var("EMF_MANAGER_URL")).expect("Could not parse manager url");
 }
 
+pub fn get_port(name: &str) -> u16 {
+    get_var(name)
+        .parse::<u16>()
+        .expect(&format!("Could not parse {}", name))
+}
+
 fn get_private_pem_path() -> String {
     get_var("PRIVATE_PEM_PATH")
 }

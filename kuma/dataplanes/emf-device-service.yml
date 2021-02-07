@@ -1,0 +1,14 @@
+type: Dataplane
+mesh: default
+name: emf-device-service
+networking:
+  address: {{ mgmt_address }}
+  inbound:
+    - port: {{ device_service_port }}
+      tags:
+        kuma.io/service: emf-device-service
+        kuma.io/protocol: http2
+  outbound:
+    - port: {{ device_service_pg_port }}
+      tags:
+        kuma.io/service: postgres

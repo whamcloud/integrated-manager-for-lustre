@@ -5,13 +5,13 @@
 use emf_manager_cli::{
     api::{self, api_cli, graphql_cli},
     display_utils::display_error,
+    error::EmfManagerCliError,
     filesystem::{self, filesystem_cli},
     selfname,
     server::{self, server_cli},
     snapshot::{self, snapshot_cli},
     stratagem::{self, stratagem_cli},
     target::{self, target_cli},
-    update_repo_file::{self, update_repo_file_cli},
 };
 
 use std::process::exit;
@@ -51,10 +51,6 @@ pub enum App {
         #[structopt(subcommand)]
         command: target::TargetCommand,
     },
-    #[structopt(name = "update-repo")]
-    /// Update Agent repo files
-    UpdateRepoFile(update_repo_file::UpdateRepoFileHosts),
-
     #[structopt(name = "debugapi", setting = structopt::clap::AppSettings::Hidden)]
     /// Direct API Access (for testing and debug)
     DebugApi(api::ApiCommand),
@@ -74,6 +70,8 @@ pub enum App {
     },
 }
 
+static SETTINGS_FILE: &str = "/etc/emf/emf-settings.conf";
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     emf_tracing::init();
@@ -84,12 +82,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     tracing::debug!("Matching args {:?}", matches);
 
-    match matches {
-        App::Shell { .. } => (),
-        _ => dotenv::from_path("/etc/emf/emf-settings.conf")
-            .or_else(|_| dotenv::from_path("/etc/emf/emf-settings.conf"))
-            .or_else(|_| dotenv::from_path("/var/lib/chroma/emf-settings.conf"))
-            .expect("Could not load cli env"),
+    let r = match matches {
+        App::Shell { .. } => Ok(()),
+        _ => dotenv::from_path(SETTINGS_FILE).map_err(|_| {
+            EmfManagerCliError::ConfigError(format!(
+                "Could not load settings from {}",
+                SETTINGS_FILE
+            ))
+        }),
+    };
+
+    if let Err(e) = r {
+        display_error(e);
+        exit(1);
     }
 
     let r = match matches {
@@ -100,7 +105,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         App::Snapshot { command } => snapshot_cli(command).await,
         App::Stratagem { command } => stratagem_cli(command).await,
         App::Target { command } => target_cli(command).await,
-        App::UpdateRepoFile(config) => update_repo_file_cli(config).await,
         App::Shell { shell, exe, output } => {
             if let Some(out) = output {
                 let mut o = std::fs::File::create(out)?;

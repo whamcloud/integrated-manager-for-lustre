@@ -1,8 +1,7 @@
-NAME          := emf-manager
-MODULE_SUBDIR  = chroma_manager
-DEVELOP_DEPS  := version
-DEVELOP_POST  := ./manage.py dev_setup
-DIST_DEPS     := version $(COPR_REPO_TARGETS)
+# Copyright (c) 2021 DDN. All rights reserved.
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file.
+
 RPM_OPTS = -D "_topdir $(CURDIR)/_topdir"
 ifdef RPM_DIST
 	RPM_OPTS += -D "dist ${RPM_DIST}"
@@ -11,14 +10,6 @@ endif
 TMPDIR:=$(shell mktemp -d)
 TARGET:=$(or $(CARGO_TARGET_DIR),target)
 
-# SET MFL_COPR_REPO in .copr/Makefile
-TAGS_ARGS      := --exclude=chroma-manager/_topdir     \
-	          --exclude=chroma-\*/myenv\*              \
-	          --exclude=chroma_test_env                \
-	          --exclude=chroma-manager/chroma_test_env \
-	          --exclude=chroma_unit_test_env           \
-	          --exclude=workspace
-
 # Always nuke the DB when running tests?
 ALWAYS_NUKE_DB ?= false
 
@@ -26,45 +17,14 @@ ALWAYS_NUKE_DB ?= false
 ALWAYS_NUKE_LOGS ?= false
 
 # Misc test config
-DB_NAME ?= chroma
+DB_NAME ?= emf
 DB_USER ?= $(DB_NAME)
 
-# Test runner options
-NOSE_ARGS ?= --stop
-
-all: rust-core-rpms device-scanner-rpms emf-gui-rpm docker-rpms
-
-MFL_COPR_REPO=managerforlustre/manager-for-lustre-devel
-MFL_REPO_OWNER := $(firstword $(subst /, ,$(MFL_COPR_REPO)))
-MFL_REPO_NAME  := $(word 2,$(subst /, ,$(MFL_COPR_REPO)))
-MFL_COPR_NAME  := $(MFL_REPO_OWNER)-$(MFL_REPO_NAME)
-
-# Files needing substitutions for MFL_COPR/REPO_*
-SUBSTS_SHELL := tests/framework/services/runner.sh
-SUBSTS_REPOS := base.repo chroma_support.repo tests/framework/chroma_support.repo
-
-SUBSTS := $(SUBSTS_SHELL) $(SUBSTS_REPOS)
-
-base.repo: base.repo.in Makefile
-
-chroma_support.repo: tests/framework/chroma_support.repo.in Makefile
-
-tests/framework/chroma_support.repo: tests/framework/chroma_support.repo.in Makefile
+all: rust-core-rpms device-scanner-rpms emf-gui-rpm
 
 tests/framework/utils/defaults.sh: tests/framework/utils/defaults.sh.in Makefile
 
 tests/framework/services/runner.sh: tests/framework/services/runner.sh.in Makefile
-
-$(SUBSTS):
-	sed -e 's/@MFL_COPR_REPO@/$(subst /,\/,$(MFL_COPR_REPO))/g' \
-	    -e 's/@MFL_COPR_NAME@/$(MFL_COPR_NAME)/g'               \
-	    -e 's/@MFL_REPO_OWNER@/$(MFL_REPO_OWNER)/g'             \
-	    -e 's/@MFL_REPO_NAME@/$(MFL_REPO_NAME)/g' < $< > $@
-
-substs: $(SUBSTS)
-	chmod +x $(SUBSTS_SHELL)
-
-base.repo: base.repo.in Makefile
 
 rpm-repo-docker:
 	docker run --mount type=volume,src=sccache,dst=/.cache/sccache --mount type=volume,src=rust-core-registry,dst=/root/.cargo/registry -v '${CURDIR}:/build:rw' emfteam/emf-centos7-deps make all
@@ -79,8 +39,6 @@ check:
 	cargo clippy -- -W warnings
 	cargo check --locked --manifest-path emf-system-rpm-tests/Cargo.toml --tests
 	cargo clippy --manifest-path emf-system-rpm-tests/Cargo.toml --tests -- -W warnings
-	cargo check --locked --manifest-path emf-system-docker-tests/Cargo.toml --tests
-	cargo clippy --manifest-path emf-system-docker-tests/Cargo.toml --tests -- -W warnings
 	cargo check --locked --manifest-path emf-gui/crate/Cargo.toml --tests
 	cargo clippy --manifest-path emf-gui/crate/Cargo.toml --tests -- -W warnings
 
@@ -88,7 +46,6 @@ fmt:
 	black ./
 	cargo fmt --all
 	cargo fmt --all --manifest-path emf-system-rpm-tests/Cargo.toml
-	cargo fmt --all --manifest-path emf-system-docker-tests/Cargo.toml
 	cargo fmt --all --manifest-path emf-gui/crate/Cargo.toml
 
 .PHONY: deb deb-repo
@@ -123,52 +80,35 @@ sos-rpm:
 rust-core-rpms:
 	mkdir -p ${TMPDIR}/release/rust-core
 	cargo build --release
-	cp ${TARGET}/release/emf-{action-runner,agent,agent-comms,agent-daemon,api,corosync,device,journal,mailbox,network,ntp,ostpool,postoffice,report,sfa,snapshot,stats,task-runner,warp-drive,timer} \
-		emf-action-runner.service \
-		emf-action-runner.socket \
-		emf-agent-comms.service \
-		emf-agent/systemd-units/* \
+	cp ${TARGET}/release/emf-{agent,api,corosync,device,host,journal,mailbox,network,ntp,ostpool,report,sfa,snapshot,stats,task-runner,warp-drive,timer,device-agent,corosync-agent,host-agent,journal-agent,network-agent,ntp-agent,ostpool-agent,postoffice-agent,snapshot-agent,stats-agent} \
 		emf-api.service \
-		emf-device.service \
-		emf-journal.service \
 		emf-mailbox.service \
-		emf-network.service \
-		emf-ntp.service \
-		emf-ostpool.service \
-		emf-postoffice.service \
 		emf-report.conf \
 		emf-report.service \
-		emf-rust-corosync.service \
-		emf-rust-stats.service \
 		emf-sfa.service \
-		emf-snapshot.service \
 		emf-task-runner.service \
 		emf-timer.service \
 		emf-warp-drive/systemd-units/* \
+		emf-services/systemd-units/* \
+		emf-manager-redirect.conf \
+		emf-manager.target \
+		bootstrap.conf \
+		nginx/emf-gateway.conf.template \
 		${TMPDIR}/release/rust-core
+	cp emf-agent/tmpfiles.conf ${TMPDIR}/release/rust-core
 	cp ${TARGET}/release/emf ${TMPDIR}/release/rust-core
 	cp ${TARGET}/release/emf-config ${TMPDIR}/release/rust-core
+	cp -rf grafana ${TMPDIR}/release/rust-core
+	cp -rf nginx ${TMPDIR}/release/rust-core
+	cp -rf kuma ${TMPDIR}/release/rust-core
+	
+	mkdir -p ${TMPDIR}/release/rust-core/emf-agent-units
+	cp -rf emf-agent/systemd-units ${TMPDIR}/release/rust-core/emf-agent-units
 	mkdir -p ${TMPDIR}/_topdir/{SOURCES,SPECS}
 	tar -czvf ${TMPDIR}/_topdir/SOURCES/rust-core.tar.gz -C ${TMPDIR}/release/rust-core .
 	cp rust-emf.spec ${TMPDIR}/_topdir/SPECS/
 	rpmbuild -bb ${RPM_OPTS} -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/_topdir/SPECS/rust-emf.spec
 	rm -rf ${TMPDIR}/_topdir/SOURCES/*
-	cp -rf ${TMPDIR}/_topdir .
-	rm -rf ${TMPDIR}
-
-docker-rpms:
-	$(MAKE) -C docker save
-	mkdir -p ${TMPDIR}/_topdir/{SOURCES,SPECS}
-	mkdir -p ${TMPDIR}/scratch/emf-docker
-
-	cp -r docker/{docker-compose.yml,emf-images.tgz,update-embedded.sh,copy-embedded-settings} ${TMPDIR}/scratch/emf-docker/
-	cp emf-docker.service ${TMPDIR}/scratch/emf-docker/
-	tar -czvf ${TMPDIR}/_topdir/SOURCES/emf-docker.tar.gz -C ${TMPDIR}/scratch/emf-docker .
-
-	cp emf-docker.spec ${TMPDIR}/_topdir/SPECS/
-	rpmbuild -bb ${RPM_OPTS} -D "_topdir ${TMPDIR}/_topdir" ${TMPDIR}/_topdir/SPECS/emf-docker.spec
-
-	rm -rf ${TMPDIR}/_topdir/{SOURCES,SPECS}/*
 	cp -rf ${TMPDIR}/_topdir .
 	rm -rf ${TMPDIR}
 
@@ -207,8 +147,7 @@ nuke_db:
 	createdb -O $(DB_USER) $(DB_NAME)
 
 migrate_db:
-	psql chroma -c "CREATE EXTENSION IF NOT EXISTS btree_gist;"
-	@./manage.py migrate
+	psql $(DB_USER) -c "CREATE EXTENSION IF NOT EXISTS btree_gist;"
 	cargo sqlx migrate run
 
 sqlx-data.json:
@@ -220,24 +159,3 @@ nuke_logs:
 		rm -f $(CURDIR)/*{.,_}log; \
 	} || true
 
-dev_setup: nuke_db nuke_logs
-	@./manage.py dev_setup || exit $$?
-
-service_tests: dev_setup
-	@echo "Running service tests..."
-	@PYTHONPATH=. nosetests $(NOSE_ARGS) tests/services 2>&1 | tee test-services.log; \
-	exit $${PIPESTATUS[0]}
-
-unit_tests unit-tests:
-	@echo "Running standard unit tests..."
-	@./manage.py test $(NOSE_ARGS) tests/unit 2>&1 | tee unit.log; \
-	exit $${PIPESTATUS[0]}
-
-tests test: unit_tests service_tests
-
-clean_substs:
-	if [ -n "$(SUBSTS)" ]; then \
-	    rm -f $(SUBSTS);        \
-	fi
-
-.PHONY: substs

@@ -1,0 +1,22 @@
+[Unit]
+Description=EMF network agent sidecar
+Requires=emf-network-agent.service
+PartOf=emf-network-agent.service
+
+[Service]
+EnvironmentFile=/etc/emf/bootstrap.conf
+EnvironmentFile=-/etc/emf/overrides.conf
+ExecStartPre=/bin/rm -f /tmp/kuma-al-emf-network-agent-*-default.sock
+ExecStart=/root/kuma-1.0.6/bin/kuma-dp run \
+    --cp-address=https://${CP_ADDR}:5678 \
+    --dataplane-file=/etc/emf/dataplanes/emf-network-agent.yml \
+    --dataplane-token-file=/etc/emf/tokens/dataplane-token \
+    --dataplane-var network_agent_port=${NETWORK_AGENT_PORT} \
+    --dataplane-var mgmt_address=${MGMT_ADDR} \
+    --dataplane-var network_agent_network_service_port=${NETWORK_AGENT_NETWORK_SERVICE_PORT} \
+    --dataplane-var node_id=%m \
+    --admin-port=
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal

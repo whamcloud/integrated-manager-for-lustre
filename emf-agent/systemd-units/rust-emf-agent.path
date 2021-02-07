@@ -1,9 +1,0 @@
-[Unit]
-Description=Rust EMF Agent path detection
-PartOf=emf-storage-server.target
-
-[Path]
-PathExists=/etc/emf/manager-url.conf
-
-[Install]
-WantedBy=emf-storage-server.target

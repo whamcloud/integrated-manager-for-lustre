@@ -1,0 +1,18 @@
+[Unit]
+Description=EMF Network Agent Service
+PartOf=emf-agent.target
+After=network.target
+Wants=emf-network-agent-sidecar.service
+After=emf-network-agent-sidecar.service
+
+[Service]
+Type=simple
+Environment=RUST_LOG=info
+EnvironmentFile=/etc/emf/bootstrap.conf
+EnvironmentFile=-/etc/emf/overrides.conf
+ExecStart=/bin/emf-network-agent
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+

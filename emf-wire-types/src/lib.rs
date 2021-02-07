@@ -2,22 +2,37 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+pub mod alert;
 pub mod client;
+pub mod corosync;
 pub mod db;
+pub mod filesystem;
 pub mod graphql_duration;
 pub mod high_availability;
+pub mod host;
+pub mod lnet;
+pub mod ost_pool;
 pub mod sfa;
 pub mod snapshot;
+pub mod state_machine;
 pub mod stratagem;
+pub mod target;
 pub mod task;
 pub mod warp_drive;
 
+pub use alert::*;
 use chrono::{DateTime, Utc};
+pub use corosync::*;
 use db::LogMessageRecord;
+pub use filesystem::*;
+pub use host::*;
 use ipnetwork::{Ipv4Network, Ipv6Network};
+pub use lnet::*;
+pub use ost_pool::*;
+pub use state_machine::*;
 use std::{
     cmp::{Ord, Ordering},
-    collections::{BTreeMap, BTreeSet, HashMap},
+    collections::{BTreeMap, HashMap},
     convert::TryFrom,
     convert::TryInto,
     fmt, io,
@@ -25,6 +40,22 @@ use std::{
     ops::Deref,
     sync::Arc,
 };
+pub use stratagem::*;
+pub use target::*;
+
+#[cfg_attr(feature = "postgres-interop", derive(sqlx::Type))]
+#[cfg_attr(feature = "postgres-interop", sqlx(rename = "component"))]
+#[cfg_attr(feature = "postgres-interop", sqlx(rename_all = "lowercase"))]
+#[serde(rename_all = "lowercase")]
+#[derive(
+    PartialEq, Eq, Clone, Copy, Debug, serde::Serialize, serde::Deserialize, Ord, PartialOrd, Hash,
+)]
+pub enum ComponentType {
+    Host,
+    Filesystem,
+    Lnet,
+    Target,
+}
 
 #[derive(Eq, PartialEq, Hash, Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[serde(transparent)]
@@ -84,119 +115,55 @@ impl fmt::Display for Fqdn {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
-#[serde(transparent)]
-pub struct Id(pub String);
+impl Deref for Fqdn {
+    type Target = str;
 
-impl From<&str> for Id {
-    fn from(name: &str) -> Self {
-        Self(name.into())
+    fn deref(&self) -> &Self::Target {
+        self.0.as_str()
     }
 }
 
-impl fmt::Display for Id {
+#[derive(
+    Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Clone, serde::Serialize, serde::Deserialize,
+)]
+#[serde(transparent)]
+pub struct MachineId(pub String);
+
+impl From<MachineId> for String {
+    fn from(MachineId(s): MachineId) -> Self {
+        s
+    }
+}
+
+impl From<&str> for MachineId {
+    fn from(s: &str) -> Self {
+        Self(s.into())
+    }
+}
+
+impl From<&String> for MachineId {
+    fn from(s: &String) -> Self {
+        Self(s.as_str().into())
+    }
+}
+
+impl From<String> for MachineId {
+    fn from(s: String) -> Self {
+        Self(s)
+    }
+}
+
+impl fmt::Display for MachineId {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.0)
     }
 }
 
-/// The payload from the agent.
-/// One or many can be packed into an `Envelope`
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
-#[serde(tag = "type")]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum Message {
-    Data {
-        fqdn: Fqdn,
-        plugin: PluginName,
-        session_id: Id,
-        session_seq: u64,
-        body: serde_json::Value,
-    },
-    SessionCreateRequest {
-        fqdn: Fqdn,
-        plugin: PluginName,
-    },
-}
+impl Deref for MachineId {
+    type Target = str;
 
-/// `Envelope` of `Messages` sent to the manager.
-#[derive(serde::Serialize, serde::Deserialize, Debug)]
-pub struct Envelope {
-    pub messages: Vec<Message>,
-    pub server_boot_time: String,
-    pub client_start_time: String,
-}
-
-impl Envelope {
-    pub fn new(
-        messages: Vec<Message>,
-        client_start_time: impl Into<String>,
-        server_boot_time: impl Into<String>,
-    ) -> Self {
-        Self {
-            messages,
-            server_boot_time: server_boot_time.into(),
-            client_start_time: client_start_time.into(),
-        }
-    }
-}
-
-#[derive(serde::Deserialize, serde::Serialize, Debug)]
-#[serde(tag = "type")]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum ManagerMessage {
-    SessionCreateResponse {
-        fqdn: Fqdn,
-        plugin: PluginName,
-        session_id: Id,
-    },
-    Data {
-        fqdn: Fqdn,
-        plugin: PluginName,
-        session_id: Id,
-        body: serde_json::Value,
-    },
-    SessionTerminate {
-        fqdn: Fqdn,
-        plugin: PluginName,
-        session_id: Id,
-    },
-    SessionTerminateAll {
-        fqdn: Fqdn,
-    },
-}
-
-#[derive(serde::Deserialize, serde::Serialize, Debug)]
-pub struct ManagerMessages {
-    pub messages: Vec<ManagerMessage>,
-}
-
-#[derive(serde::Deserialize, serde::Serialize, Debug)]
-#[serde(tag = "type")]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum PluginMessage {
-    SessionTerminate {
-        fqdn: Fqdn,
-        plugin: PluginName,
-        session_id: Id,
-    },
-    SessionCreate {
-        fqdn: Fqdn,
-        plugin: PluginName,
-        session_id: Id,
-    },
-    Data {
-        fqdn: Fqdn,
-        plugin: PluginName,
-        session_id: Id,
-        session_seq: u64,
-        body: serde_json::Value,
-    },
-}
-
-pub trait FlatQuery {
-    fn query() -> Vec<(&'static str, &'static str)> {
-        vec![("limit", "0")]
+    fn deref(&self) -> &Self::Target {
+        self.0.as_str()
     }
 }
 
@@ -322,44 +289,31 @@ impl<T: serde::Serialize> ToBytes for T {
 pub struct TaskAction(pub String, pub HashMap<String, String>, pub Vec<FidItem>);
 
 #[derive(
-    serde::Serialize, serde::Deserialize, Clone, Debug, Eq, PartialEq, PartialOrd, Ord, Hash,
+    serde::Serialize, serde::Deserialize, Clone, Copy, Debug, Eq, PartialEq, PartialOrd, Ord, Hash,
 )]
-#[serde(try_from = "String")]
-#[serde(into = "String")]
-pub struct CompositeId(pub i32, pub i32);
+pub struct CompositeId(pub ComponentType, pub i32);
 
 impl fmt::Display for CompositeId {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}:{}", self.0, self.1)
-    }
-}
-
-impl From<CompositeId> for String {
-    fn from(x: CompositeId) -> Self {
-        format!("{}", x)
-    }
-}
-
-impl TryFrom<String> for CompositeId {
-    type Error = Box<dyn std::error::Error>;
-
-    fn try_from(s: String) -> Result<Self, Self::Error> {
-        let xs: Vec<_> = s.split(':').collect();
-
-        if xs.len() != 2 {
-            return Err("Could not convert to CompositeId, String did not contain 2 parts.".into());
-        }
-
-        let x = xs[0].parse::<i32>()?;
-        let y = xs[1].parse::<i32>()?;
-
-        Ok(Self(x, y))
+        write!(f, "{:?}:{}", self.0, self.1)
     }
 }
 
 pub trait ToCompositeId {
     fn composite_id(&self) -> CompositeId;
 }
+
+impl<T: db::Id + ToComponentType> ToCompositeId for T {
+    fn composite_id(&self) -> CompositeId {
+        CompositeId(self.component_type(), self.id())
+    }
+}
+
+/// A `Record` with it's concrete type erased.
+/// The returned item implements the `Label` and `EndpointName`
+/// traits.
+pub trait ErasedRecord: Label + db::Id + core::fmt::Debug {}
+impl<T: Label + db::Id + ToCompositeId + core::fmt::Debug> ErasedRecord for T {}
 
 impl<T: ToCompositeId> ToCompositeId for &Arc<T> {
     fn composite_id(&self) -> CompositeId {
@@ -377,88 +331,12 @@ impl<T: ToCompositeId> ToCompositeId for Arc<T> {
     }
 }
 
+pub trait ToComponentType {
+    fn component_type(&self) -> ComponentType;
+}
+
 pub trait Label {
     fn label(&self) -> &str;
-}
-
-pub trait EndpointName {
-    fn endpoint_name() -> &'static str;
-}
-
-pub trait EndpointNameSelf {
-    fn endpoint_name(&self) -> &'static str;
-}
-
-impl<T: EndpointName> EndpointNameSelf for T {
-    fn endpoint_name(&self) -> &'static str {
-        Self::endpoint_name()
-    }
-}
-
-/// The type of lock
-#[derive(serde::Deserialize, serde::Serialize, Clone, Debug, Eq, PartialEq, Hash)]
-#[serde(rename_all = "lowercase")]
-pub enum LockType {
-    Read,
-    Write,
-}
-
-/// The Action associated with a `LockChange`
-#[derive(serde::Deserialize, serde::Serialize, Clone, Debug, Eq, PartialEq, Hash)]
-#[serde(rename_all = "lowercase")]
-pub enum LockAction {
-    Add,
-    Remove,
-}
-
-/// A change to be applied to `Locks`
-#[derive(serde::Deserialize, serde::Serialize, Clone, Debug, Eq, PartialEq, Hash)]
-pub struct LockChange {
-    pub uuid: String,
-    pub job_id: u64,
-    pub content_type_id: i32,
-    pub item_id: i32,
-    pub description: String,
-    pub lock_type: LockType,
-    pub action: LockAction,
-}
-
-impl ToCompositeId for LockChange {
-    fn composite_id(&self) -> CompositeId {
-        CompositeId(self.content_type_id, self.item_id)
-    }
-}
-
-/// Meta is the metadata object returned by a fetch call
-#[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
-pub struct Meta {
-    pub limit: u32,
-    pub next: Option<String>,
-    pub offset: u32,
-    pub previous: Option<String>,
-    pub total_count: u32,
-}
-
-/// ApiList contains the metadata and the `Vec` of objects returned by a fetch call
-#[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
-pub struct ApiList<T> {
-    pub meta: Meta,
-    pub objects: Vec<T>,
-}
-
-impl<T> ApiList<T> {
-    pub fn new(objects: Vec<T>) -> Self {
-        Self {
-            meta: Meta {
-                limit: 0,
-                next: None,
-                offset: 0,
-                previous: None,
-                total_count: objects.len() as u32,
-            },
-            objects,
-        }
-    }
 }
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
@@ -490,32 +368,6 @@ impl Default for Conf {
     }
 }
 
-impl EndpointName for Conf {
-    fn endpoint_name() -> &'static str {
-        "conf"
-    }
-}
-
-// An available action from `/api/action/`
-#[derive(serde::Deserialize, serde::Serialize, PartialEq, Clone, Debug)]
-pub struct AvailableAction {
-    pub args: Option<HashMap<String, Option<u64>>>,
-    pub composite_id: CompositeId,
-    pub class_name: Option<String>,
-    pub confirmation: Option<String>,
-    pub display_group: u64,
-    pub display_order: u64,
-    pub long_description: String,
-    pub state: Option<String>,
-    pub verb: String,
-}
-
-impl EndpointName for AvailableAction {
-    fn endpoint_name() -> &'static str {
-        "action"
-    }
-}
-
 /// A `NtpConfiguration` record from `/api/ntp_configuration/`
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 pub struct NtpConfiguration {
@@ -529,344 +381,11 @@ pub struct NtpConfiguration {
     pub state_modified_at: String,
 }
 
-impl EndpointName for NtpConfiguration {
-    fn endpoint_name() -> &'static str {
-        "ntp_configuration"
-    }
-}
-
 #[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
 pub struct ClientMount {
     pub filesystem_name: String,
     pub mountpoints: Vec<String>,
     pub state: String,
-}
-
-/// A Host record from `/api/host/`
-#[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
-pub struct Host {
-    pub address: String,
-    pub boot_time: Option<String>,
-    pub content_type_id: i32,
-    pub corosync_configuration: Option<String>,
-    pub corosync_ring0: String,
-    pub fqdn: String,
-    pub id: i32,
-    pub immutable_state: bool,
-    pub install_method: String,
-    pub label: String,
-    pub lnet_configuration: String,
-    pub needs_update: bool,
-    pub nids: Option<Vec<String>>,
-    pub nodename: String,
-    pub pacemaker_configuration: Option<String>,
-    pub private_key: Option<String>,
-    pub private_key_passphrase: Option<String>,
-    pub resource_uri: String,
-    pub root_pw: Option<String>,
-    pub server_profile: ServerProfile,
-    pub state: String,
-    pub state_modified_at: String,
-}
-
-impl Host {
-    /// Get associated LNet configuration id
-    pub fn lnet_id(&self) -> Option<i32> {
-        let id = emf_api_utils::extract_id(&self.lnet_configuration)?;
-
-        id.parse::<i32>().ok()
-    }
-    /// Get associated Corosync configuration id
-    pub fn corosync_id(&self) -> Option<i32> {
-        let id = emf_api_utils::extract_id(self.corosync_configuration.as_ref()?)?;
-
-        id.parse::<i32>().ok()
-    }
-    /// Get associated Pacemaker configuration id
-    pub fn pacemaker_id(&self) -> Option<i32> {
-        let id = emf_api_utils::extract_id(self.pacemaker_configuration.as_ref()?)?;
-
-        id.parse::<i32>().ok()
-    }
-}
-
-impl FlatQuery for Host {}
-
-impl ToCompositeId for Host {
-    fn composite_id(&self) -> CompositeId {
-        CompositeId(self.content_type_id, self.id)
-    }
-}
-
-impl ToCompositeId for &Host {
-    fn composite_id(&self) -> CompositeId {
-        CompositeId(self.content_type_id, self.id)
-    }
-}
-
-impl Label for Host {
-    fn label(&self) -> &str {
-        &self.label
-    }
-}
-
-impl Label for &Host {
-    fn label(&self) -> &str {
-        &self.label
-    }
-}
-
-impl db::Id for Host {
-    fn id(&self) -> i32 {
-        self.id
-    }
-}
-
-impl db::Id for &Host {
-    fn id(&self) -> i32 {
-        self.id
-    }
-}
-
-impl EndpointName for Host {
-    fn endpoint_name() -> &'static str {
-        "host"
-    }
-}
-
-/// A server profile record from api/server_profile/
-#[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
-pub struct ServerProfile {
-    pub corosync: bool,
-    pub corosync2: bool,
-    pub default: bool,
-    pub initial_state: String,
-    pub managed: bool,
-    pub name: String,
-    pub ntp: bool,
-    pub pacemaker: bool,
-    pub repolist: Vec<String>,
-    pub resource_uri: String,
-    pub ui_description: String,
-    pub ui_name: String,
-    pub user_selectable: bool,
-    pub worker: bool,
-}
-
-impl FlatQuery for ServerProfile {}
-
-impl EndpointName for ServerProfile {
-    fn endpoint_name() -> &'static str {
-        "server_profile"
-    }
-}
-
-pub mod graphql {
-    use crate::db::ServerProfileRecord;
-
-    #[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
-    #[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
-    pub struct ServerProfile {
-        pub corosync: bool,
-        pub corosync2: bool,
-        pub default: bool,
-        pub initial_state: String,
-        pub managed: bool,
-        pub name: String,
-        pub ntp: bool,
-        pub pacemaker: bool,
-        pub ui_description: String,
-        pub ui_name: String,
-        pub user_selectable: bool,
-        pub worker: bool,
-        pub repos: Vec<Repository>,
-    }
-
-    #[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
-    #[cfg_attr(feature = "graphql", derive(juniper::GraphQLInputObject))]
-    pub struct ServerProfileInput {
-        pub corosync: bool,
-        pub corosync2: bool,
-        pub default: bool,
-        #[serde(rename(serialize = "initialState"))]
-        pub initial_state: String,
-        pub managed: bool,
-        pub name: String,
-        pub ntp: bool,
-        pub pacemaker: bool,
-        #[serde(rename(serialize = "uiDescription"))]
-        pub ui_description: String,
-        #[serde(rename(serialize = "uiName"))]
-        pub ui_name: String,
-        #[serde(rename(serialize = "userSelectable"))]
-        pub user_selectable: bool,
-        pub worker: bool,
-        pub packages: Vec<String>,
-        pub repolist: Vec<String>,
-    }
-
-    #[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
-    #[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
-    pub struct Repository {
-        pub name: String,
-        pub location: String,
-    }
-
-    #[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
-    #[cfg_attr(feature = "graphql", derive(juniper::GraphQLInputObject))]
-    pub struct RepositoryInput {
-        pub name: String,
-        pub location: String,
-    }
-
-    impl ServerProfile {
-        pub fn new(
-            record: ServerProfileRecord,
-            repos: &serde_json::Value,
-        ) -> Result<Self, &'static str> {
-            let repos: Vec<_> = repos
-                .as_array()
-                .ok_or("repos is not an array")?
-                .iter()
-                .filter_map(|p| {
-                    let name = p.get("f1")?;
-                    let location = p.get("f2")?;
-                    Some(Repository {
-                        name: name.as_str()?.into(),
-                        location: location.as_str()?.into(),
-                    })
-                })
-                .collect();
-            Ok(Self {
-                corosync: record.corosync,
-                corosync2: record.corosync2,
-                default: record.default,
-                initial_state: record.initial_state,
-                managed: record.managed,
-                name: record.name,
-                ntp: record.ntp,
-                pacemaker: record.pacemaker,
-                repos,
-                ui_description: record.ui_description,
-                ui_name: record.ui_name,
-                user_selectable: record.user_selectable,
-                worker: record.worker,
-            })
-        }
-    }
-}
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct ProfileTest {
-    pub description: String,
-    pub error: String,
-    pub pass: bool,
-    pub test: String,
-}
-
-#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
-pub struct CmdWrapper {
-    pub command: Command,
-}
-
-#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
-#[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
-pub struct Command {
-    pub cancelled: bool,
-    pub complete: bool,
-    pub created_at: String,
-    pub errored: bool,
-    pub id: i32,
-    pub jobs: Vec<String>,
-    pub logs: String,
-    pub message: String,
-    pub resource_uri: String,
-}
-
-impl EndpointName for Command {
-    fn endpoint_name() -> &'static str {
-        "command"
-    }
-}
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct JobLock {
-    pub locked_item_content_type_id: i32,
-    pub locked_item_id: i32,
-    pub locked_item_uri: String,
-    pub resource_uri: String,
-}
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct AvailableTransition {
-    pub label: String,
-    pub state: String,
-}
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct Job<T> {
-    pub available_transitions: Vec<AvailableTransition>,
-    pub cancelled: bool,
-    pub class_name: String,
-    pub commands: Vec<String>,
-    pub created_at: String,
-    pub description: String,
-    pub errored: bool,
-    pub id: i32,
-    pub modified_at: String,
-    pub read_locks: Vec<JobLock>,
-    pub resource_uri: String,
-    pub state: String,
-    pub step_results: HashMap<String, T>,
-    pub steps: Vec<String>,
-    pub wait_for: Vec<String>,
-    pub write_locks: Vec<JobLock>,
-}
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct Check {
-    pub name: String,
-    pub value: bool,
-}
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct HostValididity {
-    pub address: String,
-    pub status: Vec<Check>,
-    pub valid: bool,
-    pub profiles: HashMap<String, Vec<ProfileTest>>,
-}
-
-pub type TestHostJob = Job<HostValididity>;
-
-impl<T> EndpointName for Job<T> {
-    fn endpoint_name() -> &'static str {
-        "job"
-    }
-}
-
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct Step {
-    pub args: HashMap<String, serde_json::value::Value>,
-    pub backtrace: String,
-    pub class_name: String,
-    pub console: String,
-    pub created_at: String,
-    pub description: String,
-    pub id: i32,
-    pub log: String,
-    pub modified_at: String,
-    pub resource_uri: String,
-    pub result: Option<String>,
-    pub state: String,
-    pub step_count: i32,
-    pub step_index: i32,
-}
-
-impl EndpointName for Step {
-    fn endpoint_name() -> &'static str {
-        "step"
-    }
 }
 
 #[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
@@ -919,278 +438,6 @@ pub struct MdtConfParams {
     mdt_mds_mds_setattr_threads_min: Option<String>,
     #[serde(rename = "mdt.hsm_control")]
     mdt_hsm_control: Option<String>,
-}
-
-/// A Volume record from api/volume/
-#[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
-pub struct Volume {
-    pub filesystem_type: Option<String>,
-    pub id: i32,
-    pub kind: String,
-    pub label: String,
-    pub resource_uri: String,
-    pub size: Option<i64>,
-    pub status: Option<String>,
-    pub storage_resource: Option<String>,
-    pub usable_for_lustre: bool,
-    pub volume_nodes: Vec<VolumeNode>,
-}
-
-impl FlatQuery for Volume {}
-
-impl Label for Volume {
-    fn label(&self) -> &str {
-        &self.label
-    }
-}
-
-impl Label for &Volume {
-    fn label(&self) -> &str {
-        &self.label
-    }
-}
-
-impl db::Id for Volume {
-    fn id(&self) -> i32 {
-        self.id
-    }
-}
-
-impl db::Id for &Volume {
-    fn id(&self) -> i32 {
-        self.id
-    }
-}
-
-impl EndpointName for Volume {
-    fn endpoint_name() -> &'static str {
-        "volume"
-    }
-}
-
-#[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
-pub struct VolumeNode {
-    pub host: String,
-    pub host_id: i32,
-    pub host_label: String,
-    pub id: i32,
-    pub path: String,
-    pub primary: bool,
-    pub resource_uri: String,
-    #[serde(rename = "use")]
-    pub _use: bool,
-    pub volume_id: i32,
-}
-
-impl FlatQuery for VolumeNode {}
-
-impl EndpointName for VolumeNode {
-    fn endpoint_name() -> &'static str {
-        "volume_node"
-    }
-}
-
-#[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
-#[serde(untagged)]
-pub enum VolumeOrResourceUri {
-    ResourceUri(String),
-    Volume(Volume),
-}
-
-#[derive(serde::Deserialize, serde::Serialize, PartialEq, Clone, Debug)]
-pub struct HsmControlParamMdt {
-    pub id: String,
-    pub kind: String,
-    pub resource: String,
-    pub conf_params: MdtConfParams,
-}
-
-/// HsmControlParams used for hsm actions
-#[derive(serde::Deserialize, serde::Serialize, PartialEq, Clone, Debug)]
-pub struct HsmControlParam {
-    pub long_description: String,
-    pub param_key: String,
-    pub param_value: String,
-    pub verb: String,
-    pub mdt: HsmControlParamMdt,
-}
-
-/// A Filesystem record from /api/filesystem/
-#[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
-pub struct Filesystem {
-    pub bytes_free: Option<f64>,
-    pub bytes_total: Option<f64>,
-    pub cdt_mdt: Option<String>,
-    pub cdt_status: Option<String>,
-    pub client_count: Option<u64>,
-    pub conf_params: FilesystemConfParams,
-    pub content_type_id: i32,
-    pub files_free: Option<u64>,
-    pub files_total: Option<u64>,
-    pub hsm_control_params: Option<Vec<HsmControlParam>>,
-    pub id: i32,
-    pub immutable_state: bool,
-    pub label: String,
-    pub mdts: Vec<String>,
-    pub mgt: String,
-    pub name: String,
-    pub osts: Vec<String>,
-    pub resource_uri: String,
-    pub state: String,
-    pub state_modified_at: String,
-}
-
-impl FlatQuery for Filesystem {
-    fn query() -> Vec<(&'static str, &'static str)> {
-        vec![("limit", "0")]
-    }
-}
-
-impl ToCompositeId for Filesystem {
-    fn composite_id(&self) -> CompositeId {
-        CompositeId(self.content_type_id, self.id)
-    }
-}
-
-impl ToCompositeId for &Filesystem {
-    fn composite_id(&self) -> CompositeId {
-        CompositeId(self.content_type_id, self.id)
-    }
-}
-
-impl Label for Filesystem {
-    fn label(&self) -> &str {
-        &self.label
-    }
-}
-
-impl Label for &Filesystem {
-    fn label(&self) -> &str {
-        &self.label
-    }
-}
-
-impl db::Id for Filesystem {
-    fn id(&self) -> i32 {
-        self.id
-    }
-}
-
-impl db::Id for &Filesystem {
-    fn id(&self) -> i32 {
-        self.id
-    }
-}
-
-impl EndpointName for Filesystem {
-    fn endpoint_name() -> &'static str {
-        "filesystem"
-    }
-}
-
-#[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
-pub struct FilesystemShort {
-    pub id: i32,
-    pub name: String,
-}
-
-#[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Copy, Debug)]
-pub enum AlertRecordType {
-    AlertState,
-    LearnEvent,
-    AlertEvent,
-    SyslogEvent,
-    ClientConnectEvent,
-    CommandRunningAlert,
-    CommandSuccessfulAlert,
-    CommandCancelledAlert,
-    CommandErroredAlert,
-    CorosyncUnknownPeersAlert,
-    CorosyncToManyPeersAlert,
-    CorosyncNoPeersAlert,
-    CorosyncStoppedAlert,
-    StonithNotEnabledAlert,
-    PacemakerStoppedAlert,
-    HostContactAlert,
-    HostOfflineAlert,
-    HostRebootEvent,
-    TargetOfflineAlert,
-    TargetRecoveryAlert,
-    StorageResourceOffline,
-    StorageResourceAlert,
-    StorageResourceLearnEvent,
-    IpmiBmcUnavailableAlert,
-    LNetOfflineAlert,
-    LNetNidsChangedAlert,
-    StratagemUnconfiguredAlert,
-    TimeOutOfSyncAlert,
-    NoTimeSyncAlert,
-    MultipleTimeSyncAlert,
-    UnknownTimeSyncAlert,
-}
-
-impl ToString for AlertRecordType {
-    fn to_string(&self) -> String {
-        serde_json::to_string(self).unwrap().replace("\"", "")
-    }
-}
-
-#[derive(
-    serde::Serialize, serde::Deserialize, Copy, Clone, Debug, PartialOrd, Ord, PartialEq, Eq,
-)]
-pub enum AlertSeverity {
-    DEBUG,
-    INFO,
-    WARNING,
-    ERROR,
-    CRITICAL,
-}
-
-impl From<AlertSeverity> for i32 {
-    fn from(x: AlertSeverity) -> Self {
-        match x {
-            AlertSeverity::DEBUG => 10,
-            AlertSeverity::INFO => 20,
-            AlertSeverity::WARNING => 30,
-            AlertSeverity::ERROR => 40,
-            AlertSeverity::CRITICAL => 50,
-        }
-    }
-}
-
-/// An Alert record from /api/alert/
-#[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug)]
-pub struct Alert {
-    pub _message: Option<String>,
-    pub active: Option<bool>,
-    pub affected: Option<Vec<String>>,
-    pub affected_composite_ids: Option<Vec<CompositeId>>,
-    pub alert_item: String,
-    pub alert_item_id: Option<i32>,
-    pub alert_item_str: String,
-    pub alert_type: String,
-    pub begin: String,
-    pub dismissed: bool,
-    pub end: Option<String>,
-    pub id: i32,
-    pub lustre_pid: Option<i32>,
-    pub message: String,
-    pub record_type: AlertRecordType,
-    pub resource_uri: String,
-    pub severity: AlertSeverity,
-    pub variant: String,
-}
-
-impl FlatQuery for Alert {
-    fn query() -> Vec<(&'static str, &'static str)> {
-        vec![("limit", "0"), ("active", "true")]
-    }
-}
-
-impl EndpointName for Alert {
-    fn endpoint_name() -> &'static str {
-        "alert"
-    }
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
@@ -1289,12 +536,6 @@ pub struct Log {
     pub tag: String,
 }
 
-impl EndpointName for Log {
-    fn endpoint_name() -> &'static str {
-        "log"
-    }
-}
-
 // A log message from GraphQL endpoint
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
 #[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
@@ -1368,68 +609,12 @@ pub mod logs {
     }
 }
 
-/// A `StratagemConfiguration` record from `api/stratagem_configuration`.
-#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
-pub struct StratagemConfiguration {
-    pub content_type_id: i32,
-    pub filesystem: String,
-    pub id: i32,
-    pub immutable_state: bool,
-    pub interval: u64,
-    pub label: String,
-    pub not_deleted: Option<bool>,
-    pub purge_duration: Option<u64>,
-    pub report_duration: Option<u64>,
-    pub resource_uri: String,
-    pub state: String,
-    pub state_modified_at: String,
-}
-
-impl EndpointName for StratagemConfiguration {
-    fn endpoint_name() -> &'static str {
-        "stratagem_configuration"
-    }
-}
-
-#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
-#[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
-/// Information about a stratagem report
-pub struct StratagemReport {
-    /// The filename of the stratagem report
-    pub filename: String,
-    /// When the report was last modified
-    pub modify_time: DateTime<Utc>,
-    /// The size of the report in bytes
-    pub size: i32,
-}
-
 /// An `AlertType` record from `api/alert_type`.
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Eq, PartialEq)]
 pub struct AlertType {
     pub description: String,
     pub id: String,
     pub resource_uri: String,
-}
-
-impl EndpointName for AlertType {
-    fn endpoint_name() -> &'static str {
-        "alert_type"
-    }
-}
-
-/// An `AlertSubscription` record from `api/alert_subscription`.
-#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Eq, PartialEq)]
-pub struct AlertSubscription {
-    pub alert_type: AlertType,
-    pub id: i32,
-    pub resource_uri: String,
-    pub user: String,
-}
-
-impl EndpointName for AlertSubscription {
-    fn endpoint_name() -> &'static str {
-        "alert_subscription"
-    }
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone, Copy, Debug, Eq, PartialEq)]
@@ -1448,16 +633,9 @@ pub struct Group {
     pub resource_uri: String,
 }
 
-impl EndpointName for Group {
-    fn endpoint_name() -> &'static str {
-        "group"
-    }
-}
-
 /// A `User` record from `api/user`.
 #[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Eq, PartialEq)]
 pub struct User {
-    pub alert_subscriptions: Option<Vec<AlertSubscription>>,
     pub email: String,
     pub first_name: String,
     pub full_name: String,
@@ -1473,26 +651,6 @@ pub struct User {
     pub username: String,
 }
 
-impl EndpointName for User {
-    fn endpoint_name() -> &'static str {
-        "user"
-    }
-}
-
-/// A `Session` record from `api/session`
-#[derive(serde::Serialize, serde::Deserialize, Clone, Debug, Eq, PartialEq)]
-pub struct Session {
-    pub read_enabled: bool,
-    pub resource_uri: String,
-    pub user: Option<User>,
-}
-
-impl EndpointName for Session {
-    fn endpoint_name() -> &'static str {
-        "session"
-    }
-}
-
 pub mod time {
     #[derive(Clone, Copy, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
     pub enum Synced {
@@ -1500,7 +658,7 @@ pub mod time {
         Unsynced,
     }
 
-    #[derive(Debug, serde::Serialize, serde::Deserialize)]
+    #[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
     pub enum State {
         None,
         Multiple,
@@ -1509,7 +667,7 @@ pub mod time {
         Unknown,
     }
 
-    #[derive(Debug, serde::Serialize, serde::Deserialize, PartialEq)]
+    #[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
     pub struct Offset(String);
 
     impl<T: ToString> From<T> for Offset {
@@ -1792,74 +950,6 @@ pub struct ComponentState<T: Default> {
     pub state: T,
 }
 
-/// An OST Pool record from `/api/ostpool/`
-#[derive(Debug, Default, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct OstPoolApi {
-    pub id: i32,
-    pub resource_uri: String,
-    #[serde(flatten)]
-    pub ost: OstPool,
-}
-
-impl EndpointName for OstPoolApi {
-    fn endpoint_name() -> &'static str {
-        "ostpool"
-    }
-}
-
-impl FlatQuery for OstPoolApi {}
-
-impl std::fmt::Display for OstPoolApi {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "[#{}] {}", self.id, self.ost)
-    }
-}
-
-/// Type Sent between ostpool agent daemon and service
-/// FS Name -> Set of OstPools
-pub type FsPoolMap = BTreeMap<String, BTreeSet<OstPool>>;
-
-#[derive(Debug, Default, Clone, Eq, serde::Serialize, serde::Deserialize)]
-pub struct OstPool {
-    pub name: String,
-    pub filesystem: String,
-    pub osts: Vec<String>,
-}
-
-impl std::fmt::Display for OstPool {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "{}.{} [{}]",
-            self.filesystem,
-            self.name,
-            self.osts.join(", ")
-        )
-    }
-}
-
-impl Ord for OstPool {
-    fn cmp(&self, other: &Self) -> Ordering {
-        let x = self.filesystem.cmp(&other.filesystem);
-        if x != Ordering::Equal {
-            return x;
-        }
-        self.name.cmp(&other.name)
-    }
-}
-
-impl PartialOrd for OstPool {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl PartialEq for OstPool {
-    fn eq(&self, other: &Self) -> bool {
-        self.filesystem == other.filesystem && self.name == other.name
-    }
-}
-
 #[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct JournalMessage {
     pub datetime: std::time::Duration,
@@ -2013,56 +1103,9 @@ pub struct LustreClient {
     pub id: i32,
     pub state_modified_at: DateTime<Utc>,
     pub state: String,
-    pub immutable_state: bool,
-    pub not_deleted: Option<bool>,
-    pub content_type_id: Option<i32>,
     pub filesystem: String,
     pub host_id: i32,
     pub mountpoints: Vec<String>,
-}
-
-#[cfg_attr(feature = "graphql", derive(juniper::GraphQLEnum))]
-#[cfg_attr(feature = "postgres-interop", derive(sqlx::Type))]
-#[cfg_attr(feature = "postgres-interop", sqlx(rename = "fs_type"))]
-#[cfg_attr(feature = "postgres-interop", sqlx(rename_all = "lowercase"))]
-#[serde(rename_all = "lowercase")]
-#[derive(PartialEq, Eq, Clone, Debug, serde::Serialize, serde::Deserialize, Ord, PartialOrd)]
-pub enum FsType {
-    #[cfg_attr(feature = "graphql", graphql(name = "zfs"))]
-    Zfs,
-    #[cfg_attr(feature = "graphql", graphql(name = "ldiskfs"))]
-    Ldiskfs,
-}
-
-impl TryFrom<&str> for FsType {
-    type Error = &'static str;
-
-    fn try_from(x: &str) -> Result<Self, Self::Error> {
-        match x {
-            "ldiskfs" => Ok(Self::Ldiskfs),
-            "zfs" => Ok(Self::Zfs),
-            _ => Err("Invalid fs type."),
-        }
-    }
-}
-
-impl TryFrom<String> for FsType {
-    type Error = &'static str;
-
-    fn try_from(x: String) -> Result<Self, Self::Error> {
-        Self::try_from(x.as_str())
-    }
-}
-
-impl fmt::Display for FsType {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let label = match self {
-            Self::Ldiskfs => "ldiskfs",
-            Self::Zfs => "zfs",
-        };
-
-        write!(f, "{}", label)
-    }
 }
 
 #[derive(Debug, Eq, Clone, serde::Serialize, serde::Deserialize)]
@@ -2147,7 +1190,7 @@ impl PartialEq for LdevEntry {
     }
 }
 
-#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Copy, PartialEq, Debug, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum LndType {
     Tcp,
@@ -2349,7 +1392,7 @@ impl
     }
 }
 
-#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct NetworkInterface {
     pub interface: String,
     pub mac_address: Option<String>,
@@ -2361,14 +1404,14 @@ pub struct NetworkInterface {
     pub is_slave: bool,
 }
 
-#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Nid {
     pub nid: String,
     pub status: String,
     pub interfaces: Option<BTreeMap<i32, String>>,
 }
 
-#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Net {
     #[serde(rename = "net type")]
     pub net_type: String,
@@ -2376,7 +1419,7 @@ pub struct Net {
     pub local_nis: Vec<Nid>,
 }
 
-#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct LNet {
     pub net: Vec<Net>,
 }
@@ -2405,8 +1448,56 @@ impl LNetState for LNet {
     }
 }
 
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct NetworkData {
     pub network_interfaces: Vec<NetworkInterface>,
     pub lnet_data: LNet,
+}
+
+#[derive(Hash, Eq, PartialEq)]
+#[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
+/// A Lustre Target and it's corresponding resource
+pub struct TargetResource {
+    /// The id of the cluster
+    pub cluster_id: i32,
+    /// The filesystems associated with this target
+    pub fs_names: Vec<String>,
+    /// The uuid of this target
+    pub uuid: String,
+    /// The name of this target
+    pub name: String,
+    /// The corosync resource id associated with this target
+    pub resource_id: String,
+    /// The id of this target
+    pub target_id: i32,
+    /// The current state of this target
+    pub state: String,
+    /// The list of host ids this target could possibly run on
+    pub cluster_hosts: Vec<i32>,
+}
+
+pub struct BannedTargetResource {
+    pub resource: String,
+    pub cluster_id: i32,
+    pub host_id: i32,
+    pub mount_point: Option<String>,
+}
+
+#[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
+/// A Corosync banned resource
+pub struct BannedResource {
+    // The primary id
+    pub id: i32,
+    /// The resource name
+    pub name: String,
+    /// The id of the cluster in which the resource lives
+    pub cluster_id: i32,
+    /// The resource name
+    pub resource: String,
+    /// The node in which the resource lives
+    pub node: String,
+    /// The assigned weight of the resource
+    pub weight: i32,
+    /// Is master only
+    pub master_only: bool,
 }

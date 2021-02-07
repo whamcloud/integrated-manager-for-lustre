@@ -7,8 +7,6 @@ use thiserror::Error;
 #[derive(Debug, Error)]
 pub enum EmfTaskRunnerError {
     #[error(transparent)]
-    EmfPgError(#[from] emf_postgres::Error),
-    #[error(transparent)]
     JsonError(#[from] serde_json::Error),
     #[error(transparent)]
     EmfPgPoolError(#[from] emf_postgres::sqlx::Error),

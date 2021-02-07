@@ -2,15 +2,12 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-mod action;
-mod command;
 mod error;
 mod graphql;
 mod timer;
 
 use emf_manager_env::get_pool_limit;
 use emf_postgres::get_db_pool;
-use emf_rabbit::{self, create_connection_filter};
 use emf_wire_types::Conf;
 use std::sync::Arc;
 use warp::Filter;
@@ -21,8 +18,6 @@ const DEFAULT_POOL_LIMIT: u32 = 5;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     emf_tracing::init();
-
-    let addr = emf_manager_env::get_emf_api_addr();
 
     let conf = Conf {
         allow_anonymous_read: emf_manager_env::get_allow_anonymous_read(),
@@ -36,11 +31,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         monitor_sfa: emf_manager_env::get_sfa_endpoints().is_some(),
     };
 
-    let rabbit_pool = emf_rabbit::connect_to_rabbit(2);
-
-    let conn_filter = create_connection_filter(rabbit_pool.clone());
-
-    let pg_pool = get_db_pool(get_pool_limit().unwrap_or(DEFAULT_POOL_LIMIT)).await?;
+    let pg_pool = get_db_pool(
+        get_pool_limit().unwrap_or(DEFAULT_POOL_LIMIT),
+        emf_manager_env::get_port("API_SERVICE_PG_PORT"),
+    )
+    .await?;
 
     let schema = Arc::new(graphql::Schema::new(
         graphql::QueryRoot,
@@ -49,18 +44,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ));
     let schema_filter = warp::any().map(move || Arc::clone(&schema));
 
-    let ctx = Arc::new(graphql::Context {
-        pg_pool,
-        rabbit_pool,
-    });
+    let ctx = Arc::new(graphql::Context { pg_pool });
     let ctx_filter = warp::any().map(move || Arc::clone(&ctx));
 
     let routes = warp::path("conf")
         .map(move || warp::reply::json(&conf))
-        .or(action::endpoint(conn_filter.clone()))
         .or(graphql::endpoint(schema_filter, ctx_filter));
-
-    tracing::info!("Starting on {:?}", addr);
 
     let log = warp::log::custom(|info| {
         tracing::debug!(
@@ -76,6 +65,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
     });
 
+    let port = emf_manager_env::get_port("API_SERVICE_PORT");
+
+    tracing::info!("Starting on {:?}", port);
+
     warp::serve(
         routes
             .or_else(|e| async {
@@ -85,7 +78,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             })
             .with(log),
     )
-    .run(addr)
+    .run(([127, 0, 0, 1], port))
     .await;
 
     Ok(())

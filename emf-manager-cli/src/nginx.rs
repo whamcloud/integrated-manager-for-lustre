@@ -197,26 +197,17 @@ mod tests {
 
     #[test]
     fn test_replace_template_variables() {
-        let template: &[u8] = include_bytes!("../../chroma-manager.conf.template");
+        let template: &[u8] = include_bytes!("../../nginx/emf-gateway.conf.template");
 
         let vars: HashMap<String, String> = [
-            ("REPO_PATH", "/var/lib/chroma/repo"),
-            ("HTTP_FRONTEND_PORT", "80"),
-            ("HTTPS_FRONTEND_PORT", "443"),
-            ("HTTP_AGENT_PROXY_PASS", "http://127.0.0.1:8002"),
-            ("HTTP_AGENT2_PROXY_PASS", "http://127.0.0.1:8003"),
-            ("HTTP_API_PROXY_PASS", "http://127.0.0.1:8001"),
-            ("EMF_API_PROXY_PASS", "http://127.0.0.1:8004"),
-            ("WARP_DRIVE_PROXY_PASS", "http://127.0.0.1:8890"),
-            ("MAILBOX_PROXY_PASS", "http://127.0.0.1:8891"),
-            ("SSL_PATH", "/var/lib/chroma"),
-            ("DEVICE_AGGREGATOR_PORT", "8008"),
-            ("DEVICE_AGGREGATOR_PROXY_PASS", "http://127.0.0.1:8008"),
-            ("GRAFANA_PORT", "3000"),
-            ("GRAFANA_PROXY_PASS", "http://127.0.0.1:3000"),
-            ("INFLUXDB_PROXY_PASS", "http://127.0.0.1:8086"),
+            ("NGINX_GATEWAY_PORT", "7443"),
+            ("NGINX_CRYPTO_DIR", "/etc/emf/nginx/crypto"),
+            ("NGINX_API_SERVICE_PORT", "7469"),
+            ("NGINX_GRAFANA_PORT", "7470"),
+            ("NGINX_INFLUX_PORT", "7471"),
+            ("NGINX_WARP_DRIVE_SERVICE_PORT", "7472"),
             ("REPORT_PATH", "/var/spool/emf/report"),
-            ("REPORT_PROXY_PASS", "http://127.0.0.1:8893"),
+            ("REPO_PATH", "/var/lib/emf/repo"),
         ]
         .iter()
         .map(|(k, v)| (k.to_string(), v.to_string()))

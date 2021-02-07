@@ -61,22 +61,11 @@ impl From<serde_json::error::Error> for EmfManagerClientError {
     }
 }
 
-/// Get a client that is able to make authenticated requests
+/// Get a client that is able to make requests
 /// against the API
 pub fn get_client() -> Result<Client, EmfManagerClientError> {
-    let header_value = header::HeaderValue::from_str(&format!(
-        "ApiKey {}:{}",
-        emf_manager_env::get_api_user(),
-        emf_manager_env::get_api_key()
-    ))?;
-
-    let headers = vec![(header::AUTHORIZATION, header_value)]
-        .into_iter()
-        .collect();
-
     Client::builder()
         .timeout(Duration::from_secs(60))
-        .default_headers(headers)
         .danger_accept_invalid_certs(true)
         .build()
         .map_err(EmfManagerClientError::Reqwest)

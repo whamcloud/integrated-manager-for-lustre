@@ -1,6 +1,7 @@
 ---
 source: emf-manager-cli/src/nginx.rs
 expression: config
+
 ---
 map $ssl_client_s_dn $ssl_client_s_dn_cn {
     default "";
@@ -19,13 +20,14 @@ map $uri $cache_control {
 }
 
 server {
-    root /var/lib/chroma;
+    root /var/lib/emf;
 
-    listen 443 ssl http2;
+    listen 7443 ssl http2;
 
     error_page 497 https://$http_host$request_uri;
 
     proxy_read_timeout 330s;
+    proxy_http_version 1.1;
 
     access_log /var/log/nginx/access.log combined if=$loggable;
 
@@ -62,11 +64,8 @@ server {
         text/xml xml rss;
     }
 
-    ssl_certificate /var/lib/chroma/manager.crt;
-    ssl_certificate_key /var/lib/chroma/manager.pem;
-    ssl_trusted_certificate /var/lib/chroma/authority.crt;
-    ssl_client_certificate /var/lib/chroma/authority.crt;
-    ssl_verify_client optional;
+    ssl_certificate /etc/emf/nginx/crypto/ca.crt;
+    ssl_certificate_key /etc/emf/nginx/crypto/ca.key;
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_prefer_server_ciphers on;
 
@@ -74,17 +73,6 @@ server {
     ssl_session_timeout 180m;
 
     gzip_comp_level 5;
-
-    location /certificate/ {
-        return 301 https://$http_host/certificate;
-    }
-
-    location /certificate {
-        alias /var/lib/chroma/authority.crt;
-        types {}
-        default_type application/octet-stream;
-        add_header Content-disposition "attachment; filename=download.cer";
-    }
 
     location ~ ^/$ {
         return 301 https://$http_host/ui;
@@ -123,28 +111,7 @@ server {
             text/javascript;
     }
 
-    location /auth {
-        internal;
-        proxy_set_header X-Forwarded-Host $host;
-        proxy_set_header X-Forwarded-Server $host;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_pass_request_body off;
-        proxy_set_header Content-Length "";
-        proxy_pass http://127.0.0.1:8001/api/auth/;
-    }
-
-    location /anon_auth {
-        internal;
-        proxy_set_header X-Forwarded-Host $host;
-        proxy_set_header X-Forwarded-Server $host;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_pass_request_body off;
-        proxy_set_header Content-Length "";
-        proxy_pass http://127.0.0.1:8001/api/anon_auth/;
-    }
-
     location /grafana {
-        auth_request /anon_auth;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-Host $host;
@@ -152,7 +119,7 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-WEBAUTH-USER "admin";
         rewrite  ^/grafana/(.*)  /$1 break;
-        proxy_pass http://127.0.0.1:3000;
+        proxy_pass http://127.0.0.1:7470;
 
         etag on;
         expires 1y;
@@ -163,13 +130,12 @@ server {
 
     location /influx {
         limit_except GET { deny all; }
-        auth_request /anon_auth;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-Host $host;
         proxy_set_header X-Forwarded-Server $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_pass http://127.0.0.1:8086/query;
+        proxy_pass http://127.0.0.1:7471/query;
 
         gzip_proxied any;
     }
@@ -179,38 +145,23 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-Server $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_pass http://127.0.0.1:8004/conf;
-    }
-
-    location /api/action {
-        auth_request /auth;
-
-        proxy_set_header Host $http_host;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header X-Forwarded-Server $host;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_pass http://127.0.0.1:8004/action;
-
-        gzip on;
-        gzip_types application/json;
+        proxy_pass http://127.0.0.1:7469/conf;
     }
 
     location /graphql_schema {
         proxy_set_header Host $http_host;
-        auth_request /auth;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-Server $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_pass http://127.0.0.1:8004/graphql_schema;
+        proxy_pass http://127.0.0.1:7469/graphql_schema;
     }
 
     location /graphql {
         proxy_set_header Host $http_host;
-        auth_request /auth;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-Server $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_pass http://127.0.0.1:8004/graphql;
+        proxy_pass http://127.0.0.1:7469/graphql;
 
         gzip on;
         gzip_types application/json;
@@ -218,22 +169,10 @@ server {
 
     location /graphiql {
         proxy_set_header Host $http_host;
-        auth_request /auth;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-Server $host;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_pass http://127.0.0.1:8004/graphiql;
-    }
-
-    location /api {
-        proxy_set_header Host $http_host;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_set_header X-Forwarded-Server $host;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_pass http://127.0.0.1:8001/api;
-
-        gzip on;
-        gzip_types application/json;
+        proxy_pass http://127.0.0.1:7469/graphiql;
     }
 
     location /messaging {
@@ -242,29 +181,10 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_http_version 1.1;
         proxy_set_header Connection '';
-        proxy_pass http://127.0.0.1:8890;
-    }
-
-    location /mailbox {
-        if ($ssl_client_verify != SUCCESS) {
-            return 401;
-        }
-
-        client_max_body_size 0m;
-
-        proxy_set_header X-SSL-Client-On $ssl_client_verify;
-        proxy_set_header X-SSL-Client-Name $ssl_client_s_dn_cn;
-        proxy_set_header X-SSL-Client-Serial $ssl_client_serial;
-
-        proxy_set_header X-Forwarded-Host $host;
-        proxy_set_header X-Forwarded-Server $host;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_pass http://127.0.0.1:8891/mailbox;
+        proxy_pass http://127.0.0.1:7472;
     }
 
     location ~ /report/(.+)$ {
-        auth_request /auth;
-
         types { } default_type application/octet-stream;
         gzip on;
         gzip_types application/octet-stream;
@@ -277,88 +197,7 @@ server {
         alias /var/spool/emf/report/$1;
     }
 
-    location /report {
-        if ($ssl_client_verify != SUCCESS) {
-            return 401;
-        }
-
-        client_max_body_size 0m;
-
-        proxy_set_header X-SSL-Client-On $ssl_client_verify;
-        proxy_set_header X-SSL-Client-Name $ssl_client_s_dn_cn;
-        proxy_set_header X-SSL-Client-Serial $ssl_client_serial;
-
-        proxy_set_header X-Forwarded-Host $host;
-        proxy_set_header X-Forwarded-Server $host;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_pass http://127.0.0.1:8893/report;
-    }
-
-    location /agent/register {
-        proxy_set_header X-Forwarded-Host $host;
-        proxy_set_header X-Forwarded-Server $host;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_pass http://127.0.0.1:8002/agent/register;
-    }
-
-    location /agent/setup {
-        proxy_set_header X-Forwarded-Host $host;
-        proxy_set_header X-Forwarded-Server $host;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_pass http://127.0.0.1:8002/agent/setup;
-    }
-
-    location /agent/reregister {
-        if ($ssl_client_verify != SUCCESS) {
-            return 401;
-        }
-
-        proxy_set_header X-SSL-Client-On $ssl_client_verify;
-        proxy_set_header X-SSL-Client-Name $ssl_client_s_dn_cn;
-        proxy_set_header X-SSL-Client-Serial $ssl_client_serial;
-
-        proxy_set_header X-Forwarded-Host $host;
-        proxy_set_header X-Forwarded-Server $host;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_pass http://127.0.0.1:8002/agent/reregister;
-    }
-
-    location /agent/message {
-        client_body_buffer_size 1m;
-        client_max_body_size 8m;
-
-        if ($ssl_client_verify != SUCCESS) {
-            return 401;
-        }
-
-        proxy_set_header X-SSL-Client-On $ssl_client_verify;
-        proxy_set_header X-SSL-Client-Name $ssl_client_s_dn_cn;
-        proxy_set_header X-SSL-Client-Serial $ssl_client_serial;
-
-        proxy_set_header X-Forwarded-Host $host;
-        proxy_set_header X-Forwarded-Server $host;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_pass http://127.0.0.1:8002/agent/message;
-    }
-
-    location /agent2/message {
-        client_body_buffer_size 1m;
-        client_max_body_size 8m;
-
-        if ($ssl_client_verify != SUCCESS) {
-            return 401;
-        }
-
-        proxy_set_header X-SSL-Client-On $ssl_client_verify;
-        proxy_set_header X-SSL-Client-Name $ssl_client_s_dn_cn;
-        proxy_set_header X-SSL-Client-Serial $ssl_client_serial;
-
-        proxy_set_header X-Forwarded-Host $host;
-        proxy_set_header X-Forwarded-Server $host;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_pass http://127.0.0.1:8003/message;
-    }
-
+    
     location /repo/ {
         if ($ssl_client_verify != SUCCESS) {
             return 401;
@@ -368,14 +207,13 @@ server {
         proxy_set_header X-SSL-Client-Name $ssl_client_s_dn_cn;
 
         autoindex on;
-        alias /var/lib/chroma/repo/;
+        alias /var/lib/emf/repo/;
     }
 
     location /client/ {
         autoindex on;
-        alias /var/lib/chroma/repo/lustre-client/;
+        alias /var/lib/emf/repo/lustre-client/;
     }
-
 }
 
 # We should be able to use `alias` / `root` with `try_files`
@@ -387,7 +225,7 @@ upstream ui.fake {
 
 server {
     server_name ui.fake;
-    root /usr/share/emf-manager/rust-emf-gui;
+    root /usr/share/emf/rust-emf-gui;
     index index.html;
 
     types {

@@ -107,10 +107,10 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:9.6.17
+        image: postgres:13
         env:
-          POSTGRES_USER: chroma
-          POSTGRES_PASSWORD: chroma
+          POSTGRES_USER: emf
+          POSTGRES_PASSWORD: emf
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -130,9 +130,9 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - run: sudo PGPASSWORD=chroma psql -h localhost -p 5432 -c 'CREATE EXTENSION IF NOT EXISTS btree_gist;' -d chroma -U chroma
+      - run: sudo PGPASSWORD=emf psql -h localhost -p 5432 -c 'CREATE EXTENSION IF NOT EXISTS btree_gist;' -d emf -U emf
         env:
-          DB_PASSWORD: chroma
+          DB_PASSWORD: emf
           DB_HOST: localhost
           DB_PORT: 5432
 
@@ -144,14 +144,14 @@ jobs:
       - run: cargo install sqlx-cli --no-default-features --features postgres --git https://github.com/launchbadge/sqlx --tag v0.4.2
       - uses: actions-rs/cargo@v1
         env:
-          DATABASE_URL: postgres://chroma:chroma@localhost:5432/chroma
+          DATABASE_URL: postgres://emf:emf@localhost:5432/emf
         with:
           command: sqlx
           args: migrate run
 
       - uses: actions-rs/cargo@v1
         env:
-          DATABASE_URL: postgres://chroma:chroma@localhost:5432/chroma
+          DATABASE_URL: postgres://emf:emf@localhost:5432/emf
         with:
           command: sqlx
           args: prepare --merged --check -- --tests
@@ -175,15 +175,11 @@ jobs:
         rust:
           - stable
     services:
-      rabbitmq:
-        image: rabbitmq:3.6
-        ports:
-          - 5672:5672
       postgres:
-        image: postgres:9.6.17
+        image: postgres:13
         env:
-          POSTGRES_USER: chroma
-          POSTGRES_PASSWORD: chroma
+          POSTGRES_USER: emf
+          POSTGRES_PASSWORD: emf
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -212,18 +208,16 @@ jobs:
           toolchain: ${{ matrix.rust }}
           override: true
 
-      - uses: actions/setup-python@v1
-        env:
-          DB_PASSWORD: chroma
-          DB_HOST: localhost
-          DB_PORT: 5432
+      - uses: actions-rs/cargo@v1
       - run: cargo install sqlx-cli --no-default-features --features postgres --git https://github.com/launchbadge/sqlx --tag v0.4.2
+
       - uses: actions-rs/cargo@v1
         env:
-          DATABASE_URL: postgres://chroma:chroma@localhost:5432/chroma
+          DATABASE_URL: postgres://emf:emf@localhost:5432/emf
         with:
           command: sqlx
           args: migrate run
+
       - name: Run cargo test
         uses: actions-rs/cargo@v1
         with:
@@ -233,11 +227,11 @@ jobs:
       - name: Run db tests
         uses: actions-rs/cargo@v1
         env:
-          DATABASE_URL: postgres://chroma:chroma@localhost:5432/chroma
-          DB_USER: chroma
-          DB_HOST: localhost
-          DB_NAME: chroma
-          DB_PASSWORD: chroma
+          DATABASE_URL: postgres://emf:emf@localhost:5432/emf
+          PG_USER: emf
+          PG_HOST: localhost
+          PG_NAME: emf
+          PG_PASSWORD: emf
         with:
           command: test
           args: --test integration_tests --locked -- --ignored

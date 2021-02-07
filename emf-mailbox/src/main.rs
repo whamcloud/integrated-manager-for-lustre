@@ -27,7 +27,11 @@ lazy_static! {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     emf_tracing::init();
 
-    let pool = get_db_pool(*POOL_LIMIT).await?;
+    let pool = get_db_pool(
+        *POOL_LIMIT,
+        emf_manager_env::get_port("MAILBOX_SERVICE_PORT"),
+    )
+    .await?;
     let db_pool_filter = warp::any().map(move || pool.clone());
 
     let addr = emf_manager_env::get_mailbox_addr();

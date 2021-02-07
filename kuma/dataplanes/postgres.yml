@@ -1,0 +1,10 @@
+type: Dataplane
+mesh: default
+name: postgres
+networking:
+  address: {{ mgmt_address }}
+  inbound:
+    - port: {{ postgres_port }}
+      tags:
+        kuma.io/service: postgres
+        kuma.io/protocol: tcp

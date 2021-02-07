@@ -1,0 +1,28 @@
+[Unit]
+Description=EMF Nginx gateway sidecar
+Before=nginx.service
+Requires=nginx.service
+PartOf=emf-manager.target
+
+[Service]
+EnvironmentFile=/etc/emf/bootstrap.conf
+EnvironmentFile=-/etc/emf/overrides.conf
+ExecStartPre=/bin/rm -f /tmp/kuma-al-nginx-default.sock
+ExecStart=/root/kuma-1.0.6/bin/kuma-dp run \
+    --cp-address=https://${CP_ADDR}:5678 \
+    --dataplane-file=/etc/emf/dataplanes/nginx.yml \
+    --dataplane-token-file=/etc/emf/tokens/dataplane-token \
+    --dataplane-var nginx_influx_port=${NGINX_INFLUX_PORT} \
+    --dataplane-var nginx_grafana_port=${NGINX_GRAFANA_PORT} \
+    --dataplane-var nginx_api_service_port=${NGINX_API_SERVICE_PORT} \
+    --dataplane-var nginx_warp_drive_service_port=${NGINX_WARP_DRIVE_SERVICE_PORT} \
+    --dataplane-var mgmt_address=${MGMT_ADDR} \
+    --admin-port=
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+RequiredBy=nginx.service
+Also=nginx.service

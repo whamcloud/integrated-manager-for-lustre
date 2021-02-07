@@ -3,9 +3,8 @@
 // license that can be found in the LICENSE file.
 
 use crate::{
-    command::get_command,
     error::EmfApiError,
-    graphql::{create_task_job, fs_id_by_name, insert_task, run_jobs, Context, SendJob},
+    graphql::{create_task_job, fs_id_by_name, insert_task, Context, SendJob},
 };
 use emf_postgres::sqlx;
 use emf_wire_types::{
@@ -21,7 +20,7 @@ pub(crate) struct TaskQuery;
 impl TaskQuery {
     /// List all known `Task` records.
     async fn list(context: &Context) -> juniper::FieldResult<Vec<TaskOut>> {
-        let xs = sqlx::query_as!(Task, "SELECT * FROM chroma_core_task")
+        let xs = sqlx::query_as!(Task, "SELECT * FROM task")
             .fetch(&context.pg_pool)
             .err_into::<EmfApiError>()
             .and_then(|x| async {
@@ -74,14 +73,7 @@ impl TaskMutation {
 
         let job = create_task_job(task.id);
 
-        let cmd_id = run_jobs("Creating Task", vec![job], &context.rabbit_pool).await?;
-
-        let command = get_command(&context.pg_pool, cmd_id).await?;
-
-        Ok(CreateTaskResult {
-            task_id: task.id,
-            command,
-        })
+        unimplemented!();
     }
     /// Remove an existing task by id
     async fn remove(context: &Context, task_id: i32) -> juniper::FieldResult<Command> {
@@ -92,10 +84,6 @@ impl TaskMutation {
                 .collect::<HashMap<String, serde_json::Value>>(),
         };
 
-        let cmd_id = run_jobs("Removing Task", vec![job], &context.rabbit_pool).await?;
-
-        let command = get_command(&context.pg_pool, cmd_id).await?;
-
-        Ok(command)
+        unimplemented!();
     }
 }

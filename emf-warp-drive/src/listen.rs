@@ -3,11 +3,11 @@
 // license that can be found in the LICENSE file.
 
 use crate::{cache, db_record, error, users, DbRecord};
+use emf_postgres::sqlx::postgres::PgListener;
 use emf_wire_types::{
     db::TableName,
     warp_drive::{Message, RecordChange},
 };
-use futures::{Stream, TryStreamExt};
 use std::{convert::TryFrom, sync::Arc};
 
 #[derive(serde::Deserialize, Debug)]
@@ -75,43 +75,26 @@ async fn handle_record_change(
 }
 
 pub async fn handle_db_notifications(
-    mut stream: impl Stream<Item = Result<emf_postgres::AsyncMessage, emf_postgres::Error>>
-        + std::marker::Unpin,
-    client: emf_postgres::SharedClient,
-    api_client: emf_manager_client::Client,
+    mut listener: PgListener,
     api_cache_state: cache::SharedCache,
     user_state: users::SharedUsers,
 ) -> Result<(), error::EmfWarpDriveError> {
-    // Keep the client alive within the spawned future so the LISTEN/NOTIFY stream is not dropped
-    let _keep_alive = &client;
+    listener.listen("table_update").await?;
 
-    while let Some(msg) = stream.try_next().await? {
+    loop {
+        let notification = listener.recv().await?;
+
         let api_cache_state = Arc::clone(&api_cache_state);
         let user_state = Arc::clone(&user_state);
 
-        match msg {
-            emf_postgres::AsyncMessage::Notification(n) => {
-                if n.channel() == "table_update" {
-                    let r = into_db_record(n.payload())?;
+        if notification.payload() != "table_update" {
+            continue;
+        }
 
-                    let record_change =
-                        cache::db_record_to_change_record(r, api_client.clone()).await?;
+        let r = into_db_record(notification.payload())?;
 
-                    handle_record_change(record_change, api_cache_state, user_state).await;
-                } else {
-                    tracing::warn!("unknown channel: {}", n.channel());
-                }
+        let record_change = cache::db_record_to_change_record(r);
 
-                Ok(())
-            }
-            emf_postgres::AsyncMessage::Notice(err) => {
-                tracing::error!("Error from postgres {}", err);
-
-                Err(error::EmfWarpDriveError::from(err))
-            }
-            _ => unreachable!(),
-        }?;
+        handle_record_change(record_change, api_cache_state, user_state).await;
     }
-
-    Ok(())
 }

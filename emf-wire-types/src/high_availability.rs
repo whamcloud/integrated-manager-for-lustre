@@ -9,7 +9,7 @@ use std::{
     io,
 };
 
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum NodeType {
     Unknown,
     Member,
@@ -47,7 +47,7 @@ impl Display for NodeType {
     }
 }
 
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Node {
     pub name: String,
     pub id: String,
@@ -64,7 +64,7 @@ pub struct Node {
     pub r#type: NodeType,
 }
 
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Resource {
     pub id: String,
     pub resource_agent: String,
@@ -79,7 +79,7 @@ pub struct Resource {
     pub active_node_id: Option<String>,
 }
 
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Ban {
     pub id: String,
     pub resource: String,
@@ -88,7 +88,7 @@ pub struct Ban {
     pub master_only: bool,
 }
 
-#[derive(Debug, Default, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Cluster {
     pub nodes: Vec<Node>,
     pub resources: Vec<Resource>,

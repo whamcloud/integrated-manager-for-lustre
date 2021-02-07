@@ -9,10 +9,10 @@ use emf_postgres::{
     get_db_pool,
     sqlx::{self, Done, PgPool},
 };
-use emf_service_queue::service_queue::consume_data;
+use emf_service_queue::spawn_service_consumer;
 use emf_tracing::tracing;
 use emf_wire_types::JournalMessage;
-use futures::TryStreamExt;
+use futures::StreamExt;
 use lazy_static::lazy_static;
 use std::convert::TryInto;
 
@@ -32,9 +32,9 @@ async fn purge_excess(pool: &PgPool, mut num_rows: i64) -> Result<i64, EmfJourna
     while *DBLOG_LW < num_rows {
         let x = sqlx::query!(
             r#"
-                DELETE FROM chroma_core_logmessage
-                WHERE id in ( 
-                    SELECT id FROM chroma_core_logmessage ORDER BY id LIMIT $1
+                DELETE FROM logmessage
+                WHERE id in (
+                    SELECT id FROM logmessage ORDER BY id LIMIT $1
                 )
             "#,
             std::cmp::min(10_000, num_rows - *DBLOG_LW)
@@ -54,41 +54,31 @@ async fn purge_excess(pool: &PgPool, mut num_rows: i64) -> Result<i64, EmfJourna
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     emf_tracing::init();
 
-    tracing::info!("Starting");
+    let pool = get_db_pool(
+        get_pool_limit().unwrap_or(DEFAULT_POOL_LIMIT),
+        emf_manager_env::get_port("JOURNAL_SERVICE_PG_PORT"),
+    )
+    .await?;
 
-    let pool = get_db_pool(get_pool_limit().unwrap_or(DEFAULT_POOL_LIMIT)).await?;
-
-    let rabbit_pool = emf_rabbit::connect_to_rabbit(1);
-
-    let conn = emf_rabbit::get_conn(rabbit_pool).await?;
-
-    let ch = emf_rabbit::create_channel(&conn).await?;
-
-    let mut s = consume_data::<Vec<JournalMessage>>(&ch, "rust_agent_journal_rx");
-
-    let mut num_rows = sqlx::query!("SELECT COUNT(*) FROM chroma_core_logmessage")
+    let mut num_rows = sqlx::query!("SELECT COUNT(*) FROM logmessage")
         .fetch_one(&pool)
         .await?
         .count
         .expect("count returned None");
 
-    while let Some((host, xs)) = s.try_next().await? {
+    let mut rx = spawn_service_consumer::<Vec<JournalMessage>>(emf_manager_env::get_port(
+        "JOURNAL_SERVICE_PORT",
+    ));
+
+    while let Some((host, xs)) = rx.next().await {
         num_rows = purge_excess(&pool, num_rows).await?;
 
-        struct Row {
-            id: i32,
-            content_type_id: Option<i32>,
-        }
+        let row = sqlx::query!("select id from host where fqdn = $1", host.to_string())
+            .fetch_optional(&pool)
+            .await?;
 
-        let row = sqlx::query_as!(Row,
-            "select id, content_type_id from chroma_core_managedhost where fqdn = $1 and not_deleted = 't'",
-            host.to_string()
-        )
-        .fetch_optional(&pool)
-        .await?;
-
-        let row = match row {
-            Some(row) => row,
+        let id = match row {
+            Some(row) => row.id,
             None => {
                 tracing::warn!("Host '{}' is unknown", host);
 
@@ -96,16 +86,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         };
 
-        let content_type_id = match row.content_type_id.as_ref() {
-            Some(x) => *x,
-            None => {
-                tracing::warn!("Host '{}' content_type_id  is unknown", host);
-                continue;
-            }
-        };
-
         for x in xs.iter() {
-            execute_handlers(&x.message, row.id, content_type_id, &pool).await?;
+            execute_handlers(&x.message, id, &pool).await?;
         }
 
         num_rows += xs.len() as i64;
@@ -135,7 +117,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         sqlx::query!(
             r#"
-             INSERT INTO chroma_core_logmessage
+             INSERT INTO logmessage
              (datetime, fqdn, severity, facility, tag, message, message_class)
              SELECT datetime, $2, severity, facility, source, message, message_class
              FROM UNNEST($1::timestamptz[], $3::smallint[], $4::smallint[], $5::text[], $6::text[], $7::smallint[])

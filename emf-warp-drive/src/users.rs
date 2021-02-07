@@ -2,7 +2,6 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::locks::Locks;
 use emf_wire_types::warp_drive::{Cache, Message};
 use futures::{channel::mpsc, lock::Mutex, Stream, StreamExt};
 use im::HashMap;
@@ -19,7 +18,6 @@ pub type SharedUsers = Arc<Mutex<HashMap<usize, mpsc::UnboundedSender<Message>>>
 
 pub async fn user_connected(
     state: SharedUsers,
-    locks: Locks,
     api_cache: Cache,
 ) -> impl Stream<Item = Result<impl ServerSentEvent, warp::Error>> {
     // Use a counter to assign a new unique ID for this user.
@@ -32,7 +30,6 @@ pub async fn user_connected(
     let (tx, rx) = mpsc::unbounded();
 
     let _ = tx.unbounded_send(Message::Records(api_cache));
-    let _ = tx.unbounded_send(Message::Locks(locks));
 
     // Save the sender in our list of connected users.
     state.lock().await.insert(id, tx);

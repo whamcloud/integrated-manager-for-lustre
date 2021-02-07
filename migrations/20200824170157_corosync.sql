@@ -45,16 +45,16 @@ CREATE TABLE IF NOT EXISTS corosync_target_resource (
 
 CREATE UNIQUE INDEX IF NOT EXISTS corosync_target_resource_id_idx ON corosync_target_resource (id, cluster_id);
 
-CREATE TABLE IF NOT EXISTS corosync_node_managed_host (
-    host_id int NOT NULL REFERENCES chroma_core_managedhost (id),
+CREATE TABLE IF NOT EXISTS corosync_node_host (
+    host_id int NOT NULL REFERENCES host (id),
     corosync_node_id corosync_node_key NOT NULL,
     cluster_id INT NOT NULL,
     FOREIGN KEY (corosync_node_id, cluster_id) REFERENCES corosync_node (id, cluster_id) ON DELETE CASCADE,
     UNIQUE (host_id, corosync_node_id, cluster_id)
 );
 
-CREATE TABLE IF NOT EXISTS corosync_target_resource_managed_host (
-    host_id INT NOT NULL REFERENCES chroma_core_managedhost (id),
+CREATE TABLE IF NOT EXISTS corosync_target_resource_host (
+    host_id INT NOT NULL REFERENCES host (id),
     cluster_id INT NOT NULL,
     corosync_resource_id text NOT NULL,
     FOREIGN KEY (cluster_id, corosync_resource_id) REFERENCES corosync_target_resource (cluster_id, id) ON DELETE CASCADE,

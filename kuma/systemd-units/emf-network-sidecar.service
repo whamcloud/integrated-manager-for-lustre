@@ -1,0 +1,22 @@
+[Unit]
+Description=EMF network service sidecar
+Requires=emf-network.service
+PartOf=emf-network.service
+
+[Service]
+EnvironmentFile=/etc/emf/bootstrap.conf
+EnvironmentFile=-/etc/emf/overrides.conf
+ExecStartPre=/bin/rm -f /tmp/kuma-al-emf-network-service-default.sock
+ExecStart=/root/kuma-1.0.6/bin/kuma-dp run \
+    --cp-address=https://${CP_ADDR}:5678 \
+    --dataplane-file=/etc/emf/dataplanes/emf-network-service.yml \
+    --dataplane-token-file=/etc/emf/tokens/dataplane-token \
+    --dataplane-var mgmt_address=${MGMT_ADDR} \
+    --dataplane-var network_service_port=${NETWORK_SERVICE_PORT} \
+    --dataplane-var network_service_pg_port=${NETWORK_SERVICE_PG_PORT} \
+    --dataplane-var network_service_influx_port=${NETWORK_SERVICE_INFLUX_PORT} \
+    --admin-port=
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal

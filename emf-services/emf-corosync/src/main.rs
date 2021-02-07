@@ -11,10 +11,10 @@ use emf_corosync::{
 };
 use emf_manager_env::get_pool_limit;
 use emf_postgres::{get_db_pool, host_id_by_fqdn, sqlx};
-use emf_service_queue::service_queue::consume_data;
+use emf_service_queue::spawn_service_consumer;
 use emf_tracing::tracing;
 use emf_wire_types::high_availability::Cluster;
-use futures::TryStreamExt;
+use futures::StreamExt;
 use std::collections::BTreeSet;
 
 // Default pool limit if not overridden by POOL_LIMIT
@@ -24,19 +24,19 @@ const DEFAULT_POOL_LIMIT: u32 = 2;
 async fn main() -> Result<(), EmfCorosyncError> {
     emf_tracing::init();
 
-    let rabbit_pool = emf_rabbit::connect_to_rabbit(1);
-
-    let conn = emf_rabbit::get_conn(rabbit_pool).await?;
-
-    let ch = emf_rabbit::create_channel(&conn).await?;
-
-    let mut s = consume_data::<(String, Cluster)>(&ch, "rust_agent_corosync_rx");
-
-    let pool = get_db_pool(get_pool_limit().unwrap_or(DEFAULT_POOL_LIMIT)).await?;
+    let pool = get_db_pool(
+        get_pool_limit().unwrap_or(DEFAULT_POOL_LIMIT),
+        emf_manager_env::get_port("COROSYNC_SERVICE_PG_PORT"),
+    )
+    .await?;
 
     sqlx::migrate!("../../migrations").run(&pool).await?;
 
-    while let Some((fqdn, (local_node_id, cluster))) = s.try_next().await? {
+    let mut rx = spawn_service_consumer::<(String, Cluster)>(emf_manager_env::get_port(
+        "COROSYNC_SERVICE_PORT",
+    ));
+
+    while let Some((fqdn, (local_node_id, cluster))) = rx.next().await {
         let host_id = host_id_by_fqdn(&fqdn, &pool).await?;
 
         let host_id = match host_id {

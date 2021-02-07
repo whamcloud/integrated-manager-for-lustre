@@ -1,0 +1,17 @@
+[Unit]
+Description=EMF Ntp Agent Service
+PartOf=emf-agent.target
+After=network.target
+Wants=emf-ntp-agent-sidecar.service
+After=emf-ntp-agent-sidecar.service
+
+[Service]
+Type=simple
+Environment=RUST_LOG=info
+EnvironmentFile=/etc/emf/bootstrap.conf
+EnvironmentFile=-/etc/emf/overrides.conf
+ExecStart=/bin/emf-ntp-agent
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal

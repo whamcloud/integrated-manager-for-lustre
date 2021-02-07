@@ -1,0 +1,19 @@
+[Unit]
+Description=EMF Journal Agent Service
+PartOf=emf-agent.target
+After=network.target
+Requires=systemd-journal-gatewayd.socket
+After=systemd-journal-gatewayd.socket
+Wants=emf-journal-agent-sidecar.service
+After=emf-journal-agent-sidecar.service
+
+[Service]
+Type=simple
+Environment=RUST_LOG=info
+EnvironmentFile=/etc/emf/bootstrap.conf
+EnvironmentFile=-/etc/emf/overrides.conf
+ExecStart=/bin/emf-journal-agent
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal

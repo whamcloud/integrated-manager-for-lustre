@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use emf_wire_types::{AlertRecordType, AlertSeverity};
+use emf_wire_types::{AlertRecordType, AlertSeverity, ComponentType};
 use sqlx::PgPool;
 
 pub async fn lower(
@@ -13,12 +13,12 @@ pub async fn lower(
     let xs: Vec<_> = xs.iter().map(|x| x.to_string()).collect();
 
     sqlx::query!(
-        r#"UPDATE chroma_core_alertstate
+        r#"UPDATE alertstate
             SET active = Null, "end" = now()
             WHERE
                 active = true
                 AND alert_item_id = $1
-                AND record_type = ANY($2)
+                AND record_type::text = ANY($2)
         "#,
         host_id,
         &xs
@@ -33,16 +33,15 @@ pub async fn raise(
     pool: &PgPool,
     record_type: AlertRecordType,
     msg: String,
-    item_content_type_id: i32,
+    component_type: ComponentType,
     lustre_pid: Option<i32>,
     severity: AlertSeverity,
     item_id: i32,
 ) -> Result<(), sqlx::Error> {
-    let record_type = record_type.to_string();
-    let severity: i32 = severity.into();
+    let severity: i32 = severity as i32;
 
     sqlx::query!(
-        r#"INSERT INTO chroma_core_alertstate
+        r#"INSERT INTO alertstate
         (
             record_type,
             variant,
@@ -56,15 +55,15 @@ pub async fn raise(
             lustre_pid,
             alert_item_type_id
         )
-        VALUES ($1, '{}', $2, $1, now(), $3, true, false, $4, $5, $6)
+        VALUES ($1::alert_record_type, '{}', $2, $1, now(), $3, true, false, $4, $5, $6)
         ON CONFLICT DO NOTHING
         "#,
-        &record_type,
+        record_type as AlertRecordType,
         item_id,
         msg,
         severity,
         lustre_pid,
-        item_content_type_id
+        component_type as ComponentType
     )
     .execute(pool)
     .await?;

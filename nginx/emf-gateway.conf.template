@@ -1,0 +1,250 @@
+map $ssl_client_s_dn $ssl_client_s_dn_cn {
+    default "";
+    ~CN=(?<CN>[^,]+) $CN;
+}
+
+map $status $loggable {
+    ~^[23]  0;
+    default 1;
+}
+
+map $uri $cache_control {
+    default no-cache;
+    ~\.html$ public,must-revalidate;
+    ~\.(jpg|jpeg|png|gif|ico|css|js|wasm|woff2|svg)$ public,max-age=31536000,immutable;
+}
+
+server {
+    root /var/lib/emf;
+
+    listen {{NGINX_GATEWAY_PORT}} ssl http2;
+
+    error_page 497 https://$http_host$request_uri;
+
+    proxy_read_timeout 330s;
+    proxy_http_version 1.1;
+
+    access_log /var/log/nginx/access.log combined if=$loggable;
+
+    types {
+        application/javascript js;
+        application/json json map;
+        application/manifest+json webmanifest;
+        application/octet-stream bin exe dll;
+        application/octet-stream deb;
+        application/octet-stream dmg;
+        application/octet-stream eot;
+        application/octet-stream iso img;
+        application/octet-stream msi msp msm;
+        application/wasm wasm;
+        application/x-makeself run;
+        application/x-pilot prc pdb;
+        application/x-rar-compressed rar;
+        application/x-redhat-package-manager rpm;
+        application/x-shockwave-flash swf;
+        application/x-tcl tcl tk;
+        application/x-x509-ca-cert der pem crt;
+        application/zip zip;
+        font/woff woff;
+        font/woff2 woff2;
+        image/gif gif;
+        image/jpeg jpeg jpg;
+        image/png png;
+        image/svg+xml svg;
+        image/x-icon ico;
+        text/css css;
+        text/html html htm;
+        text/plain txt;
+        text/x-component htc;
+        text/xml xml rss;
+    }
+
+    ssl_certificate {{NGINX_CRYPTO_DIR}}/ca.crt;
+    ssl_certificate_key {{NGINX_CRYPTO_DIR}}/ca.key;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers on;
+
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 180m;
+
+    gzip_comp_level 5;
+
+    location ~ ^/$ {
+        return 301 https://$http_host/ui;
+    }
+
+    location /help {
+        alias /usr/lib/emf-manager/emf-online-help;
+
+        gzip on;
+        gzip_types text/plain text/xml text/css application/x-javascript application/javascript text/javascript application/json;
+
+        index index.html;
+    }
+
+    location ~ ^/ui/(favicon.*|android-chrome.*|apple-touch-icon\.png|mstile-150x150\.png|safari-pinned-tab\.svg)$ {
+        try_files /branding/$1 /../../../usr/share/emf-manager/rust-emf-gui/$1;
+    }
+
+    location /ui {
+        proxy_pass http://ui.fake/;
+
+        etag on;
+        expires 1y;
+        add_header Cache-Control $cache_control;
+
+        gzip on;
+        gzip_types
+            application/javascript
+            application/json
+            application/manifest+json
+            application/wasm
+            application/x-javascript
+            application/x-web-app-manifest+json
+            image/*
+            text/css
+            text/javascript;
+    }
+
+    location /grafana {
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Server $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-WEBAUTH-USER "admin";
+        rewrite  ^/grafana/(.*)  /$1 break;
+        proxy_pass http://127.0.0.1:{{NGINX_GRAFANA_PORT}};
+
+        etag on;
+        expires 1y;
+        add_header Cache-Control $cache_control;
+
+        gzip_proxied any;
+    }
+
+    location /influx {
+        limit_except GET { deny all; }
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Server $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_pass http://127.0.0.1:{{NGINX_INFLUX_PORT}}/query;
+
+        gzip_proxied any;
+    }
+
+    location /api/conf {
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Server $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_pass http://127.0.0.1:{{NGINX_API_SERVICE_PORT}}/conf;
+    }
+
+    location /graphql_schema {
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Server $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_pass http://127.0.0.1:{{NGINX_API_SERVICE_PORT}}/graphql_schema;
+    }
+
+    location /graphql {
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Server $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_pass http://127.0.0.1:{{NGINX_API_SERVICE_PORT}}/graphql;
+
+        gzip on;
+        gzip_types application/json;
+    }
+
+    location /graphiql {
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Server $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_pass http://127.0.0.1:{{NGINX_API_SERVICE_PORT}}/graphiql;
+    }
+
+    location /messaging {
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Server $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_http_version 1.1;
+        proxy_set_header Connection '';
+        proxy_pass http://127.0.0.1:{{NGINX_WARP_DRIVE_SERVICE_PORT}};
+    }
+
+    location ~ /report/(.+)$ {
+        types { } default_type application/octet-stream;
+        gzip on;
+        gzip_types application/octet-stream;
+
+        sendfile on;
+        tcp_nopush on;
+        tcp_nodelay on;
+        sendfile_max_chunk 1m;
+
+        alias {{REPORT_PATH}}/$1;
+    }
+
+    
+    location /repo/ {
+        if ($ssl_client_verify != SUCCESS) {
+            return 401;
+        }
+
+        proxy_set_header X-SSL-Client-On $ssl_client_verify;
+        proxy_set_header X-SSL-Client-Name $ssl_client_s_dn_cn;
+
+        autoindex on;
+        alias {{REPO_PATH}}/;
+    }
+
+    location /client/ {
+        autoindex on;
+        alias {{REPO_PATH}}/lustre-client/;
+    }
+}
+
+# We should be able to use `alias` / `root` with `try_files`
+# However, due to https://trac.nginx.org/nginx/ticket/97
+# We need to do it this way.
+upstream ui.fake {
+    server 127.0.0.1;
+}
+
+server {
+    server_name ui.fake;
+    root /usr/share/emf/rust-emf-gui;
+    index index.html;
+
+    types {
+        application/javascript js;
+        application/json json map;
+        application/manifest+json webmanifest;
+        application/wasm wasm;
+        application/x-redhat-package-manager rpm;
+        application/x-x509-ca-cert der pem crt;
+        application/zip zip;
+        font/woff woff;
+        font/woff2 woff2;
+        image/gif gif;
+        image/jpeg jpeg jpg;
+        image/png png;
+        image/svg+xml svg;
+        image/x-icon ico;
+        text/css css;
+        text/html html htm;
+        text/plain txt;
+        text/xml xml rss;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

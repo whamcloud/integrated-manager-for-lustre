@@ -2,67 +2,76 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-#![type_length_limit = "5657938"]
-
 use emf_ostpool::{db, error::Error};
-use emf_service_queue::service_queue::consume_data;
+use emf_postgres::sqlx;
+use emf_service_queue::spawn_service_consumer;
+use emf_tracing::tracing;
 use emf_wire_types::FsPoolMap;
-use futures::{future::try_join_all, TryStreamExt};
+use futures::{future::try_join_all, StreamExt};
 use std::collections::BTreeSet;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     emf_tracing::init();
 
-    let pool = emf_rabbit::connect_to_rabbit(1);
+    let mut rx =
+        spawn_service_consumer::<FsPoolMap>(emf_manager_env::get_port("OSTPOOL_SERVICE_PORT"));
 
-    let conn = emf_rabbit::get_conn(pool).await?;
+    let db_pool =
+        emf_postgres::get_db_pool(2, emf_manager_env::get_port("OSTPOOL_SERVICE_PG_PORT")).await?;
 
-    let ch = emf_rabbit::create_channel(&conn).await?;
-
-    let mut s = consume_data::<FsPoolMap>(&ch, "rust_agent_ostpool_rx");
-
-    while let Some((fqdn, fspools)) = s.try_next().await? {
+    while let Some((fqdn, fspools)) = rx.next().await {
         tracing::debug!("Pools from {}: {:?}", fqdn, fspools);
 
-        let client = db::connect(fqdn).await?;
+        let db_pool = db_pool.clone();
 
-        let xs = fspools.iter().map(|(fsname, newpoolset)| {
-            let client = client.clone();
+        let xs = fspools.iter().map(move |(fsname, newpoolset)| {
+            let db_pool = db_pool.clone();
 
             async move {
                 // If fsid finds no match, assume FS hasn't been added to EMF and skip
-                let fsid = match client.fsid(&fsname).await {
-                    Ok(id) => id,
-                    Err(Error::NotFound) => {
+                let row = sqlx::query!("SELECT id FROM filesystem WHERE name = $1", &fsname)
+                    .fetch_optional(&db_pool)
+                    .await?;
+
+                let fsid = match row {
+                    Some(x) => x.id,
+                    None => {
                         tracing::info!("Filesystem {} not found in DB", &fsname);
+
                         return Ok(vec![]);
                     }
-                    Err(e) => return Err(e),
                 };
+
                 tracing::debug!("{}: {:?}", fsname, newpoolset);
 
-                let oldpoolset = client.poolset(fsname, fsid).await?;
+                let oldpoolset = db::poolset(fsname, fsid, &db_pool).await?;
 
                 let addset: BTreeSet<_> = newpoolset.difference(&oldpoolset).cloned().collect();
 
                 let xsadd = addset.clone().into_iter().map(|pool| {
-                    let client = client.clone();
+                    let db_pool = db_pool.clone();
+
                     async move {
                         tracing::debug!("Create {}.{}: {:?}", fsname, &pool.name, &pool.osts);
-                        let poolid = client.create(fsid, &pool.name).await?;
-                        client.grow(fsid, poolid, &pool.osts).await
+
+                        let poolid = db::create(fsid, &pool.name, &db_pool).await?;
+
+                        db::grow(&fsname, poolid, &pool.osts, &db_pool).await
                     }
                 });
 
                 let xsrm = oldpoolset.difference(&newpoolset).cloned().map(|pool| {
-                    let client = client.clone();
+                    let db_pool = db_pool.clone();
+
                     async move {
-                        if let Some(poolid) = client.poolid(fsid, &pool.name).await? {
+                        if let Some(poolid) = db::poolid(fsid, &pool.name, &db_pool).await? {
                             tracing::debug!("Remove {}.{}: {:?}", fsname, &pool.name, &pool.osts);
-                            client.shrink(fsid, poolid, &pool.osts).await?;
-                            client.delete(fsid, &pool.name).await?;
+
+                            db::shrink(&fsname, poolid, &pool.osts, &db_pool).await?;
+                            db::delete(fsid, &pool.name, &db_pool).await?;
                         }
+
                         Ok::<_, Error>(())
                     }
                 });
@@ -70,16 +79,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 let xsupdate = newpoolset.difference(&addset).cloned().filter_map(|pool| {
                     if let Some(old) = oldpoolset.get(&pool) {
                         if old.osts != pool.osts {
-                            let client = client.clone();
+                            let db_pool = db_pool.clone();
+
                             return Some(async move {
-                                if let Some(poolid) = client.poolid(fsid, &pool.name).await? {
+                                if let Some(poolid) = db::poolid(fsid, &pool.name, &db_pool).await?
+                                {
                                     tracing::debug!(
                                         "Diff {}.{}: {:?}",
                                         fsname,
                                         &pool.name,
                                         &pool.osts
                                     );
-                                    client.diff(fsid, poolid, &pool.osts).await
+
+                                    db::diff(&fsname, poolid, &pool.osts, &db_pool).await
                                 } else {
                                     Ok(())
                                 }
@@ -94,6 +106,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 try_join_all(xsupdate).await
             }
         });
+
         try_join_all(xs).await?;
     }
 
