@@ -9,8 +9,8 @@ EnvironmentFile=-/etc/emf/overrides.conf
 Environment=KUMA_STORE_TYPE=postgres
 Environment=KUMA_STORE_POSTGRES_HOST=localhost
 Environment=KUMA_DNS_SERVER_CIDR=127.0.0.1/8
-ExecStartPre=/root/kuma-1.0.6/bin/kuma-cp migrate up
-ExecStart=/root/kuma-1.0.6/bin/kuma-cp run
+ExecStartPre=/usr/bin/kuma-cp migrate up
+ExecStart=/usr/bin/kuma-cp run
 Restart=always
 RestartSec=5
 StandardOutput=journal

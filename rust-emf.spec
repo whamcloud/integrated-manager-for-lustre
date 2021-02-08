@@ -8,6 +8,8 @@ BuildRequires: systemd
 
 %global envoy_version 1.16.0.p0.g8fb3cb8-1p69.ga5345f6
 
+%global kuma_version 1.0.6-1
+
 Name: rust-%{crate}
 Version: 0.5.0
 # Release Start
@@ -196,6 +198,8 @@ License: MIT
 Group: System Environment/Libraries
 Requires: rust-emf-bootstrap >= %{version}
 Requires: rust-emf-postgres >= %{version}
+Requires: kuma-cp >= %{kuma_version}
+Requires: kuma-ctl >= %{kuma_version}
 
 %description kuma
 %{summary}
@@ -211,6 +215,7 @@ Summary: postgres and sidecar
 License: MIT
 Group: System Environment/Libraries
 Requires:       getenvoy-envoy = %{envoy_version}
+Requires:       kuma-dp >= %{kuma_version}
 Requires:       rust-emf-bootstrap >= %{version}
 Requires:       rust-emf-config-cli >= %{version}
 Requires:       postgresql13-server >= 13.1
@@ -229,6 +234,7 @@ Summary: influxdb and sidecar
 License: MIT
 Group: System Environment/Libraries
 Requires: getenvoy-envoy = %{envoy_version}
+Requires: kuma-dp >= %{kuma_version}
 Requires: rust-emf-bootstrap >= %{version}
 Requires: rust-emf-config-cli >= %{version}
 Requires: influxdb < 2
@@ -246,6 +252,7 @@ Summary: grafana and sidecar
 License: MIT
 Group: System Environment/Libraries
 Requires: getenvoy-envoy = %{envoy_version}
+Requires: kuma-dp >= %{kuma_version}
 Requires: rust-emf-bootstrap >= %{version}
 Requires: rust-emf-config-cli >= %{version}
 Requires: grafana
@@ -268,6 +275,7 @@ Summary: nginx gateway and sidecar
 License: MIT
 Group: System Environment/Libraries
 Requires: getenvoy-envoy = %{envoy_version}
+Requires: kuma-dp >= %{kuma_version}
 Requires: rust-emf-grafana >= %{version}
 Requires: rust-emf-api >= %{version}
 Requires: rust-emf-warp-drive >= %{version}
@@ -294,7 +302,6 @@ Requires: nginx >= 1:1.12.2
 Summary: EMF manager CLI
 License: MIT
 Group: System Environment/Libraries
-Requires: getenvoy-envoy = %{envoy_version}
 Requires: rust-emf-bootstrap >= %{version}
 Provides: rust-iml-cli
 Obsoletes: rust-iml-cli
@@ -355,6 +362,7 @@ License: MIT
 Group: System Environment/Libraries
 Requires: rust-emf-manager-target >= %{version}
 Requires: getenvoy-envoy = %{envoy_version}
+Requires: kuma-dp >= %{kuma_version}
 Requires: rust-emf-bootstrap >= %{version}
 Provides: rust-iml-api
 Obsoletes: rust-iml-api
@@ -378,6 +386,7 @@ License: MIT
 Group: System Environment/Libraries
 Requires: rust-emf-manager-target >= %{version}
 Requires: getenvoy-envoy = %{envoy_version}
+Requires: kuma-dp >= %{kuma_version}
 Requires: rust-emf-bootstrap >= %{version}
 Requires: rust-emf-postgres >= %{version}
 Provides: rust-iml-ostpool
@@ -402,6 +411,7 @@ License: MIT
 Group: System Environment/Libraries
 Requires: rust-emf-manager-target >= %{version}
 Requires: getenvoy-envoy = %{envoy_version}
+Requires: kuma-dp >= %{kuma_version}
 Requires: rust-emf-bootstrap >= %{version}
 Provides: rust-iml-task-runner
 Obsoletes: rust-iml-task-runner
@@ -423,6 +433,7 @@ License: MIT
 Group: System Environment/Libraries
 Requires: rust-emf-manager-target >= %{version}
 Requires: getenvoy-envoy = %{envoy_version}
+Requires: kuma-dp >= %{kuma_version}
 Requires: rust-emf-bootstrap >= %{version}
 Requires: rust-emf-influx >= %{version}
 Provides: rust-iml-stats
@@ -447,6 +458,7 @@ License: MIT
 Group: System Environment/Libraries
 Requires: rust-emf-manager-target >= %{version}
 Requires: getenvoy-envoy = %{envoy_version}
+Requires: kuma-dp >= %{kuma_version}
 Requires: rust-emf-bootstrap >= %{version}
 Requires: rust-emf-postgres >= %{version}
 Provides: rust-iml-warp-drive
@@ -472,6 +484,7 @@ License: MIT
 Group: System Environment/Libraries
 Requires: rust-emf-manager-target >= %{version}
 Requires: getenvoy-envoy = %{envoy_version}
+Requires: kuma-dp >= %{kuma_version}
 Requires: rust-emf-bootstrap >= %{version}
 Provides: rust-iml-mailbox
 Obsoletes: rust-iml-mailbox
@@ -493,6 +506,7 @@ License: MIT
 Group: System Environment/Libraries
 Requires: rust-emf-manager-target >= %{version}
 Requires: getenvoy-envoy = %{envoy_version}
+Requires: kuma-dp >= %{kuma_version}
 Requires: rust-emf-postgres >= %{version}
 Requires: rust-emf-bootstrap >= %{version}
 
@@ -515,6 +529,7 @@ License: MIT
 Group: System Environment/Libraries
 Requires: rust-emf-manager-target >= %{version}
 Requires: getenvoy-envoy = %{envoy_version}
+Requires: kuma-dp >= %{kuma_version}
 Requires: rust-emf-postgres >= %{version}
 Requires: rust-emf-influx >= %{version}
 Requires: rust-emf-bootstrap >= %{version}
@@ -540,6 +555,7 @@ License: MIT
 Group: System Environment/Libraries
 Requires: rust-emf-manager-target >= %{version}
 Requires: getenvoy-envoy = %{envoy_version}
+Requires: kuma-dp >= %{kuma_version}
 Requires: rust-emf-bootstrap >= %{version}
 Requires: rust-emf-postgres >= %{version}
 Provides: rust-iml-ntp
@@ -564,6 +580,7 @@ License: MIT
 Group: System Environment/Libraries
 Requires: rust-emf-manager-target >= %{version}
 Requires: getenvoy-envoy = %{envoy_version}
+Requires: kuma-dp >= %{kuma_version}
 Requires: rust-emf-bootstrap >= %{version}
 Provides: rust-iml-report
 Obsoletes: rust-iml-report
@@ -586,6 +603,7 @@ License: MIT
 Group: System Environment/Libraries
 Requires: rust-emf-manager-target >= %{version}
 Requires: getenvoy-envoy = %{envoy_version}
+Requires: kuma-dp >= %{kuma_version}
 Requires: rust-emf-bootstrap >= %{version}
 Requires: rust-emf-postgres >= %{version}
 Provides: rust-iml-sfa
@@ -608,6 +626,7 @@ License: MIT
 Group: System Environment/Libraries
 Requires: rust-emf-manager-target >= %{version}
 Requires: getenvoy-envoy = %{envoy_version}
+Requires: kuma-dp >= %{kuma_version}
 Requires: rust-emf-bootstrap >= %{version}
 Requires: rust-emf-influx >= %{version}
 Requires: rust-emf-postgres >= %{version}
@@ -633,6 +652,7 @@ License: MIT
 Group: System Environment/Libraries
 Requires: rust-emf-manager-target >= %{version}
 Requires: getenvoy-envoy = %{envoy_version}
+Requires: kuma-dp >= %{kuma_version}
 Requires: rust-emf-bootstrap >= %{version}
 Requires: rust-emf-postgres >= %{version}
 Provides: rust-iml-device
@@ -657,6 +677,7 @@ License: MIT
 Group: System Environment/Libraries
 Requires: rust-emf-manager-target >= %{version}
 Requires: getenvoy-envoy = %{envoy_version}
+Requires: kuma-dp >= %{kuma_version}
 Requires: rust-emf-bootstrap >= %{version}
 Requires: rust-emf-postgres >= %{version}
 Provides: rust-iml-journal
@@ -681,6 +702,7 @@ License: MIT
 Group: System Environment/Libraries
 Requires: rust-emf-manager-target >= %{version}
 Requires: getenvoy-envoy = %{envoy_version}
+Requires: kuma-dp >= %{kuma_version}
 Requires: rust-emf-bootstrap >= %{version}
 Requires: rust-emf-postgres >= %{version}
 Provides: rust-iml-corosync
@@ -765,6 +787,7 @@ License: MIT
 Group: System Environment/Libraries
 Requires: rust-emf-agent-target >= %{version}
 Requires: getenvoy-envoy = %{envoy_version}
+Requires: kuma-dp >= %{kuma_version}
 Requires: rust-emf-bootstrap >= %{version}
 
 %description corosync-agent
@@ -784,6 +807,7 @@ Group: System Environment/Libraries
 Requires: rust-emf-agent-target >= %{version}
 Requires: emf-device-scanner >= 5.1
 Requires: getenvoy-envoy = %{envoy_version}
+Requires: kuma-dp >= %{kuma_version}
 Requires: rust-emf-bootstrap >= %{version}
 Obsoletes: emf-device-scanner-proxy
 
@@ -803,6 +827,7 @@ License: MIT
 Group: System Environment/Libraries
 Requires: rust-emf-agent-target >= %{version}
 Requires: getenvoy-envoy = %{envoy_version}
+Requires: kuma-dp >= %{kuma_version}
 Requires: rust-emf-bootstrap >= %{version}
 Requires: systemd-journal-gateway
 
@@ -828,6 +853,7 @@ License: MIT
 Group: System Environment/Libraries
 Requires: rust-emf-agent-target >= %{version}
 Requires: getenvoy-envoy = %{envoy_version}
+Requires: kuma-dp >= %{kuma_version}
 Requires: rust-emf-bootstrap >= %{version}
 
 %description host-agent
@@ -846,6 +872,7 @@ License: MIT
 Group: System Environment/Libraries
 Requires: rust-emf-agent-target >= %{version}
 Requires: getenvoy-envoy = %{envoy_version}
+Requires: kuma-dp >= %{kuma_version}
 Requires: rust-emf-bootstrap >= %{version}
 
 %description network-agent
@@ -864,6 +891,7 @@ License: MIT
 Group: System Environment/Libraries
 Requires: rust-emf-agent-target >= %{version}
 Requires: getenvoy-envoy = %{envoy_version}
+Requires: kuma-dp >= %{kuma_version}
 Requires: rust-emf-bootstrap >= %{version}
 
 %description ntp-agent
@@ -882,6 +910,7 @@ License: MIT
 Group: System Environment/Libraries
 Requires: rust-emf-agent-target >= %{version}
 Requires: getenvoy-envoy = %{envoy_version}
+Requires: kuma-dp >= %{kuma_version}
 Requires: rust-emf-bootstrap >= %{version}
 
 %description ostpool-agent
@@ -899,7 +928,6 @@ Summary: ships postoffice info to the manager
 License: MIT
 Group: System Environment/Libraries
 Requires: rust-emf-agent-target >= %{version}
-Requires: getenvoy-envoy = %{envoy_version}
 Requires: rust-emf-bootstrap >= %{version}
 
 %description postoffice-agent
@@ -916,6 +944,7 @@ License: MIT
 Group: System Environment/Libraries
 Requires: rust-emf-agent-target >= %{version}
 Requires: getenvoy-envoy = %{envoy_version}
+Requires: kuma-dp >= %{kuma_version}
 Requires: rust-emf-bootstrap >= %{version}
 
 %description snapshot-agent
@@ -934,6 +963,7 @@ License: MIT
 Group: System Environment/Libraries
 Requires: rust-emf-agent-target >= %{version}
 Requires: getenvoy-envoy = %{envoy_version}
+Requires: kuma-dp >= %{kuma_version}
 Requires: rust-emf-bootstrap >= %{version}
 
 %description stats-agent
