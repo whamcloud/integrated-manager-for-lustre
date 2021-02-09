@@ -1,3 +1,6 @@
+override SHELL = bash
+override .SHELLFLAGS = -eux -o pipefail -c
+
 VBOX_DIR=$(shell VBoxManage list systemproperties|awk -F ': *' '/^Default machine folder:/{ print $$2 }')
 VDISK_DIR=${VBOX_DIR}/esvdisks
 

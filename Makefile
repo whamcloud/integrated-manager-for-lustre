@@ -2,6 +2,9 @@
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file.
 
+override SHELL = bash
+override .SHELLFLAGS = -eux -o pipefail -c
+
 RPM_OPTS = -D "_topdir $(CURDIR)/_topdir"
 ifdef RPM_DIST
 	RPM_OPTS += -D "dist ${RPM_DIST}"
@@ -101,7 +104,7 @@ rust-core-rpms:
 	cp -rf grafana ${TMPDIR}/release/rust-core
 	cp -rf nginx ${TMPDIR}/release/rust-core
 	cp -rf kuma ${TMPDIR}/release/rust-core
-	
+
 	mkdir -p ${TMPDIR}/release/rust-core/emf-agent-units
 	cp -rf emf-agent/systemd-units ${TMPDIR}/release/rust-core/emf-agent-units
 	mkdir -p ${TMPDIR}/_topdir/{SOURCES,SPECS}
