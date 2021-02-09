@@ -6,7 +6,7 @@ PartOf=emf-ntp-agent.service
 [Service]
 EnvironmentFile=/etc/emf/bootstrap.conf
 EnvironmentFile=-/etc/emf/overrides.conf
-ExecStartPre=/bin/rm -f /tmp/kuma-al-emf-ntp-agent-*-default.sock
+ExecStartPre=/bin/rm -f /tmp/kuma-al-emf-ntp-agent-%m-default.sock
 ExecStart=/usr/bin/kuma-dp run \
     --cp-address=https://${CP_ADDR}:5678 \
     --dataplane-file=/etc/emf/dataplanes/emf-ntp-agent.yml \

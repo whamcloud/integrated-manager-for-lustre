@@ -1,4 +1,5 @@
 _build
+_deb
 _topdir
 .cargo
 .DS_Store
