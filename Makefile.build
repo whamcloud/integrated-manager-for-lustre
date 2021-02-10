@@ -5,6 +5,7 @@ BINDIR = $(PREFIX)/bin
 SYSTEMDDIR = $(PREFIX)/lib/systemd
 TMPFILESDIR = $(PREFIX)/lib/tmpfile.d
 UDEVDIR = $(PREFIX)/lib/udev/rules.d
+SYSCONFDIR = /etc
 
 INSTALL = install -v
 INSTALL_BIN = $(INSTALL)
@@ -51,32 +52,135 @@ install-device-scanner: build-device-scanner
 	$(INSTALL_FILE) device-scanner/uevent-listener/udev-rules/99-emf-device-scanner.rules '$(DESTDIR)$(UDEVDIR)'
 
 
-
 .PHONY: build-agent
 build-agent:
 	cargo build --release -p emf-agent
 
 .PHONY: install-agent
 install-agent: build-agent
+	$(INSTALL_DIR) '$(DESTDIR)$(SYSCONFDIR)/emf'
+	$(INSTALL_FILE) bootstrap.conf '$(DESTDIR)$(SYSCONFDIR)/emf'
+
+
+	$(INSTALL_DIR) '$(DESTDIR)$(SYSTEMDDIR)/system'
+	$(INSTALL_FILE) "emf-agent/systemd-units/emf-agent.target" '$(DESTDIR)$(SYSTEMDDIR)/system';
+
+
 	$(INSTALL_DIR) '$(DESTDIR)$(BINDIR)'
 	for b in \
 		emf-agent \
-		emf-agent-daemon \
 		; do \
 	$(INSTALL_BIN) "$(CARGO_TARGET_DIR)/release/$$b" '$(DESTDIR)$(BINDIR)'; \
 	done
 
-	$(INSTALL_DIR) '$(DESTDIR)$(SYSTEMDDIR)/system'
-	for s in \
-		emf-agent/systemd-units/rust-emf-agent.path \
-		emf-agent/systemd-units/rust-emf-agent.service \
-		; do \
-	$(INSTALL_FILE) "$$s" '$(DESTDIR)$(SYSTEMDDIR)/system'; \
-	done
-
 	$(INSTALL_DIR) '$(DESTDIR)$(TMPFILESDIR)'
-	$(INSTALL_FILE) -T emf-agent/systemd-units/tmpfiles.conf '$(DESTDIR)$(TMPFILESDIR)/emf-agent.conf'
+	$(INSTALL_FILE) -T emf-agent/tmpfiles.conf '$(DESTDIR)$(TMPFILESDIR)/emf-agent.conf'
 
+
+	$(INSTALL_DIR) '$(DESTDIR)$(BINDIR)'
+	$(INSTALL_BIN) "$(CARGO_TARGET_DIR)/release/emf-corosync-agent" '$(DESTDIR)$(BINDIR)';
+
+	$(INSTALL_DIR) '$(DESTDIR)$(SYSTEMDDIR)/system'
+	$(INSTALL_FILE) "emf-agent/systemd-units/emf-corosync-agent.service" '$(DESTDIR)$(SYSTEMDDIR)/system';
+	$(INSTALL_FILE) "kuma/systemd-units/emf-corosync-agent-sidecar.service" '$(DESTDIR)$(SYSTEMDDIR)/system';
+
+	$(INSTALL_DIR) '$(DESTDIR)$(SYSCONFDIR)/emf/dataplanes'
+	$(INSTALL_FILE) "kuma/dataplanes/emf-corosync-agent.yml" '$(DESTDIR)$(SYSCONFDIR)/emf/dataplanes'
+
+
+	$(INSTALL_DIR) '$(DESTDIR)$(BINDIR)'
+	$(INSTALL_BIN) "$(CARGO_TARGET_DIR)/release/emf-device-agent" '$(DESTDIR)$(BINDIR)';
+
+	$(INSTALL_DIR) '$(DESTDIR)$(SYSTEMDDIR)/system'
+	$(INSTALL_FILE) "emf-agent/systemd-units/emf-device-agent.service" '$(DESTDIR)$(SYSTEMDDIR)/system';
+	$(INSTALL_FILE) "kuma/systemd-units/emf-device-agent-sidecar.service" '$(DESTDIR)$(SYSTEMDDIR)/system';
+
+	$(INSTALL_DIR) '$(DESTDIR)$(SYSCONFDIR)/emf/dataplanes'
+	$(INSTALL_FILE) "kuma/dataplanes/emf-device-agent.yml" '$(DESTDIR)$(SYSCONFDIR)/emf/dataplanes'
+
+
+	$(INSTALL_DIR) '$(DESTDIR)$(BINDIR)'
+	$(INSTALL_BIN) "$(CARGO_TARGET_DIR)/release/emf-journal-agent" '$(DESTDIR)$(BINDIR)';
+
+	$(INSTALL_DIR) '$(DESTDIR)$(SYSTEMDDIR)/system'
+	$(INSTALL_FILE) "emf-agent/systemd-units/emf-journal-agent.service" '$(DESTDIR)$(SYSTEMDDIR)/system';
+	$(INSTALL_FILE) "kuma/systemd-units/emf-journal-agent-sidecar.service" '$(DESTDIR)$(SYSTEMDDIR)/system';
+
+	$(INSTALL_DIR) '$(DESTDIR)$(SYSCONFDIR)/emf/dataplanes'
+	$(INSTALL_FILE) "kuma/dataplanes/emf-journal-agent.yml" '$(DESTDIR)$(SYSCONFDIR)/emf/dataplanes'
+
+
+	$(INSTALL_DIR) '$(DESTDIR)$(BINDIR)'
+	$(INSTALL_BIN) "$(CARGO_TARGET_DIR)/release/emf-host-agent" '$(DESTDIR)$(BINDIR)';
+
+	$(INSTALL_DIR) '$(DESTDIR)$(SYSTEMDDIR)/system'
+	$(INSTALL_FILE) "emf-agent/systemd-units/emf-host-agent.service" '$(DESTDIR)$(SYSTEMDDIR)/system';
+	$(INSTALL_FILE) "kuma/systemd-units/emf-host-agent-sidecar.service" '$(DESTDIR)$(SYSTEMDDIR)/system';
+
+	$(INSTALL_DIR) '$(DESTDIR)$(SYSCONFDIR)/emf/dataplanes'
+	$(INSTALL_FILE) "kuma/dataplanes/emf-host-agent.yml" '$(DESTDIR)$(SYSCONFDIR)/emf/dataplanes'
+
+
+	$(INSTALL_DIR) '$(DESTDIR)$(BINDIR)'
+	$(INSTALL_BIN) "$(CARGO_TARGET_DIR)/release/emf-network-agent" '$(DESTDIR)$(BINDIR)';
+
+	$(INSTALL_DIR) '$(DESTDIR)$(SYSTEMDDIR)/system'
+	$(INSTALL_FILE) "emf-agent/systemd-units/emf-network-agent.service" '$(DESTDIR)$(SYSTEMDDIR)/system';
+	$(INSTALL_FILE) "kuma/systemd-units/emf-network-agent-sidecar.service" '$(DESTDIR)$(SYSTEMDDIR)/system';
+
+	$(INSTALL_DIR) '$(DESTDIR)$(SYSCONFDIR)/emf/dataplanes'
+	$(INSTALL_FILE) "kuma/dataplanes/emf-network-agent.yml" '$(DESTDIR)$(SYSCONFDIR)/emf/dataplanes'
+
+
+	$(INSTALL_DIR) '$(DESTDIR)$(BINDIR)'
+	$(INSTALL_BIN) "$(CARGO_TARGET_DIR)/release/emf-ntp-agent" '$(DESTDIR)$(BINDIR)';
+
+	$(INSTALL_DIR) '$(DESTDIR)$(SYSTEMDDIR)/system'
+	$(INSTALL_FILE) "emf-agent/systemd-units/emf-ntp-agent.service" '$(DESTDIR)$(SYSTEMDDIR)/system';
+	$(INSTALL_FILE) "kuma/systemd-units/emf-ntp-agent-sidecar.service" '$(DESTDIR)$(SYSTEMDDIR)/system';
+
+	$(INSTALL_DIR) '$(DESTDIR)$(SYSCONFDIR)/emf/dataplanes'
+	$(INSTALL_FILE) "kuma/dataplanes/emf-ntp-agent.yml" '$(DESTDIR)$(SYSCONFDIR)/emf/dataplanes'
+
+
+	$(INSTALL_DIR) '$(DESTDIR)$(BINDIR)'
+	$(INSTALL_BIN) "$(CARGO_TARGET_DIR)/release/emf-ostpool-agent" '$(DESTDIR)$(BINDIR)';
+
+	$(INSTALL_DIR) '$(DESTDIR)$(SYSTEMDDIR)/system'
+	$(INSTALL_FILE) "emf-agent/systemd-units/emf-ostpool-agent.service" '$(DESTDIR)$(SYSTEMDDIR)/system';
+	$(INSTALL_FILE) "kuma/systemd-units/emf-ostpool-agent-sidecar.service" '$(DESTDIR)$(SYSTEMDDIR)/system';
+
+	$(INSTALL_DIR) '$(DESTDIR)$(SYSCONFDIR)/emf/dataplanes'
+	$(INSTALL_FILE) "kuma/dataplanes/emf-ostpool-agent.yml" '$(DESTDIR)$(SYSCONFDIR)/emf/dataplanes'
+
+
+	$(INSTALL_DIR) '$(DESTDIR)$(BINDIR)'
+	$(INSTALL_BIN) "$(CARGO_TARGET_DIR)/release/emf-postoffice-agent" '$(DESTDIR)$(BINDIR)';
+
+	$(INSTALL_DIR) '$(DESTDIR)$(SYSTEMDDIR)/system'
+	$(INSTALL_FILE) "emf-agent/systemd-units/emf-postoffice-agent.service" '$(DESTDIR)$(SYSTEMDDIR)/system';
+
+
+	$(INSTALL_DIR) '$(DESTDIR)$(BINDIR)'
+	$(INSTALL_BIN) "$(CARGO_TARGET_DIR)/release/emf-snapshot-agent" '$(DESTDIR)$(BINDIR)';
+
+	$(INSTALL_DIR) '$(DESTDIR)$(SYSTEMDDIR)/system'
+	$(INSTALL_FILE) "emf-agent/systemd-units/emf-snapshot-agent.service" '$(DESTDIR)$(SYSTEMDDIR)/system';
+	$(INSTALL_FILE) "kuma/systemd-units/emf-snapshot-agent-sidecar.service" '$(DESTDIR)$(SYSTEMDDIR)/system';
+
+	$(INSTALL_DIR) '$(DESTDIR)$(SYSCONFDIR)/emf/dataplanes'
+	$(INSTALL_FILE) "kuma/dataplanes/emf-snapshot-agent.yml" '$(DESTDIR)$(SYSCONFDIR)/emf/dataplanes'
+
+
+	$(INSTALL_DIR) '$(DESTDIR)$(BINDIR)'
+	$(INSTALL_BIN) "$(CARGO_TARGET_DIR)/release/emf-stats-agent" '$(DESTDIR)$(BINDIR)';
+
+	$(INSTALL_DIR) '$(DESTDIR)$(SYSTEMDDIR)/system'
+	$(INSTALL_FILE) "emf-agent/systemd-units/emf-stats-agent.service" '$(DESTDIR)$(SYSTEMDDIR)/system';
+	$(INSTALL_FILE) "kuma/systemd-units/emf-stats-agent-sidecar.service" '$(DESTDIR)$(SYSTEMDDIR)/system';
+
+	$(INSTALL_DIR) '$(DESTDIR)$(SYSCONFDIR)/emf/dataplanes'
+	$(INSTALL_FILE) "kuma/dataplanes/emf-stats-agent.yml" '$(DESTDIR)$(SYSCONFDIR)/emf/dataplanes'
 
 .PHONY: clean
 clean:

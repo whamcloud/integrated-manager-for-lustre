@@ -1,0 +1,4 @@
+/usr/bin/emf-corosync-agent
+/lib/systemd/system/emf-corosync-agent.service
+/lib/systemd/system/emf-corosync-agent-sidecar.service
+/etc/emf/dataplanes/emf-corosync-agent.yml

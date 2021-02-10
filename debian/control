@@ -10,9 +10,108 @@ Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: daemon with an in-memory representation of devices
 
+Package: emf-agent-target
+Architecture: all
+Depends: ${misc:Depends}
+Description: EMF agent systemd target
+
+Package: emf-bootstrap
+Architecture: all
+Depends: ${misc:Depends}
+Description: Initial bootstrap.conf used by all services
+
 Package: emf-agent
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends},
-  emf-device-scanner (= ${source:Version})
-Description: EMF agent daemon and CLI
+  emf-bootstrap (= ${source:Version})
+Description: EMF agent CLI
 
+Package: emf-corosync-agent
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends},
+    emf-agent-target (= ${source:Version}),
+    emf-bootstrap (= ${source:Version}),
+    kuma-dp (>= 1.0.6),
+    getenvoy-envoy (= 1.16.0.p0.g8fb3cb8-1p69.ga5345f6)
+Description: ships corosync info to the manager
+
+Package: emf-device-agent
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends},
+    emf-agent-target (= ${source:Version}),
+    emf-bootstrap (= ${source:Version}),
+    emf-device-scanner (= ${source:Version}),
+    kuma-dp (>= 1.0.6),
+    getenvoy-envoy (= 1.16.0.p0.g8fb3cb8-1p69.ga5345f6)
+Description: ships device info to the manager
+
+Package: emf-journal-agent
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends},
+    emf-agent-target (= ${source:Version}),
+    emf-bootstrap (= ${source:Version}),
+    systemd-journal-remote (>= 245.4),
+    kuma-dp (>= 1.0.6),
+    getenvoy-envoy (= 1.16.0.p0.g8fb3cb8-1p69.ga5345f6)
+Description: ships journal info to the manager
+
+Package: emf-host-agent
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends},
+    emf-agent-target (= ${source:Version}),
+    emf-bootstrap (= ${source:Version}),
+    kuma-dp (>= 1.0.6),
+    getenvoy-envoy (= 1.16.0.p0.g8fb3cb8-1p69.ga5345f6)
+Description: ships host info to the manager
+
+Package: emf-network-agent
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends},
+    emf-agent-target (= ${source:Version}),
+    emf-bootstrap (= ${source:Version}),
+    kuma-dp (>= 1.0.6),
+    getenvoy-envoy (= 1.16.0.p0.g8fb3cb8-1p69.ga5345f6)
+Description: ships network info to the manager
+
+Package: emf-ntp-agent
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends},
+    emf-agent-target (= ${source:Version}),
+    emf-bootstrap (= ${source:Version}),
+    kuma-dp (>= 1.0.6),
+    getenvoy-envoy (= 1.16.0.p0.g8fb3cb8-1p69.ga5345f6)
+Description: ships ntp info to the manager
+
+Package: emf-ostpool-agent
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends},
+    emf-agent-target (= ${source:Version}),
+    emf-bootstrap (= ${source:Version}),
+    kuma-dp (>= 1.0.6),
+    getenvoy-envoy (= 1.16.0.p0.g8fb3cb8-1p69.ga5345f6)
+Description: ships ostpool info to the manager
+
+Package: emf-postoffice-agent
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends},
+    emf-agent-target (= ${source:Version}),
+    emf-bootstrap (= ${source:Version}),
+Description: watches for postoffice changes
+
+Package: emf-snapshot-agent
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends},
+    emf-agent-target (= ${source:Version}),
+    emf-bootstrap (= ${source:Version}),
+    kuma-dp (>= 1.0.6),
+    getenvoy-envoy (= 1.16.0.p0.g8fb3cb8-1p69.ga5345f6)
+Description: ships snapshot info to the manager
+
+Package: emf-stats-agent
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends},
+    emf-agent-target (= ${source:Version}),
+    emf-bootstrap (= ${source:Version}),
+    kuma-dp (>= 1.0.6),
+    getenvoy-envoy (= 1.16.0.p0.g8fb3cb8-1p69.ga5345f6)
+Description: ships stats info to the manager

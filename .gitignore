@@ -1,6 +1,7 @@
 _build
 _deb
 _topdir
+_deb
 .cargo
 .DS_Store
 .idea
@@ -42,3 +43,9 @@ target
 vagrant/sosreport*
 /docker/*.tar
 **/cargo-timing*.html
+debian/*
+!debian/*.install
+!debian/changelog
+!debian/control
+!debian/rules
+

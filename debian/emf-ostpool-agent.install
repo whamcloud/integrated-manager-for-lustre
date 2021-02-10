@@ -1,0 +1,4 @@
+/usr/bin/emf-ostpool-agent
+/lib/systemd/system/emf-ostpool-agent.service
+/lib/systemd/system/emf-ostpool-agent-sidecar.service
+/etc/emf/dataplanes/emf-ostpool-agent.yml

@@ -1,0 +1,4 @@
+/usr/bin/emf-stats-agent
+/lib/systemd/system/emf-stats-agent.service
+/lib/systemd/system/emf-stats-agent-sidecar.service
+/etc/emf/dataplanes/emf-stats-agent.yml

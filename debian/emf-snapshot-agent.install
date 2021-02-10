@@ -1,0 +1,4 @@
+/usr/bin/emf-snapshot-agent
+/lib/systemd/system/emf-snapshot-agent.service
+/lib/systemd/system/emf-snapshot-agent-sidecar.service
+/etc/emf/dataplanes/emf-snapshot-agent.yml

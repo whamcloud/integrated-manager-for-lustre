@@ -1,0 +1,4 @@
+/usr/bin/emf-host-agent
+/lib/systemd/system/emf-host-agent.service
+/lib/systemd/system/emf-host-agent-sidecar.service
+/etc/emf/dataplanes/emf-host-agent.yml

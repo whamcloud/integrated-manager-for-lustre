@@ -1,0 +1,4 @@
+/usr/bin/emf-device-agent
+/lib/systemd/system/emf-device-agent.service
+/lib/systemd/system/emf-device-agent-sidecar.service
+/etc/emf/dataplanes/emf-device-agent.yml

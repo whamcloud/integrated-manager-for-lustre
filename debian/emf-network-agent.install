@@ -1,0 +1,4 @@
+/usr/bin/emf-network-agent
+/lib/systemd/system/emf-network-agent.service
+/lib/systemd/system/emf-network-agent-sidecar.service
+/etc/emf/dataplanes/emf-network-agent.yml

@@ -1,0 +1,4 @@
+/usr/bin/emf-ntp-agent
+/lib/systemd/system/emf-ntp-agent.service
+/lib/systemd/system/emf-ntp-agent-sidecar.service
+/etc/emf/dataplanes/emf-ntp-agent.yml

@@ -1,0 +1,4 @@
+/usr/bin/emf-journal-agent
+/lib/systemd/system/emf-journal-agent.service
+/lib/systemd/system/emf-journal-agent-sidecar.service
+/etc/emf/dataplanes/emf-journal-agent.yml

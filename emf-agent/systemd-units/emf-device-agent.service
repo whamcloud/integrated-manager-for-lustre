@@ -17,6 +17,3 @@ Restart=always
 RestartSec=5
 StandardOutput=journal
 StandardError=journal
-
-[Install]
-Also=device-scanner.target
