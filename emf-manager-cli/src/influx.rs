@@ -6,84 +6,109 @@ use crate::error::EmfManagerCliError;
 use emf_cmd::{self, CheckedCommandExt};
 use emf_systemd::restart_unit;
 use futures::TryFutureExt;
-use std::{path::Path, str};
 use structopt::StructOpt;
-use tokio::fs;
 
 #[derive(Debug, StructOpt)]
 #[structopt(setting = structopt::clap::AppSettings::ColoredHelp)]
 pub enum Command {
-    /// Generate Influx config
-    #[structopt(name = "generate-config", setting = structopt::clap::AppSettings::ColoredHelp)]
-    GenerateConfig {
-        /// Port influx should bind to on startup
-        #[structopt(long, env = "INFLUXDB_SERVICE_PORT")]
-        bindport: u16,
-    },
-
     /// Start necessary units
     #[structopt(setting = structopt::clap::AppSettings::ColoredHelp)]
     Start,
 
     /// Setup running influxdb
     #[structopt(setting = structopt::clap::AppSettings::ColoredHelp)]
-    Setup {
-        /// EMF database name
-        #[structopt(
-            short = "e",
-            long = "emfdb",
-            default_value = "emf",
-            env = "INFLUXDB_EMF_DB"
-        )]
-        maindb: String,
+    Setup(Setup),
+}
 
-        /// EMF Stats database name
-        #[structopt(
-            short = "t",
-            long = "statsdb",
-            default_value = "emf_stats",
-            env = "INFLUXDB_EMF_STATS_DB"
-        )]
-        statdb: String,
+#[derive(Debug, Default, StructOpt)]
+pub struct Setup {
+    /// EMF database name
+    #[structopt(
+        short = "e",
+        long = "emfdb",
+        default_value = "emf",
+        env = "INFLUXDB_EMF_DB"
+    )]
+    maindb: String,
 
-        /// Stratagem Scan database name
-        #[structopt(
-            short = "c",
-            long = "scandb",
-            default_value = "emf_stratagem_scans",
-            env = "INFLUXDB_STRATAGEM_SCAN_DB"
-        )]
-        scandb: String,
+    /// EMF Stats database name
+    #[structopt(
+        short = "t",
+        long = "statsdb",
+        default_value = "emf_stats",
+        env = "INFLUXDB_EMF_STATS_DB"
+    )]
+    statdb: String,
 
-        /// EMF database name
-        #[structopt(
-            short = "l",
-            long = "long-duration",
-            default_value = "52w",
-            env = "INFLUXDB_EMF_STATS_LONG_DURATION"
-        )]
-        duration: String,
-    },
+    /// Stratagem Scan database name
+    #[structopt(
+        short = "c",
+        long = "scandb",
+        default_value = "emf_stratagem_scans",
+        env = "INFLUXDB_STRATAGEM_SCAN_DB"
+    )]
+    scandb: String,
+
+    /// EMF database name
+    #[structopt(
+        short = "l",
+        long = "long-duration",
+        default_value = "52w",
+        env = "INFLUXDB_EMF_STATS_LONG_DURATION"
+    )]
+    duration: String,
 }
 
 pub async fn cli(command: Command) -> Result<(), EmfManagerCliError> {
     match command {
-        Command::GenerateConfig { bindport } => {
-            generate_config("/etc/default/influxdb", bindport).await
-        }
         Command::Start => {
             restart_unit("influxdb.service".to_string())
                 .err_into()
                 .await
         }
-        Command::Setup {
+        Command::Setup(Setup {
             maindb,
             statdb,
             scandb,
             duration,
-        } => {
-            influx(None, format!("CREATE DATABASE {}", maindb)).await?;
-            influx(None, format!("CREATE DATABASE {}", scandb)).await?;
+        }) => {
+            let url = format!(
+                "http://{}/ping?wait_for_leader=10s",
+                std::env::var("INFLUXDB_HTTP_BIND_ADDRESS").map_err(|_| {
+                    EmfManagerCliError::DoesNotExist(
+                        "environment variable INFLUXDB_HTTP_BIND_ADDRESS".to_string(),
+                    )
+                })?
+            );
+            tracing::debug!("Waiting for influx start (url: {})", &url);
+            let mut i: i32 = 30;
+            let waitfor = tokio::time::Duration::from_secs(2);
+            loop {
+                if let Ok(resp) = reqwest::get(&url).await {
+                    if resp.status().is_success() {
+                        break;
+                    }
+                }
+                if i == 0 {
+                    tracing::error!("Influx start up timed out");
+                    return Err(EmfManagerCliError::ConfigError(
+                        "Failed to start influxdb".to_string(),
+                    ));
+                }
+                tokio::time::delay_for(waitfor).await;
+                i -= 2;
+            }
+            tracing::info!("Creating Influx DBs");
+            influx(
+                None,
+                vec![
+                    format!("CREATE DATABASE {}", maindb),
+                    format!("CREATE DATABASE {}", scandb),
+                    format!("CREATE DATABASE {}", statdb),
+                ]
+                .join("; "),
+            )
+            .await?;
             influx(
                 &scandb,
                 format!(
@@ -92,7 +117,7 @@ pub async fn cli(command: Command) -> Result<(), EmfManagerCliError> {
                 ),
             )
             .await?;
-            influx(None, format!("CREATE DATABASE {}", statdb)).await?;
+
             let rc = influx(&statdb, format!(r#"CREATE RETENTION POLICY "long_term" ON "{}" DURATION {} REPLICATION 1 SHARD DURATION 5d"#, statdb, duration)).await;
             if rc.is_err() {
                 influx(&statdb, format!(r#"ALTER RETENTION POLICY "long_term" ON "{}" DURATION {} REPLICATION 1 SHARD DURATION 5d"#, statdb, duration)).await?;
@@ -112,24 +137,6 @@ pub async fn cli(command: Command) -> Result<(), EmfManagerCliError> {
             Ok(())
         }
     }
-}
-
-// Disable reporting
-// Disable influx http logging (of every write and every query)
-async fn generate_config(path: impl AsRef<Path>, bindport: u16) -> Result<(), EmfManagerCliError> {
-    fs::write(
-        path,
-        format!(
-            r#"INFLUXDB_DATA_QUERY_LOG_ENABLED=false
-INFLUXDB_HTTP_BIND_ADDRESS=127.0.0.1:{}
-INFLUXDB_REPORTING_DISABLED=true
-INFLUXDB_HTTP_LOG_ENABLED=false
-"#,
-            bindport
-        ),
-    )
-    .await?;
-    Ok(())
 }
 
 async fn influx(db: impl Into<Option<&String>>, cmd: String) -> Result<(), EmfManagerCliError> {

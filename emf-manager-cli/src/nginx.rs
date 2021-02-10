@@ -4,7 +4,7 @@
 
 use crate::{display_utils::display_success, error::EmfManagerCliError};
 use console::Term;
-use emf_cmd::{CheckedCommandExt as _, Command, OutputExt as _};
+use emf_cmd::{CheckedCommandExt as _, OutputExt as _};
 use emf_fs::mkdirp;
 use lazy_static::lazy_static;
 use regex::{Captures, Regex};
@@ -14,27 +14,35 @@ use tokio::fs;
 
 #[derive(Debug, StructOpt)]
 #[structopt(setting = structopt::clap::AppSettings::ColoredHelp)]
-pub enum NginxCommand {
+pub enum Command {
     /// Generate Nginx conf
     #[structopt(name = "generate-config", setting = structopt::clap::AppSettings::ColoredHelp)]
-    GenerateConfig {
-        /// Set the nginx config path
-        #[structopt(short = "p", long = "path", env = "NGINX_TEMPLATE_PATH")]
-        template_path: String,
+    GenerateConfig(GenerateConfig),
 
-        #[structopt(short = "o", long = "output", env = "NGINX_OUTPUT_PATH")]
-        output_path: Option<String>,
-    },
     /// Generate self-signed certificates.
     #[structopt(name = "generate-self-certs", setting = structopt::clap::AppSettings::ColoredHelp)]
-    GenerateSelfSignedCerts {
-        /// Certificate output directory
-        #[structopt(short, long, env = "NGINX_CRYPTO_DIR", parse(from_os_str))]
-        out: PathBuf,
-        /// Days the certificate will be valid for
-        #[structopt(short, long, default_value = "3650", env = "NGINX_CERT_EXPIRE_DAYS")]
-        days: u32,
-    },
+    GenerateSelfSignedCerts(GenerateSelfSignedCerts),
+}
+
+#[derive(Debug, Default, StructOpt)]
+pub struct GenerateConfig {
+    /// Set the nginx config path
+    #[structopt(short = "p", long = "path", env = "NGINX_TEMPLATE_PATH")]
+    template_path: String,
+
+    #[structopt(short = "o", long = "output", env = "NGINX_OUTPUT_PATH")]
+    output_path: Option<String>,
+}
+
+#[derive(Debug, Default, StructOpt)]
+pub struct GenerateSelfSignedCerts {
+    /// Certificate output directory
+    #[structopt(short, long, env = "NGINX_CRYPTO_DIR", parse(from_os_str))]
+    out: PathBuf,
+
+    /// Days the certificate will be valid for
+    #[structopt(short, long, default_value = "3650", env = "NGINX_CERT_EXPIRE_DAYS")]
+    days: u32,
 }
 
 fn replace_template_variables(contents: &str, vars: HashMap<String, String>) -> String {
@@ -61,16 +69,16 @@ fn replace_template_variables(contents: &str, vars: HashMap<String, String>) -> 
     config
 }
 
-fn openssl() -> Command {
+fn openssl() -> emf_cmd::Command {
     emf_cmd::Command::new("/usr/bin/openssl")
 }
 
-pub async fn nginx_cli(command: NginxCommand) -> Result<(), EmfManagerCliError> {
+pub async fn cli(command: Command) -> Result<(), EmfManagerCliError> {
     match command {
-        NginxCommand::GenerateConfig {
+        Command::GenerateConfig(GenerateConfig {
             template_path,
             output_path,
-        } => {
+        }) => {
             let nginx_template_bytes = fs::read(template_path).await?;
             let nginx_template = String::from_utf8(nginx_template_bytes)?;
 
@@ -88,7 +96,7 @@ pub async fn nginx_cli(command: NginxCommand) -> Result<(), EmfManagerCliError> 
                 term.write_line(&config).unwrap();
             }
         }
-        NginxCommand::GenerateSelfSignedCerts { out, days } => {
+        Command::GenerateSelfSignedCerts(GenerateSelfSignedCerts { out, days }) => {
             println!("Generating self-signed certs...");
 
             if !emf_fs::dir_exists(&out).await {

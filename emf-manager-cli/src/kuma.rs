@@ -15,25 +15,32 @@ use tokio::fs;
 pub enum Command {
     ///  config
     #[structopt(name = "create-db", setting = structopt::clap::AppSettings::ColoredHelp)]
-    CreateDb {
-        /// Postgres database to use for kuma info
-        #[structopt(short, long, default_value = "kuma", env = "EMF_KUMA_DB")]
-        db: String,
+    CreateDb(CreateDb),
 
-        /// Postgres user to access database
-        #[structopt(short, long, default_value = "emf", env = "EMF_KUMA_DB_USER")]
-        user: String,
-    },
     /// Start requisite services
     #[structopt(setting = structopt::clap::AppSettings::ColoredHelp)]
     Start,
 
     #[structopt(setting = structopt::clap::AppSettings::ColoredHelp)]
-    Setup {
-        /// Base config dir
-        #[structopt(short, long, default_value = "/etc/emf", env = "EMF_KUMA_BASE_DIR")]
-        dir: PathBuf,
-    },
+    Setup(Setup),
+}
+
+#[derive(Debug, Default, StructOpt)]
+pub struct CreateDb {
+    /// Postgres database to use for kuma info
+    #[structopt(short, long, default_value = "kuma", env = "EMF_KUMA_DB")]
+    db: String,
+
+    /// Postgres user to access database
+    #[structopt(short, long, default_value = "emf", env = "EMF_KUMA_DB_USER")]
+    user: String,
+}
+
+#[derive(Debug, Default, StructOpt)]
+pub struct Setup {
+    /// Base config dir
+    #[structopt(short, long, default_value = "/etc/emf", env = "EMF_KUMA_BASE_DIR")]
+    dir: PathBuf,
 }
 
 async fn kumactl<I, S>(args: I) -> Result<Output, EmfManagerCliError>
@@ -50,7 +57,7 @@ where
 
 pub async fn cli(command: Command) -> Result<(), EmfManagerCliError> {
     match command {
-        Command::CreateDb { db, user } => {
+        Command::CreateDb(CreateDb { db, user }) => {
             let dbs: HashSet<String> = psql("SELECT datname FROM pg_database")
                 .await?
                 .lines()
@@ -61,7 +68,7 @@ pub async fn cli(command: Command) -> Result<(), EmfManagerCliError> {
             }
         }
         Command::Start => restart_unit("kuma.service".to_string()).await?,
-        Command::Setup { dir } => {
+        Command::Setup(Setup { dir }) => {
             let tokendir = dir.join("tokens");
             let policydir = dir.join("policies");
 

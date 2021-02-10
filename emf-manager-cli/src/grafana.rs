@@ -11,20 +11,23 @@ use structopt::StructOpt;
 pub enum Command {
     ///  config
     #[structopt(setting = structopt::clap::AppSettings::ColoredHelp)]
-    Setup {
-        /// Postgres database to use for grafana info
-        #[structopt(short, long, default_value = "grafana", env = "EMF_GRAFANA_DB")]
-        db: String,
+    Setup(Setup),
+}
 
-        /// Postgres user to access database
-        #[structopt(short, long, default_value = "emf", env = "EMF_GRAFANA_DB_USER")]
-        user: String,
-    },
+#[derive(Debug, Default, StructOpt)]
+pub struct Setup {
+    /// Postgres database to use for grafana info
+    #[structopt(short, long, default_value = "grafana", env = "EMF_GRAFANA_DB")]
+    db: String,
+
+    /// Postgres user to access database
+    #[structopt(short, long, default_value = "emf", env = "EMF_GRAFANA_DB_USER")]
+    user: String,
 }
 
 pub async fn cli(command: Command) -> Result<(), EmfManagerCliError> {
     match command {
-        Command::Setup { db, user } => {
+        Command::Setup(Setup { db, user }) => {
             let dbs: HashSet<String> = psql("SELECT datname FROM pg_database")
                 .await?
                 .lines()

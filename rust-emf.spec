@@ -90,6 +90,7 @@ cp emf-report.conf %{buildroot}%{_tmpfilesdir}
 mkdir -p %{buildroot}%{_sysconfdir}/emf/dataplanes/
 mkdir -p %{buildroot}%{_sysconfdir}/emf/policies/
 cp bootstrap.conf %{buildroot}%{_sysconfdir}/emf/bootstrap.conf
+cp embedded.conf %{buildroot}%{_sysconfdir}/emf/embedded.conf
 cp kuma/dataplanes/* %{buildroot}%{_sysconfdir}/emf/dataplanes
 cp kuma/policies/* %{buildroot}%{_sysconfdir}/emf/policies
 
@@ -110,8 +111,11 @@ mv %{buildroot}%{emf_root}/grafana/datasources/influxdb-emf-datasource.yml %{bui
 mkdir -p %{buildroot}%{_unitdir}/grafana-server.service.d/
 mv %{buildroot}%{emf_root}/grafana/dropin-emf.conf %{buildroot}%{_unitdir}/grafana-server.service.d/90-emf.conf
 mkdir -p %{buildroot}%{_unitdir}/nginx.service.d/
-cp nginx/nginx-dropin-emf.conf %{buildroot}%{_unitdir}/nginx.service.d/90-nginx-dropin-emf.conf
+cp nginx/nginx-dropin-emf.conf %{buildroot}%{_unitdir}/nginx.service.d/50-nginx-dropin-emf.conf
 cp nginx/emf-gateway.conf.template %{buildroot}%{emf_root}
+cp nginx/emf-embedded.conf %{buildroot}%{_unitdir}/nginx.service.d/60-emf-embedded.conf
+install -D -m 644 influx/influx-dropin-emf.conf %{buildroot}%{_unitdir}/influxdb.service.d/50-influx-dropin-emf.conf
+install -D -m 644 postgres/emf-embedded.conf %{buildroot}%{_unitdir}/postgresql-13.service.d/60-emf-embedded.conf
 cp emf-manager-redirect.conf %{buildroot}%{_sysconfdir}/nginx/default.d/emf-manager-redirect.conf
 
 install -m 644 emf-manager.target %{buildroot}%{_unitdir}/
@@ -128,6 +132,19 @@ Group: System Environment/Libraries
 %files bootstrap
 %attr(0644,root,root)%{_sysconfdir}/emf/bootstrap.conf
 
+%package embedded
+Summary: Setup for embedded deployments
+License: MIT
+Group: System Environment/Libraries
+
+%description embedded
+%{summary}
+
+%files embedded
+%attr(0644,root,root)
+%{_unitdir}/postgresql-13.service.d/60-emf-embedded.conf
+%{_unitdir}/nginx.service.d/60-emf-embedded.conf
+%{_sysconfdir}/emf/embedded.conf
 
 # Manager Services
 %package manager
@@ -243,6 +260,7 @@ Requires: influxdb < 2
 %{summary}
 
 %files influx
+%{_unitdir}/influxdb.service.d/50-influx-dropin-emf.conf
 %{_unitdir}/emf-influx-sidecar.service
 %{_sysconfdir}/emf/dataplanes/influx.yml
 
@@ -292,7 +310,7 @@ Requires: nginx >= 1:1.12.2
 %dir %attr(0755,nginx,nginx)%{emf_root}
 %ghost %{_sysconfdir}/nginx/conf.d/emf-gateway.conf
 %{_sysconfdir}/nginx/default.d/emf-manager-redirect.conf
-%{_unitdir}/nginx.service.d/90-nginx-dropin-emf.conf
+%{_unitdir}/nginx.service.d/50-nginx-dropin-emf.conf
 %{emf_root}/emf-gateway.conf.template
 %{_unitdir}/emf-nginx-sidecar.service
 %{_sysconfdir}/emf/dataplanes/nginx.yml

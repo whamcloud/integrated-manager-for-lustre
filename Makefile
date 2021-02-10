@@ -83,7 +83,7 @@ sos-rpm:
 rust-core-rpms:
 	mkdir -p ${TMPDIR}/release/rust-core
 	cargo build --release
-	cp ${TARGET}/release/emf-{agent,api,corosync,device,host,journal,mailbox,network,ntp,ostpool,report,sfa,snapshot,stats,task-runner,warp-drive,timer,device-agent,corosync-agent,host-agent,journal-agent,network-agent,ntp-agent,ostpool-agent,postoffice-agent,snapshot-agent,stats-agent} \
+	cp -r ${TARGET}/release/emf-{agent,api,corosync,device,host,journal,mailbox,network,ntp,ostpool,report,sfa,snapshot,stats,task-runner,warp-drive,timer,device-agent,corosync-agent,host-agent,journal-agent,network-agent,ntp-agent,ostpool-agent,postoffice-agent,snapshot-agent,stats-agent} \
 		emf-api.service \
 		emf-mailbox.service \
 		emf-report.conf \
@@ -96,7 +96,10 @@ rust-core-rpms:
 		emf-manager-redirect.conf \
 		emf-manager.target \
 		bootstrap.conf \
-		nginx/emf-gateway.conf.template \
+		embedded.conf \
+		nginx/ \
+		postgres/ \
+		influx/ \
 		${TMPDIR}/release/rust-core
 	cp emf-agent/tmpfiles.conf ${TMPDIR}/release/rust-core
 	cp ${TARGET}/release/emf ${TMPDIR}/release/rust-core

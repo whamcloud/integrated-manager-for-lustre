@@ -3,10 +3,8 @@
 // license that can be found in the LICENSE file.
 
 use emf_manager_cli::{
-    display_utils::display_error,
-    grafana, influx, kuma,
-    nginx::{self, nginx_cli},
-    postgres, selfname,
+    config_utils::EnvExt, display_utils::display_error, grafana, influx, kuma, nginx, postgres,
+    selfname,
 };
 use std::process::exit;
 use structopt::StructOpt;
@@ -14,6 +12,10 @@ use structopt::StructOpt;
 #[derive(Debug, StructOpt)]
 #[structopt(setting = structopt::clap::AppSettings::ColoredHelp)]
 pub enum App {
+    /// Bootstrap local node to be able to run EMF management services
+    #[structopt(setting = structopt::clap::AppSettings::ColoredHelp)]
+    Bootstrap,
+
     /// Grafana setup
     Grafana {
         #[structopt(subcommand)]
@@ -32,7 +34,7 @@ pub enum App {
     /// Nginx config file generator
     Nginx {
         #[structopt(subcommand)]
-        command: nginx::NginxCommand,
+        command: nginx::Command,
     },
     /// PostgreSQL config file generator
     Postgres {
@@ -54,10 +56,36 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing::debug!("Matching args {:?}", matches);
 
     let r = match matches {
+        App::Bootstrap => {
+            postgres::cli(postgres::Command::GenerateConfig(
+                postgres::GenerateConfig::from_env(),
+            ))
+            .await?;
+            postgres::cli(postgres::Command::Start).await?;
+            postgres::cli(postgres::Command::Setup(postgres::Setup::from_env())).await?;
+
+            nginx::cli(nginx::Command::GenerateSelfSignedCerts(
+                nginx::GenerateSelfSignedCerts::from_env(),
+            ))
+            .await?;
+
+            kuma::cli(kuma::Command::CreateDb(kuma::CreateDb::from_env())).await?;
+            grafana::cli(grafana::Command::Setup(grafana::Setup::from_env())).await?;
+
+            influx::cli(influx::Command::Start).await?;
+
+            influx::cli(influx::Command::Setup(influx::Setup::from_env())).await?;
+
+            kuma::cli(kuma::Command::Start).await?;
+
+            kuma::cli(kuma::Command::Setup(kuma::Setup::from_env())).await?;
+
+            Ok(())
+        }
         App::Grafana { command } => grafana::cli(command).await,
         App::Influx { command } => influx::cli(command).await,
         App::Kuma { command } => kuma::cli(command).await,
-        App::Nginx { command } => nginx_cli(command).await,
+        App::Nginx { command } => nginx::cli(command).await,
         App::Postgres { command } => postgres::cli(command).await,
     };
 
