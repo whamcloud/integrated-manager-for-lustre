@@ -118,7 +118,7 @@ jobs:
           mkdir -p emf_rpms
           chmod 777 emf_rpms
       - name: Download kuma cp
-        uses: dsaltares/fetch-gh-release-asset@master
+        uses: dsaltares/fetch-gh-release-asset@e2dbbde
         with:
           repo: "whamcloud/pkg-kuma"
           version: "tags/v1.0.6-1"
@@ -126,7 +126,7 @@ jobs:
           target: "emf_rpms/kuma-cp-1.0.6-1.el7.x86_64.rpm"
           token: ${{ secrets.RELESE_DOWNLOAD_PAT }}
       - name: Download kuma dp
-        uses: dsaltares/fetch-gh-release-asset@master
+        uses: dsaltares/fetch-gh-release-asset@e2dbbde
         with:
           repo: "whamcloud/pkg-kuma"
           version: "tags/v1.0.6-1"
@@ -134,7 +134,7 @@ jobs:
           target: "emf_rpms/kuma-dp-1.0.6-1.el7.x86_64.rpm"
           token: ${{ secrets.RELESE_DOWNLOAD_PAT }}
       - name: Download kumactl
-        uses: dsaltares/fetch-gh-release-asset@master
+        uses: dsaltares/fetch-gh-release-asset@e2dbbde
         with:
           repo: "whamcloud/pkg-kuma"
           version: "tags/v1.0.6-1"

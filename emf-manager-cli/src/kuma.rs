@@ -2,25 +2,27 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{config_utils::psql, error::EmfManagerCliError};
-use emf_cmd::CheckedCommandExt;
+use crate::{config_utils::psql, display_utils::display_success, error::EmfManagerCliError};
+use emf_cmd::{CheckedCommandExt as _, OutputExt as _};
 use emf_fs::mkdirp;
 use emf_systemd::restart_unit;
-use std::{collections::HashSet, ffi::OsStr, path::PathBuf, process::Output};
+use std::{collections::HashSet, path::PathBuf};
 use structopt::StructOpt;
 use tokio::fs;
 
 #[derive(Debug, StructOpt)]
 #[structopt(setting = structopt::clap::AppSettings::ColoredHelp)]
 pub enum Command {
-    ///  config
+    ///  Create the kuma control plane database
     #[structopt(name = "create-db", setting = structopt::clap::AppSettings::ColoredHelp)]
     CreateDb(CreateDb),
-
     /// Start requisite services
     #[structopt(setting = structopt::clap::AppSettings::ColoredHelp)]
     Start,
-
+    /// Generate TLS certificate used by the control plane server
+    #[structopt(name = "generate-certs", setting = structopt::clap::AppSettings::ColoredHelp)]
+    GenerateCerts(GenerateCerts),
+    /// Create dataplane tokens and apply default service policies
     #[structopt(setting = structopt::clap::AppSettings::ColoredHelp)]
     Setup(Setup),
 }
@@ -28,31 +30,36 @@ pub enum Command {
 #[derive(Debug, Default, StructOpt)]
 pub struct CreateDb {
     /// Postgres database to use for kuma info
-    #[structopt(short, long, default_value = "kuma", env = "EMF_KUMA_DB")]
+    #[structopt(
+        short,
+        long,
+        default_value = "kuma",
+        env = "KUMA_STORE_POSTGRES_DB_NAME"
+    )]
     db: String,
 
     /// Postgres user to access database
-    #[structopt(short, long, default_value = "emf", env = "EMF_KUMA_DB_USER")]
+    #[structopt(short, long, default_value = "emf", env = "KUMA_STORE_POSTGRES_USER")]
     user: String,
+}
+
+#[derive(Debug, Default, StructOpt)]
+pub struct GenerateCerts {
+    #[structopt(short = "k", long = "key-file", env = "KUMA_GENERAL_TLS_KEY_FILE")]
+    key_file: PathBuf,
+    #[structopt(short = "c", long = "cert-file", env = "KUMA_GENERAL_TLS_CERT_FILE")]
+    cert_file: PathBuf,
 }
 
 #[derive(Debug, Default, StructOpt)]
 pub struct Setup {
     /// Base config dir
-    #[structopt(short, long, default_value = "/etc/emf", env = "EMF_KUMA_BASE_DIR")]
+    #[structopt(short, long, default_value = "/etc/emf", env = "KUMA_BASE_DIR")]
     dir: PathBuf,
 }
 
-async fn kumactl<I, S>(args: I) -> Result<Output, EmfManagerCliError>
-where
-    I: IntoIterator<Item = S>,
-    S: AsRef<OsStr>,
-{
-    let out = emf_cmd::Command::new("kumactl")
-        .args(args)
-        .checked_output()
-        .await?;
-    Ok(out)
+fn kumactl() -> emf_cmd::Command {
+    emf_cmd::Command::new("kumactl")
 }
 
 pub async fn cli(command: Command) -> Result<(), EmfManagerCliError> {
@@ -67,28 +74,101 @@ pub async fn cli(command: Command) -> Result<(), EmfManagerCliError> {
                 psql(&format!("CREATE DATABASE {} OWNER {}", db, user)).await?;
             }
         }
+        Command::GenerateCerts(GenerateCerts {
+            key_file,
+            cert_file,
+        }) => {
+            if emf_fs::file_exists(&key_file).await && emf_fs::file_exists(&cert_file).await {
+                println!("Control plane certs exist, skipping");
+            }
+
+            let key_dir = match key_file.parent() {
+                Some(x) => x,
+                None => {
+                    return Err(EmfManagerCliError::ConfigError(
+                        "Cannot create key under root directory".to_string(),
+                    ))
+                }
+            };
+
+            let cert_dir = match cert_file.parent() {
+                Some(x) => x,
+                None => {
+                    return Err(EmfManagerCliError::ConfigError(
+                        "Cannot create cert under root directory".to_string(),
+                    ))
+                }
+            };
+
+            println!("Generating control plane certs...");
+
+            if !emf_fs::dir_exists(&key_dir).await {
+                mkdirp(&key_dir).await?;
+            }
+
+            if !emf_fs::dir_exists(&cert_dir).await {
+                mkdirp(&cert_dir).await?;
+            }
+
+            let fqdn = emf_cmd::Command::new("hostname")
+                .arg("-f")
+                .checked_output()
+                .await?;
+            let fqdn = fqdn.try_stdout_str()?.trim();
+
+            kumactl()
+                .arg("generate")
+                .arg("tls-certificate")
+                .arg("--type")
+                .arg("server")
+                .arg("--cp-hostname")
+                .arg(fqdn)
+                .arg("--key-file")
+                .arg(&key_file)
+                .arg("--cert-file")
+                .arg(&cert_file)
+                .checked_output()
+                .await?;
+
+            display_success(format!(
+                "Successfully generated control plane certs for {}",
+                fqdn
+            ));
+        }
         Command::Start => restart_unit("kuma.service".to_string()).await?,
         Command::Setup(Setup { dir }) => {
+            println!("Applying kuma policies...");
+
             let tokendir = dir.join("tokens");
             let policydir = dir.join("policies");
 
             mkdirp(&tokendir).await?;
 
-            let out = kumactl(vec!["generate", "dataplane-token", "--mesh", "default"]).await?;
+            let out = kumactl()
+                .args(vec!["generate", "dataplane-token", "--mesh", "default"])
+                .checked_output()
+                .await?;
             fs::write(tokendir.join("dataplane-token"), out.stdout).await?;
 
-            kumactl(vec![
-                "apply",
-                "-f",
-                policydir.join("mtls.yml").to_str().unwrap(),
-            ])
-            .await?;
-            kumactl(vec![
-                "apply",
-                "-f",
-                policydir.join("traffic.yml").to_str().unwrap(),
-            ])
-            .await?;
+            kumactl()
+                .args(vec![
+                    "apply",
+                    "-f",
+                    policydir.join("mtls.yml").to_str().unwrap(),
+                ])
+                .checked_output()
+                .await?;
+
+            kumactl()
+                .args(vec![
+                    "apply",
+                    "-f",
+                    policydir.join("traffic.yml").to_str().unwrap(),
+                ])
+                .checked_output()
+                .await?;
+
+            display_success("Successfully applied kuma policies");
         }
     }
     Ok(())
