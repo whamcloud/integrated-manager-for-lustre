@@ -80,7 +80,7 @@ lazy_static! {
 fn create_policy<E: Debug>() -> impl RetryPolicy<E> {
     |k: u32, e| match k {
         0 => RetryAction::RetryNow,
-        k if k < 3 => {
+        k if k < 5 => {
             let secs = (2 * k) as u64;
 
             tracing::debug!(
@@ -97,6 +97,7 @@ fn create_policy<E: Debug>() -> impl RetryPolicy<E> {
 /// Creates a writer channel that will send data to the specified port.
 /// This will be picked up by the service mesh and routed to the cooresponding service.
 /// All output is diffed against the previous tick. If nothing has changed, no data is sent.
+#[tracing::instrument]
 pub fn create_filtered_writer<T: PartialEq + Send + serde::Serialize + Sync + 'static>(
     port: u16,
 ) -> UnboundedSender<T> {
@@ -119,7 +120,7 @@ pub fn create_filtered_writer<T: PartialEq + Send + serde::Serialize + Sync + 's
 
                 let client = client.clone();
 
-                retry_future(
+                let r = retry_future(
                     |_| {
                         client
                             .post(&format!("http://127.0.0.1:{}", port))
@@ -128,9 +129,16 @@ pub fn create_filtered_writer<T: PartialEq + Send + serde::Serialize + Sync + 's
                     },
                     policy,
                 )
-                .await?;
+                .await
+                .and_then(|resp| resp.error_for_status());
 
-                state.replace(x);
+                if r.is_ok() {
+                    state.replace(x);
+                } else {
+                    tracing::debug!("Send failed, uninitializing cache");
+
+                    state = None;
+                }
             }
         }
 
