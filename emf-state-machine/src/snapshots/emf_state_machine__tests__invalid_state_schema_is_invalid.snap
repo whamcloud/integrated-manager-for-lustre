@@ -18,16 +18,16 @@ Documentation for this node:
 
 
 
-Required properties "start" are missing
+Required properties "end" are missing
 At instance path /components/lnet/actions/start/state:
   {
-    "strt": "own",
-    "end": "oops"
+    "start": "own",
+    "ed": "oops"
   }
 
 At schema path /properties/components/patternProperties/^[_a-zA-Z0-9-]+$/properties/actions/patternProperties/^[_a-zA-Z0-9-]+$/properties/state/required:
   [
-    "start"
+    "end"
   ]
 
 

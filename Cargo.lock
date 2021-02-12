@@ -1330,6 +1330,7 @@ dependencies = [
  "insta",
  "jsonschema-valid",
  "lazy_static",
+ "serde",
  "serde_json",
  "serde_yaml",
  "thiserror",

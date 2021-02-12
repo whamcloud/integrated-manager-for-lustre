@@ -1,3 +1,9 @@
+// Copyright (c) 2021 DDN. All rights reserved.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file
+
+pub mod state_schema;
+
 static STATE_SCHEMA_RAW: &str = std::include_str!("state-schema.yml");
 static STATE_SCHEMA_SCHEMA_RAW: &str = std::include_str!("state-schema-schema.json");
 
@@ -8,13 +14,17 @@ lazy_static::lazy_static! {
 }
 
 #[derive(thiserror::Error, Debug)]
-enum Error {
+pub enum Error {
     #[error("invalid JSON: {0}")]
     JSON(#[from] serde_json::Error),
     #[error("invalid YAML: {0}")]
     YAML(#[from] serde_yaml::Error),
     #[error("invalid document: {0:?}")]
     Schema(Vec<jsonschema_valid::ValidationError>),
+    #[error("input output error: {0}")]
+    IoError(#[from] std::io::Error),
+    #[error("Error converting: {0}")]
+    ConversionError(String),
 }
 
 impl From<jsonschema_valid::ValidationError> for Error {
@@ -62,8 +72,8 @@ components:
     actions:
       start:
         state:
-          strt: own
-          end: oops
+          start: own
+          ed: oops
       stop:
         state:
           start: up

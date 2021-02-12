@@ -4,26 +4,34 @@ components:
     states:
       up:
       down:
-    add:
-      input:
-        hostlist:
-          - string
-        auth: string
-        user: string
-        tags:
-          - string
+    actions:
+      add:
+        input:
+          hostlist:
+            - string
+          auth: string
+          user: string
+          tags:
+            - string
+        provisional: true
+        state:
+          end: up
   client_mount:
     states:
       mounted:
       unmounted:
-    create:
-      input:
-        hostlist:
-          - string
-        mountspec: string
-        mountpoint: string
-        tags:
-          - string
+    actions:
+      create:
+        input:
+          hostlist:
+            - string
+          mountspec: string
+          mountpoint: string
+          tags:
+            - string
+        provisional: true
+        state:
+          end: mounted
   lnet:
     states:
       up:
@@ -34,11 +42,13 @@ components:
     actions:
       start:
         state:
-          start: down
+          start: 
+            - down
           end: up
       stop:
         state:
-          start: up
+          start: 
+            - up
           end: down
       load:
         state:
@@ -48,54 +58,96 @@ components:
           end: loaded
       unload:
         state:
-          start: loaded
+          start: 
+            - loaded
           end: unloaded
       configure:
         state:
-          start: loaded
+          start: 
+            - loaded
           end: configured
         input:
             - string
       export:
         state:
-          start: configured
+          start: 
+            - configured
+          end: up
       unconfigure:
         state:
-          start: configured
+          start: 
+            - configured
           end: loaded
       import:
+        state:
+          end: unloaded
         input: string
   mgt:
     states:
       mounted:
         dependencies:
-          - this.lnet: up
+          - exactly:
+              this.lnet: up
       unmounted:
+    actions:
+      format:
+        provisional: true
+        input:
+          name: String
+        state:
+          end: unmounted
+      mount:
+        input:
+          name: String,
+        state:
+          start: 
+            - unmounted
+          end: mounted
   ost:
     states:
       mounted:
         dependencies:
-          - this.lnet: up
+          - exactly:
+              this.lnet: up
       unmounted:
     actions:
       mount:
         input:
           name: String
         state:
-          start: unmounted
+          start: 
+            - unmounted
           end: mounted
   mdt:
     states:
       mounted:
         dependencies:
-          - this.lnet: up
+          - exactly:
+              this.lnet: up
       unmounted:
+    actions:
+      mount:
+        input:
+          name: String
+        state:
+          start: 
+            - unmounted
+          end: mounted 
   mgt_mdt:
     states:
       mounted:
         dependencies:
-          - this.lnet: up
+          - exactly:
+              this.lnet: up
       unmounted:
+    actions:
+      mount:
+        input:
+          name: String
+        state:
+          start: 
+            - unmounted
+          end: mounted
   filesystem:
     states:
       unavailable:
@@ -122,7 +174,8 @@ components:
         input:
           name: String
         state:
-          start: available
+          start: 
+            - available
           end: stopped
       create:
         input:
@@ -133,3 +186,6 @@ components:
             - string
           ost_volumes:
             - string
+        provisional: true
+        state:
+          end: stopped

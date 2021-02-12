@@ -41,20 +41,6 @@
                                                             }
                                                         }
                                                     },
-                                                    "and": {
-                                                        "type": "array",
-                                                        "description": "A list of deps that can be used with the And qualifier. A corresponding input must be specified for each item in this list.",
-                                                        "items": {
-                                                            "type": "object",
-                                                            "description": "A reference to an input and the state it must be in.",
-                                                            "patternProperties": {
-                                                                "^this\\.[_a-zA-Z0-9-]+$": {
-                                                                    "type": "string",
-                                                                    "description": "The state that the reference input must be in."
-                                                                }
-                                                            }
-                                                        }
-                                                    },
                                                     "all": {
                                                         "type": "array",
                                                         "description": "A list of deps that can be used with the All qualifier. The corresponding input must be a list in which all items in the list are in the specified state.",
@@ -88,6 +74,10 @@
                                     "type": "object",
                                     "description": "Action properties",
                                     "properties": {
+                                        "provisional": {
+                                            "type": "boolean",
+                                            "description": "Indicates if the action will use a provisional component."
+                                        },
                                         "input": {
                                             "type": ["string", "array", "object"],
                                             "description": "Input that must be provided to run the action.",
@@ -121,13 +111,15 @@
                                                     "description": "The end state of the action."
                                                 }
                                             },
-                                            "required": ["start"]
+                                            "required": ["end"]
                                         }
-                                    }
+                                    },
+                                    "required": ["state"]
                                 }
                             }
                         }
-                    }
+                    },
+                    "required": ["states", "actions"]
                 }
             }
         }
