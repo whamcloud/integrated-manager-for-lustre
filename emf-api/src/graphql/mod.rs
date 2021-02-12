@@ -13,10 +13,7 @@ use crate::{
     timer::{configure_snapshot_timer, remove_snapshot_timer},
 };
 use chrono::{DateTime, Utc};
-use emf_postgres::{
-    active_mgs_host_fqdn, fqdn_by_host_id, get_fs_target_resources, sqlx,
-    sqlx::postgres::types::PgInterval, PgPool,
-};
+use emf_postgres::{active_mgs_host_fqdn, fqdn_by_host_id, get_fs_target_resources};
 use emf_wire_types::{
     db::{LogMessageRecord, LustreFid},
     graphql_duration::GraphQLDuration,
@@ -31,6 +28,10 @@ use itertools::Itertools;
 use juniper::{
     http::{graphiql::graphiql_source, GraphQLRequest},
     EmptySubscription, FieldError, RootNode, Value,
+};
+use sqlx::{
+    self,
+    postgres::{types::PgInterval, PgPool},
 };
 use std::{
     collections::{HashMap, HashSet},

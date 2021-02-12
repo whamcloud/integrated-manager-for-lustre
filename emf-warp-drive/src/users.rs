@@ -9,7 +9,7 @@ use std::sync::{
     atomic::{AtomicUsize, Ordering},
     Arc,
 };
-use warp::sse::ServerSentEvent;
+use warp::filters::sse::Event;
 
 /// Global unique user id counter.
 static NEXT_USER_ID: AtomicUsize = AtomicUsize::new(1);
@@ -19,7 +19,7 @@ pub type SharedUsers = Arc<Mutex<HashMap<usize, mpsc::UnboundedSender<Message>>>
 pub async fn user_connected(
     state: SharedUsers,
     api_cache: Cache,
-) -> impl Stream<Item = Result<impl ServerSentEvent, warp::Error>> {
+) -> impl Stream<Item = Result<Event, warp::Error>> {
     // Use a counter to assign a new unique ID for this user.
     let id = NEXT_USER_ID.fetch_add(1, Ordering::Relaxed);
 
@@ -35,7 +35,7 @@ pub async fn user_connected(
     state.lock().await.insert(id, tx);
 
     // Convert messages into Server-Sent Events and return resulting stream.
-    rx.map(|msg| Ok(warp::sse::data(serde_json::to_string(&msg).unwrap())))
+    rx.map(|msg| Ok(Event::default().data(serde_json::to_string(&msg).unwrap())))
 }
 
 /// Sends a message to each connected user

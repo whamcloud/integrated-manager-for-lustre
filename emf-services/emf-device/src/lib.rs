@@ -10,12 +10,12 @@ use device_types::{
     mount::Mount,
 };
 use emf_change::*;
-use emf_postgres::sqlx::{self, PgPool};
 use emf_tracing::tracing;
 use emf_wire_types::{Fqdn, FsType};
 pub use error::EmfDeviceError;
 use futures::{future::try_join_all, lock::Mutex, TryStreamExt};
 use im::HashSet;
+use sqlx::postgres::PgPool;
 use std::{
     collections::{BTreeMap, BTreeSet, HashMap},
     sync::Arc,

@@ -3,7 +3,6 @@
 // license that can be found in the LICENSE file.
 
 use crate::{error::EmfApiError, graphql::Context};
-use emf_postgres::sqlx;
 use emf_wire_types::Filesystem;
 use futures::TryFutureExt;
 

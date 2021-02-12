@@ -5,14 +5,14 @@ name = "emf-report"
 version = "0.1.0"
 
 [dependencies]
-bytes = "0.5"
+bytes = "1"
 futures = "0.3"
 emf-fs = {path = "../emf-fs", version = "0.4"}
 emf-manager-env = {path = "../emf-manager-env", version = "0.4"}
-emf-tracing = {version = "0.3", path = "../emf-tracing"}
-tokio = {version = "0.2", features = ["rt-threaded"]}
+emf-tracing = {version = "0.4", path = "../emf-tracing"}
+tokio = {version = "1", features = ["rt-multi-thread"]}
 tracing = "0.1"
-warp = "0.2"
+warp = "0.3"
 
 [dev-dependencies]
 tempdir = "0.3"

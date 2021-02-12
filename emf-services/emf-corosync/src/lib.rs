@@ -2,13 +2,13 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use emf_postgres::{sqlx, PgPool};
 use emf_wire_types::high_availability::{Ban, Node, Resource};
+use sqlx::postgres::PgPool;
 use std::{collections::HashMap, fmt};
 use thiserror::Error;
 
 #[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, sqlx::Type)]
-#[sqlx(rename = "corosync_node_key")]
+#[sqlx(type_name = "corosync_node_key")]
 pub struct CorosyncNodeKey {
     pub id: String,
     pub name: String,

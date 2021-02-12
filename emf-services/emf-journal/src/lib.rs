@@ -2,15 +2,13 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use emf_postgres::{
-    alert,
-    sqlx::{self, PgPool},
-};
+use emf_postgres::alert;
 use emf_wire_types::{AlertRecordType, AlertSeverity, ComponentType, MessageClass};
 use future::BoxFuture;
 use futures::{future, FutureExt, TryFutureExt};
 use lazy_static::lazy_static;
 use regex::Regex;
+use sqlx::postgres::PgPool;
 use std::collections::HashMap;
 use thiserror::Error;
 

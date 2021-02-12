@@ -4,7 +4,7 @@
 
 use futures::Future;
 use std::{fmt::Debug, time::Duration};
-use tokio::time::delay_for;
+use tokio::time::sleep;
 
 pub mod policy;
 
@@ -82,7 +82,7 @@ where
                 tracing::debug!("on request: {} => action: {:?}", request_no, action);
                 match action {
                     RetryAction::RetryNow => { /* do nothing, iterate again */ }
-                    RetryAction::WaitFor(duration) => delay_for(duration).await,
+                    RetryAction::WaitFor(duration) => sleep(duration).await,
                     RetryAction::ReturnError(err) => return Err(err),
                 }
             }
@@ -112,7 +112,7 @@ where
                 tracing::debug!("on request: {} => action: {:?}", request_no, action);
                 match action {
                     RetryAction::RetryNow => { /* do nothing, iterate again */ }
-                    RetryAction::WaitFor(duration) => delay_for(duration).await,
+                    RetryAction::WaitFor(duration) => sleep(duration).await,
                     RetryAction::ReturnError(err) => return Err(err),
                 }
             }

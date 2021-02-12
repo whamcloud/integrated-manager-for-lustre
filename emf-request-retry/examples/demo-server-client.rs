@@ -11,7 +11,7 @@ use std::io;
 use std::net::SocketAddr;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
-use tokio::time::delay_for;
+use tokio::time::sleep;
 use warp::http::StatusCode;
 use warp::Filter;
 
@@ -42,7 +42,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     println!("Sleep for 30 seconds");
-    delay_for(Duration::from_secs(30)).await;
+    sleep(Duration::from_secs(30)).await;
     println!("End of sleep, shutting down");
 
     Ok(())

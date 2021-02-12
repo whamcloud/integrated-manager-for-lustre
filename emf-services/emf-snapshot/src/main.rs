@@ -5,7 +5,7 @@
 use emf_influx::Client as InfluxClient;
 use emf_manager_client::{Client as ManagerClient, Url};
 use emf_manager_env::{get_influxdb_metrics_db, get_pool_limit};
-use emf_postgres::{get_db_pool, sqlx};
+use emf_postgres::get_db_pool;
 use emf_service_queue::spawn_service_consumer;
 use emf_snapshot::{client_monitor::tick, retention::handle_retention_rules, MonitorState};
 use emf_tracing::tracing;

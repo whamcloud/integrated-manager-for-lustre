@@ -129,8 +129,6 @@ pub enum EmfAgentError {
     SystemdError(#[from] emf_systemd::SystemdError),
     #[error(transparent)]
     TokioJoinError(#[from] tokio::task::JoinError),
-    #[error(transparent)]
-    TokioTimerError(#[from] tokio::time::Error),
     #[error("Unexpected status code")]
     UnexpectedStatusError,
     #[error(transparent)]

@@ -16,6 +16,7 @@ use std::{
 };
 use stream_cancel::{Trigger, Tripwire};
 use tokio::{fs, net::UnixListener, sync::Mutex};
+use tokio_stream::wrappers::UnixListenerStream;
 use tokio_util::codec::{BytesCodec, FramedRead};
 
 // Returned trigger should be dropped to cause route to stop
@@ -28,11 +29,11 @@ fn start_route(mailbox: String) -> Trigger {
         let _ = fs::remove_file(&addr).await.map_err(|e| {
             tracing::debug!("Failed to remove file {}: {}", &addr, &e);
         });
-        let mut listener = UnixListener::bind(addr.clone()).map_err(|e| {
+        let listener = UnixListener::bind(addr.clone()).map_err(|e| {
             tracing::error!("Failed to open unix socket {}: {}", &addr, &e);
             e
         })?;
-        let mut incoming = listener.incoming().take_until(tripwire);
+        let mut incoming = UnixListenerStream::new(listener).take_until(tripwire);
 
         tracing::debug!("Starting Route for {}", mailbox);
         while let Some(inbound) = incoming.next().await {

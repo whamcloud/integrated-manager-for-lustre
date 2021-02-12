@@ -9,7 +9,7 @@ dotenv = {version = "0.15", optional = true}
 emf-manager-env = {path = "../emf-manager-env", version = "0.4"}
 emf-wire-types = {path = "../emf-wire-types", version = "0.4", features = ["postgres-interop"]}
 futures = "0.3"
-sqlx = {version = "0.4.2", default-features = false, features = ["json", "macros", "offline", "postgres", "runtime-tokio-rustls", "chrono", "migrate"]}
+sqlx = {version = "0.5", features = ["json", "offline", "postgres", "runtime-tokio-rustls", "chrono"]}
 tracing = "0.1"
 
 [features]

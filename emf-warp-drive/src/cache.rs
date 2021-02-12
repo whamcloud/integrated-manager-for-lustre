@@ -3,7 +3,6 @@
 // license that can be found in the LICENSE file.
 
 use crate::{listen::MessageType, DbRecord};
-use emf_postgres::{sqlx, PgPool};
 use emf_wire_types::{
     db::Id,
     sfa::{
@@ -17,6 +16,7 @@ use emf_wire_types::{
     StratagemConfiguration, TargetRecord,
 };
 use futures::{lock::Mutex, TryStreamExt};
+use sqlx::postgres::PgPool;
 use std::{fmt::Debug, sync::Arc};
 
 pub type SharedCache = Arc<Mutex<Cache>>;

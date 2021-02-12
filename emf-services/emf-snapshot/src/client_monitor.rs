@@ -2,8 +2,8 @@ use crate::{Error, MonitorState};
 use emf_command_utils::wait_for_cmds_success;
 use emf_graphql_queries::snapshot as snapshot_queries;
 use emf_manager_client::{get_influx, graphql, Client};
-use emf_postgres::{sqlx, PgPool};
 use emf_tracing::tracing;
+use sqlx::postgres::PgPool;
 use std::{collections::HashMap, fmt::Debug};
 use tokio::time::{Duration, Instant};
 

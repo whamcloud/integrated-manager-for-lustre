@@ -95,7 +95,7 @@ pub async fn cli(command: Command) -> Result<(), EmfManagerCliError> {
                         "Failed to start influxdb".to_string(),
                     ));
                 }
-                tokio::time::delay_for(waitfor).await;
+                tokio::time::sleep(waitfor).await;
                 i -= 2;
             }
             tracing::info!("Creating Influx DBs");

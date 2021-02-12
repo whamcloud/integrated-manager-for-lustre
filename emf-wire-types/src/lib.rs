@@ -44,7 +44,7 @@ pub use stratagem::*;
 pub use target::*;
 
 #[cfg_attr(feature = "postgres-interop", derive(sqlx::Type))]
-#[cfg_attr(feature = "postgres-interop", sqlx(rename = "component"))]
+#[cfg_attr(feature = "postgres-interop", sqlx(type_name = "component"))]
 #[cfg_attr(feature = "postgres-interop", sqlx(rename_all = "lowercase"))]
 #[serde(rename_all = "lowercase")]
 #[derive(

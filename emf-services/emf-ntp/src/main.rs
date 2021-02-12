@@ -3,7 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use emf_manager_env::get_pool_limit;
-use emf_postgres::{alert, get_db_pool, sqlx};
+use emf_postgres::{alert, get_db_pool};
 use emf_service_queue::spawn_service_consumer;
 use emf_wire_types::{time::State, AlertRecordType, AlertSeverity, ComponentType};
 use futures::StreamExt;

@@ -143,9 +143,11 @@ pub async fn get_fs_target_resources(
 }
 
 pub async fn get_banned_targets(pool: &PgPool) -> Result<Vec<BannedTargetResource>, sqlx::Error> {
-    let xs = sqlx::query!(
+    let xs = sqlx::query_as!(
+        BannedTargetResource,
         r#"
-            SELECT b.id, b.resource, b.node, b.cluster_id, nh.host_id, t.mount_point
+            SELECT b.resource as "resource!", b.cluster_id as "cluster_id!",
+                   nh.host_id as "host_id!", t.mount_point
             FROM corosync_resource_bans b
             INNER JOIN corosync_node_host nh ON (nh.corosync_node_id).name = b.node
             AND nh.cluster_id = b.cluster_id
@@ -154,12 +156,6 @@ pub async fn get_banned_targets(pool: &PgPool) -> Result<Vec<BannedTargetResourc
         "#
     )
     .fetch(pool)
-    .map_ok(|x| BannedTargetResource {
-        resource: x.resource,
-        cluster_id: x.cluster_id,
-        host_id: x.host_id,
-        mount_point: x.mount_point,
-    })
     .try_collect()
     .await?;
 

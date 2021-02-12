@@ -4,6 +4,7 @@
 
 use emf_wire_types::Fqdn;
 use tokio::sync::mpsc;
+use tokio_stream::wrappers::UnboundedReceiverStream;
 use warp::{reply::WithStatus, Filter, Reply};
 
 pub type Incoming<T> = (Fqdn, T);
@@ -13,7 +14,7 @@ pub type Incoming<T> = (Fqdn, T);
 // A Rx handle is also returned. It should be consumed to work with `Incoming` data.
 pub fn create_service_consumer<T: Send + serde::de::DeserializeOwned>() -> (
     impl Filter<Extract = (WithStatus<impl Reply>,), Error = warp::Rejection> + Clone,
-    mpsc::UnboundedReceiver<Incoming<T>>,
+    UnboundedReceiverStream<Incoming<T>>,
 ) {
     let (tx, rx) = mpsc::unbounded_channel::<Incoming<T>>();
 
@@ -28,14 +29,14 @@ pub fn create_service_consumer<T: Send + serde::de::DeserializeOwned>() -> (
             warp::reply::with_status(warp::reply(), x)
         });
 
-    (x, rx)
+    (x, UnboundedReceiverStream::new(rx))
 }
 
 /// Spawns a new server that listens for incoming POSTs
 /// from other services on the given port.
 pub fn spawn_service_consumer<T: Send + serde::de::DeserializeOwned + 'static>(
     port: u16,
-) -> mpsc::UnboundedReceiver<Incoming<T>> {
+) -> UnboundedReceiverStream<Incoming<T>> {
     let (x, rx) = create_service_consumer();
 
     let server = warp::serve(x).run(([127, 0, 0, 1], port));

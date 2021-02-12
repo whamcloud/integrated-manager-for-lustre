@@ -20,6 +20,7 @@ use tokio::{
     signal::unix::{signal, SignalKind},
     sync::mpsc::{unbounded_channel, UnboundedSender},
 };
+use tokio_stream::wrappers::UnboundedReceiverStream;
 
 lazy_static! {
     /// Gets the FQDN or panics
@@ -90,7 +91,8 @@ fn create_policy<E: Debug>() -> impl RetryPolicy<E> {
 pub fn create_filtered_writer<T: PartialEq + Send + serde::Serialize + Sync + 'static>(
     port: u16,
 ) -> UnboundedSender<T> {
-    let (tx, mut rx) = unbounded_channel();
+    let (tx, rx) = unbounded_channel();
+    let mut rx = UnboundedReceiverStream::new(rx);
 
     tokio::spawn(async move {
         let mut state: Option<T> = None;

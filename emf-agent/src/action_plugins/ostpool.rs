@@ -11,7 +11,7 @@ use emf_wire_types::OstPool;
 use futures::future::try_join_all;
 use std::iter::FromIterator;
 use std::time::Duration;
-use tokio::time::delay_for;
+use tokio::time::sleep;
 
 /// A list of rules + a name for the group of rules.
 #[derive(Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -44,7 +44,7 @@ pub async fn action_pool_wait(cmd: CmdPool) -> Result<(), EmfAgentError> {
         if pl.contains(&cmd.name) {
             return Ok(());
         }
-        delay_for(Duration::from_millis(500)).await;
+        sleep(Duration::from_millis(500)).await;
     }
 
     Err(EmfAgentError::from(RequiredError(format!(

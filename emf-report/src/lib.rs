@@ -26,7 +26,7 @@ impl<T: Stream<Item = Result<String, warp::Rejection>>> LineStream for T {}
 fn streamer<'a>(
     s: impl Stream<Item = Result<impl Buf, warp::Error>> + Send + 'a,
 ) -> BoxStream<'a, Result<String, warp::Rejection>> {
-    let s = s.map_ok(|mut x| x.to_bytes());
+    let s = s.map_ok(|mut x| x.copy_to_bytes(x.remaining()));
 
     emf_fs::read_lines(s)
         .map_err(Errors::IoError)

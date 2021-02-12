@@ -8,6 +8,6 @@ version = "0.4.0"
 emf-cmd = {version = "0.4", path = "../emf-cmd"}
 emf-system-test-utils = {version = "0.4", path = "../emf-system-test-utils"}
 emf-wire-types = {version = "0.4", path = "../emf-wire-types"}
-tokio = {version = "0.2", features = ["macros", "rt-threaded"]}
+tokio = {version = "1", features = ["macros", "rt-multi-thread"]}
 tracing = "0.1"
 tracing-subscriber = "0.2"

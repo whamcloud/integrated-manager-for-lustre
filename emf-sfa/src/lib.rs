@@ -5,7 +5,6 @@
 pub mod db;
 mod sfa_class_ext;
 
-use emf_postgres::sqlx;
 use emf_wire_types::sfa::wbem_interop::SfaClassError;
 pub use sfa_class_ext::SfaClassExt;
 use thiserror::Error;

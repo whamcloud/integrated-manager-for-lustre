@@ -12,5 +12,5 @@ emf-cmd = {path = "../emf-cmd", version = "0.4"}
 emf-wire-types = {path = "../emf-wire-types", version = "0.4"}
 serde = {version = "1", features = ['derive']}
 serde_json = "1.0"
-tokio = {version = "0.2", features = ["net", "stream", "time"]}
+tokio = {version = "1", features = ["net", "time"]}
 tracing = "0.1"

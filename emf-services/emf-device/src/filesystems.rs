@@ -3,16 +3,13 @@
 // license that can be found in the LICENSE file.
 
 use crate::EmfDeviceError;
-use emf_postgres::{
-    get_fs_target_resources,
-    sqlx::{self, Postgres, Transaction},
-    PgPool,
-};
+use emf_postgres::get_fs_target_resources;
 use emf_tracing::tracing;
 use emf_wire_types::TargetResource;
 use futures::TryStreamExt;
 use lazy_static::lazy_static;
 use regex::Regex;
+use sqlx::{postgres::PgPool, Postgres, Transaction};
 use std::collections::{BTreeSet, HashMap, HashSet};
 
 #[derive(Default)]

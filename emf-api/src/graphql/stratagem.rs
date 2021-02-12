@@ -7,7 +7,6 @@ use crate::{
     graphql::{fs_id_by_name, insert_fidlist, insert_task, Context, SendJob},
 };
 use emf_manager_env::get_report_path;
-use emf_postgres::{sqlx, PgPool};
 use emf_wire_types::{
     graphql_duration::GraphQLDuration, stratagem, task::TaskArgs, Command, StratagemConfiguration,
     StratagemConfigurationOutput, StratagemReport,
@@ -17,8 +16,10 @@ use futures::{
     TryFutureExt, TryStreamExt,
 };
 use juniper::{FieldError, Value};
+use sqlx::postgres::PgPool;
 use std::collections::HashMap;
 use tokio::fs;
+use tokio_stream::wrappers::ReadDirStream;
 use uuid::Uuid;
 
 pub(crate) struct StratagemQuery;
@@ -48,7 +49,9 @@ impl StratagemQuery {
     /// List completed Stratagem reports that currently reside on the manager node.
     /// Note: All report names must be valid unicode.
     async fn stratagem_reports(_context: &Context) -> juniper::FieldResult<Vec<StratagemReport>> {
-        let paths = tokio::fs::read_dir(get_report_path()).await?;
+        let paths = tokio::fs::read_dir(get_report_path())
+            .map_ok(ReadDirStream::new)
+            .await?;
 
         let file_paths = paths
             .map_ok(|x| x.file_name().to_string_lossy().to_string())
@@ -657,7 +660,7 @@ async fn get_target_hosts_by_fsname(
     let xs = sqlx::query_as!(
         TargetHost,
         r#"
-            SELECT t.name, t.dev_path, h.fqdn
+            SELECT t.name as "name!", t.dev_path, h.fqdn as "fqdn!"
             FROM target t
             INNER JOIN host h
             ON t.active_host_id = h.id

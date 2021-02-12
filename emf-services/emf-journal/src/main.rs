@@ -5,15 +5,13 @@
 use chrono::TimeZone;
 use emf_journal::{execute_handlers, get_message_class, EmfJournalError};
 use emf_manager_env::get_pool_limit;
-use emf_postgres::{
-    get_db_pool,
-    sqlx::{self, Done, PgPool},
-};
+use emf_postgres::get_db_pool;
 use emf_service_queue::spawn_service_consumer;
 use emf_tracing::tracing;
 use emf_wire_types::JournalMessage;
 use futures::StreamExt;
 use lazy_static::lazy_static;
+use sqlx::postgres::PgPool;
 use std::convert::TryInto;
 
 lazy_static! {

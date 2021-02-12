@@ -3,7 +3,6 @@
 // license that can be found in the LICENSE file.
 
 use emf_manager_client::EmfManagerClientError;
-use emf_postgres::sqlx;
 use futures::channel::oneshot;
 use thiserror::Error;
 use warp::reject;
@@ -27,9 +26,3 @@ pub enum EmfApiError {
 }
 
 impl reject::Reject for EmfApiError {}
-
-impl From<EmfApiError> for warp::Rejection {
-    fn from(err: EmfApiError) -> Self {
-        warp::reject::custom(err)
-    }
-}

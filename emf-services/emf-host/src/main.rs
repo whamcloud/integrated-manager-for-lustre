@@ -4,7 +4,7 @@
 
 use chrono::{DateTime, Utc};
 use emf_manager_env::get_pool_limit;
-use emf_postgres::{get_db_pool, sqlx};
+use emf_postgres::get_db_pool;
 use emf_service_queue::spawn_service_consumer;
 use emf_wire_types::MachineId;
 use futures::StreamExt;

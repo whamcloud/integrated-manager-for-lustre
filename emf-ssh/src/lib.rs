@@ -13,9 +13,15 @@ pub enum Error {
     #[error(transparent)]
     Anyhow(#[from] anyhow::Error),
     #[error(transparent)]
+    ClientError(#[from] ClientError),
+    #[error(transparent)]
     Io(#[from] io::Error),
     #[error(transparent)]
     FromUtf8(#[from] FromUtf8Error),
+    #[error(transparent)]
+    SshError(#[from] thrussh::Error),
+    #[error(transparent)]
+    SshKeyError(#[from] thrussh_keys::Error),
     #[error("SSH Authentication Failed")]
     AuthenticationFailed,
     #[error("No home directory found")]
@@ -50,7 +56,7 @@ pub async fn connect(
     port: impl Into<Option<u16>>,
     user: impl ToString,
     auth: Auth,
-) -> Result<client::Handle, Error> {
+) -> Result<client::Handle<Client>, Error> {
     let cfg = client::Config {
         connection_timeout: Some(Duration::from_secs(60)),
         ..Default::default()
@@ -67,7 +73,7 @@ pub async fn connect(
 
     let sh = Client { host, port };
 
-    let mut session = client::connect(cfg, address, sh).await?;
+    let mut session: Handle<Client> = client::connect(cfg, address, sh).await?;
 
     let (session, authed) = match auth {
         Auth::Password(password) => {
@@ -103,8 +109,8 @@ pub async fn connect(
                                 return Ok((agent, session, authed));
                             }
 
-                            let (agent, authed) =
-                                session.authenticate_future(user, x, agent).await?;
+                            let (agent, authed) = session.authenticate_future(user, x, agent).await;
+                            let authed = authed.map_err(|_| Error::AuthenticationFailed)?;
 
                             Ok((agent, session, authed))
                         }
@@ -171,7 +177,7 @@ impl Output {
     }
 }
 
-pub trait SshHandleExt {
+pub trait SshHandleExt<Client> {
     fn create_channel(&mut self) -> BoxFuture<Result<Channel, Error>>;
     /// Send a file to the remote path using this session
     fn push_file(
@@ -187,7 +193,7 @@ pub trait SshHandleExt {
     ) -> BoxFuture<'a, Result<(), Error>>;
 }
 
-impl SshHandleExt for Handle {
+impl SshHandleExt<Client> for Handle<Client> {
     fn create_channel(&mut self) -> BoxFuture<Result<Channel, Error>> {
         let fut = self.channel_open_session();
 
@@ -364,14 +370,25 @@ impl SshChannelExt for Channel {
     }
 }
 
-struct Client {
-    host: String,
-    port: Option<u16>,
+pub struct Client {
+    pub host: String,
+    pub port: Option<u16>,
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum ClientError {
+    #[error(transparent)]
+    Anyhow(#[from] anyhow::Error),
+    #[error(transparent)]
+    SshError(#[from] thrussh::Error),
+    #[error(transparent)]
+    FromUtf8(#[from] FromUtf8Error),
 }
 
 impl client::Handler for Client {
-    type FutureUnit = futures::future::Ready<Result<(Self, client::Session), anyhow::Error>>;
-    type FutureBool = futures::future::Ready<Result<(Self, bool), anyhow::Error>>;
+    type Error = ClientError;
+    type FutureUnit = futures::future::Ready<Result<(Self, client::Session), Self::Error>>;
+    type FutureBool = futures::future::Ready<Result<(Self, bool), Self::Error>>;
 
     fn finished_bool(self, b: bool) -> Self::FutureBool {
         futures::future::ready(Ok((self, b)))
@@ -394,22 +411,20 @@ impl client::Handler for Client {
 
                 self.finished_bool(true)
             }
-            Err(ref e) => match e.downcast_ref::<thrussh_keys::Error>() {
-                Some(thrussh_keys::Error::KeyChanged { line: x }) => {
-                    tracing::error!(
-                        "Server Key for host: {} has changed on line {} of known_hosts file",
-                        &self.host,
-                        x
-                    );
+            Err(thrussh_keys::Error::KeyChanged { line: x }) => {
+                tracing::error!(
+                    "Server Key for host: {} has changed on line {} of known_hosts file",
+                    &self.host,
+                    x
+                );
 
-                    self.finished_bool(false)
-                }
-                _ => {
-                    tracing::warn!("Unknown error for host: {}, {:?}", &self.host, r);
+                self.finished_bool(false)
+            }
+            _ => {
+                tracing::warn!("Unknown error for host: {}, {:?}", &self.host, r);
 
-                    self.finished_bool(true)
-                }
-            },
+                self.finished_bool(true)
+            }
         }
     }
 }

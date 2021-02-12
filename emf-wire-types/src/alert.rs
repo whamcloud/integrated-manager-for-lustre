@@ -24,7 +24,7 @@ pub enum AlertSeverity {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "postgres-interop", derive(sqlx::Type))]
-#[cfg_attr(feature = "postgres-interop", sqlx(rename = "alert_record_type"))]
+#[cfg_attr(feature = "postgres-interop", sqlx(type_name = "alert_record_type"))]
 pub enum AlertRecordType {
     AlertState,
     LearnEvent,

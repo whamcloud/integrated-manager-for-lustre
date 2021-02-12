@@ -4,10 +4,7 @@
 
 use emf_action_client::Client;
 use emf_manager_env::get_pool_limit;
-use emf_postgres::{
-    get_db_pool,
-    sqlx::{self, Done, Executor, PgPool},
-};
+use emf_postgres::get_db_pool;
 use emf_tracing::tracing;
 use emf_wire_types::{
     db::{FidTaskQueue, LustreFid},
@@ -16,6 +13,7 @@ use emf_wire_types::{
 };
 use futures::{future::join_all, lock::Mutex, FutureExt, TryFutureExt};
 use lazy_static::lazy_static;
+use sqlx::{postgres::PgPool, Executor};
 use std::{
     cmp::max,
     collections::{HashMap, HashSet},

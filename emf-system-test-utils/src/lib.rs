@@ -17,7 +17,7 @@ use tokio::{
     fs::{canonicalize, File},
     io::AsyncWriteExt,
     process::Command,
-    time::delay_for,
+    time::sleep,
 };
 
 #[derive(Debug, thiserror::Error)]
@@ -107,7 +107,7 @@ pub async fn try_command_n_times(
         tracing::debug!("Trying command: {:?} - Attempt #{}", cmd, count + 1);
         count += 1;
 
-        delay_for(Duration::from_secs(delay)).await;
+        sleep(Duration::from_secs(delay)).await;
 
         r = cmd.status().await?;
     }
@@ -577,7 +577,7 @@ pub async fn create_fs(config: Config) -> Result<Config, TestError> {
     wait_for_ntp(&config).await?;
     wait_on_services_ready(&config).await?;
 
-    delay_for(Duration::from_secs(10)).await;
+    sleep(Duration::from_secs(10)).await;
 
     Ok(config)
 }
@@ -602,7 +602,7 @@ async fn mount_fs(config: &Config) -> Result<usize, TestError> {
 
 pub async fn detect_fs(config: Config) -> Result<Config, TestError> {
     let count = mount_fs(&config).await?;
-    tokio::time::delay_for(Duration::from_secs(60)).await;
+    tokio::time::sleep(Duration::from_secs(60)).await;
 
     ssh::detect_fs(config.manager_ip).await?;
 
@@ -673,7 +673,7 @@ pub async fn test_stratagem_taskqueue(config: Config) -> Result<Config, TestErro
     ssh::graphql_call::<_, emf_graphql_queries::Response<task::create::Resp>>(&config, &q).await?;
 
     // TODO wait for command to complete
-    delay_for(Duration::from_secs(20)).await;
+    sleep(Duration::from_secs(20)).await;
 
     // send fid
     let cmd = r#"socat - unix-connect:/run/emf/postman-testfile.sock"#;
@@ -693,7 +693,7 @@ pub async fn test_stratagem_taskqueue(config: Config) -> Result<Config, TestErro
     ssh_child.wait_with_checked_output().await?;
 
     // TODO wait for fid to process by checking Task
-    delay_for(Duration::from_secs(20)).await;
+    sleep(Duration::from_secs(20)).await;
 
     // check output on manager
     if let Ok((_, output)) = ssh::ssh_exec(

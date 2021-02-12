@@ -11,10 +11,11 @@
 
 use emf_mailbox::ingest_data;
 use emf_manager_env::get_pool_limit;
-use emf_postgres::{get_db_pool, sqlx::PgPool};
+use emf_postgres::get_db_pool;
 use emf_tracing::tracing;
 use futures::{Stream, StreamExt};
 use lazy_static::lazy_static;
+use sqlx::postgres::PgPool;
 use std::pin::Pin;
 use warp::Filter as _;
 

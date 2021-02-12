@@ -8,8 +8,8 @@ version = "0.4.0"
 futures = "0.3"
 emf-cmd = {path = "../emf-cmd", version = "0.4", features = ["warp-errs"]}
 emf-manager-env = {path = "../emf-manager-env", version = "0.4"}
-emf-tracing = {version = "0.3", path = "../emf-tracing"}
+emf-tracing = {version = "0.4", path = "../emf-tracing"}
 serde = {version = "1", features = ["derive"]}
 serde_json = "1.0"
-tokio = {version = "0.2", features = ["process", "macros"]}
-warp = "0.2"
+tokio = {version = "1", features = ["process", "macros"]}
+warp = "0.3"

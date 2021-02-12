@@ -47,7 +47,14 @@ impl InfluxClientExt for Client {
                     .into_iter()
                     .filter_map(|x| x.series)
                     .flatten()
-                    .map(|x| -> serde_json::Value { ColVals(x.columns, x.values).into() })
+                    .filter_map(|x| {
+                        if let Some(v) = x.values {
+                            Some((x.columns, v))
+                        } else {
+                            None
+                        }
+                    })
+                    .map(|(c, v)| -> serde_json::Value { ColVals(c, v).into() })
                     .map(|x| -> Result<Vec<T>, Error> {
                         let x = serde_json::from_value(x)?;
 
@@ -109,10 +116,10 @@ mod tests {
         let query_result = vec![Node {
             statement_id: Some(0),
             series: Some(vec![Series {
-                name: "col1".to_string(),
+                name: Some("col1".to_string()),
                 tags: None,
                 columns: vec!["time".into(), "col1".into(), "col2".into(), "col3".into()],
-                values: vec![
+                values: Some(vec![
                     vec![
                         json!(1597166951257510515_i64),
                         json!("foo1"),
@@ -125,7 +132,7 @@ mod tests {
                         json!("bar2"),
                         json!("baz2"),
                     ],
-                ],
+                ]),
             }]),
         }];
 
@@ -140,7 +147,14 @@ mod tests {
             .into_iter()
             .filter_map(|x| x.series)
             .flatten()
-            .map(|x| -> serde_json::Value { ColVals(x.columns, x.values).into() })
+            .filter_map(|x| {
+                if let Some(v) = x.values {
+                    Some((x.columns, v))
+                } else {
+                    None
+                }
+            })
+            .map(|(c, v)| -> serde_json::Value { ColVals(c, v).into() })
             .map(|x| {
                 let x: Vec<Record> =
                     serde_json::from_value(x).expect("Couldn't convert to record.");

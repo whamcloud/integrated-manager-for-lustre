@@ -991,6 +991,42 @@
       ]
     }
   },
+  "265ffd576ccd92631fcec20125129f1562246a5b86a20eccdfc972fa4e4a6e31": {
+    "query": "\n            SELECT b.resource as \"resource!\", b.cluster_id as \"cluster_id!\",\n                   nh.host_id as \"host_id!\", t.mount_point\n            FROM corosync_resource_bans b\n            INNER JOIN corosync_node_host nh ON (nh.corosync_node_id).name = b.node\n            AND nh.cluster_id = b.cluster_id\n            INNER JOIN corosync_resource t ON t.name = b.resource AND b.cluster_id = t.cluster_id\n            WHERE t.mount_point is not NULL\n        ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "resource!",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 1,
+          "name": "cluster_id!",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 2,
+          "name": "host_id!",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 3,
+          "name": "mount_point",
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        true,
+        true,
+        true,
+        true
+      ]
+    }
+  },
   "272e3387251a0a65d1edb3f4bfca25149e88e6df0b7009ec7e8fed519329e9f7": {
     "query": "\n            DELETE from sfaenclosure\n            WHERE (index, storage_system)\n            IN (\n                SELECT *\n                FROM UNNEST($1::int[], $2::text[])\n            )\n        ",
     "describe": {
@@ -1414,6 +1450,38 @@
       },
       "nullable": [
         false
+      ]
+    }
+  },
+  "3b87fce6dce80a66ed29a4b271afc989aab7a157a65c30a9db5bf6230857dd6a": {
+    "query": "\n            SELECT t.name as \"name!\", t.dev_path, h.fqdn as \"fqdn!\"\n            FROM target t\n            INNER JOIN host h\n            ON t.active_host_id = h.id\n            WHERE $1 = ANY(t.filesystems)\n        ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "name!",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 1,
+          "name": "dev_path",
+          "type_info": "Text"
+        },
+        {
+          "ordinal": 2,
+          "name": "fqdn!",
+          "type_info": "Text"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      },
+      "nullable": [
+        true,
+        true,
+        true
       ]
     }
   },
@@ -4259,54 +4327,6 @@
       ]
     }
   },
-  "e91685697c71c1e523689c8215adba28f593367ab474dfe5647c632af9d3b875": {
-    "query": "\n            SELECT b.id, b.resource, b.node, b.cluster_id, nh.host_id, t.mount_point\n            FROM corosync_resource_bans b\n            INNER JOIN corosync_node_host nh ON (nh.corosync_node_id).name = b.node\n            AND nh.cluster_id = b.cluster_id\n            INNER JOIN corosync_resource t ON t.name = b.resource AND b.cluster_id = t.cluster_id\n            WHERE t.mount_point is not NULL\n        ",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 1,
-          "name": "resource",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 2,
-          "name": "node",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 3,
-          "name": "cluster_id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 4,
-          "name": "host_id",
-          "type_info": "Int4"
-        },
-        {
-          "ordinal": 5,
-          "name": "mount_point",
-          "type_info": "Text"
-        }
-      ],
-      "parameters": {
-        "Left": []
-      },
-      "nullable": [
-        false,
-        false,
-        false,
-        false,
-        false,
-        true
-      ]
-    }
-  },
   "ec0d6964e1d518f23086eba95dc1ae7017cc3b64c26a3b98ea1da9241ebec494": {
     "query": "\n            DELETE FROM corosync_resource_bans\n            USING corosync_node_host\n            WHERE host_id = $1\n            AND node = (corosync_node_id).name\n            AND name != ALL($2)\n            ",
     "describe": {
@@ -4318,38 +4338,6 @@
         ]
       },
       "nullable": []
-    }
-  },
-  "ef512f2dfaf7dbcd8e3816a0eda4b851dfbf596c6935bb854121246f21edd87c": {
-    "query": "\n            SELECT t.name, t.dev_path, h.fqdn\n            FROM target t\n            INNER JOIN host h\n            ON t.active_host_id = h.id\n            WHERE $1 = ANY(t.filesystems)\n        ",
-    "describe": {
-      "columns": [
-        {
-          "ordinal": 0,
-          "name": "name",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 1,
-          "name": "dev_path",
-          "type_info": "Text"
-        },
-        {
-          "ordinal": 2,
-          "name": "fqdn",
-          "type_info": "Text"
-        }
-      ],
-      "parameters": {
-        "Left": [
-          "Text"
-        ]
-      },
-      "nullable": [
-        false,
-        true,
-        false
-      ]
     }
   },
   "f50133338ce3a38a6d802bb83a31c74b96a9e923df5f8536900b5e68a204430a": {

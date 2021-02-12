@@ -3,11 +3,12 @@
 // license that can be found in the LICENSE file.
 
 use emf_change::{Changeable, Changes, Deletions, GetChanges as _, Upserts};
-use emf_postgres::{get_db_pool, PgPool};
+use emf_postgres::get_db_pool;
 use emf_request_retry::{retry_future, RetryAction};
 use emf_sfa::{db, EmfSfaError, SfaClassExt as _};
 use emf_tracing::tracing;
 use futures::{future, Future};
+use sqlx::postgres::PgPool;
 use std::{fmt::Debug, time::Duration};
 use tokio::time;
 use url::Url;

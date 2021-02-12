@@ -2,8 +2,9 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use emf_manager_env::get_port;
 use emf_ostpool::{db, error::Error};
-use emf_postgres::sqlx;
+use emf_postgres::get_db_pool;
 use emf_service_queue::spawn_service_consumer;
 use emf_tracing::tracing;
 use emf_wire_types::FsPoolMap;
@@ -14,11 +15,9 @@ use std::collections::BTreeSet;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     emf_tracing::init();
 
-    let mut rx =
-        spawn_service_consumer::<FsPoolMap>(emf_manager_env::get_port("OSTPOOL_SERVICE_PORT"));
+    let mut rx = spawn_service_consumer::<FsPoolMap>(get_port("OSTPOOL_SERVICE_PORT"));
 
-    let db_pool =
-        emf_postgres::get_db_pool(2, emf_manager_env::get_port("OSTPOOL_SERVICE_PG_PORT")).await?;
+    let db_pool = get_db_pool(2, get_port("OSTPOOL_SERVICE_PG_PORT")).await?;
 
     while let Some((fqdn, fspools)) = rx.next().await {
         tracing::debug!("Pools from {}: {:?}", fqdn, fspools);

@@ -3,10 +3,10 @@
 // license that can be found in the LICENSE file.
 
 use crate::error::Error;
-use emf_postgres::{sqlx, PgPool};
 use emf_tracing::tracing;
 use emf_wire_types::OstPool;
 use futures::{future::try_join_all, TryStreamExt};
+use sqlx::postgres::PgPool;
 use std::collections::BTreeSet;
 
 /// Assume that if there is a single filesystem with a given name,

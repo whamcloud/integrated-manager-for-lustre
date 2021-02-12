@@ -21,7 +21,7 @@ use emf_wire_types::{
 };
 use futures::{future::try_join_all, try_join};
 use std::{collections::HashMap, time::Duration};
-use tokio::time::delay_for;
+use tokio::time::sleep;
 
 pub use crate::high_availability::{crm_attribute, pcs};
 
@@ -104,7 +104,7 @@ async fn wait_resource(resource: &str, running: bool) -> Result<(), EmfAgentErro
         if stati.peek() != None && stati.all(|s| s == check) {
             return Ok(());
         }
-        delay_for(delay_duration).await;
+        sleep(delay_duration).await;
     }
     Err(EmfAgentError::from(RequiredError(format!(
         "Waiting for resource {} of {} failed after {} sec",
@@ -646,7 +646,7 @@ pub async fn move_resource((resource, dest_host): (String, String)) -> Result<()
             ))));
         }
         counter += WAIT_DELAY;
-        delay_for(delay_duration).await;
+        sleep(delay_duration).await;
     };
 
     crm_resource(&["--resource", &resource, "--un-move", "--node", &dest_host]).await?;

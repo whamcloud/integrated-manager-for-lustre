@@ -11,9 +11,10 @@ use std::{
 use tempfile::NamedTempFile;
 use tokio::{
     fs::{self, File},
-    prelude::*,
+    io::AsyncReadExt,
     task::spawn_blocking,
 };
+use tokio_stream::wrappers::ReadDirStream;
 use tokio_util::codec::{BytesCodec, FramedRead, FramedWrite, LinesCodec, LinesCodecError};
 
 #[derive(Debug)]
@@ -99,7 +100,7 @@ where
         .map_ok(|file| FramedRead::new(file, BytesCodec::new()))
         .try_flatten_stream()
         .err_into()
-        .map_ok(bytes::BytesMut::freeze)
+        .map_ok(|b| b.freeze())
 }
 
 /// Given a path, streams the file line by line till EOF
@@ -129,6 +130,7 @@ where
     P: AsRef<Path> + Send + 'static,
 {
     tokio::fs::read_dir(p)
+        .map_ok(ReadDirStream::new)
         .err_into()
         .try_flatten_stream()
         .map_ok(|d| d.path())
@@ -147,6 +149,7 @@ where
     P: AsRef<Path> + Send + 'static,
 {
     tokio::fs::read_dir(p)
+        .map_ok(ReadDirStream::new)
         .err_into()
         .try_flatten_stream()
         .map_ok(|d| d.path())

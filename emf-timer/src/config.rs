@@ -7,7 +7,7 @@ use futures::TryFutureExt;
 use serde::{Deserialize, Serialize};
 use tokio::{
     fs::{remove_file, File},
-    prelude::*,
+    io::AsyncWriteExt,
 };
 
 #[derive(Debug, Deserialize, Serialize)]

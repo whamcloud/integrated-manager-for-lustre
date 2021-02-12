@@ -5,7 +5,7 @@
 mod cim_xml;
 
 use async_trait::async_trait;
-use bytes::buf::ext::BufExt;
+use bytes::Buf;
 pub use cim_xml::{
     CimXmlError, {req, resp},
 };

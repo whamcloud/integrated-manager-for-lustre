@@ -2,9 +2,9 @@ use crate::{Error, FsStats};
 use emf_command_utils::wait_for_cmds_success;
 use emf_influx::{Client as InfluxClient, InfluxClientExt as _};
 use emf_manager_client::{graphql, Client};
-use emf_postgres::{sqlx, PgPool};
 use emf_tracing::tracing;
 use emf_wire_types::{snapshot, Command};
+use sqlx::postgres::PgPool;
 use std::collections::HashMap;
 
 async fn get_stats_from_influx(
@@ -208,6 +208,6 @@ pub async fn handle_retention_rules(
                 }
             };
 
-        tokio::time::delay_for(tokio::time::Duration::from_secs(60)).await;
+        tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
     }
 }

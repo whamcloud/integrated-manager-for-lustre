@@ -2,10 +2,9 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use bytes::buf::BufExt as _;
 use emf_manager_env::{get_action_runner_http, get_action_runner_uds, running_in_docker};
 use emf_wire_types::{Action, ActionId, ActionName, ActionType, AgentResult, Fqdn};
-use hyper::{client::HttpConnector, Body, Request};
+use hyper::{body::Buf, client::HttpConnector, Body, Request};
 use hyperlocal::{UnixClientExt as _, UnixConnector};
 use std::{ops::Deref, sync::Arc};
 use thiserror::Error;

@@ -8,7 +8,7 @@ use emf_device::{
     update_client_mounts, update_devices, EmfDeviceError,
 };
 use emf_manager_env::get_pool_limit;
-use emf_postgres::{get_db_pool, sqlx};
+use emf_postgres::get_db_pool;
 use emf_service_queue::spawn_service_consumer;
 use emf_tracing::tracing;
 use emf_wire_types::Fqdn;

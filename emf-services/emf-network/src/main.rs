@@ -4,10 +4,11 @@
 
 use emf_influx::{Client, Error as InfluxError, Point, Points, Precision, Value};
 use emf_manager_env::{get_influxdb_metrics_db, get_pool_limit};
-use emf_postgres::{get_db_pool, host_id_by_fqdn, sqlx, PgPool};
+use emf_postgres::{get_db_pool, host_id_by_fqdn};
 use emf_service_queue::spawn_service_consumer;
 use emf_wire_types::{LNet, LNetState as _, NetworkData, NetworkInterface};
 use futures::StreamExt;
+use sqlx::postgres::PgPool;
 use url::Url;
 
 // Default pool limit if not overridden by POOL_LIMIT

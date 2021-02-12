@@ -3,11 +3,11 @@
 // license that can be found in the LICENSE file.
 
 use bytes::Buf;
-use emf_postgres::sqlx::{self, PgPool};
 use emf_tracing::tracing;
 use emf_wire_types::{db::LustreFid, task::Task};
 use futures::{stream::BoxStream, Stream, StreamExt, TryFutureExt, TryStreamExt};
 use serde_json::json;
+use sqlx::postgres::PgPool;
 use std::{collections::HashMap, str::FromStr};
 use thiserror::Error;
 use warp::{filters::BoxedFilter, reject, Filter};
@@ -34,7 +34,7 @@ impl<T: Stream<Item = Result<String, warp::Rejection>>> LineStream for T {}
 fn streamer<'a>(
     s: impl Stream<Item = Result<impl Buf, warp::Error>> + Send + 'a,
 ) -> BoxStream<'a, Result<String, warp::Rejection>> {
-    let s = s.map_ok(|mut x| x.to_bytes());
+    let s = s.map_ok(|mut x| x.copy_to_bytes(x.remaining()));
 
     emf_fs::read_lines(s)
         .map_err(MailboxError::IoError)

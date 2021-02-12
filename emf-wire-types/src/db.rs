@@ -31,7 +31,7 @@ pub trait Name {
 /// Record from the `lustre_fid` type
 #[cfg(feature = "postgres-interop")]
 #[derive(serde::Serialize, serde::Deserialize, PartialEq, Clone, Debug, sqlx::Type)]
-#[sqlx(rename = "lustre_fid")]
+#[sqlx(type_name = "lustre_fid")]
 pub struct LustreFid {
     pub seq: i64,
     pub oid: i32,

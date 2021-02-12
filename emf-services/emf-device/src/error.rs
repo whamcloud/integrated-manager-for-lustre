@@ -2,7 +2,6 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use emf_postgres::sqlx;
 use thiserror::Error;
 
 #[derive(Error, Debug)]

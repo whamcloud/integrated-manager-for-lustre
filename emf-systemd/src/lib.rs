@@ -9,7 +9,7 @@ pub use crate::systemd_error::SystemdError;
 use emf_cmd::{CheckedCommandExt, Command};
 use emf_wire_types::{ActiveState, RunState, UnitFileState};
 use std::{str, time::Duration};
-use tokio::time::delay_for;
+use tokio::time::sleep;
 
 /// Waits for a unit to enter a certain state based on a given predicate.
 async fn wait_for_state(
@@ -24,7 +24,7 @@ async fn wait_for_state(
             return Ok(());
         }
 
-        delay_for(Duration::from_millis(500)).await;
+        sleep(Duration::from_millis(500)).await;
     }
 
     let x = get_run_state(unit_name.to_string()).await?;

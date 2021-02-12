@@ -9,5 +9,5 @@ pub enum EmfTaskRunnerError {
     #[error(transparent)]
     JsonError(#[from] serde_json::Error),
     #[error(transparent)]
-    EmfPgPoolError(#[from] emf_postgres::sqlx::Error),
+    SqlxError(#[from] sqlx::Error),
 }

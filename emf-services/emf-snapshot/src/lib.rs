@@ -14,7 +14,7 @@ pub enum Error {
     #[error(transparent)]
     EmfGraphqlQueriesError(#[from] emf_graphql_queries::Errors),
     #[error(transparent)]
-    EmfPostgresError(#[from] emf_postgres::sqlx::Error),
+    EmfPostgresError(#[from] sqlx::Error),
     #[error(transparent)]
     EmfInfluxError(#[from] emf_influx::Error),
 }

@@ -10,7 +10,7 @@ use emf_corosync::{
     EmfCorosyncError,
 };
 use emf_manager_env::get_pool_limit;
-use emf_postgres::{get_db_pool, host_id_by_fqdn, sqlx};
+use emf_postgres::{get_db_pool, host_id_by_fqdn};
 use emf_service_queue::spawn_service_consumer;
 use emf_tracing::tracing;
 use emf_wire_types::high_availability::Cluster;

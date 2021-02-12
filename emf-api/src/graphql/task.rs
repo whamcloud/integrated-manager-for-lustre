@@ -6,7 +6,6 @@ use crate::{
     error::EmfApiError,
     graphql::{create_task_job, fs_id_by_name, insert_task, Context, SendJob},
 };
-use emf_postgres::sqlx;
 use emf_wire_types::{
     task::{Task, TaskArgs, TaskOut},
     Command,

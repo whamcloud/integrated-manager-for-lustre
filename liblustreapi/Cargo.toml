@@ -6,8 +6,8 @@ version = "0.4.0"
 
 [dependencies]
 errno = "0.2"
-libc = "0.2.76"
-libloading = "0.6.3"
+libc = "0.2"
+libloading = "0.6"
 liblustreapi-types = {path = "../liblustreapi-types", version = "0.4"}
 thiserror = "1"
 tracing = "0.1"

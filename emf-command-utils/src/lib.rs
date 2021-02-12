@@ -6,7 +6,6 @@ use emf_tracing::tracing;
 use emf_wire_types::Command;
 use futures::channel::mpsc;
 use std::{collections::HashSet, iter, time::Duration};
-use tokio::time::delay_for;
 
 #[derive(Debug, thiserror::Error)]
 pub enum CmdUtilError {
