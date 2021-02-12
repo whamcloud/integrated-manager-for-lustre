@@ -80,7 +80,16 @@ lazy_static! {
 fn create_policy<E: Debug>() -> impl RetryPolicy<E> {
     |k: u32, e| match k {
         0 => RetryAction::RetryNow,
-        k if k < 3 => RetryAction::WaitFor(Duration::from_secs((2 * k) as u64)),
+        k if k < 3 => {
+            let secs = (2 * k) as u64;
+
+            tracing::debug!(
+                "Waiting {} seconds for outbound port to become available...",
+                secs
+            );
+
+            RetryAction::WaitFor(Duration::from_secs(secs))
+        }
         _ => RetryAction::ReturnError(e),
     }
 }

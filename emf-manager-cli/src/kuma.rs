@@ -5,10 +5,43 @@
 use crate::{config_utils::psql, display_utils::display_success, error::EmfManagerCliError};
 use emf_cmd::{CheckedCommandExt as _, OutputExt as _};
 use emf_fs::mkdirp;
+use emf_request_retry::{retry_future, RetryAction, RetryPolicy};
 use emf_systemd::restart_unit;
-use std::{collections::HashSet, path::PathBuf};
+use std::{collections::HashSet, fmt, path::PathBuf, time::Duration};
 use structopt::StructOpt;
 use tokio::fs;
+
+fn create_policy<E: fmt::Debug>() -> impl RetryPolicy<E> {
+    |k: u32, e| match k {
+        0 => RetryAction::RetryNow,
+        k if k < 10 => {
+            let secs = 2 * k as u64;
+
+            tracing::debug!("Waiting {} seconds for kuma to start...", secs);
+
+            RetryAction::WaitFor(Duration::from_secs(secs))
+        }
+        _ => RetryAction::ReturnError(e),
+    }
+}
+
+async fn wait_for_kuma() -> Result<(), EmfManagerCliError> {
+    let policy = create_policy::<EmfManagerCliError>();
+
+    retry_future(
+        |_| async {
+            reqwest::get("http://127.0.0.1:5681")
+                .await?
+                .error_for_status()?;
+
+            Ok(())
+        },
+        policy,
+    )
+    .await?;
+
+    Ok(())
+}
 
 #[derive(Debug, StructOpt)]
 #[structopt(setting = structopt::clap::AppSettings::ColoredHelp)]
@@ -80,6 +113,8 @@ pub async fn cli(command: Command) -> Result<(), EmfManagerCliError> {
         }) => {
             if emf_fs::file_exists(&key_file).await && emf_fs::file_exists(&cert_file).await {
                 println!("Control plane certs exist, skipping");
+
+                return Ok(());
             }
 
             let key_dir = match key_file.parent() {
@@ -138,6 +173,8 @@ pub async fn cli(command: Command) -> Result<(), EmfManagerCliError> {
         Command::Start => restart_unit("kuma.service".to_string()).await?,
         Command::Setup(Setup { dir }) => {
             println!("Applying kuma policies...");
+
+            wait_for_kuma().await?;
 
             let tokendir = dir.join("tokens");
             let policydir = dir.join("policies");

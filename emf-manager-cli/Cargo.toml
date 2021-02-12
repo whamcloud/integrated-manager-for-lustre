@@ -18,6 +18,7 @@ emf-fs = {path = "../emf-fs", version = "0.4"}
 emf-graphql-queries = {path = "../emf-graphql-queries", version = "0.2"}
 emf-influx = {path = "../emf-influx", version = "0.2"}
 emf-manager-client = {path = "../emf-manager-client", version = "0.4"}
+emf-request-retry = {path = "../emf-request-retry", version = "0.4.0"}
 emf-ssh = {path = "../emf-ssh", version = "0.1"}
 emf-systemd = {path = "../emf-systemd", version = "0.4"}
 emf-tracing = {version = "0.4", path = "../emf-tracing"}
