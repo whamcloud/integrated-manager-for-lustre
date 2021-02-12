@@ -37,7 +37,9 @@ pub mod wbem_interop {
         ParseIntError(#[from] std::num::ParseIntError),
     }
 
-    #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq, Ord, PartialOrd)]
+    #[derive(
+        serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq, Ord, PartialOrd,
+    )]
     pub struct SfaDiskSlot {
         pub index: i32,
         pub enclosure_index: i32,
@@ -45,7 +47,9 @@ pub mod wbem_interop {
         pub storage_system: String,
     }
 
-    #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq, Ord, PartialOrd)]
+    #[derive(
+        serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq, Ord, PartialOrd,
+    )]
     pub struct SfaEnclosure {
         /// Specifies the index, part of the OID, of the enclosure.
         pub index: i32,
@@ -146,7 +150,9 @@ pub mod wbem_interop {
         }
     }
 
-    #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq, Ord, PartialOrd)]
+    #[derive(
+        serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq, Ord, PartialOrd,
+    )]
     pub struct SfaDiskDrive {
         pub index: i32,
         pub enclosure_index: i32,
@@ -237,7 +243,9 @@ pub mod wbem_interop {
         }
     }
 
-    #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq, Ord, PartialOrd)]
+    #[derive(
+        serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq, Ord, PartialOrd,
+    )]
     pub struct SfaJob {
         pub index: i32,
         pub sub_target_index: Option<i32>,
@@ -329,7 +337,9 @@ pub mod wbem_interop {
         }
     }
 
-    #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq, Ord, PartialOrd)]
+    #[derive(
+        serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq, Ord, PartialOrd,
+    )]
     pub struct SfaPowerSupply {
         pub index: i32,
         pub enclosure_index: i32,
@@ -399,7 +409,9 @@ pub mod wbem_interop {
         }
     }
 
-    #[derive(serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq, Ord, PartialOrd)]
+    #[derive(
+        serde::Serialize, serde::Deserialize, Debug, Clone, PartialEq, Eq, Ord, PartialOrd,
+    )]
     pub struct SfaController {
         pub index: i32,
         pub enclosure_index: i32,
