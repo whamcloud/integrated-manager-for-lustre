@@ -67,7 +67,7 @@ fn parse_chrony_time_offset(output: impl ToString) -> Option<time::Offset> {
 async fn is_ntp_configured_by_emf() -> Result<bool, EmfAgentError> {
     let x = emf_fs::stream_file_lines(NTP_CONFIG_FILE)
         .boxed()
-        .try_filter(|l| future::ready(l.find("# EMF_EDIT").is_some()))
+        .try_filter(|l| future::ready(l.contains("# EMF_EDIT")))
         .try_next()
         .await?
         .is_some();

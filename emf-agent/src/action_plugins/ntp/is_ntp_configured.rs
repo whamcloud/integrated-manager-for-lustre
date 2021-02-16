@@ -10,7 +10,7 @@ fn has_marker(
     s: impl Stream<Item = Result<String, EmfAgentError>>,
 ) -> impl Future<Output = Result<bool, EmfAgentError>> {
     s.try_fold(false, |acc, x: String| {
-        future::ok::<_, EmfAgentError>(acc || x.find(MARKER).is_some())
+        future::ok::<_, EmfAgentError>(acc || x.contains(MARKER))
     })
     .err_into()
 }

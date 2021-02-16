@@ -27,7 +27,7 @@ lazy_static! {
 pub fn get_port(name: &str) -> u16 {
     get_var(name)
         .parse::<u16>()
-        .expect(&format!("Could not parse {}", name))
+        .unwrap_or_else(|_| panic!("Could not parse {}", name))
 }
 
 fn get_private_pem_path() -> String {

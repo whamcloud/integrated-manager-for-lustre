@@ -13,7 +13,7 @@ pub async fn loaded(module: String) -> Result<bool, EmfAgentError> {
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let module = stdout.lines().find(|m| {
-        let mut fields = m.split(' ').filter(|s| *s != "");
+        let mut fields = m.split(' ').filter(|s| !s.is_empty());
         let name = fields.next();
         name == Some(&module)
     });
