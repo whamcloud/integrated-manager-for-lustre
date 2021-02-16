@@ -32,7 +32,7 @@ Depends: ${shlibs:Depends}, ${misc:Depends},
     emf-agent-target (= ${source:Version}),
     emf-bootstrap (= ${source:Version}),
     kuma-dp (>= 1.0.7),
-    getenvoy-envoy (= 1.16.0.p0.g8fb3cb8-1p69.ga5345f6)
+    getenvoy-envoy (= 1.16.2.p0.ge98e41a-1p71.gbe6132a)
 Description: ships corosync info to the manager
 
 Package: emf-device-agent
@@ -42,7 +42,7 @@ Depends: ${shlibs:Depends}, ${misc:Depends},
     emf-bootstrap (= ${source:Version}),
     emf-device-scanner (= ${source:Version}),
     kuma-dp (>= 1.0.7),
-    getenvoy-envoy (= 1.16.0.p0.g8fb3cb8-1p69.ga5345f6)
+    getenvoy-envoy (= 1.16.2.p0.ge98e41a-1p71.gbe6132a)
 Description: ships device info to the manager
 
 Package: emf-journal-agent
@@ -52,7 +52,7 @@ Depends: ${shlibs:Depends}, ${misc:Depends},
     emf-bootstrap (= ${source:Version}),
     systemd-journal-remote (>= 245.4),
     kuma-dp (>= 1.0.7),
-    getenvoy-envoy (= 1.16.0.p0.g8fb3cb8-1p69.ga5345f6)
+    getenvoy-envoy (= 1.16.2.p0.ge98e41a-1p71.gbe6132a)
 Description: ships journal info to the manager
 
 Package: emf-host-agent
@@ -61,7 +61,7 @@ Depends: ${shlibs:Depends}, ${misc:Depends},
     emf-agent-target (= ${source:Version}),
     emf-bootstrap (= ${source:Version}),
     kuma-dp (>= 1.0.7),
-    getenvoy-envoy (= 1.16.0.p0.g8fb3cb8-1p69.ga5345f6)
+    getenvoy-envoy (= 1.16.2.p0.ge98e41a-1p71.gbe6132a)
 Description: ships host info to the manager
 
 Package: emf-network-agent
@@ -70,7 +70,7 @@ Depends: ${shlibs:Depends}, ${misc:Depends},
     emf-agent-target (= ${source:Version}),
     emf-bootstrap (= ${source:Version}),
     kuma-dp (>= 1.0.7),
-    getenvoy-envoy (= 1.16.0.p0.g8fb3cb8-1p69.ga5345f6)
+    getenvoy-envoy (= 1.16.2.p0.ge98e41a-1p71.gbe6132a)
 Description: ships network info to the manager
 
 Package: emf-ntp-agent
@@ -79,7 +79,7 @@ Depends: ${shlibs:Depends}, ${misc:Depends},
     emf-agent-target (= ${source:Version}),
     emf-bootstrap (= ${source:Version}),
     kuma-dp (>= 1.0.7),
-    getenvoy-envoy (= 1.16.0.p0.g8fb3cb8-1p69.ga5345f6)
+    getenvoy-envoy (= 1.16.2.p0.ge98e41a-1p71.gbe6132a)
 Description: ships ntp info to the manager
 
 Package: emf-ostpool-agent
@@ -88,7 +88,7 @@ Depends: ${shlibs:Depends}, ${misc:Depends},
     emf-agent-target (= ${source:Version}),
     emf-bootstrap (= ${source:Version}),
     kuma-dp (>= 1.0.7),
-    getenvoy-envoy (= 1.16.0.p0.g8fb3cb8-1p69.ga5345f6)
+    getenvoy-envoy (= 1.16.2.p0.ge98e41a-1p71.gbe6132a)
 Description: ships ostpool info to the manager
 
 Package: emf-postoffice-agent
@@ -104,7 +104,7 @@ Depends: ${shlibs:Depends}, ${misc:Depends},
     emf-agent-target (= ${source:Version}),
     emf-bootstrap (= ${source:Version}),
     kuma-dp (>= 1.0.7),
-    getenvoy-envoy (= 1.16.0.p0.g8fb3cb8-1p69.ga5345f6)
+    getenvoy-envoy (= 1.16.2.p0.ge98e41a-1p71.gbe6132a)
 Description: ships snapshot info to the manager
 
 Package: emf-stats-agent
@@ -113,5 +113,5 @@ Depends: ${shlibs:Depends}, ${misc:Depends},
     emf-agent-target (= ${source:Version}),
     emf-bootstrap (= ${source:Version}),
     kuma-dp (>= 1.0.7),
-    getenvoy-envoy (= 1.16.0.p0.g8fb3cb8-1p69.ga5345f6)
+    getenvoy-envoy (= 1.16.2.p0.ge98e41a-1p71.gbe6132a)
 Description: ships stats info to the manager
