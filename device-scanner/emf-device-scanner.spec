@@ -23,6 +23,8 @@ Obsoletes: iml-device-scanner
 device-scanner-daemon builds an in-memory representation of
 devices using udev and findmnt.
 
+%global debug_package %{nil}
+
 %prep
 %setup -c
 

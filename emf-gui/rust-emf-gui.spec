@@ -15,6 +15,8 @@ Source0:    emf-gui.tar
 %description
 %{summary}.
 
+%global debug_package %{nil}
+
 %prep
 %setup -c
 
