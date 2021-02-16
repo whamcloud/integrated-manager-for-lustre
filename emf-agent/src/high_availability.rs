@@ -218,13 +218,6 @@ pub async fn get_crm_mon() -> Result<Option<Cluster>, EmfAgentError> {
 
     x.resource_mounts = mounts;
 
-    let ban_output = crm_mon_cmd()
-        .arg("--neg-locations")
-        .checked_output()
-        .await?;
-
-    read_banned_output(&ban_output.stdout, &mut x)?;
-
     Ok(Some(x))
 }
 
@@ -516,6 +509,9 @@ pub(crate) fn read_crm_output(crm_output: &[u8]) -> Result<Cluster, EmfAgentErro
                 b"resources" => {
                     cluster.resources = read_resources(&mut reader)?;
                 }
+                b"bans" => {
+                    cluster.bans = read_bans(&mut reader)?;
+                }
                 _ => {}
             },
             Event::Eof => break,
@@ -528,35 +524,11 @@ pub(crate) fn read_crm_output(crm_output: &[u8]) -> Result<Cluster, EmfAgentErro
     Ok(cluster)
 }
 
-fn read_banned_output(crm_output: &[u8], cluster: &mut Cluster) -> Result<(), EmfAgentError> {
-    let x = std::str::from_utf8(crm_output)?;
-
-    let mut reader = Reader::from_str(x);
-    reader.trim_text(true);
-
-    let mut buf = vec![];
-
-    loop {
-        match reader.read_event(&mut buf)? {
-            Event::Start(ref x) if x.name() == b"bans" => {
-                cluster.bans = read_bans(&mut reader)?;
-            }
-            Event::Eof => break,
-            _ => {}
-        };
-
-        buf.clear();
-    }
-
-    Ok(())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     static ES_FIXTURE: &'static [u8] = include_bytes!("./fixtures/es_fixture.xml");
-    static ES_BAN_FIXTURE: &'static [u8] = include_bytes!("./fixtures/es_ban_fixture.xml");
     static ES_LUSTRE_RESOURCE_MOUNTS_FIXTURE: &'static [u8] =
         include_bytes!("./fixtures/es_lustre_resource_mounts_fixture.txt");
     static VAGRANT_FIXTURE: &'static [u8] = include_bytes!("./fixtures/vagrant_fixture.xml");
@@ -567,9 +539,7 @@ mod tests {
 
     #[test]
     fn test_read_es() {
-        let mut cluster = read_crm_output(ES_FIXTURE).unwrap();
-
-        read_banned_output(ES_BAN_FIXTURE, &mut cluster).unwrap();
+        let cluster = read_crm_output(ES_FIXTURE).unwrap();
 
         insta::assert_debug_snapshot!(cluster);
     }
