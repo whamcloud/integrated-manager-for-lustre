@@ -8,7 +8,11 @@
 //!
 //!
 
-use emf_agent::{agent_error::EmfAgentError, env, util::create_filtered_writer};
+use emf_agent::{
+    agent_error::EmfAgentError,
+    env,
+    util::{create_filtered_writer, UnboundedSenderExt},
+};
 use emf_cmd::{CheckedCommandExt, Command};
 use emf_wire_types::{time, RunState};
 use futures::{future, Future, FutureExt, StreamExt, TryFutureExt, TryStreamExt};
@@ -191,7 +195,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut x = interval(Duration::from_secs(5));
 
     let port = env::get_port("NTP_AGENT_NTP_SERVICE_PORT");
-    let writer = create_filtered_writer(port);
+    let writer = create_filtered_writer(port)?;
 
     loop {
         x.tick().await;
@@ -204,7 +208,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         )
         .await?;
 
-        let _ = writer.send(x);
+        let _ = writer.send_msg(x);
     }
 }
 

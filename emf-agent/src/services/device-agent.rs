@@ -3,7 +3,9 @@
 // license that can be found in the LICENSE file.
 
 use emf_agent::{
-    agent_error::EmfAgentError, device_scanner_client, env, util::create_filtered_writer,
+    agent_error::EmfAgentError,
+    device_scanner_client, env,
+    util::{create_filtered_writer, UnboundedSenderExt},
 };
 use emf_cmd::Command;
 use futures::{StreamExt, TryFutureExt, TryStreamExt};
@@ -51,7 +53,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let port = env::get_port("DEVICE_AGENT_DEVICE_SERVICE_PORT");
 
-    let writer = create_filtered_writer(port);
+    let writer = create_filtered_writer(port)?;
     let mut s = device_scanner_client::stream_lines(device_scanner_client::Cmd::Stream).boxed();
 
     while let Some(x) = s.try_next().await? {
@@ -62,7 +64,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         let xs = Value::Array(vec![x, fses]);
 
-        let _ = writer.send(xs);
+        let _ = writer.send_msg(xs);
     }
 
     Ok(())

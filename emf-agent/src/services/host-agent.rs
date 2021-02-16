@@ -9,7 +9,7 @@
 use emf_agent::{
     agent_error::EmfAgentError,
     env,
-    util::{create_filtered_writer, BOOT_TIME, MACHINE_ID},
+    util::{create_filtered_writer, UnboundedSenderExt, BOOT_TIME, MACHINE_ID},
 };
 use std::{ops::Deref, time::Duration};
 use tokio::time::interval;
@@ -22,11 +22,11 @@ async fn main() -> Result<(), EmfAgentError> {
 
     let port = env::get_port("HOST_AGENT_HOST_SERVICE_PORT");
 
-    let writer = create_filtered_writer(port);
+    let writer = create_filtered_writer(port)?;
 
     loop {
         x.tick().await;
 
-        let _ = writer.send((MACHINE_ID.to_string(), BOOT_TIME.deref()));
+        let _ = writer.send_msg((MACHINE_ID.to_string(), BOOT_TIME.deref()));
     }
 }

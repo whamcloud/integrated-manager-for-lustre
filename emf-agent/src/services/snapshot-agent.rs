@@ -9,8 +9,11 @@
 //!
 
 use emf_agent::{
-    action_plugins::lustre::snapshot, agent_error::EmfAgentError, device_scanner_client, env,
-    lustre::list_mdt0s, util::create_filtered_writer,
+    action_plugins::lustre::snapshot,
+    agent_error::EmfAgentError,
+    device_scanner_client, env,
+    lustre::list_mdt0s,
+    util::{create_filtered_writer, UnboundedSenderExt},
 };
 use emf_wire_types::snapshot::{List, Snapshot};
 use futures::{future::try_join_all, TryFutureExt};
@@ -87,7 +90,7 @@ async fn main() -> Result<(), EmfAgentError> {
 
     let port = env::get_port("SNAPSHOT_AGENT_SNAPSHOT_SERVICE_PORT");
 
-    let writer = create_filtered_writer(port);
+    let writer = create_filtered_writer(port)?;
 
     loop {
         x.tick().await;
@@ -103,7 +106,7 @@ async fn main() -> Result<(), EmfAgentError> {
         };
 
         if let Some(x) = x {
-            let _ = writer.send(x);
+            let _ = writer.send_msg(x);
         }
     }
 }

@@ -6,7 +6,7 @@ use emf_agent::{
     agent_error::EmfAgentError,
     env,
     high_availability::{get_crm_mon, get_local_nodeid},
-    util::create_filtered_writer,
+    util::{create_filtered_writer, UnboundedSenderExt as _},
 };
 use std::time::Duration;
 use tokio::time::interval;
@@ -18,7 +18,7 @@ async fn main() -> Result<(), EmfAgentError> {
     let mut x = interval(Duration::from_secs(5));
 
     let port = env::get_port("COROSYNC_AGENT_COROSYNC_SERVICE_PORT");
-    let writer = create_filtered_writer(port);
+    let writer = create_filtered_writer(port)?;
 
     loop {
         x.tick().await;
@@ -28,7 +28,7 @@ async fn main() -> Result<(), EmfAgentError> {
         let cluster = get_crm_mon().await?;
 
         if let Some(x) = node_id.zip(cluster) {
-            let _ = writer.send(x);
+            let _ = writer.send_msg(x);
         }
     }
 }

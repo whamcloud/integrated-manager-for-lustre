@@ -2,7 +2,11 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use emf_agent::{agent_error::EmfAgentError, env, util::create_filtered_writer};
+use emf_agent::{
+    agent_error::EmfAgentError,
+    env,
+    util::{create_filtered_writer, UnboundedSenderExt},
+};
 use emf_cmd::Command;
 use futures::{future, StreamExt, TryFutureExt, TryStreamExt};
 use lustre_collector::{
@@ -26,7 +30,7 @@ async fn main() -> Result<(), EmfAgentError> {
 
     let port = env::get_port("STATS_AGENT_STATS_SERVICE_PORT");
 
-    let writer = create_filtered_writer(port);
+    let writer = create_filtered_writer(port)?;
 
     loop {
         x.tick().await;
@@ -69,7 +73,7 @@ async fn main() -> Result<(), EmfAgentError> {
                     lctl_output.append(&mut cpu_output);
                 }
 
-                let _ = writer.send(lctl_output);
+                let _ = writer.send_msg(lctl_output);
             }
             Err(EmfAgentError::Io(ref err)) if err.kind() == io::ErrorKind::NotFound => {
                 tracing::debug!("Program was not found; will not send report.");

@@ -7,8 +7,11 @@
 //!
 
 use emf_agent::{
-    action_plugins::ostpool::pools, agent_error::EmfAgentError, env, lustre::list_mdt0s,
-    util::create_filtered_writer,
+    action_plugins::ostpool::pools,
+    agent_error::EmfAgentError,
+    env,
+    lustre::list_mdt0s,
+    util::{create_filtered_writer, UnboundedSenderExt},
 };
 use emf_wire_types::{FsPoolMap, OstPool};
 use futures::future::join_all;
@@ -51,13 +54,13 @@ async fn main() -> Result<(), EmfAgentError> {
 
     let port = env::get_port("OSTPOOL_AGENT_OSTPOOL_SERVICE_PORT");
 
-    let writer = create_filtered_writer(port);
+    let writer = create_filtered_writer(port)?;
 
     loop {
         x.tick().await;
 
         let x = build_tree().await;
 
-        let _ = writer.send(x);
+        let _ = writer.send_msg(x);
     }
 }

@@ -3,7 +3,10 @@
 // license that can be found in the LICENSE file.
 
 use emf_agent::{
-    agent_error::EmfAgentError, env, env::get_journal_port, util::create_filtered_writer,
+    agent_error::EmfAgentError,
+    env,
+    env::get_journal_port,
+    util::{create_filtered_writer, UnboundedSenderExt},
 };
 use emf_wire_types::{JournalMessage, JournalPriority};
 use lazy_static::lazy_static;
@@ -102,7 +105,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut cursor: Option<String> = None;
 
     let port = env::get_port("JOURNAL_AGENT_JOURNAL_SERVICE_PORT");
-    let writer = create_filtered_writer(port);
+    let writer = create_filtered_writer(port)?;
 
     loop {
         x.tick().await;
@@ -122,6 +125,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             cursor.replace(new_cursor.clone());
         }
 
-        let _ = writer.send(messages);
+        let _ = writer.send_msg(messages);
     }
 }
