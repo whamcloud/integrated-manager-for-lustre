@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::error::EmfManagerCliError;
+use crate::{display_utils::display_success, error::EmfManagerCliError};
 use emf_cmd::{self, CheckedCommandExt};
 use emf_systemd::restart_unit;
 use futures::TryFutureExt;
@@ -62,9 +62,7 @@ pub struct Setup {
 pub async fn cli(command: Command) -> Result<(), EmfManagerCliError> {
     match command {
         Command::Start => {
-            restart_unit("influxdb.service".to_string())
-                .err_into()
-                .await
+            restart_unit("influxdb.service".to_string()).await?;
         }
         Command::Setup(Setup {
             maindb,
@@ -72,6 +70,7 @@ pub async fn cli(command: Command) -> Result<(), EmfManagerCliError> {
             scandb,
             duration,
         }) => {
+            println!("Setting up influx...");
             let url = format!(
                 "http://{}/ping?wait_for_leader=10s",
                 std::env::var("INFLUXDB_HTTP_BIND_ADDRESS").map_err(|_| {
@@ -134,9 +133,10 @@ pub async fn cli(command: Command) -> Result<(), EmfManagerCliError> {
                 ].join("; ");
             influx(&statdb, cmd).await?;
             influx(&statdb, format!(r#"ALTER RETENTION POLICY "autogen" ON "{}" DURATION 1d  REPLICATION 1 SHARD DURATION 2h DEFAULT"#, statdb)).await?;
-            Ok(())
+            display_success("Successfully configured influx".to_string());
         }
     }
+    Ok(())
 }
 
 async fn influx(db: impl Into<Option<&String>>, cmd: String) -> Result<(), EmfManagerCliError> {
@@ -146,9 +146,10 @@ async fn influx(db: impl Into<Option<&String>>, cmd: String) -> Result<(), EmfMa
         vec!["-execute", &cmd]
     };
 
-    emf_cmd::Command::new("influx")
+    // Drop stdout
+    let _ = emf_cmd::Command::new("influx")
         .args(args)
-        .checked_status()
-        .err_into()
-        .await
+        .checked_output()
+        .await?;
+    Ok(())
 }
