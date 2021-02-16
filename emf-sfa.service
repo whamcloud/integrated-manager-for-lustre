@@ -9,7 +9,7 @@ Type=simple
 Environment=RUST_LOG=info
 EnvironmentFile=/etc/emf/bootstrap.conf
 EnvironmentFile=-/etc/emf/overrides.conf
-ExecStart=/bin/emf-sfa
+ExecStart=/usr/bin/emf-sfa
 Restart=on-failure
 RestartSec=5
 StandardOutput=journal

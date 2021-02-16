@@ -9,7 +9,7 @@ Type=simple
 Environment=RUST_LOG=info,sqlx::query=warn
 EnvironmentFile=/etc/emf/bootstrap.conf
 EnvironmentFile=-/etc/emf/overrides.conf
-ExecStart=/bin/emf-network
+ExecStart=/usr/bin/emf-network
 Restart=always
 RestartSec=5
 StandardOutput=journal

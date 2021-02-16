@@ -7,7 +7,7 @@ Type=simple
 Environment=RUST_LOG=info
 EnvironmentFile=/etc/emf/bootstrap.conf
 EnvironmentFile=-/etc/emf/overrides.conf
-ExecStart=/bin/emf-timer
+ExecStart=/usr/bin/emf-timer
 Restart=always
 RestartSec=5
 StandardOutput=journal

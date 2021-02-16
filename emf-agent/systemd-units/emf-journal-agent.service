@@ -12,7 +12,7 @@ Type=simple
 Environment=RUST_LOG=info
 EnvironmentFile=/etc/emf/bootstrap.conf
 EnvironmentFile=-/etc/emf/overrides.conf
-ExecStart=/bin/emf-journal-agent
+ExecStart=/usr/bin/emf-journal-agent
 Restart=always
 RestartSec=5
 StandardOutput=journal

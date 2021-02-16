@@ -10,7 +10,7 @@ Type=simple
 Environment=RUST_LOG=info
 EnvironmentFile=/etc/emf/bootstrap.conf
 EnvironmentFile=-/etc/emf/overrides.conf
-ExecStart=/bin/emf-network-agent
+ExecStart=/usr/bin/emf-network-agent
 Restart=always
 RestartSec=5
 StandardOutput=journal

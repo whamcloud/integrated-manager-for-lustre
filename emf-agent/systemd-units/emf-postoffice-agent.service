@@ -8,7 +8,7 @@ Type=simple
 Environment=RUST_LOG=info
 EnvironmentFile=/etc/emf/bootstrap.conf
 EnvironmentFile=-/etc/emf/overrides.conf
-ExecStart=/bin/emf-postoffice-agent
+ExecStart=/usr/bin/emf-postoffice-agent
 Restart=always
 RestartSec=5
 StandardOutput=journal

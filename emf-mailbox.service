@@ -8,7 +8,7 @@ Type=simple
 Environment=RUST_LOG=info,sqlx::query=warn
 EnvironmentFile=/etc/emf/bootstrap.conf
 EnvironmentFile=-/etc/emf/overrides.conf
-ExecStart=/bin/emf-mailbox
+ExecStart=/usr/bin/emf-mailbox
 Restart=always
 RestartSec=5
 StandardOutput=journal
