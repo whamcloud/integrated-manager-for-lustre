@@ -20,6 +20,8 @@ ExclusiveArch: x86_64
 %description
 %{summary}
 
+%global debug_package %{nil}
+
 %prep
 %setup -c
 
