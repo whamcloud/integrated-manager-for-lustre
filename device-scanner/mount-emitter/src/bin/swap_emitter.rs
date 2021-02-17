@@ -26,11 +26,16 @@ async fn main() -> Result<(), mount_emitter::Error> {
             .await?;
 
         if !output.status.success() {
-            return Err(mount_emitter::Error::Unexpected(format!(
-                "findmnt call failed. exit code: {:?}, stderr: {}",
-                output.status.code(),
-                String::from_utf8_lossy(&output.stderr)
-            )));
+            if Some(1) == output.status.code() {
+                tracing::debug!("No swap entries found");
+                continue;
+            } else {
+                return Err(mount_emitter::Error::Unexpected(format!(
+                    "findmnt call failed. exit code: {:?}, stderr: {}",
+                    output.status.code(),
+                    String::from_utf8_lossy(&output.stderr)
+                )));
+            }
         }
 
         let xs: Vec<String> = (&output.stdout).lines().collect::<Result<_, _>>()?;
