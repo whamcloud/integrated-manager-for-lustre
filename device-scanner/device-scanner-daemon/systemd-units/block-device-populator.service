@@ -3,7 +3,7 @@ Description=EMF Block Device Populator
 After=device-scanner.socket
 
 [Service]
-ExecStart=/usr/sbin/udevadm trigger --action=change --subsystem-match=block
+ExecStart=/usr/bin/udevadm trigger --action=change --subsystem-match=block
 Type=oneshot
 
 [Install]
