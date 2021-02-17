@@ -1,6 +1,6 @@
 version: 1
 components:
-  server:
+  host:
     states:
       up:
       down:
@@ -98,7 +98,7 @@ components:
           end: unmounted
       mount:
         input:
-          name: String,
+          name: String
         state:
           start: 
             - unmounted
@@ -151,6 +151,7 @@ components:
   filesystem:
     states:
       unavailable:
+      available:
       started:
           dependencies:
             - or:

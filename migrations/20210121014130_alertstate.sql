@@ -1,4 +1,4 @@
-CREATE TYPE component AS ENUM ('host', 'filesystem', 'lnet');
+CREATE TYPE component AS ENUM ('host', 'filesystem', 'lnet', 'target', 'client_mount', 'ntp', 'mgt', 'ost', 'mdt', 'mgt_mdt');
 
 CREATE TYPE alert_record_type AS ENUM (
     'AlertState',

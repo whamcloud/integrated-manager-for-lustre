@@ -3,33 +3,34 @@
 // license that can be found in the LICENSE file
 
 use crate::Error;
+use emf_wire_types::ComponentType;
 use std::{
-    collections::{BTreeSet, HashMap},
+    collections::{BTreeMap, BTreeSet},
     convert::TryFrom,
 };
 
 static STATE_SCHEMA: &str = std::include_str!("state-schema.yml");
 
-#[derive(serde::Deserialize, serde::Serialize)]
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
 pub struct ActionState {
     #[serde(default)]
-    start: Option<BTreeSet<String>>,
-    end: String,
+    pub start: Option<BTreeSet<String>>,
+    pub end: String,
 }
 
-#[derive(serde::Deserialize, serde::Serialize)]
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
 pub struct Action {
-    input: Option<serde_yaml::Value>,
+    pub input: Option<serde_yaml::Value>,
     #[serde(default)]
-    provisional: bool,
-    state: ActionState,
+    pub provisional: bool,
+    pub state: ActionState,
 }
 
 #[derive(Clone, Debug, serde::Deserialize, Eq, Ord, PartialEq, PartialOrd, serde::Serialize)]
 #[serde(try_from = "serde_json::Map<String, serde_json::Value>")]
 pub struct DepNode {
-    name: String,
-    state: String,
+    pub name: String,
+    pub state: String,
 }
 
 impl TryFrom<serde_json::Map<String, serde_json::Value>> for DepNode {
@@ -53,7 +54,7 @@ impl TryFrom<serde_json::Map<String, serde_json::Value>> for DepNode {
     }
 }
 
-#[derive(Clone, serde::Deserialize, Eq, Ord, PartialEq, PartialOrd, serde::Serialize)]
+#[derive(Clone, Debug, serde::Deserialize, Eq, Ord, PartialEq, PartialOrd, serde::Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Dependency {
     Or(BTreeSet<DepNode>),
@@ -61,21 +62,21 @@ pub enum Dependency {
     Exactly(DepNode),
 }
 
-#[derive(serde::Deserialize, serde::Serialize)]
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
 pub struct ComponentState {
     #[serde(default)]
     dependencies: Option<Vec<Dependency>>,
 }
 
-#[derive(serde::Deserialize, serde::Serialize)]
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
 pub struct Component {
-    states: HashMap<String, Option<ComponentState>>,
-    actions: HashMap<String, Action>,
+    pub states: BTreeMap<String, Option<ComponentState>>,
+    pub actions: BTreeMap<String, Action>,
 }
 
-#[derive(serde::Deserialize, serde::Serialize)]
+#[derive(Debug, serde::Deserialize, serde::Serialize)]
 pub struct Schema {
-    components: HashMap<String, Component>,
+    pub components: BTreeMap<ComponentType, Component>,
 }
 
 pub fn parse_state_schema() -> Result<Schema, Error> {

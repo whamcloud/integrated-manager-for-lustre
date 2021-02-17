@@ -1,0 +1,165 @@
+---
+source: emf-state-machine/src/transition_graph.rs
+expression: serialized_graph
+
+---
+{
+  "client_mount": {
+    "edge_property": "directed",
+    "edges": [],
+    "node_holes": [],
+    "nodes": [
+      "mounted",
+      "unmounted"
+    ]
+  },
+  "filesystem": {
+    "edge_property": "directed",
+    "edges": [
+      [
+        0,
+        2,
+        "stop"
+      ],
+      [
+        2,
+        1,
+        "start"
+      ],
+      [
+        3,
+        1,
+        "start"
+      ]
+    ],
+    "node_holes": [],
+    "nodes": [
+      "available",
+      "started",
+      "stopped",
+      "unavailable"
+    ]
+  },
+  "host": {
+    "edge_property": "directed",
+    "edges": [],
+    "node_holes": [],
+    "nodes": [
+      "down",
+      "up"
+    ]
+  },
+  "lnet": {
+    "edge_property": "directed",
+    "edges": [
+      [
+        0,
+        2,
+        "unconfigure"
+      ],
+      [
+        0,
+        4,
+        "export"
+      ],
+      [
+        1,
+        4,
+        "start"
+      ],
+      [
+        2,
+        0,
+        "configure"
+      ],
+      [
+        2,
+        3,
+        "unload"
+      ],
+      [
+        3,
+        2,
+        "load"
+      ],
+      [
+        4,
+        1,
+        "stop"
+      ],
+      [
+        4,
+        2,
+        "load"
+      ]
+    ],
+    "node_holes": [],
+    "nodes": [
+      "configured",
+      "down",
+      "loaded",
+      "unloaded",
+      "up"
+    ]
+  },
+  "mdt": {
+    "edge_property": "directed",
+    "edges": [
+      [
+        1,
+        0,
+        "mount"
+      ]
+    ],
+    "node_holes": [],
+    "nodes": [
+      "mounted",
+      "unmounted"
+    ]
+  },
+  "mgt": {
+    "edge_property": "directed",
+    "edges": [
+      [
+        1,
+        0,
+        "mount"
+      ]
+    ],
+    "node_holes": [],
+    "nodes": [
+      "mounted",
+      "unmounted"
+    ]
+  },
+  "mgt_mdt": {
+    "edge_property": "directed",
+    "edges": [
+      [
+        1,
+        0,
+        "mount"
+      ]
+    ],
+    "node_holes": [],
+    "nodes": [
+      "mounted",
+      "unmounted"
+    ]
+  },
+  "ost": {
+    "edge_property": "directed",
+    "edges": [
+      [
+        1,
+        0,
+        "mount"
+      ]
+    ],
+    "node_holes": [],
+    "nodes": [
+      "mounted",
+      "unmounted"
+    ]
+  }
+}

@@ -377,6 +377,12 @@ impl ArcCache {
             ComponentType::Host => self.host.get(&composite_id.1).cloned().map(erase),
             ComponentType::Lnet => self.lnet.get(&composite_id.1).cloned().map(erase),
             ComponentType::Target => self.target.get(&composite_id.1).cloned().map(erase),
+            ComponentType::ClientMount => unimplemented!(),
+            ComponentType::Ntp => unimplemented!(),
+            ComponentType::Mgt => unimplemented!(),
+            ComponentType::Mdt => unimplemented!(),
+            ComponentType::Ost => unimplemented!(),
+            ComponentType::MgtMdt => unimplemented!(),
         }
     }
 }

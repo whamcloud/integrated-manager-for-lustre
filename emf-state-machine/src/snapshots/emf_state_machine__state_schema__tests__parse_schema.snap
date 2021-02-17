@@ -5,33 +5,34 @@ expression: schema
 ---
 {
   "components": {
-    "client_mount": {
+    "host": {
       "states": {
-        "mounted": null,
-        "unmounted": null
+        "down": null,
+        "up": null
       },
       "actions": {
-        "create": {
+        "add": {
           "input": {
+            "auth": "string",
             "hostlist": [
               "string"
             ],
-            "mountpoint": "string",
-            "mountspec": "string",
             "tags": [
               "string"
-            ]
+            ],
+            "user": "string"
           },
           "provisional": true,
           "state": {
             "start": null,
-            "end": "mounted"
+            "end": "up"
           }
         }
       }
     },
     "filesystem": {
       "states": {
+        "available": null,
         "started": {
           "dependencies": [
             {
@@ -205,30 +206,26 @@ expression: schema
         }
       }
     },
-    "mdt": {
+    "client_mount": {
       "states": {
-        "mounted": {
-          "dependencies": [
-            {
-              "exactly": {
-                "name": "this.lnet",
-                "state": "up"
-              }
-            }
-          ]
-        },
+        "mounted": null,
         "unmounted": null
       },
       "actions": {
-        "mount": {
+        "create": {
           "input": {
-            "name": "String"
-          },
-          "provisional": false,
-          "state": {
-            "start": [
-              "unmounted"
+            "hostlist": [
+              "string"
             ],
+            "mountpoint": "string",
+            "mountspec": "string",
+            "tags": [
+              "string"
+            ]
+          },
+          "provisional": true,
+          "state": {
+            "start": null,
             "end": "mounted"
           }
         }
@@ -259,35 +256,6 @@ expression: schema
             "end": "unmounted"
           }
         },
-        "mount": {
-          "input": {
-            "name": "String,"
-          },
-          "provisional": false,
-          "state": {
-            "start": [
-              "unmounted"
-            ],
-            "end": "mounted"
-          }
-        }
-      }
-    },
-    "mgt_mdt": {
-      "states": {
-        "mounted": {
-          "dependencies": [
-            {
-              "exactly": {
-                "name": "this.lnet",
-                "state": "up"
-              }
-            }
-          ]
-        },
-        "unmounted": null
-      },
-      "actions": {
         "mount": {
           "input": {
             "name": "String"
@@ -331,27 +299,60 @@ expression: schema
         }
       }
     },
-    "server": {
+    "mdt": {
       "states": {
-        "down": null,
-        "up": null
+        "mounted": {
+          "dependencies": [
+            {
+              "exactly": {
+                "name": "this.lnet",
+                "state": "up"
+              }
+            }
+          ]
+        },
+        "unmounted": null
       },
       "actions": {
-        "add": {
+        "mount": {
           "input": {
-            "auth": "string",
-            "hostlist": [
-              "string"
-            ],
-            "tags": [
-              "string"
-            ],
-            "user": "string"
+            "name": "String"
           },
-          "provisional": true,
+          "provisional": false,
           "state": {
-            "start": null,
-            "end": "up"
+            "start": [
+              "unmounted"
+            ],
+            "end": "mounted"
+          }
+        }
+      }
+    },
+    "mgt_mdt": {
+      "states": {
+        "mounted": {
+          "dependencies": [
+            {
+              "exactly": {
+                "name": "this.lnet",
+                "state": "up"
+              }
+            }
+          ]
+        },
+        "unmounted": null
+      },
+      "actions": {
+        "mount": {
+          "input": {
+            "name": "String"
+          },
+          "provisional": false,
+          "state": {
+            "start": [
+              "unmounted"
+            ],
+            "end": "mounted"
           }
         }
       }

@@ -1328,9 +1328,11 @@ dependencies = [
 name = "emf-state-machine"
 version = "0.1.0"
 dependencies = [
+ "emf-wire-types",
  "insta",
  "jsonschema-valid",
  "lazy_static",
+ "petgraph",
  "serde",
  "serde_json",
  "serde_yaml",
@@ -2782,6 +2784,8 @@ checksum = "467d164a6de56270bd7c4d070df81d07beace25012d5103ced4e9ff08d6afdb7"
 dependencies = [
  "fixedbitset",
  "indexmap",
+ "serde",
+ "serde_derive",
 ]
 
 [[package]]

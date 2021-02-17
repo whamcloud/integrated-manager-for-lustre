@@ -45,8 +45,8 @@ pub use target::*;
 
 #[cfg_attr(feature = "postgres-interop", derive(sqlx::Type))]
 #[cfg_attr(feature = "postgres-interop", sqlx(type_name = "component"))]
-#[cfg_attr(feature = "postgres-interop", sqlx(rename_all = "lowercase"))]
-#[serde(rename_all = "lowercase")]
+#[cfg_attr(feature = "postgres-interop", sqlx(rename_all = "snake_case"))]
+#[serde(rename_all = "snake_case")]
 #[derive(
     PartialEq, Eq, Clone, Copy, Debug, serde::Serialize, serde::Deserialize, Ord, PartialOrd, Hash,
 )]
@@ -55,6 +55,12 @@ pub enum ComponentType {
     Filesystem,
     Lnet,
     Target,
+    ClientMount,
+    Ntp,
+    Mgt,
+    Ost,
+    Mdt,
+    MgtMdt,
 }
 
 #[derive(Eq, PartialEq, Hash, Debug, Clone, serde::Serialize, serde::Deserialize)]

@@ -3,6 +3,7 @@
 // license that can be found in the LICENSE file
 
 pub mod state_schema;
+pub mod transition_graph;
 
 static STATE_SCHEMA_RAW: &str = std::include_str!("state-schema.yml");
 static STATE_SCHEMA_SCHEMA_RAW: &str = std::include_str!("state-schema-schema.json");
@@ -12,6 +13,9 @@ lazy_static::lazy_static! {
     pub static ref STATE_SCHEMA: serde_json::Value = load_schema_yaml(STATE_SCHEMA_RAW, STATE_SCHEMA_SCHEMA_RAW).unwrap();
 
 }
+
+/// The transition graph is a graph containing states for nodes and actions for edges.
+type TransitionGraph = petgraph::graph::DiGraph<String, String>;
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
