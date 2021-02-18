@@ -1162,7 +1162,14 @@
                 "Enum": [
                   "host",
                   "filesystem",
-                  "lnet"
+                  "lnet",
+                  "target",
+                  "client_mount",
+                  "ntp",
+                  "mgt",
+                  "ost",
+                  "mdt",
+                  "mgt_mdt"
                 ]
               }
             }
@@ -4560,7 +4567,14 @@
                 "Enum": [
                   "host",
                   "filesystem",
-                  "lnet"
+                  "lnet",
+                  "target",
+                  "client_mount",
+                  "ntp",
+                  "mgt",
+                  "ost",
+                  "mdt",
+                  "mgt_mdt"
                 ]
               }
             }
