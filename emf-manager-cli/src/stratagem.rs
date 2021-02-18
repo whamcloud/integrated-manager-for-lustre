@@ -259,12 +259,12 @@ async fn interval_cli(cmd: IntervalCommand) -> Result<(), EmfManagerCliError> {
             Ok(())
         }
         IntervalCommand::Create(c) => {
-            unimplemented!();
+            todo!();
         }
         IntervalCommand::Remove(StratagemRemoveData { filesystem }) => {
             let x = get_stratagem_config_by_fs_name(&filesystem).await?;
 
-            unimplemented!();
+            todo!();
         }
     }
 }
@@ -283,7 +283,7 @@ pub async fn stratagem_cli(command: StratagemCommand) -> Result<(), EmfManagerCl
 
             let command = Result::from(resp)?.data.stratagem.run_fast_file_scan;
 
-            unimplemented!();
+            todo!();
         }
         StratagemCommand::Filesync(data) => match data.expression {
             Some(ref exp) => {
@@ -299,7 +299,7 @@ pub async fn stratagem_cli(command: StratagemCommand) -> Result<(), EmfManagerCl
 
                 let command = Result::from(resp)?.data.stratagem.run_filesync;
 
-                unimplemented!();
+                todo!();
             }
             None => {
                 #[derive(Serialize, Debug)]
@@ -362,7 +362,7 @@ pub async fn stratagem_cli(command: StratagemCommand) -> Result<(), EmfManagerCl
 
                 tracing::debug!("run_cloudsync: {:?}", command);
 
-                unimplemented!();
+                todo!();
             }
             None => {
                 #[derive(Serialize, Debug)]

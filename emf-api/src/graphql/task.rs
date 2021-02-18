@@ -72,7 +72,7 @@ impl TaskMutation {
 
         let job = create_task_job(task.id);
 
-        unimplemented!();
+        todo!();
     }
     /// Remove an existing task by id
     async fn remove(context: &Context, task_id: i32) -> juniper::FieldResult<Command> {
@@ -83,6 +83,6 @@ impl TaskMutation {
                 .collect::<HashMap<String, serde_json::Value>>(),
         };
 
-        unimplemented!();
+        todo!();
     }
 }

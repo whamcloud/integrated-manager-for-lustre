@@ -192,7 +192,7 @@ impl StratagemMutation {
                 .into_iter()
                 .collect();
 
-        unimplemented!();
+        todo!();
     }
     async fn run_cloudsync(
         context: &Context,
@@ -278,7 +278,7 @@ impl StratagemMutation {
                 .into_iter()
                 .collect();
 
-        unimplemented!();
+        todo!();
     }
     async fn run_fast_file_scan(
         context: &Context,
@@ -508,7 +508,7 @@ impl StratagemMutation {
                 .into_iter()
                 .collect();
 
-        unimplemented!();
+        todo!();
     }
     async fn run_stratagem(
         context: &Context,
@@ -612,7 +612,7 @@ impl StratagemMutation {
                 .into_iter()
                 .collect();
 
-        unimplemented!();
+        todo!();
     }
 
     /// Delete a stratagem report

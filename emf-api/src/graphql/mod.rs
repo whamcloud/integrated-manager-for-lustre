@@ -562,7 +562,7 @@ impl MutationRoot {
             }
         }]);
 
-        unimplemented!();
+        todo!();
     }
     #[graphql(arguments(
         fsname(description = "Filesystem snapshot was taken from"),
@@ -602,7 +602,7 @@ impl MutationRoot {
             }
         }]);
 
-        unimplemented!();
+        todo!();
     }
     #[graphql(arguments(
         fsname(description = "Filesystem snapshot was taken from"),
@@ -637,7 +637,7 @@ impl MutationRoot {
             }
         }]);
 
-        unimplemented!();
+        todo!();
     }
     #[graphql(arguments(
         fsname(description = "Filesystem snapshot was taken from"),
@@ -674,7 +674,7 @@ impl MutationRoot {
             }
         }]);
 
-        unimplemented!();
+        todo!();
     }
     #[graphql(arguments(
         fsname(description = "The filesystem to create snapshots with"),

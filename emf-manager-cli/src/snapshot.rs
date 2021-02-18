@@ -206,7 +206,7 @@ pub async fn snapshot_cli(command: SnapshotCommand) -> Result<(), EmfManagerCliE
                 graphql(query).await?;
             let x = Result::from(resp)?.data.create_snapshot;
 
-            unimplemented!();
+            todo!();
 
             Ok(())
         }
@@ -217,7 +217,7 @@ pub async fn snapshot_cli(command: SnapshotCommand) -> Result<(), EmfManagerCliE
                 graphql(query).await?;
             let x = Result::from(resp)?.data.destroy_snapshot;
 
-            unimplemented!();
+            todo!();
 
             Ok(())
         }
@@ -227,7 +227,7 @@ pub async fn snapshot_cli(command: SnapshotCommand) -> Result<(), EmfManagerCliE
                 graphql(query).await?;
             let x = Result::from(resp)?.data.mount_snapshot;
 
-            unimplemented!();
+            todo!();
 
             Ok(())
         }
@@ -237,7 +237,7 @@ pub async fn snapshot_cli(command: SnapshotCommand) -> Result<(), EmfManagerCliE
                 graphql(query).await?;
             let x = Result::from(resp)?.data.unmount_snapshot;
 
-            unimplemented!();
+            todo!();
 
             Ok(())
         }

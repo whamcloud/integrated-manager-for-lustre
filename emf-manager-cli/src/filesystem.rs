@@ -65,7 +65,7 @@ fn option_sub(a: Option<u64>, b: Option<u64>) -> Option<u64> {
 async fn forget_filesystem(fsname: String) -> Result<(), EmfManagerCliError> {
     let fs = get_filesystem(&fsname).await?;
 
-    unimplemented!();
+    todo!();
 }
 
 pub async fn filesystem_cli(command: FilesystemCommand) -> Result<(), EmfManagerCliError> {

@@ -30,7 +30,7 @@ pub async fn wait_for_cmds_progress(
     cmds: &[Command],
     tx: Option<mpsc::UnboundedSender<Progress>>,
 ) -> Result<Vec<Command>, CmdUtilError> {
-    unimplemented!();
+    todo!();
 }
 
 /// Waits for command completion and prints progress messages.
@@ -39,9 +39,9 @@ pub async fn wait_for_cmds_success(
     cmds: &[Command],
     tx: Option<mpsc::UnboundedSender<Progress>>,
 ) -> Result<Vec<Command>, CmdUtilError> {
-    unimplemented!();
+    todo!();
 }
 
 fn cmd_finished(cmd: &Command) -> bool {
-    unimplemented!();
+    todo!();
 }

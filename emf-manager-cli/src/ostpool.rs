@@ -135,7 +135,7 @@ async fn ostpool_destroy(
 
     term.write_line(&format!("{} ost pool...", style("Destroying").green()))?;
 
-    unimplemented!();
+    todo!();
 }
 
 pub async fn ostpool_cli(command: OstPoolCommand) -> Result<(), EmfManagerCliError> {
@@ -152,7 +152,7 @@ pub async fn ostpool_cli(command: OstPoolCommand) -> Result<(), EmfManagerCliErr
             poolname,
             osts,
         } => {
-            unimplemented!();
+            todo!();
         }
         OstPoolCommand::Destroy { fsname, poolname } => {
             ostpool_destroy(&term, fsname, poolname).await?;
@@ -172,7 +172,7 @@ pub async fn ostpool_cli(command: OstPoolCommand) -> Result<(), EmfManagerCliErr
             tracing::debug!("POOL: {:?}", pool);
             term.write_line(&format!("{} ost pool...", style("Growing").green()))?;
 
-            unimplemented!();
+            todo!();
         }
         OstPoolCommand::Shrink {
             fsname,
@@ -186,7 +186,7 @@ pub async fn ostpool_cli(command: OstPoolCommand) -> Result<(), EmfManagerCliErr
             tracing::debug!("POOL: {:?}", pool);
             term.write_line(&format!("{} ost pool...", style("Shrinking").green()))?;
 
-            unimplemented!();
+            todo!();
         }
     };
 
