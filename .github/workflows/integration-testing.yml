@@ -199,6 +199,18 @@ jobs:
       - name: Publish packages
         run: make deb-repo
 
+      - name: Download kuma dp
+        uses: dsaltares/fetch-gh-release-asset@e2dbbde846aa9a9d2998a2ce9fa92ab73921c81b
+        with:
+          repo: "whamcloud/pkg-kuma"
+          version: "tags/v1.0.7-1"
+          file: "kuma-dp_1.0.7-1_amd64.deb"
+          target: "kuma-dp_1.0.7-1_amd64.deb"
+          token: ${{ secrets.RELESE_DOWNLOAD_PAT }}
+
+      - name: Publish kuma dp
+        run: reprepro -vb _deb/repo includedeb emf kuma-*.deb
+
       - name: Summary
         run: |
           find _deb -ls
