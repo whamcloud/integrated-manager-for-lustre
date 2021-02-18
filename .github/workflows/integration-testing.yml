@@ -199,6 +199,12 @@ jobs:
       - name: Publish packages
         run: make deb-repo
 
+      - name: Download envoy
+        run: curl -sSfL -O "https://dl.bintray.com/tetrate/getenvoy-deb/pool/stable/g/getenvoy-envoy/getenvoy-envoy_1.16.2.p0.ge98e41a-1p71.gbe6132a_amd64.deb"
+
+      - name: Publish envoy
+        run: reprepro -vb _deb/repo includedeb emf getenvoy-envoy*.deb
+
       - name: Download kuma dp
         uses: dsaltares/fetch-gh-release-asset@e2dbbde846aa9a9d2998a2ce9fa92ab73921c81b
         with:
