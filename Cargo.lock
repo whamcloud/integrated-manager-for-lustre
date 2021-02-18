@@ -1332,7 +1332,7 @@ dependencies = [
  "humantime-serde",
  "insta",
  "jsonschema-valid",
- "lazy_static",
+ "once_cell",
  "petgraph",
  "serde",
  "serde_json",

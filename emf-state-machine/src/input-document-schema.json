@@ -1,0 +1,74 @@
+{
+  "$schema": "http://json-schema.org/schema#",
+  "properties": {
+    "version": {
+      "type": "number",
+      "description": "The version of this input document"
+    },
+    "jobs": {
+      "type": "object",
+      "description": "Jobs to submit to the state-machine.",
+      "patternProperties": {
+        "^[_a-zA-Z0-9_-]+$": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "The name to display for this job."
+            },
+            "needs": {
+              "type": "array",
+              "description": "A list of jobs that must be completed before this job can run.",
+              "items": {
+                "type": "string",
+                "description": "Name of the job that must be complete."
+              }
+            },
+            "steps": {
+              "type": "array",
+              "description": "A list of steps to submit to the state-machine for this job. Each step will run sequentially",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "action": {
+                    "type": "string",
+                    "description": "The action to be run from the registry in `component.action` format."
+                  },
+                  "id": {
+                    "type": "string",
+                    "description": "The step identifier."
+                  },
+                  "inputs": {
+                    "description": "The input to supply to this step.",
+                    "type": "object"
+                  },
+                  "outputs": {
+                    "description": "Output that will be used in a future job when building the graph.",
+                    "type": "object"
+                  }
+                },
+                "required": ["action", "id"]
+              }
+            }
+          },
+          "required": ["name", "steps"]
+        },
+        "additionalProperties": false
+      }
+    },
+    "dry_run": {
+      "type": "boolean",
+      "description": "Whether the state-machine should execute this input document or return the changes that would be made if it did. Defaults to true."
+    },
+    "timeout": {
+      "type": "string",
+      "description": "How long this input document should wait for completion before aborting. Defaults to no timeout."
+    },
+    "refresh": {
+      "type": "boolean",
+      "description": "Whether the relevant components should be refreshed before executing the input document. Defaults to false."
+    }
+  },
+  "additionalProperties": false,
+  "required": ["jobs"]
+}

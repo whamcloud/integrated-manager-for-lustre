@@ -1,0 +1,24 @@
+---
+source: emf-state-machine/src/input_document.rs
+expression: mk_err_str(errs)
+
+---
+Required properties "id" are missing
+At instance path /jobs/add_mds1/steps/0:
+  {
+    "action": "host.add",
+    "inputs": {
+      "fqdn": "mds1"
+    },
+    "outputs": {
+      "id": "this.id"
+    }
+  }
+
+At schema path /properties/jobs/patternProperties/^[_a-zA-Z0-9_-]+$/properties/steps/items/required:
+  [
+    "action",
+    "id"
+  ]
+
+
