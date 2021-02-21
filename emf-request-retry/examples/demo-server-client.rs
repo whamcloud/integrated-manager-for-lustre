@@ -2,7 +2,9 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+use emf_request_retry::policy::exponential_backoff_policy_builder;
 use emf_request_retry::{retry_future, retry_future_gen, RetryAction};
+use once_cell::sync::Lazy;
 use reqwest::{Client, Response, Url};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -11,39 +13,77 @@ use std::io;
 use std::net::SocketAddr;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
+use tokio::sync::mpsc::unbounded_channel;
+use tokio::sync::Mutex;
 use tokio::time::sleep;
 use warp::http::StatusCode;
 use warp::Filter;
 
-static GLOBAL_SERVER_COUNTER: AtomicUsize = AtomicUsize::new(0);
+#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, Hash)]
+struct ClientId(u32);
 
-/// A serialized message to report in JSON format.
+static GLOBAL_SERVER_STATE: Lazy<Mutex<HashMap<ClientId, AtomicUsize>>> = Lazy::new(|| {
+    let mut hm = HashMap::new();
+    // we know there are 3 clients only
+    hm.insert(ClientId(1), AtomicUsize::new(0));
+    hm.insert(ClientId(2), AtomicUsize::new(0));
+    hm.insert(ClientId(3), AtomicUsize::new(0));
+    Mutex::new(hm)
+});
+
+/// Messages from the server to clients during HTTP request.
 #[derive(Serialize, Deserialize, Debug)]
 struct Hello {
-    client: u32,
+    client: ClientId,
     counter: Option<usize>,
 }
+
+/// Messages from main to clients without relation to HTTP requests.
+#[derive(Clone, Debug)]
+struct Fire;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let addr: SocketAddr = "127.0.0.1:8080".parse().unwrap();
+    let (tx, mut rx) = unbounded_channel::<Fire>();
 
     // run server
     tokio::spawn(async move { server(&addr).await });
 
-    // run 2 clients
+    // run 3 clients
     tokio::spawn(async move {
-        let result = retry_client_obj(&addr, 1).await;
-        println!("retry_client_obj received {:?}", result);
+        let result = client_1(&addr).await;
+        println!("client 1 received {:?}", result);
     });
     tokio::spawn(async move {
-        let result = retry_client_fun(&addr, 2).await;
-        println!("retry_client_fun received {:?}", result);
+        let result = client_2(&addr).await;
+        println!("client 2 received {:?}", result);
+    });
+    tokio::spawn(async move {
+        while let Some(x) = rx.recv().await {
+            let policy = exponential_backoff_policy_builder().build().unwrap();
+
+            let r = retry_future(|_| http_call(&addr, 3), policy).await;
+            println!("client 3 received {:?}", r);
+            if let Err(e) = r {
+                println!("Could not send result {:?}. Error {:?}", x, e);
+            }
+        }
+        println!("channel has been dropped, end of transmission");
     });
 
-    println!("Sleep for 30 seconds");
-    sleep(Duration::from_secs(30)).await;
-    println!("End of sleep, shutting down");
+    // Let's start the client with exponential backoff
+    tx.send(Fire)?;
+
+    println!("Wait for 20 seconds");
+    for _ in 0..20u8 {
+        {
+            let hm = GLOBAL_SERVER_STATE.lock().await;
+            println!("Server state: {:?}", hm);
+        }
+        sleep(Duration::from_secs(1)).await;
+    }
+    println!("End of waiting, shutting down");
 
     Ok(())
 }
@@ -53,17 +93,16 @@ async fn server(addr: &SocketAddr) {
     warp::serve(routes).run(*addr).await;
 }
 
-async fn retry_client_obj(addr: &SocketAddr, client_id: u32) -> Result<String, reqwest::Error> {
+async fn client_1(addr: &SocketAddr) -> Result<String, reqwest::Error> {
     let policy_1 = |k: u32, e| match k {
         0 => RetryAction::RetryNow,
         k if k < 3 => RetryAction::WaitFor(Duration::from_secs((2 * k) as u64)),
         _ => RetryAction::ReturnError(e),
     };
-
-    retry_future(|_| http_call(addr, client_id), policy_1).await
+    retry_future(|_| http_call(addr, 1), policy_1).await
 }
 
-async fn retry_client_fun(addr: &SocketAddr, client_id: u32) -> Result<String, reqwest::Error> {
+async fn client_2(addr: &SocketAddr) -> Result<String, reqwest::Error> {
     fn policy_2<E: Debug>(k: u32, _e: E) -> RetryAction<E> {
         if k == 0 {
             RetryAction::RetryNow
@@ -71,25 +110,35 @@ async fn retry_client_fun(addr: &SocketAddr, client_id: u32) -> Result<String, r
             RetryAction::WaitFor(Duration::from_secs(5))
         }
     }
-    retry_future_gen(|_| http_call(addr, client_id), policy_2).await
+    retry_future_gen(|_| http_call(addr, 2), policy_2).await
 }
 
 async fn server_reply(mut hello: Hello) -> Result<Box<dyn warp::Reply>, warp::Rejection> {
-    GLOBAL_SERVER_COUNTER.fetch_add(1, Ordering::SeqCst);
-    let counter = GLOBAL_SERVER_COUNTER.load(Ordering::SeqCst);
-    if counter % 5 == 0 {
-        hello.counter = Some(counter);
-        println!(
-            "Incoming request from client={}, counter={}",
-            hello.client, counter
-        );
-        Ok(Box::new(warp::reply::json(&hello)) as Box<dyn warp::Reply>)
-    } else {
-        println!(
-            "Incoming request from client={}, counter={}, server is going to fail",
-            hello.client, counter
-        );
-        Ok(Box::new(StatusCode::INTERNAL_SERVER_ERROR) as Box<dyn warp::Reply>)
+    let count = {
+        let hm = GLOBAL_SERVER_STATE.lock().await;
+        let counter = hm.get(&hello.client).expect("Impossible server state");
+        counter.fetch_add(1, Ordering::SeqCst) + 1
+    };
+    match hello.client {
+        ClientId(1) | ClientId(2) => {
+            // dispatch client 1
+            if count % 5 == 0 {
+                hello.counter = Some(count);
+                Ok(Box::new(warp::reply::json(&hello)) as Box<dyn warp::Reply>)
+            } else {
+                Ok(Box::new(StatusCode::INTERNAL_SERVER_ERROR) as Box<dyn warp::Reply>)
+            }
+        }
+        ClientId(3) => {
+            // dispatch client 3
+            if count % 7 == 0 {
+                hello.counter = Some(count);
+                Ok(Box::new(warp::reply::json(&hello)) as Box<dyn warp::Reply>)
+            } else {
+                Ok(Box::new(StatusCode::INTERNAL_SERVER_ERROR) as Box<dyn warp::Reply>)
+            }
+        }
+        _ => unreachable!("Impossible client number"),
     }
 }
 

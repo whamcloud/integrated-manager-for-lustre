@@ -5,9 +5,11 @@
 use crate::{RetryAction, RetryPolicy};
 use rand::distributions::Distribution;
 use rand::distributions::Uniform;
-use rand::prelude::ThreadRng;
-use rand::{thread_rng, Rng};
-use std::fmt::{self, Debug};
+use rand::Rng;
+use rand_xoshiro::rand_core::SeedableRng;
+use rand_xoshiro::Xoshiro256PlusPlus;
+use std::fmt;
+use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::time::Duration;
 
@@ -60,7 +62,7 @@ where
     R: Rng,
     F: for<'r> Fn(&'r E) -> bool,
 {
-    pub fn with_f_rng(is_fatal_f: F, rng: R) -> Self {
+    pub fn new(is_fatal_f: F, rng: R) -> Self {
         Self {
             rng,
             is_fatal_f,
@@ -90,7 +92,7 @@ where
     }
 }
 
-impl<E, R, F> Debug for ExponentialBackoffPolicy<E, R, F>
+impl<E, R, F> fmt::Debug for ExponentialBackoffPolicy<E, R, F>
 where
     E: Debug,
     R: Rng,
@@ -180,7 +182,7 @@ where
 ///     | io::ErrorKind::BrokenPipe => false,
 ///     _ => true, // e.g. io::ErrorKind::PermissionDenied
 /// };
-/// let policy = ExponentialBackoffPolicyBuilder::with_f_rng(is_fatal_f, rng)
+/// let policy = ExponentialBackoffPolicyBuilder::new(is_fatal_f, rng)
 ///     .max_count(4)
 ///     .initial_delay(Duration::from_millis(100))
 ///     .random_factor(0.0)
@@ -198,12 +200,39 @@ pub struct ExponentialBackoffPolicyBuilder<E: Debug, R: Rng, F: Fn(&E) -> bool> 
     pub _s: PhantomData<E>,
 }
 
+// `Xoshiro256PlusPlus` is pure, has all the internal state inside, so it is safe to be sent.
+// `Fn(&'r E) -> bool` is safe to be sent, since it accepts a shared reference.
+unsafe impl<E, F> Send for ExponentialBackoffPolicy<E, Xoshiro256PlusPlus, F>
+where
+    E: Debug + Send,
+    F: for<'r> Fn(&'r E) -> bool,
+{
+}
+
+/// The policy uses `xoshiro256++`, the `xoshiro256++` algorithm is not suitable for
+/// cryptographic purposes, but is very fast and has excellent statistical properties.
+/// Uses `seed` as the current seconds since Epoch.
 pub fn exponential_backoff_policy_builder<E>(
-) -> ExponentialBackoffPolicyBuilder<E, ThreadRng, &'static dyn Fn(&E) -> bool>
+) -> ExponentialBackoffPolicyBuilder<E, Xoshiro256PlusPlus, &'static dyn Fn(&E) -> bool>
 where
     E: Debug,
 {
-    let rng = thread_rng();
+    let seed = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_else(|_| Duration::from_secs(0))
+        .as_secs();
+    exponential_backoff_policy_builder_with_seed(seed)
+}
+
+/// The policy uses `xoshiro256++`, the `xoshiro256++` algorithm is not suitable for
+/// cryptographic purposes, but is very fast and has excellent statistical properties.
+pub fn exponential_backoff_policy_builder_with_seed<E>(
+    seed: u64,
+) -> ExponentialBackoffPolicyBuilder<E, Xoshiro256PlusPlus, &'static dyn Fn(&E) -> bool>
+where
+    E: Debug,
+{
+    let rng = Xoshiro256PlusPlus::seed_from_u64(seed);
     let is_fatal_f = &|_: &E| false; // all errors are not fatal, always retry
     ExponentialBackoffPolicyBuilder {
         rng,
@@ -222,7 +251,7 @@ where
     R: Rng,
     F: for<'r> Fn(&'r E) -> bool,
 {
-    pub fn with_f_rng(is_fatal_f: F, rng: R) -> Self {
+    pub fn new(is_fatal_f: F, rng: R) -> Self {
         Self {
             rng,
             is_fatal_f,
@@ -250,7 +279,7 @@ where
         self
     }
     pub fn build(self) -> Option<ExponentialBackoffPolicy<E, R, F>> {
-        let mut policy = ExponentialBackoffPolicy::with_f_rng(self.is_fatal_f, self.rng);
+        let mut policy = ExponentialBackoffPolicy::new(self.is_fatal_f, self.rng);
         if let Some(initial_delay) = self.initial_delay {
             policy.current_delay = initial_delay;
             policy.randomized_delay = initial_delay;
@@ -273,7 +302,7 @@ mod tests {
     use super::*;
     use crate::RetryAction::{RetryNow, ReturnError, WaitFor};
     use rand::SeedableRng;
-    use rand_xorshift::XorShiftRng;
+    use rand_xoshiro::Xoshiro256PlusPlus;
 
     #[derive(Debug, Clone, PartialEq)]
     enum Error {
@@ -290,7 +319,8 @@ mod tests {
 
     #[test]
     fn exponential_policy_check_intervals() {
-        let mut exp_policy = ExponentialBackoffPolicyBuilder::with_f_rng(is_fatal, thread_rng())
+        let rng = Xoshiro256PlusPlus::seed_from_u64(256);
+        let mut exp_policy = ExponentialBackoffPolicyBuilder::new(is_fatal, rng)
             .build()
             .expect("Impossible to fail");
         let errors = [
@@ -323,9 +353,8 @@ mod tests {
             Error::Fatal => true,
             Error::NonFatal => false,
         };
-        let seed = [16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1];
-        let rng = XorShiftRng::from_seed(seed);
-        let mut exp_policy = ExponentialBackoffPolicyBuilder::with_f_rng(is_fatal_closure, rng)
+        let rng = Xoshiro256PlusPlus::seed_from_u64(256);
+        let mut exp_policy = ExponentialBackoffPolicyBuilder::new(is_fatal_closure, rng)
             .max_count(5)
             .initial_delay(Duration::from_secs(1))
             .random_factor(0.0)
@@ -350,7 +379,8 @@ mod tests {
 
     #[test]
     fn exponential_policy_maximum_reached() {
-        let mut exp_policy = ExponentialBackoffPolicyBuilder::with_f_rng(|_| false, thread_rng())
+        let rng = Xoshiro256PlusPlus::seed_from_u64(42);
+        let mut exp_policy = ExponentialBackoffPolicyBuilder::new(|_| false, rng)
             .max_count(8)
             .build()
             .expect("Impossible to fail");
