@@ -8,7 +8,7 @@ BuildRequires: systemd
 
 %global envoy_version 1.16.2.p0.ge98e41a-1p71.gbe6132a
 
-%global kuma_version 1.0.7-1
+%global kuma_version 1.0.8-1
 
 Name: rust-%{crate}
 Version: 0.5.0
