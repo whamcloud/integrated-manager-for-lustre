@@ -1,0 +1,6 @@
+---
+source: emf-state-machine/src/input_document/mod.rs
+expression: err
+
+---
+jobs.add_mds1.steps[0]: missing field `inputs`

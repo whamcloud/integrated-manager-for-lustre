@@ -2,14 +2,12 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file
 
-use crate::{state_schema::Schema, Error, TransitionGraph};
+use crate::{state_schema::Schema, TransitionGraph};
 use emf_wire_types::ComponentType;
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
-pub fn build_transition_graphs(
-    schema: Schema,
-) -> Result<BTreeMap<ComponentType, TransitionGraph>, Error> {
-    let x = schema
+pub(crate) fn build_transition_graphs(schema: &Schema) -> BTreeMap<ComponentType, TransitionGraph> {
+    schema
         .components
         .iter()
         .filter_map(
@@ -17,9 +15,9 @@ pub fn build_transition_graphs(
                 let states: BTreeSet<_> = component.states.keys().collect();
 
                 let mut graph = TransitionGraph::new();
-                let mut node_map: BTreeMap<_, petgraph::graph::NodeIndex> = BTreeMap::new();
+                let mut node_map: HashMap<_, petgraph::graph::NodeIndex> = HashMap::new();
                 for state in states {
-                    let node_index = graph.add_node(state.clone());
+                    let node_index = graph.add_node(*state);
                     node_map.insert(state, node_index);
                 }
 
@@ -30,7 +28,7 @@ pub fn build_transition_graphs(
                         if let Some(start_nodes) = &action.state.start {
                             // Create an edge from each start node to the end node
                             let connections: BTreeSet<(_, _, _)> = start_nodes
-                                .into_iter()
+                                .iter()
                                 .map(|x| (x, &action.state.end, action_name))
                                 .collect();
 
@@ -43,35 +41,29 @@ pub fn build_transition_graphs(
                     .collect();
 
                 for (a, b, edge_name) in connections {
-                    let a = node_map.get(&a)?.to_owned();
-                    let b = node_map.get(&b)?.to_owned();
-                    graph.add_edge(a, b, edge_name.to_string());
+                    let a = *node_map.get(&a)?;
+                    let b = *node_map.get(&b)?;
+                    graph.add_edge(a, b, *edge_name);
                 }
 
                 Some((comp_name.to_owned(), graph))
             },
         )
-        .collect::<BTreeMap<ComponentType, TransitionGraph>>();
-
-    Ok(x)
+        .collect::<BTreeMap<ComponentType, TransitionGraph>>()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::state_schema::parse_state_schema;
+    use crate::state_schema::STATE_SCHEMA;
     use insta::assert_json_snapshot;
 
     #[test]
-    fn parse_schema() -> Result<(), Error> {
-        let schema = parse_state_schema()?;
-        let transition_graphs = build_transition_graphs(schema)?;
+    fn parse_schema() {
+        let transition_graphs = build_transition_graphs(&STATE_SCHEMA);
 
-        let serialized_graph = serde_json::to_value(&transition_graphs)?;
         insta::with_settings!({sort_maps => true}, {
-            assert_json_snapshot!(serialized_graph);
+            assert_json_snapshot!(transition_graphs);
         });
-
-        Ok(())
     }
 }

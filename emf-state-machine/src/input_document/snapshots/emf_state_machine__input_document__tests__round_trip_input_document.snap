@@ -1,0 +1,38 @@
+---
+source: emf-state-machine/src/input_document/mod.rs
+expression: doc
+
+---
+version: 1.0
+jobs:
+  add_mds1:
+    name: Add Mds1
+    needs: []
+    steps:
+      - action: host.add
+        id: step1
+        inputs:
+          hosts:
+            - mds1
+          auth: ~
+          user: ~
+          tags: ~
+        outputs:
+          id: this.id
+  configure_lnet:
+    name: configure lnet
+    needs:
+      - add_mds1
+    steps:
+      - action: lnet.configure
+        id: step1
+        inputs:
+          hosts:
+            - "${{needs.add_mds1.step1.outputs.id}}"
+          network: tcp0
+          ethernet: eth1
+        outputs: ~
+dry_run: true
+timeout: 5m
+refresh: false
+

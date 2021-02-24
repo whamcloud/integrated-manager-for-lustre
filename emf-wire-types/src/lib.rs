@@ -63,6 +63,25 @@ pub enum ComponentType {
     MgtMdt,
 }
 
+impl fmt::Display for ComponentType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let x = match self {
+            Self::Host => "host",
+            Self::Filesystem => "filesystem",
+            Self::Lnet => "lnet",
+            Self::Target => "target",
+            Self::ClientMount => "client_mount",
+            Self::Ntp => "ntp",
+            Self::Mgt => "mgt",
+            Self::Ost => "ost",
+            Self::Mdt => "mdt",
+            Self::MgtMdt => "mgt_mdt",
+        };
+
+        write!(f, "{}", x)
+    }
+}
+
 #[derive(Eq, PartialEq, Hash, Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[serde(transparent)]
 pub struct PluginName(pub String);
