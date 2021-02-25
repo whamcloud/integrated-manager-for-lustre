@@ -238,6 +238,52 @@ jobs:
             _deb/repo/dists/
             _deb/repo/pool/
 
+  emf_repo:
+    name: EMF rpms/debs repository creation
+    runs-on: ubuntu-latest
+    needs: [
+        create_emf_repo,
+        ubuntu_packages,
+    ]
+    container:
+      image: emfteam/emf-centos7-deps
+    steps:
+      - name: Cancel Workflow Action
+        uses: styfle/cancel-workflow-action@0.6.0
+        with:
+          access_token: ${{ github.token }}
+
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Download emf RPM repo
+        uses: actions/download-artifact@v1
+        with:
+          name: emf_repo
+
+      - name: Download emf apt repo
+        uses: actions/download-artifact@v1
+        with:
+          name: apt_repo
+
+      - name: Create rpm of emf repos
+        run: |
+            export TEMP_DIR=$(mktemp -d)
+            mkdir -p ${TEMP_DIR}/release/emf-repo/repo
+            mv apt_repo ${TEMP_DIR}/release/emf-repo/apt-repo
+            mv emf_repo ${TEMP_DIR}/release/emf-repo/repo
+            mkdir -p ${TEMP_DIR}/_topdir/SOURCES
+            tar -czvf ${TEMP_DIR}/_topdir/SOURCES/emf-repo.tar.gz -C ${TEMP_DIR}/release/emf-repo .
+            rpmbuild -bb -D "_topdir ${TEMP_DIR}/_topdir" emf-repo.spec
+            cp -rf ${TEMP_DIR}/_topdir .
+
+      - name: Archive rpm
+        uses: actions/upload-artifact@v2
+        with:
+          name: emf_repo_rpm
+          path: _topdir/RPMS
+          retention-days: 1
+
   exa_base_testing:
     name: EXA Testing
     runs-on: self-hosted

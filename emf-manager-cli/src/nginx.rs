@@ -209,6 +209,7 @@ mod tests {
 
         let vars: HashMap<String, String> = [
             ("NGINX_GATEWAY_PORT", "7443"),
+            ("NGINX_GATEWAY_UNSECURE_PORT", "7080"),
             ("NGINX_CRYPTO_DIR", "/etc/emf/nginx/crypto"),
             ("NGINX_API_SERVICE_PORT", "7469"),
             ("NGINX_GRAFANA_PORT", "7470"),
@@ -216,6 +217,7 @@ mod tests {
             ("NGINX_WARP_DRIVE_SERVICE_PORT", "7472"),
             ("REPORT_PATH", "/var/spool/emf/report"),
             ("REPO_PATH", "/var/lib/emf/repo"),
+            ("APT_REPO_PATH", "/var/lib/emf/apt-repo"),
         ]
         .iter()
         .map(|(k, v)| (k.to_string(), v.to_string()))

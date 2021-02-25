@@ -196,18 +196,33 @@ server {
 
         alias /var/spool/emf/report/$1;
     }
+}
 
-    
+server {
+    root /var/lib/emf;
+
+    listen 7080;
+
+    error_page 497 http://$http_host$request_uri;
+
+    proxy_read_timeout 330s;
+    proxy_http_version 1.1;
+
+    access_log /var/log/nginx/access_unsecure.log combined if=$loggable;
+
+    types {
+        application/vnd.debian.binary-package deb;
+        application/x-redhat-package-manager rpm;
+    }
+
     location /repo/ {
-        if ($ssl_client_verify != SUCCESS) {
-            return 401;
-        }
-
-        proxy_set_header X-SSL-Client-On $ssl_client_verify;
-        proxy_set_header X-SSL-Client-Name $ssl_client_s_dn_cn;
-
         autoindex on;
         alias /var/lib/emf/repo/;
+    }
+
+    location /apt-repo/ {
+        autoindex on;
+        alias /var/lib/emf/apt-repo/;
     }
 
     location /client/ {
