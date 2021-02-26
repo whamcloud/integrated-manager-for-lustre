@@ -168,8 +168,7 @@ where
 ///     .initial_delay(Duration::from_millis(100))
 ///     .random_factor(0.0)
 ///     .multiplier(2.0)
-///     .build()
-///     .expect("Something goes wrong");
+///     .build();
 ///
 /// // or
 ///
@@ -187,8 +186,7 @@ where
 ///     .initial_delay(Duration::from_millis(100))
 ///     .random_factor(0.0)
 ///     .multiplier(2.0)
-///     .build()
-///     .expect("Something goes wrong");
+///     .build();
 /// ```
 pub struct ExponentialBackoffPolicyBuilder<E: Debug, R: Rng, F: Fn(&E) -> bool> {
     pub rng: R,
@@ -278,7 +276,7 @@ where
         self.multiplier = Some(multiplier);
         self
     }
-    pub fn build(self) -> Option<ExponentialBackoffPolicy<E, R, F>> {
+    pub fn build(self) -> ExponentialBackoffPolicy<E, R, F> {
         let mut policy = ExponentialBackoffPolicy::new(self.is_fatal_f, self.rng);
         if let Some(initial_delay) = self.initial_delay {
             policy.current_delay = initial_delay;
@@ -293,7 +291,8 @@ where
         if let Some(multiplier) = self.multiplier {
             policy.multiplier = multiplier;
         }
-        Some(policy)
+
+        policy
     }
 }
 
@@ -320,9 +319,7 @@ mod tests {
     #[test]
     fn exponential_policy_check_intervals() {
         let rng = Xoshiro256PlusPlus::seed_from_u64(256);
-        let mut exp_policy = ExponentialBackoffPolicyBuilder::new(is_fatal, rng)
-            .build()
-            .expect("Impossible to fail");
+        let mut exp_policy = ExponentialBackoffPolicyBuilder::new(is_fatal, rng).build();
         let errors = [
             Error::NonFatal,
             Error::NonFatal,
@@ -358,8 +355,7 @@ mod tests {
             .max_count(5)
             .initial_delay(Duration::from_secs(1))
             .random_factor(0.0)
-            .build()
-            .expect("Impossible to fail");
+            .build();
         let errors = [
             Error::NonFatal,
             Error::NonFatal,
@@ -382,8 +378,7 @@ mod tests {
         let rng = Xoshiro256PlusPlus::seed_from_u64(42);
         let mut exp_policy = ExponentialBackoffPolicyBuilder::new(|_| false, rng)
             .max_count(8)
-            .build()
-            .expect("Impossible to fail");
+            .build();
         // simulate the policy is called 10 times
         let errors = vec![Error::NonFatal; 10];
         let mut actions = vec![RetryNow; errors.len()];

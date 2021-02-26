@@ -220,7 +220,7 @@ pub fn create_filtered_writer<T: PartialEq + Send + serde::Serialize + Sync + 's
     Ok(tx)
 }
 
-fn create_policy<E: Debug>() -> impl RetryPolicy<E> {
+pub fn create_policy<E: Debug>() -> impl RetryPolicy<E> {
     |k: u32, e| match k {
         0 => RetryAction::RetryNow,
         k if k < 5 => {

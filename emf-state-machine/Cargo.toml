@@ -5,6 +5,8 @@ name = "emf-state-machine"
 version = "0.1.0"
 
 [dependencies]
+emf-manager-env = {path = "../emf-manager-env", version = "0.4"}
+emf-tracing = {version = "0.4", path = "../emf-tracing"}
 emf-wire-types = {path = "../emf-wire-types", version = "0.4"}
 humantime-serde = "1.0"
 maplit = "1"
@@ -15,7 +17,10 @@ serde_json = {version = "1", features = ["preserve_order"]}
 serde_path_to_error = "0.1"
 serde_yaml = "0.8"
 thiserror = "1.0"
+tokio = {version = "1", features = ["macros", "rt-multi-thread"]}
+uuid = {version = "0.8", features = ["v4"]}
 validator = {version = "0.12", features = ["derive"]}
+warp = "0.3"
 
 [dev-dependencies]
 insta = "1"

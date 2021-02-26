@@ -1,0 +1,21 @@
+[Unit]
+Description=EMF state-machine service sidecar
+Requires=emf-state-machine.service
+PartOf=emf-state-machine.service
+
+[Service]
+EnvironmentFile=/etc/emf/bootstrap.conf
+EnvironmentFile=-/etc/emf/overrides.conf
+ExecStartPre=/bin/rm -f /tmp/kuma-al-emf-state-machine-service-default.sock
+ExecStart=/usr/bin/kuma-dp run \
+    --cp-address=https://${CP_ADDR}:5678 \
+    --dataplane-file=/etc/emf/dataplanes/emf-state-machine-service.yml \
+    --dataplane-token-file=/etc/emf/tokens/dataplane-token \
+    --dataplane-var mgmt_address=${MGMT_ADDR} \
+    --dataplane-var state_machine_service_port=${STATE_MACHINE_SERVICE_PORT} \
+    --dataplane-var state_machine_service_pg_port=${STATE_MACHINE_SERVICE_PG_PORT} \
+    --admin-port=
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal

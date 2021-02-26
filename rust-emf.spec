@@ -37,6 +37,7 @@ ExclusiveArch: x86_64
 %install
 mkdir -p %{buildroot}%{_bindir}
 cp emf %{buildroot}%{_bindir}
+cp emf-action-agent %{buildroot}%{_bindir}
 cp emf-agent %{buildroot}%{_bindir}
 cp emf-api %{buildroot}%{_bindir}
 cp emf-config %{buildroot}%{_bindir}
@@ -49,6 +50,7 @@ cp emf-network %{buildroot}%{_bindir}
 cp emf-ntp %{buildroot}%{_bindir}
 cp emf-ostpool %{buildroot}%{_bindir}
 cp emf-report %{buildroot}%{_bindir}
+cp emf-state-machine %{buildroot}%{_bindir}
 cp emf-sfa %{buildroot}%{_bindir}
 cp emf-snapshot %{buildroot}%{_bindir}
 cp emf-stats %{buildroot}%{_bindir}
@@ -77,6 +79,7 @@ cp emf-network.service %{buildroot}%{_unitdir}
 cp emf-ntp.service %{buildroot}%{_unitdir}
 cp emf-ostpool.service %{buildroot}%{_unitdir}
 cp emf-report.service %{buildroot}%{_unitdir}
+cp emf-state-machine.service %{buildroot}%{_unitdir}
 cp emf-rust-stats.service %{buildroot}%{_unitdir}
 cp emf-sfa.service %{buildroot}%{_unitdir}
 cp emf-snapshot.service %{buildroot}%{_unitdir}
@@ -175,6 +178,7 @@ Requires: rust-emf-postgres >= %{version}
 Requires: rust-emf-report >= %{version}
 Requires: rust-emf-sfa >= %{version}
 Requires: rust-emf-snapshot >= %{version}
+Requires: rust-emf-state-machine >= %{version}
 Requires: rust-emf-stats >= %{version}
 Requires: rust-emf-task-runner >= %{version}
 Requires: rust-emf-timer >= %{version}
@@ -445,6 +449,29 @@ Obsoletes: rust-iml-task-runner
 %files task-runner
 %{_bindir}/emf-task-runner
 %attr(0644,root,root)%{_unitdir}/emf-task-runner.service
+
+
+%package state-machine
+Summary: State-machine service
+License: MIT
+Group: System Environment/Libraries
+Requires: rust-emf-manager-target >= %{version}
+Requires: getenvoy-envoy = %{envoy_version}
+Requires: kuma-dp >= %{kuma_version}
+Requires: rust-emf-bootstrap >= %{version}
+Requires: rust-emf-postgres >= %{version}
+
+%description state-machine
+%{summary}
+
+%preun state-machine
+%systemd_preun emf-state-machine.service
+
+%files state-machine
+%{_bindir}/emf-state-machine
+%attr(0644,root,root)%{_unitdir}/emf-state-machine.service
+%{_unitdir}/emf-state-machine-sidecar.service
+%{_sysconfdir}/emf/dataplanes/emf-state-machine-service.yml
 
 
 %package stats
@@ -799,6 +826,25 @@ Group: System Environment/Libraries
 
 %files agent-target
 %attr(0644,root,root)%{_unitdir}/emf-agent.target
+
+
+%package action-agent
+Summary: Action runner
+License: MIT
+Group: System Environment/Libraries
+Requires: rust-emf-agent-target >= %{version}
+Requires: getenvoy-envoy = %{envoy_version}
+Requires: kuma-dp >= %{kuma_version}
+Requires: rust-emf-bootstrap >= %{version}
+
+%description action-agent
+%{summary}
+
+%files action-agent
+%{_bindir}/emf-action-agent
+%{_unitdir}/emf-action-agent.service
+%{_unitdir}/emf-action-agent-sidecar.service
+%{_sysconfdir}/emf/dataplanes/emf-action-agent.yml
 
 
 %package corosync-agent

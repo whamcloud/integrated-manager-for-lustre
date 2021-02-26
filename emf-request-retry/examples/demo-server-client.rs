@@ -61,7 +61,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
     tokio::spawn(async move {
         while let Some(x) = rx.recv().await {
-            let policy = exponential_backoff_policy_builder().build().unwrap();
+            let policy = exponential_backoff_policy_builder().build();
 
             let r = retry_future(|_| http_call(&addr, 3), policy).await;
             println!("client 3 received {:?}", r);

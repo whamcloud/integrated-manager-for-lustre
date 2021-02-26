@@ -1,0 +1,4 @@
+/usr/bin/emf-action-agent
+/lib/systemd/system/emf-action-agent.service
+/lib/systemd/system/emf-action-agent-sidecar.service
+/etc/emf/dataplanes/emf-action-agent.yml

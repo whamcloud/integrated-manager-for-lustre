@@ -34,10 +34,11 @@ use std::{
     cmp::{Ord, Ordering},
     collections::{BTreeMap, HashMap},
     convert::TryFrom,
-    convert::TryInto,
+    convert::{Infallible, TryInto},
     fmt, io,
     num::ParseIntError,
     ops::Deref,
+    str::FromStr,
     sync::Arc,
 };
 pub use stratagem::*;
@@ -145,6 +146,14 @@ impl Deref for Fqdn {
 
     fn deref(&self) -> &Self::Target {
         self.0.as_str()
+    }
+}
+
+impl FromStr for Fqdn {
+    type Err = Infallible;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Fqdn(s.into()))
     }
 }
 
@@ -284,10 +293,10 @@ pub enum ActionType {
 #[derive(serde::Deserialize, serde::Serialize, Debug)]
 pub struct ActionResult {
     pub id: ActionId,
-    pub result: Result<serde_json::value::Value, String>,
+    pub result: AgentResult,
 }
 
-pub type AgentResult = std::result::Result<serde_json::Value, String>;
+pub type AgentResult = Result<serde_json::Value, String>;
 
 pub trait ToJsonValue {
     fn to_json_value(&self) -> Result<serde_json::Value, String>;

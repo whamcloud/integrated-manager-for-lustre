@@ -32,6 +32,7 @@ lazy_static = "1.4.0"
 libc = "0.2"
 liblustreapi = {path = "../liblustreapi", version = "0.4"}
 lustre_collector = "0.2.16"
+once_cell = "1.5"
 prettytable-rs = "0.8"
 quick-xml = {version = "0.18", features = ["serialize"]}
 reqwest = {version = "0.11", default-features = false, features = ["rustls-tls", "json", "stream"]}
@@ -66,6 +67,10 @@ tokio = {version = "1", features = ["rt-multi-thread"]}
 [[bin]]
 name = "emf-agent"
 path = "src/cli.rs"
+
+[[bin]]
+name = "emf-action-agent"
+path = "src/services/action-agent.rs"
 
 [[bin]]
 name = "emf-corosync-agent"
