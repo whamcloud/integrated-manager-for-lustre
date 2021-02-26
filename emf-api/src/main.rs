@@ -9,7 +9,7 @@ mod timer;
 use emf_manager_env::get_pool_limit;
 use emf_postgres::get_db_pool;
 use emf_wire_types::Conf;
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 use warp::Filter;
 
 // Default pool limit if not overridden by POOL_LIMIT
@@ -37,6 +37,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     )
     .await?;
 
+    let http_client = reqwest::Client::builder()
+        .connect_timeout(Duration::from_secs(5))
+        .http2_prior_knowledge()
+        .build()?;
+
     let schema = Arc::new(graphql::Schema::new(
         graphql::QueryRoot,
         graphql::MutationRoot,
@@ -44,7 +49,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ));
     let schema_filter = warp::any().map(move || Arc::clone(&schema));
 
-    let ctx = Arc::new(graphql::Context { pg_pool });
+    let ctx = Arc::new(graphql::Context {
+        pg_pool,
+        http_client,
+    });
     let ctx_filter = warp::any().map(move || Arc::clone(&ctx));
 
     let routes = warp::path("conf")

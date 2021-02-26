@@ -910,6 +910,7 @@ dependencies = [
  "juniper",
  "lazy_static",
  "regex",
+ "reqwest",
  "serde",
  "serde_json",
  "sqlx",
@@ -1333,8 +1334,10 @@ name = "emf-state-machine"
 version = "0.1.0"
 dependencies = [
  "emf-manager-env",
+ "emf-postgres",
  "emf-tracing",
  "emf-wire-types",
+ "futures",
  "humantime-serde",
  "insta",
  "maplit",
@@ -1344,6 +1347,7 @@ dependencies = [
  "serde_json",
  "serde_path_to_error",
  "serde_yaml",
+ "sqlx",
  "thiserror",
  "tokio",
  "uuid",

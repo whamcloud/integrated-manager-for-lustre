@@ -143,8 +143,8 @@ impl<'de> Deserialize<'de> for Step {
     }
 }
 
-#[derive(Debug)]
-pub(crate) struct InputDocumentErrors(Vec<InputDocumentError>);
+#[derive(Debug, thiserror::Error)]
+pub struct InputDocumentErrors(Vec<InputDocumentError>);
 
 impl From<InputDocumentError> for InputDocumentErrors {
     fn from(err: InputDocumentError) -> Self {
@@ -342,10 +342,10 @@ where
 }
 
 /// Deserializes an input document string and returns an `InputDocument` structure if successful.
-pub(crate) fn deserialize_input_document(
-    document: &str,
+pub fn deserialize_input_document(
+    document: impl AsRef<[u8]>,
 ) -> Result<InputDocument, InputDocumentErrors> {
-    let val: serde_yaml::Value = serde_yaml::from_str(&document).unwrap();
+    let val: serde_yaml::Value = serde_yaml::from_slice(document.as_ref()).unwrap();
     let des = val.into_deserializer();
 
     let input_doc: InputDocument =

@@ -5,6 +5,7 @@
 mod filesystem;
 mod host;
 mod ostpool;
+mod state_machine;
 mod stratagem;
 mod task;
 
@@ -504,6 +505,9 @@ impl MutationRoot {
     fn task(&self) -> task::TaskMutation {
         task::TaskMutation
     }
+    fn state_machine(&self) -> state_machine::StateMachineMutation {
+        state_machine::StateMachineMutation
+    }
     #[graphql(arguments(
         fsname(description = "Filesystem to snapshot"),
         name(description = "Name of the snapshot"),
@@ -793,6 +797,7 @@ pub(crate) type Schema = RootNode<'static, QueryRoot, MutationRoot, EmptySubscri
 
 pub(crate) struct Context {
     pub(crate) pg_pool: PgPool,
+    pub(crate) http_client: reqwest::Client,
 }
 
 impl juniper::Context for Context {}

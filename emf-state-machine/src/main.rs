@@ -2,19 +2,34 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file
 
+use emf_manager_env::get_pool_limit;
+use emf_postgres::get_db_pool;
 use emf_state_machine::{
     action_runner::{
         IncomingHostQueues, OutgoingHostQueues, INCOMING_HOST_QUEUES, OUTGOING_HOST_QUEUES,
     },
+    input_document::deserialize_input_document,
     Error,
 };
 use emf_wire_types::{ActionResult, Fqdn};
+use futures::TryFutureExt;
 use std::{convert::Infallible, sync::Arc};
-use warp::{http, Filter as _, Reply as _};
+use warp::{http, hyper::body::Bytes, Filter as _, Reply as _};
+
+// Default pool limit if not overridden by POOL_LIMIT
+const DEFAULT_POOL_LIMIT: u32 = 2;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     emf_tracing::init();
+
+    let pool = get_db_pool(
+        get_pool_limit().unwrap_or(DEFAULT_POOL_LIMIT),
+        emf_manager_env::get_port("STATE_MACHINE_SERVICE_PG_PORT"),
+    )
+    .await?;
+
+    sqlx::migrate!("../migrations").run(&pool).await?;
 
     let get_actions = warp::get()
         .and(warp::header("x-client-fqdn"))
@@ -31,6 +46,40 @@ async fn main() -> Result<(), Error> {
                 Ok::<_, Infallible>(warp::reply::json(&xs))
             },
         );
+
+    let submit_document = warp::post()
+        .and(warp::path("submit"))
+        .and(warp::body::bytes())
+        .and(warp::any().map(move || pool.clone()))
+        .and_then(|x: Bytes, pg_pool| {
+            async move {
+                let x = match deserialize_input_document(x) {
+                    Ok(x) => x,
+                    Err(e) => {
+                        return Ok(warp::reply::with_status(
+                            e.to_string(),
+                            http::StatusCode::BAD_REQUEST,
+                        )
+                        .into_response())
+                    }
+                };
+
+                let input_doc_json: serde_json::Value = serde_json::to_value(&x)?;
+
+                sqlx::query!(
+                    r#"
+                    INSERT INTO input_document (document)
+                    VALUES ($1)
+                    "#,
+                    input_doc_json
+                )
+                .execute(&pg_pool)
+                .await?;
+
+                Ok::<_, Error>("".into_response())
+            }
+            .map_err(warp::reject::custom)
+        });
 
     let ingest_responses = warp::post()
         .and(warp::header("x-client-fqdn"))
@@ -74,7 +123,7 @@ async fn main() -> Result<(), Error> {
 
     let port = emf_manager_env::get_port("STATE_MACHINE_SERVICE_PORT");
 
-    warp::serve(get_actions.or(ingest_responses))
+    warp::serve(get_actions.or(submit_document).or(ingest_responses))
         .run(([127, 0, 0, 1], port))
         .await;
 

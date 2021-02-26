@@ -7,15 +7,31 @@ pub mod input_document;
 pub mod state_schema;
 pub mod transition_graph;
 
-use crate::state_schema::{ActionName, State};
+use crate::{
+    input_document::InputDocumentErrors,
+    state_schema::{ActionName, State},
+};
+use emf_wire_types::Command;
+use input_document::InputDocument;
+use sqlx::migrate::MigrateError;
 use std::collections::HashMap;
 use validator::{Validate, ValidationErrors};
 use warp::reject;
+
 /// The transition graph is a graph containing states for nodes and actions for edges.
 type TransitionGraph = petgraph::graph::DiGraph<State, ActionName>;
 
 #[derive(thiserror::Error, Debug)]
-pub enum Error {}
+pub enum Error {
+    #[error(transparent)]
+    SerdeJsonError(#[from] serde_json::Error),
+    #[error(transparent)]
+    MigrateError(#[from] MigrateError),
+    #[error(transparent)]
+    SqlxError(#[from] sqlx::Error),
+    #[error(transparent)]
+    InputDocumentErrors(#[from] InputDocumentErrors),
+}
 
 impl reject::Reject for Error {}
 

@@ -2979,6 +2979,18 @@
       ]
     }
   },
+  "9e5f084e2ad3eeb0091fa960b2403aaf00febcd0c836ffea4dff67618540c73d": {
+    "query": "\n                    INSERT INTO input_document (document)\n                    VALUES ($1)\n                    ",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Jsonb"
+        ]
+      },
+      "nullable": []
+    }
+  },
   "9ef05ffa0bf38929a77aaf9ee7838a03c358401f1f7daeb871734e18450e85dd": {
     "query": "SELECT id, message FROM alertstate WHERE lustre_pid = $1 ORDER BY id DESC LIMIT 1",
     "describe": {

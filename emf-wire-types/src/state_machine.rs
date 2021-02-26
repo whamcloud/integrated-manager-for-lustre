@@ -5,5 +5,5 @@
 #[derive(Debug, Eq, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
 pub struct Command {
-    id: i32,
+    pub id: i32,
 }
