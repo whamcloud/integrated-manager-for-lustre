@@ -74,7 +74,7 @@ pub async fn tick(
                     );
                     let resp: iml_graphql_queries::Response<snapshot_queries::unmount::Resp> =
                         graphql(client_2.clone(), query).await?;
-                    let command = Result::from(resp)?.data.unmount_snapshot;
+                    let command = Result::from(resp)?.data.snapshot.unmount;
                     wait_for_cmds_success(&[command], None).await?;
                 }
             }

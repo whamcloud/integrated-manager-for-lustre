@@ -62,7 +62,7 @@ pub fn update(msg: Msg, model: &mut Model, orders: &mut impl Orders<Msg, GMsg>) 
         }
         Msg::SnapshotCreateResp(x) => match x {
             Ok(Response::Data(x)) => {
-                let x = command_modal::Input::Commands(vec![Arc::new(x.data.create_snapshot)]);
+                let x = command_modal::Input::Commands(vec![Arc::new(x.data.snapshot.create)]);
 
                 orders.send_g_msg(GMsg::OpenCommandModal(x));
 

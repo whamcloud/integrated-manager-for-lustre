@@ -21,6 +21,8 @@ Requires: socat
 device-scanner-daemon builds an in-memory representation of
 devices using udev, zed and findmnt.
 
+%global debug_package %{nil}
+
 %prep
 %setup -c
 

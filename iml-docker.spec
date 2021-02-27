@@ -16,6 +16,8 @@ Requires: rust-iml-cli
 %description
 %{summary}
 
+%global debug_package %{nil}
+
 %prep
 %setup -c
 

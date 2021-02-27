@@ -8,7 +8,7 @@ use sqlx::postgres::types::PgInterval;
 use std::convert::TryInto;
 use std::{convert::TryFrom, fmt, time::Duration};
 
-#[derive(serde::Deserialize, serde::Serialize, Clone, PartialEq, Debug)]
+#[derive(serde::Deserialize, serde::Serialize, Clone, Eq, Hash, PartialEq, Debug)]
 #[serde(try_from = "String", into = "String")]
 pub struct GraphQLDuration(pub Duration);
 

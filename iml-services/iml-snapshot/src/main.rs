@@ -3,12 +3,11 @@
 // license that can be found in the LICENSE file.
 
 use futures::{StreamExt, TryStreamExt};
-use iml_influx::Client as InfluxClient;
-use iml_manager_client::{Client as ManagerClient, Url};
-use iml_manager_env::{get_influxdb_addr, get_influxdb_metrics_db, get_pool_limit};
+use iml_manager_client::Client as ManagerClient;
+use iml_manager_env::get_pool_limit;
 use iml_postgres::{get_db_pool, sqlx};
 use iml_service_queue::service_queue::consume_data;
-use iml_snapshot::{client_monitor::tick, retention::handle_retention_rules, MonitorState};
+use iml_snapshot::{client_monitor::tick, policy, MonitorState};
 use iml_tracing::tracing;
 use iml_wire_types::snapshot;
 use std::collections::HashMap;
@@ -30,19 +29,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         consume_data::<HashMap<String, Vec<snapshot::Snapshot>>>(&ch, "rust_agent_snapshot_rx");
 
     let pool = get_db_pool(get_pool_limit().unwrap_or(DEFAULT_POOL_LIMIT)).await?;
-    let pool_2 = pool.clone();
-    let pool_3 = pool.clone();
-
-    let manager_client: ManagerClient = iml_manager_client::get_client()?;
-
-    let influx_url: String = format!("http://{}", get_influxdb_addr());
-    let influx_client = InfluxClient::new(
-        Url::parse(&influx_url).expect("Influx URL is invalid."),
-        get_influxdb_metrics_db(),
-    );
 
     sqlx::migrate!("../../migrations").run(&pool).await?;
 
+    let pool_2 = pool.clone();
     tokio::spawn(async move {
         let mut interval = interval(Duration::from_secs(60));
         let mut snapshot_client_counts: HashMap<i32, MonitorState> = HashMap::new();
@@ -55,11 +45,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    tokio::spawn(handle_retention_rules(
-        manager_client,
-        influx_client,
-        pool_3.clone(),
-    ));
+    let manager_client: ManagerClient = iml_manager_client::get_client()?;
+    let pool_3 = pool.clone();
+    tokio::spawn(async move {
+        loop {
+            if let Err(e) = policy::main(manager_client.clone(), pool_3.clone()).await {
+                tracing::warn!("snapshot policy failed: {}", e);
+                tokio::time::delay_for(tokio::time::Duration::from_secs(10)).await;
+            }
+        }
+    });
 
     while let Some((fqdn, snap_map)) = s.try_next().await? {
         for (fs_name, snapshots) in snap_map {
