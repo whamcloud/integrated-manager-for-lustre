@@ -18,16 +18,29 @@ use emf_wire_types::{time, RunState};
 use futures::{future, Future, FutureExt, StreamExt, TryFutureExt, TryStreamExt};
 use lazy_static::lazy_static;
 use regex::Regex;
+use std::path::Path;
 use std::{str, time::Duration};
-use tokio::time::interval;
+use tokio::{fs::metadata, time::interval};
 
 static NTP_CONFIG_FILE: &str = "/etc/ntp.conf";
 
-async fn get_time_sync_services() -> Result<(RunState, RunState), EmfAgentError> {
-    let ntpd = emf_systemd::get_run_state("ntpd.service".into()).err_into();
-    let chronyd = emf_systemd::get_run_state("chronyd.service".into()).err_into();
-
-    future::try_join(ntpd, chronyd).await
+async fn get_service_state(service_file: String) -> Result<Option<RunState>, EmfAgentError> {
+    // Check if service file exists before getting RunState
+    if metadata(Path::new("/etc/systemd/system").join(service_file.as_str()))
+        .await
+        .is_ok()
+        || metadata(Path::new("/usr/lib/systemd/system/").join(service_file.as_str()))
+            .await
+            .is_ok()
+        || metadata(Path::new("/lib/systemd/system/").join(service_file.as_str()))
+            .await
+            .is_ok()
+    {
+        let state = emf_systemd::get_run_state(service_file).await?;
+        Ok(Some(state))
+    } else {
+        Ok(None)
+    }
 }
 
 fn parse_ntp_synced(output: impl ToString) -> Option<time::Synced> {
@@ -65,14 +78,18 @@ fn parse_chrony_time_offset(output: impl ToString) -> Option<time::Offset> {
 }
 
 async fn is_ntp_configured_by_emf() -> Result<bool, EmfAgentError> {
-    let x = emf_fs::stream_file_lines(NTP_CONFIG_FILE)
-        .boxed()
-        .try_filter(|l| future::ready(l.contains("# EMF_EDIT")))
-        .try_next()
-        .await?
-        .is_some();
+    if metadata(Path::new(NTP_CONFIG_FILE)).await.is_ok() {
+        let x = emf_fs::stream_file_lines(NTP_CONFIG_FILE)
+            .boxed()
+            .try_filter(|l| future::ready(l.contains("# EMF_EDIT")))
+            .try_next()
+            .await?
+            .is_some();
 
-    Ok(x)
+        Ok(x)
+    } else {
+        Ok(false)
+    }
 }
 
 async fn get_ntpstat_command() -> Result<String, EmfAgentError> {
@@ -140,12 +157,12 @@ async fn chronyd_synced() -> Result<(Option<time::Synced>, Option<time::Offset>)
 
 async fn time_synced<
     F1: Future<Output = Result<bool, EmfAgentError>>,
-    F2: Future<Output = Result<(RunState, RunState), EmfAgentError>>,
+    F2: Future<Output = Result<Option<RunState>, EmfAgentError>>,
     F3: Future<Output = Result<(Option<time::Synced>, Option<time::Offset>), EmfAgentError>>,
     F4: Future<Output = Result<(Option<time::Synced>, Option<time::Offset>), EmfAgentError>>,
 >(
     is_ntp_configured_by_emf: fn() -> F1,
-    get_time_sync_services: fn() -> F2,
+    get_service_state: fn(String) -> F2,
     ntpd_synced: fn() -> F3,
     chronyd_synced: fn() -> F4,
 ) -> Result<time::State, EmfAgentError> {
@@ -153,21 +170,28 @@ async fn time_synced<
 
     tracing::debug!("Configured: {:?}", configured);
 
-    let (ntp_runstate, chrony_runstate) = get_time_sync_services().await?;
+    let ntp_runstate = match get_service_state("ntpd.service".into()).await? {
+        Some(state) => Some(state),
+        None => get_service_state("ntp.service".into()).await?,
+    };
+
+    let chrony_runstate = get_service_state("chronyd.service".into()).await?;
 
     tracing::debug!(
-        "ntp runstate: {:?}. chrony runstate: {:?}",
+        "ntp runstate: {:?}. chrony runstate: {:?}.",
         ntp_runstate,
-        chrony_runstate
+        chrony_runstate,
     );
 
-    let state = if ntp_runstate >= RunState::Started && chrony_runstate >= RunState::Started {
+    let state = if ntp_runstate >= Some(RunState::Started)
+        && chrony_runstate >= Some(RunState::Started)
+    {
         // Both chronyd and ntpd should not be running at the same time.
         time::State::Multiple
-    } else if ntp_runstate < RunState::Started && chrony_runstate < RunState::Started {
+    } else if ntp_runstate < Some(RunState::Started) && chrony_runstate < Some(RunState::Started) {
         // Neither chronyd or ntpd are running
         time::State::None
-    } else if ntp_runstate >= RunState::Started {
+    } else if ntp_runstate >= Some(RunState::Started) {
         let (ntp_synced, ntp_offset) = ntpd_synced().await?;
 
         match ntp_synced {
@@ -175,7 +199,7 @@ async fn time_synced<
             Some(time::Synced::Unsynced) => time::State::Unsynced(ntp_offset),
             None => time::State::Unknown,
         }
-    } else {
+    } else if chrony_runstate >= Some(RunState::Started) {
         let (chrony_synced, chrony_offset) = chronyd_synced().await?;
 
         match chrony_synced {
@@ -183,6 +207,8 @@ async fn time_synced<
             Some(time::Synced::Unsynced) => time::State::Unsynced(chrony_offset),
             None => time::State::Unknown,
         }
+    } else {
+        time::State::None
     };
 
     Ok(state)
@@ -202,7 +228,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         let x = time_synced(
             is_ntp_configured_by_emf,
-            get_time_sync_services,
+            get_service_state,
             ntpd_synced,
             chronyd_synced,
         )
@@ -215,8 +241,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use futures::FutureExt;
-    use std::pin::Pin;
 
     #[test]
     fn test_is_ntp_synced() {
@@ -287,47 +311,65 @@ Total valid RX  : 1129"#;
 
     #[tokio::test]
     async fn test_session_with_ntp_configured_by_emf() -> Result<(), EmfAgentError> {
-        fn is_ntp_configured_by_emf(
-        ) -> Pin<Box<dyn Future<Output = Result<bool, EmfAgentError>> + Send>> {
+        async fn is_ntp_configured_by_emf() -> Result<bool, EmfAgentError> {
             println!("TestSideEffect: is ntp configured by emf");
-            Box::pin(future::ok::<bool, EmfAgentError>(true))
+            Ok(true)
         }
 
-        fn get_time_sync_services(
-        ) -> Pin<Box<dyn Future<Output = Result<(RunState, RunState), EmfAgentError>> + Send>>
+        async fn get_service_state(s: String) -> Result<Option<RunState>, EmfAgentError> {
+            match s.as_ref() {
+                "ntpd.service" => Ok(Some(RunState::Setup)),
+                _ => Ok(Some(RunState::Stopped)),
+            }
+        }
+
+        async fn ntpd_synced() -> Result<(Option<time::Synced>, Option<time::Offset>), EmfAgentError>
         {
-            future::ok((RunState::Setup, RunState::Stopped)).boxed()
+            Ok((Some(time::Synced::Synced), Some("949 ms".into())))
         }
 
-        fn ntpd_synced() -> Pin<
-            Box<
-                dyn Future<
-                        Output = Result<
-                            (Option<time::Synced>, Option<time::Offset>),
-                            EmfAgentError,
-                        >,
-                    > + Send,
-            >,
-        > {
-            future::ok((Some(time::Synced::Synced), Some("949 ms".into()))).boxed()
-        }
-
-        fn chronyd_synced() -> Pin<
-            Box<
-                dyn Future<
-                        Output = Result<
-                            (Option<time::Synced>, Option<time::Offset>),
-                            EmfAgentError,
-                        >,
-                    > + Send,
-            >,
-        > {
-            future::ok((Some(time::Synced::Unsynced), None)).boxed()
+        async fn chronyd_synced(
+        ) -> Result<(Option<time::Synced>, Option<time::Offset>), EmfAgentError> {
+            Ok((Some(time::Synced::Unsynced), None))
         }
 
         let r = time_synced(
             is_ntp_configured_by_emf,
-            get_time_sync_services,
+            get_service_state,
+            ntpd_synced,
+            chronyd_synced,
+        )
+        .await?;
+
+        insta::assert_debug_snapshot!(r);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_session_with_no_ntp() -> Result<(), EmfAgentError> {
+        async fn is_ntp_configured_by_emf() -> Result<bool, EmfAgentError> {
+            println!("TestSideEffect: is ntp configured by emf");
+            Ok(false)
+        }
+
+        async fn get_service_state(_s: String) -> Result<Option<RunState>, EmfAgentError> {
+            Ok(None)
+        }
+
+        async fn ntpd_synced() -> Result<(Option<time::Synced>, Option<time::Offset>), EmfAgentError>
+        {
+            Ok((Some(time::Synced::Synced), Some("949 ms".into())))
+        }
+
+        async fn chronyd_synced(
+        ) -> Result<(Option<time::Synced>, Option<time::Offset>), EmfAgentError> {
+            Ok((Some(time::Synced::Unsynced), None))
+        }
+
+        let r = time_synced(
+            is_ntp_configured_by_emf,
+            get_service_state,
             ntpd_synced,
             chronyd_synced,
         )
