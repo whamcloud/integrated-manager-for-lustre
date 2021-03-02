@@ -14,6 +14,7 @@ pub mod kuma;
 pub mod nginx;
 pub mod ostpool;
 pub mod postgres;
+pub mod run;
 pub mod server;
 pub mod snapshot;
 pub mod stratagem;

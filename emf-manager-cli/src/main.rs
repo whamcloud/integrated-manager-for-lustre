@@ -7,14 +7,13 @@ use emf_manager_cli::{
     display_utils::display_error,
     error::EmfManagerCliError,
     filesystem::{self, filesystem_cli},
-    selfname,
+    run, selfname,
     server::{self, server_cli},
     snapshot::{self, snapshot_cli},
     stratagem::{self, stratagem_cli},
     target::{self, target_cli},
 };
-
-use std::process::exit;
+use std::{path::PathBuf, process::exit};
 use structopt::clap::Shell;
 use structopt::StructOpt;
 
@@ -50,6 +49,13 @@ pub enum App {
     Target {
         #[structopt(subcommand)]
         command: target::TargetCommand,
+    },
+    #[structopt(name = "run")]
+
+    /// Run an input document on the EMF state-machine
+    Run {
+        /// Path of input document
+        path: PathBuf,
     },
     #[structopt(name = "debugapi", setting = structopt::clap::AppSettings::Hidden)]
     /// Direct API Access (for testing and debug)
@@ -105,6 +111,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         App::Snapshot { command } => snapshot_cli(command).await,
         App::Stratagem { command } => stratagem_cli(command).await,
         App::Target { command } => target_cli(command).await,
+        App::Run { path } => run::cli(path).await,
         App::Shell { shell, exe, output } => {
             if let Some(out) = output {
                 let mut o = std::fs::File::create(out)?;
