@@ -433,7 +433,7 @@ def create_disks(vbox)
   osts = (1..8).map { |x| ["OST#{x}_", '5120'] }
 
   [
-    %w[mgt_ 5800],
+    %w[mgt_ 84992],
     %w[mdt1_ 5120],
     %w[mdt2_ 5120],
   ].concat(osts).each_with_index do |(name, size), i|
@@ -470,13 +470,13 @@ end
 def attach_disks(vbox)
   dir = "#{get_machine_folder()}/esvdisks"
 
-  osts = (1..8).map { |x| ["OST#{x}_", '5120'] }
+  osts = (1..8).map { |x| "OST#{x}_" }
 
   [
-    %w[mgt_ 5800],
-    %w[mdt1_ 5120],
-    %w[mdt2_ 5120],
-  ].concat(osts).each_with_index do |(name, size), i|
+    "mgt_",
+    "mdt1_",
+    "mdt2_",
+  ].concat(osts).each_with_index do |name, i|
     file_to_disk = "#{dir}/#{name}.vdi"
     port = (i).to_s
 
