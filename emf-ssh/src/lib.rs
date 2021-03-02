@@ -177,6 +177,16 @@ impl Output {
     }
 }
 
+impl From<Output> for Result<Output, Error> {
+    fn from(o: Output) -> Result<Output, Error> {
+        if o.success() {
+            Ok(o)
+        } else {
+            Err(Error::FailedCmd(o.exit_status.unwrap_or(1), o.stderr))
+        }
+    }
+}
+
 pub trait SshHandleExt<Client> {
     fn create_channel(&mut self) -> BoxFuture<Result<Channel, Error>>;
     /// Send a file to the remote path using this session
@@ -212,6 +222,20 @@ impl SshHandleExt<Client> for Handle<Client> {
         let to = to.into();
 
         async move {
+            {
+                let dir = to.parent().ok_or_else(|| {
+                    io::Error::new(
+                        io::ErrorKind::NotFound,
+                        format!("Could not find parent of {}", to.to_string_lossy()),
+                    )
+                })?;
+
+                let mut ch = self.create_channel().await?;
+
+                ch.exec_cmd(&format!("mkdir -p {}", dir.to_string_lossy()))
+                    .await?;
+            }
+
             let mut ch = self.create_channel().await?;
 
             ch.push_file(from, to).await
@@ -226,6 +250,20 @@ impl SshHandleExt<Client> for Handle<Client> {
         let to = to.into();
 
         async move {
+            {
+                let dir = to.parent().ok_or_else(|| {
+                    io::Error::new(
+                        io::ErrorKind::NotFound,
+                        format!("Could not find parent of {}", to.to_string_lossy()),
+                    )
+                })?;
+
+                let mut ch = self.create_channel().await?;
+
+                ch.exec_cmd(&format!("mkdir -p {}", dir.to_string_lossy()))
+                    .await?;
+            }
+
             let mut ch = self.create_channel().await?;
 
             ch.stream_file(data, to).await
@@ -281,9 +319,8 @@ impl SshChannelExt for Channel {
         let to = to.into();
 
         async move {
-            let fut = self.exec(true, format!("cat - > {}", to.to_string_lossy()));
-
-            fut.await?;
+            self.exec(true, format!("cat - > {}", to.to_string_lossy()))
+                .await?;
 
             self.data(data).await?;
 
@@ -419,6 +456,11 @@ impl client::Handler for Client {
                 );
 
                 self.finished_bool(false)
+            }
+            Err(thrussh_keys::Error::CouldNotReadKey) => {
+                tracing::warn!("Server key could not be read for host: {}", &self.host);
+
+                self.finished_bool(true)
             }
             _ => {
                 tracing::warn!("Unknown error for host: {}, {:?}", &self.host, r);

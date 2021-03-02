@@ -8,6 +8,7 @@ pub mod host;
 pub mod log;
 pub mod ostpool;
 pub mod snapshot;
+pub mod state_machine;
 pub mod stratagem;
 pub mod target;
 pub mod task;

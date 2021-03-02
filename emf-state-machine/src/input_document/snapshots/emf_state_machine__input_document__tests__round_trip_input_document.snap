@@ -9,14 +9,19 @@ jobs:
     name: Add Mds1
     needs: []
     steps:
-      - action: host.add
+      - action: host.ssh_command
         id: step1
         inputs:
-          hosts:
-            - mds1
-          auth: ~
-          user: ~
-          tags: ~
+          host: mds1
+          run: touch test
+          ssh_opts:
+            port: 22
+            user: root
+            auth_opts:
+              agent: false
+              password: ~
+              key_path: ~
+              key_passphrase: ~
         outputs:
           id: this.id
   configure_lnet:
@@ -27,8 +32,7 @@ jobs:
       - action: lnet.configure
         id: step1
         inputs:
-          hosts:
-            - "${{needs.add_mds1.step1.outputs.id}}"
+          host: "${{needs.add_mds1.step1.outputs.id}}"
           network: tcp0
           ethernet: eth1
         outputs: ~

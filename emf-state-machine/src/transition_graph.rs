@@ -24,18 +24,22 @@ pub(crate) fn build_transition_graphs(schema: &Schema) -> BTreeMap<ComponentType
                 let connections: BTreeSet<(_, _, _)> = component
                     .actions
                     .iter()
-                    .map(|(action_name, action)| {
-                        if let Some(start_nodes) = &action.state.start {
+                    .filter_map(|(action_name, action)| {
+                        let state = action.state.as_ref()?;
+
+                        let x = if let Some(start_nodes) = state.start.as_ref() {
                             // Create an edge from each start node to the end node
                             let connections: BTreeSet<(_, _, _)> = start_nodes
                                 .iter()
-                                .map(|x| (x, &action.state.end, action_name))
+                                .map(|x| (x, &state.end, action_name))
                                 .collect();
 
                             connections
                         } else {
                             BTreeSet::new()
-                        }
+                        };
+
+                        Some(x)
                     })
                     .flatten()
                     .collect();

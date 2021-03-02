@@ -21,7 +21,7 @@ pub(crate) enum State {
 
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(untagged)]
-pub(crate) enum Input {
+pub enum Input {
     Start(NullInput),
     Stop(NullInput),
     Load(NullInput),
@@ -36,7 +36,7 @@ pub(crate) enum Input {
     Clone, Copy, Debug, Ord, PartialOrd, Eq, PartialEq, Hash, serde::Serialize, serde::Deserialize,
 )]
 #[serde(rename_all = "snake_case")]
-pub(crate) enum ActionName {
+pub enum ActionName {
     Start,
     Stop,
     Load,
@@ -97,53 +97,53 @@ where
 #[serde(deny_unknown_fields)]
 pub struct Configure {
     #[validate(length(min = 1))]
-    hosts: Vec<String>,
+    pub(crate) host: String,
     #[validate(length(min = 1))]
-    network: String,
+    pub(crate) network: String,
     #[validate(length(min = 1))]
-    ethernet: String,
+    pub(crate) ethernet: String,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Validate)]
-pub struct Unconfigure {
+pub(crate) struct Unconfigure {
     #[validate(length(min = 1))]
-    hosts: Vec<String>,
+    pub(crate) host: String,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Validate)]
-pub struct Start {
+pub(crate) struct Start {
     #[validate(length(min = 1))]
-    hosts: Vec<String>,
+    pub(crate) host: String,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Validate)]
-pub struct Stop {
+pub(crate) struct Stop {
     #[validate(length(min = 1))]
-    hosts: Vec<String>,
+    pub(crate) host: String,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Validate)]
-pub struct Load {
+pub(crate) struct Load {
     #[validate(length(min = 1))]
-    hosts: Vec<String>,
+    pub(crate) host: String,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Validate)]
-pub struct Unload {
+pub(crate) struct Unload {
     #[validate(length(min = 1))]
-    hosts: Vec<String>,
+    pub(crate) host: String,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Validate)]
-pub struct Export {
+pub(crate) struct Export {
     #[validate(length(min = 1))]
-    hosts: Vec<String>,
+    pub(crate) host: String,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Validate)]
-pub struct Import {
+pub(crate) struct Import {
     #[validate(length(min = 1))]
-    hosts: Vec<String>,
+    pub(crate) host: String,
     #[validate(length(min = 1))]
-    filepath: String,
+    pub(crate) filepath: String,
 }

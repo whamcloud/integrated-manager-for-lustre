@@ -16,7 +16,6 @@ pub mod ostpool;
 pub mod postgres;
 pub mod server;
 pub mod snapshot;
-pub mod ssh;
 pub mod stratagem;
 pub mod target;
 

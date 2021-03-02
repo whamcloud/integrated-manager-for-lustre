@@ -8,12 +8,15 @@ use emf_state_machine::{
     action_runner::{
         IncomingHostQueues, OutgoingHostQueues, INCOMING_HOST_QUEUES, OUTGOING_HOST_QUEUES,
     },
+    command_plan::{build_job_graphs, JobGraph},
+    executor::get_executor,
     input_document::deserialize_input_document,
     Error,
 };
 use emf_wire_types::{ActionResult, Fqdn};
 use futures::TryFutureExt;
-use std::{convert::Infallible, sync::Arc};
+use std::{collections::HashMap, convert::Infallible, sync::Arc};
+use tokio::sync::mpsc::UnboundedSender;
 use warp::{http, hyper::body::Bytes, Filter as _, Reply as _};
 
 // Default pool limit if not overridden by POOL_LIMIT
@@ -30,6 +33,8 @@ async fn main() -> Result<(), Error> {
     .await?;
 
     sqlx::migrate!("../migrations").run(&pool).await?;
+
+    let tx = get_executor();
 
     let get_actions = warp::get()
         .and(warp::header("x-client-fqdn"))
@@ -51,35 +56,42 @@ async fn main() -> Result<(), Error> {
         .and(warp::path("submit"))
         .and(warp::body::bytes())
         .and(warp::any().map(move || pool.clone()))
-        .and_then(|x: Bytes, pg_pool| {
-            async move {
-                let x = match deserialize_input_document(x) {
-                    Ok(x) => x,
-                    Err(e) => {
-                        return Ok(warp::reply::with_status(
-                            e.to_string(),
-                            http::StatusCode::BAD_REQUEST,
-                        )
-                        .into_response())
-                    }
-                };
+        .and(warp::any().map(move || tx.clone()))
+        .and_then(
+            |x: Bytes, pg_pool, tx: UnboundedSender<HashMap<String, JobGraph>>| {
+                async move {
+                    let x = match deserialize_input_document(x) {
+                        Ok(x) => x,
+                        Err(e) => {
+                            return Ok(warp::reply::with_status(
+                                e.to_string(),
+                                http::StatusCode::BAD_REQUEST,
+                            )
+                            .into_response())
+                        }
+                    };
 
-                let input_doc_json: serde_json::Value = serde_json::to_value(&x)?;
+                    let input_doc_json: serde_json::Value = serde_json::to_value(&x)?;
 
-                sqlx::query!(
-                    r#"
+                    sqlx::query!(
+                        r#"
                     INSERT INTO input_document (document)
                     VALUES ($1)
                     "#,
-                    input_doc_json
-                )
-                .execute(&pg_pool)
-                .await?;
+                        input_doc_json
+                    )
+                    .execute(&pg_pool)
+                    .await?;
 
-                Ok::<_, Error>("".into_response())
-            }
-            .map_err(warp::reject::custom)
-        });
+                    let graphs = build_job_graphs(x);
+
+                    let _ = tx.send(graphs);
+
+                    Ok::<_, Error>("".into_response())
+                }
+                .map_err(warp::reject::custom)
+            },
+        );
 
     let ingest_responses = warp::post()
         .and(warp::header("x-client-fqdn"))

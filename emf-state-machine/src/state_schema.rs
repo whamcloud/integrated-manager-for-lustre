@@ -24,13 +24,18 @@ pub(crate) static STATE_SCHEMA: Lazy<Schema> = Lazy::new(|| Schema {
                     State::Host(host::State::Down) => None,
                },
                actions: hashmap! {
-                   ActionName::Host(host::ActionName::Add) => Action {
-                      provisional: true,
-                      state: ActionState {
-                          start: None,
-                          end: State::Host(host::State::Up),
-                      }
-                   }
+                   ActionName::Host(host::ActionName::SshCommand) => Action {
+                       provisional: true,
+                       state: None
+                   },
+                   ActionName::Host(host::ActionName::SetupPlanesSsh) => Action {
+                       provisional: true,
+                       state: None
+                   },
+                   ActionName::Host(host::ActionName::SyncFileSsh) => Action {
+                       provisional: true,
+                       state: None
+                   },
                }
            },
            ComponentType::Lnet => Component {
@@ -43,59 +48,59 @@ pub(crate) static STATE_SCHEMA: Lazy<Schema> = Lazy::new(|| Schema {
                },
                 actions: hashmap! {
                     ActionName::Lnet(lnet::ActionName::Start) => Action {
-                        state: ActionState {
+                        state: Some(ActionState {
                             start: Some(hashset![State::Lnet(lnet::State::Down)]),
                             end: State::Lnet(lnet::State::Up)
-                        },
+                        }),
                         provisional: false
                     },
                     ActionName::Lnet(lnet::ActionName::Stop) => Action {
-                        state: ActionState {
+                        state: Some(ActionState {
                             start: Some(hashset![State::Lnet(lnet::State::Up)]),
                             end: State::Lnet(lnet::State::Down)
-                        },
+                        }),
                         provisional: false
                     },
                     ActionName::Lnet(lnet::ActionName::Load) => Action {
-                        state: ActionState {
+                        state: Some(ActionState {
                             start: Some(hashset![State::Lnet(lnet::State::Unloaded), State::Lnet(lnet::State::Up)]),
                             end: State::Lnet(lnet::State::Loaded)
-                        },
+                        }),
                         provisional: false
                     },
                     ActionName::Lnet(lnet::ActionName::Unload) => Action {
-                        state: ActionState {
+                        state: Some(ActionState {
                             start: Some(hashset![State::Lnet(lnet::State::Loaded)]),
                             end: State::Lnet(lnet::State::Unloaded)
-                        },
+                        }),
                         provisional: false
                     },
                     ActionName::Lnet(lnet::ActionName::Configure) => Action {
-                        state: ActionState {
+                        state: Some(ActionState {
                             start: Some(hashset![State::Lnet(lnet::State::Loaded)]),
                             end: State::Lnet(lnet::State::Configured)
-                        },
+                        }),
                         provisional: true
                     },
                     ActionName::Lnet(lnet::ActionName::Export) => Action {
-                        state: ActionState {
+                        state: Some(ActionState {
                             start: Some(hashset![State::Lnet(lnet::State::Configured)]),
                             end: State::Lnet(lnet::State::Up)
-                        },
+                        }),
                         provisional: false
                     },
                     ActionName::Lnet(lnet::ActionName::Unconfigure) => Action {
-                        state: ActionState {
+                        state: Some(ActionState {
                             start: Some(hashset![State::Lnet(lnet::State::Configured)]),
                             end: State::Lnet(lnet::State::Loaded)
-                        },
+                        }),
                         provisional: false
                     },
                     ActionName::Lnet(lnet::ActionName::Import) => Action {
-                        state: ActionState {
+                        state: Some(ActionState {
                             start: None,
                             end: State::Lnet(lnet::State::Unloaded)
-                        },
+                        }),
                         provisional: false
                     },
                 }
@@ -107,10 +112,10 @@ pub(crate) static STATE_SCHEMA: Lazy<Schema> = Lazy::new(|| Schema {
                },
                actions: hashmap! {
                    ActionName::ClientMount(client_mount::ActionName::Create) => Action {
-                       state: ActionState {
+                       state: Some(ActionState {
                            start: None,
                            end: State::ClientMount(client_mount::State::Mounted)
-                       },
+                       }),
                        provisional: true,
                    }
                }
@@ -127,24 +132,24 @@ pub(crate) static STATE_SCHEMA: Lazy<Schema> = Lazy::new(|| Schema {
             },
             actions: hashmap! {
                 ActionName::Mgt(mgt::ActionName::Format) => Action {
-                    state: ActionState {
+                    state: Some(ActionState {
                         start: None,
                         end: State::Mgt(mgt::State::Unmounted)
-                    },
+                    }),
                     provisional: true,
                 },
                 ActionName::Mgt(mgt::ActionName::Mount) => Action {
-                    state: ActionState {
+                    state: Some(ActionState {
                         start: Some(hashset![State::Mgt(mgt::State::Unmounted)]),
                         end: State::Mgt(mgt::State::Mounted)
-                    },
+                    }),
                     provisional: false,
                 },
                 ActionName::Mgt(mgt::ActionName::Unmount) => Action {
-                    state: ActionState {
+                    state: Some(ActionState {
                         start: Some(hashset![State::Mgt(mgt::State::Mounted)]),
                         end: State::Mgt(mgt::State::Unmounted)
-                    },
+                    }),
                     provisional: false,
                 }
             }
@@ -161,24 +166,24 @@ pub(crate) static STATE_SCHEMA: Lazy<Schema> = Lazy::new(|| Schema {
             },
             actions: hashmap! {
                 ActionName::MgtMdt(mgt_mdt::ActionName::Format) => Action {
-                    state: ActionState {
+                    state: Some(ActionState {
                         start: None,
                         end: State::MgtMdt(mgt_mdt::State::Unmounted)
-                    },
+                    }),
                     provisional: true,
                 },
                 ActionName::MgtMdt(mgt_mdt::ActionName::Mount) => Action {
-                    state: ActionState {
+                    state: Some(ActionState {
                         start: Some(hashset![State::MgtMdt(mgt_mdt::State::Unmounted)]),
                         end: State::MgtMdt(mgt_mdt::State::Mounted)
-                    },
+                    }),
                     provisional: false,
                 },
                 ActionName::MgtMdt(mgt_mdt::ActionName::Unmount) => Action {
-                    state: ActionState {
+                    state: Some(ActionState {
                         start: Some(hashset![State::MgtMdt(mgt_mdt::State::Mounted)]),
                         end: State::MgtMdt(mgt_mdt::State::Unmounted)
-                    },
+                    }),
                     provisional: false,
                 }
             }
@@ -195,24 +200,24 @@ pub(crate) static STATE_SCHEMA: Lazy<Schema> = Lazy::new(|| Schema {
             },
             actions: hashmap! {
                 ActionName::Mdt(mdt::ActionName::Format) => Action {
-                    state: ActionState {
+                    state: Some(ActionState {
                         start: None,
                         end: State::Mdt(mdt::State::Unmounted)
-                    },
+                    }),
                     provisional: true,
                 },
                 ActionName::Mdt(mdt::ActionName::Mount) => Action {
-                    state: ActionState {
+                    state: Some(ActionState {
                         start: Some(hashset![State::Mdt(mdt::State::Unmounted)]),
                         end: State::Mdt(mdt::State::Mounted)
-                    },
+                    }),
                     provisional: false,
                 },
                 ActionName::Mdt(mdt::ActionName::Unmount) => Action {
-                    state: ActionState {
+                    state: Some(ActionState {
                         start: Some(hashset![State::Mdt(mdt::State::Mounted)]),
                         end: State::Mdt(mdt::State::Unmounted)
-                    },
+                    }),
                     provisional: false,
                 }
             }
@@ -229,24 +234,24 @@ pub(crate) static STATE_SCHEMA: Lazy<Schema> = Lazy::new(|| Schema {
             },
             actions: hashmap! {
                 ActionName::Ost(ost::ActionName::Format) => Action {
-                    state: ActionState {
+                    state: Some(ActionState {
                         start: None,
                         end: State::Ost(ost::State::Unmounted)
-                    },
+                    }),
                     provisional: true,
                 },
                 ActionName::Ost(ost::ActionName::Mount) => Action {
-                    state: ActionState {
+                    state: Some(ActionState {
                         start: Some(hashset![State::Ost(ost::State::Unmounted)]),
                         end: State::Ost(ost::State::Mounted)
-                    },
+                    }),
                     provisional: false,
                 },
                 ActionName::Ost(ost::ActionName::Unmount) => Action {
-                    state: ActionState {
+                    state: Some(ActionState {
                         start: Some(hashset![State::Ost(ost::State::Mounted)]),
                         end: State::Ost(ost::State::Unmounted)
-                    },
+                    }),
                     provisional: false,
                 }
             }
@@ -289,24 +294,24 @@ pub(crate) static STATE_SCHEMA: Lazy<Schema> = Lazy::new(|| Schema {
             },
             actions: hashmap! {
                 ActionName::Filesystem(filesystem::ActionName::Start) => Action {
-                    state: ActionState {
+                    state: Some(ActionState {
                         start: Some(hashset![State::Filesystem(filesystem::State::Stopped), State::Filesystem(filesystem::State::Unavailable)]),
                         end: State::Filesystem(filesystem::State::Started)
-                    },
+                    }),
                     provisional: false,
                 },
                 ActionName::Filesystem(filesystem::ActionName::Stop) => Action {
-                    state: ActionState {
+                    state: Some(ActionState {
                         start: Some(hashset![State::Filesystem(filesystem::State::Available)]),
                         end: State::Filesystem(filesystem::State::Stopped)
-                    },
+                    }),
                     provisional: false,
                 },
                 ActionName::Filesystem(filesystem::ActionName::Create) => Action {
-                    state: ActionState {
+                    state: Some(ActionState {
                         start: None,
                         end: State::Filesystem(filesystem::State::Stopped)
-                    },
+                    }),
                     provisional: true,
                 }
             }
@@ -317,7 +322,7 @@ pub(crate) static STATE_SCHEMA: Lazy<Schema> = Lazy::new(|| Schema {
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
 #[serde(untagged)]
-pub(crate) enum Input {
+pub enum Input {
     Host(host::Input),
     Lnet(lnet::Input),
     ClientMount(client_mount::Input),
@@ -331,7 +336,9 @@ pub(crate) enum Input {
 impl ValidateAddon for Input {
     fn validate(&self) -> Result<(), ValidationErrors> {
         match self {
-            Self::Host(host::Input::Add(x)) => x.validate()?,
+            Self::Host(host::Input::SshCommand(x)) => x.validate()?,
+            Self::Host(host::Input::SetupPlanesSsh(x)) => x.validate()?,
+            Self::Host(host::Input::SyncFileSsh(x)) => x.validate()?,
             Self::Lnet(lnet::Input::Configure(x)) => x.validate()?,
             Self::Lnet(lnet::Input::Export(x)) => x.validate()?,
             Self::Lnet(lnet::Input::Import(x)) => x.validate()?,
@@ -368,7 +375,7 @@ impl ValidateAddon for Input {
     Clone, Copy, Debug, Ord, PartialOrd, Eq, PartialEq, Hash, serde::Serialize, serde::Deserialize,
 )]
 #[serde(rename_all = "snake_case")]
-pub(crate) enum ActionName {
+pub enum ActionName {
     Host(host::ActionName),
     Lnet(lnet::ActionName),
     ClientMount(client_mount::ActionName),
@@ -421,7 +428,7 @@ pub(crate) struct ActionState {
 pub(crate) struct Action {
     #[serde(default)]
     pub provisional: bool,
-    pub state: ActionState,
+    pub state: Option<ActionState>,
 }
 
 #[derive(Debug, serde::Deserialize, serde::Serialize)]

@@ -5,11 +5,14 @@ name = "emf-state-machine"
 version = "0.1.0"
 
 [dependencies]
+combine = "=4.1.0"
 emf-manager-env = {path = "../emf-manager-env", version = "0.4"}
 emf-postgres = {path = "../emf-postgres", version = "0.4"}
+emf-ssh = {path = "../emf-ssh", version = "0.1"}
 emf-tracing = {version = "0.4", path = "../emf-tracing"}
 emf-wire-types = {path = "../emf-wire-types", version = "0.4"}
 futures = "0.3"
+hostlist-parser = "0.1.3"
 humantime-serde = "1.0"
 maplit = "1"
 once_cell = "1.5"
@@ -21,6 +24,7 @@ serde_yaml = "0.8"
 sqlx = {version = "0.5", features = ["json", "offline", "postgres", "runtime-tokio-rustls", "chrono"]}
 thiserror = "1.0"
 tokio = {version = "1", features = ["macros", "rt-multi-thread"]}
+tokio-stream = {version = "0.1", features = ["net"]}
 uuid = {version = "0.8", features = ["v4"]}
 validator = {version = "0.12", features = ["derive"]}
 warp = "0.3"

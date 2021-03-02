@@ -20,6 +20,7 @@ use serde::{
     de::{self, DeserializeSeed, IntoDeserializer, MapAccess, Visitor},
     Deserialize, Deserializer,
 };
+pub use ssh_opts::*;
 use std::{
     collections::{BTreeSet, HashMap},
     convert::TryFrom,
@@ -158,12 +159,10 @@ impl fmt::Display for InputDocumentErrors {
             .0
             .iter()
             .map(|x| match x {
-                InputDocumentError::ValidationErrors(_errs) => {
-                    format!(
-                        "validation error: {}",
-                        serde_json::to_string_pretty(_errs).unwrap()
-                    )
+                InputDocumentError::ValidationErrors(errs) => {
+                    format!("{:?}", errs)
                 }
+                InputDocumentError::SerdeYamlError(err) => format!("{}", err),
                 InputDocumentError::SerdeYamlPathToError(err) => {
                     format!("{}", err)
                 }
@@ -180,6 +179,8 @@ pub enum InputDocumentError {
     #[error(transparent)]
     SerdeYamlPathToError(#[from] serde_path_to_error::Error<serde_yaml::Error>),
     #[error(transparent)]
+    SerdeYamlError(#[from] serde_yaml::Error),
+    #[error(transparent)]
     ValidationErrors(#[from] validator::ValidationErrors),
 }
 
@@ -187,17 +188,17 @@ pub enum InputDocumentError {
 #[serde(default)]
 pub struct InputDocument {
     /// The version of this input document
-    version: f32,
+    pub(crate) version: f32,
     /// Jobs to submit to the state-machine.
     #[validate]
-    jobs: HashMap<String, Job>,
+    pub(crate) jobs: HashMap<String, Job>,
     /// Whether the state-machine should execute this input document or return the changes that would be made if it did. Defaults to true.
-    dry_run: bool,
+    pub(crate) dry_run: bool,
     /// How long this input document should wait for completion before aborting. Defaults to no timeout.
     #[serde(with = "humantime_serde")]
-    timeout: Option<Duration>,
+    pub(crate) timeout: Option<Duration>,
     /// Whether the relevant components should be refreshed before executing the input document. Defaults to false.
-    refresh: bool,
+    pub(crate) refresh: bool,
 }
 
 impl Default for InputDocument {
@@ -213,38 +214,50 @@ impl Default for InputDocument {
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Validate)]
-pub struct Job {
+pub(crate) struct Job {
     /// The name to display for this job.
     #[validate(length(min = 1))]
-    name: String,
+    pub(crate) name: String,
     /// A list of jobs that must be completed before this job can run.
     #[serde(default)]
-    needs: BTreeSet<String>,
+    pub(crate) needs: BTreeSet<String>,
     /// A list of steps to submit to the state-machine for this job. Each step will run sequentially
     #[validate]
     #[validate(length(min = 1))]
-    steps: Vec<Step>,
+    pub(crate) steps: Vec<Step>,
 }
 
 #[derive(serde::Serialize, Validate)]
-pub(crate) struct Step {
+pub struct Step {
     /// The action to be run from the registry in `component.action` format.
-    pub action: StepPair,
+    pub(crate) action: StepPair,
     /// The step identifier.
     #[validate(length(min = 1))]
-    pub id: String,
+    pub(crate) id: String,
     /// The input to supply to this step.
     #[serde(default)]
     #[validate]
-    pub inputs: Input,
+    pub(crate) inputs: Input,
     /// Output that will be used in a future job when building the graph.
-    pub outputs: Option<HashMap<String, serde_json::Value>>,
+    pub(crate) outputs: Option<HashMap<String, serde_json::Value>>,
 }
 
-#[derive(Clone, Copy, serde::Serialize, serde::Deserialize)]
+impl fmt::Display for Step {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Step {}", self.id)
+    }
+}
+
+#[derive(Clone, Copy, Eq, PartialEq, Hash, serde::Serialize, serde::Deserialize)]
 #[serde(try_from = "String")]
 #[serde(into = "String")]
-pub(crate) struct StepPair(ComponentType, ActionName);
+pub struct StepPair(ComponentType, ActionName);
+
+impl StepPair {
+    pub fn new(component: ComponentType, action: ActionName) -> Self {
+        Self(component, action)
+    }
+}
 
 impl TryFrom<String> for StepPair {
     type Error = io::Error;
@@ -314,7 +327,7 @@ impl From<StepPair> for String {
 #[derive(Clone, Copy, serde::Serialize, serde::Deserialize, Validate)]
 #[serde(try_from = "serde_json::Value")]
 #[serde(deny_unknown_fields)]
-pub(crate) struct NullInput;
+pub struct NullInput;
 
 impl TryFrom<serde_json::Value> for NullInput {
     type Error = io::Error;
@@ -345,7 +358,8 @@ where
 pub fn deserialize_input_document(
     document: impl AsRef<[u8]>,
 ) -> Result<InputDocument, InputDocumentErrors> {
-    let val: serde_yaml::Value = serde_yaml::from_slice(document.as_ref()).unwrap();
+    let val: serde_yaml::Value =
+        serde_yaml::from_slice(document.as_ref()).map_err(InputDocumentError::SerdeYamlError)?;
     let des = val.into_deserializer();
 
     let input_doc: InputDocument =
@@ -356,6 +370,95 @@ pub fn deserialize_input_document(
         .map_err(InputDocumentError::ValidationErrors)?;
 
     Ok(input_doc)
+}
+
+pub mod ssh_opts {
+    use validator::{Validate, ValidationError};
+
+    #[derive(Debug, serde::Serialize, serde::Deserialize, Validate)]
+    #[serde(default)]
+    pub struct SshOpts {
+        /// SSH port
+        pub port: u16,
+        /// SSH user
+        pub user: String,
+        #[validate(custom(function = "validate_auth"))]
+        pub auth_opts: AuthOpts,
+    }
+
+    impl Default for SshOpts {
+        fn default() -> Self {
+            Self {
+                port: 22,
+                user: "root".to_string(),
+
+                auth_opts: AuthOpts {
+                    agent: false,
+                    password: None,
+                    key_path: None,
+                    key_passphrase: None,
+                },
+            }
+        }
+    }
+
+    #[derive(Debug, serde::Serialize, serde::Deserialize)]
+
+    pub struct AuthOpts {
+        /// Use ssh-agent to authenticate
+        pub agent: bool,
+        /// Use password authentication
+        pub password: Option<String>,
+        /// Use private key authentication
+        pub key_path: Option<String>,
+        /// Private key passphrase
+        pub key_passphrase: Option<String>,
+    }
+
+    impl From<&AuthOpts> for emf_ssh::Auth {
+        fn from(opts: &AuthOpts) -> Self {
+            if opts.agent {
+                Self::Agent
+            } else if let Some(pw) = &opts.password {
+                Self::Password(pw.to_string())
+            } else if let Some(key_path) = &opts.key_path {
+                Self::Key {
+                    key_path: key_path.to_string(),
+                    password: opts.key_passphrase.as_ref().map(|x| x.to_string()),
+                }
+            } else {
+                Self::Auto
+            }
+        }
+    }
+
+    fn validate_auth(auth: &AuthOpts) -> Result<(), ValidationError> {
+        if auth.agent
+            && auth
+                .key_path
+                .as_ref()
+                .or(auth.key_passphrase.as_ref())
+                .or(auth.password.as_ref())
+                .is_some()
+        {
+            return Err(ValidationError::new(
+                "ssh-agent auth cannot be used with key or password auth",
+            ));
+        }
+
+        if auth
+            .password
+            .as_ref()
+            .and(auth.key_path.as_ref().or(auth.key_passphrase.as_ref()))
+            .is_some()
+        {
+            return Err(ValidationError::new(
+                "SSH password auth cannot be used with key-based auth",
+            ));
+        }
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -370,9 +473,10 @@ jobs:
     add_mds1:
         name: Add Mds1
         steps:
-            - action: host.add
+            - action: host.ssh_command
               inputs:
-                  fqdn: mds1
+                  host: mds1
+                  run: touch test
               outputs:
                   id: this.id
     configure_lnet:
@@ -403,11 +507,11 @@ jobs:
   add_mds1:
     name: Add Mds1
     steps:
-      - action: host.add
+      - action: host.ssh_command
         id: step1
         inputs:
-          hosts:
-            - mds1
+          host: mds1
+          run: touch test
         outputs:
           id: this.id
   configure_lnet:
@@ -419,8 +523,7 @@ jobs:
         inputs:
           network: tcp0
           ethernet: eth1
-          hosts:
-            - "${{needs.add_mds1.step1.outputs.id}}"
+          host: "${{needs.add_mds1.step1.outputs.id}}"
         id: step1
         outputs:
 timeout: 5 minutes"#
@@ -436,18 +539,18 @@ timeout: 5 minutes"#
     }
 
     #[test]
-    fn round_trip_input_document() -> Result<(), InputDocumentErrors> {
+    fn round_trip_input_document() -> Result<(), Box<dyn std::error::Error>> {
         let s = r#"
 version: 1
 jobs:
   add_mds1:
     name: Add Mds1
     steps:
-      - action: host.add
+      - action: host.ssh_command
         id: step1
         inputs:
-          hosts:
-            - mds1
+          host: mds1
+          run: touch test
         outputs:
           id: this.id
   configure_lnet:
@@ -459,8 +562,7 @@ jobs:
         inputs:
           network: tcp0
           ethernet: eth1
-          hosts:
-            - "${{needs.add_mds1.step1.outputs.id}}"
+          host: "${{needs.add_mds1.step1.outputs.id}}"
         id: step1
 timeout: 5 minutes"#
             .trim();
@@ -468,7 +570,7 @@ timeout: 5 minutes"#
         let doc = deserialize_input_document(s)?;
 
         // DB storage format
-        let s = serde_json::to_string(&doc).unwrap();
+        let s = serde_json::to_string(&doc)?;
 
         let doc = deserialize_input_document(&s)?;
 
@@ -487,11 +589,11 @@ jobs:
     add_mds1:
         name: Add Mds1
         steps:
-            - action: host.add
+            - action: host.ssh_command
               id: step1
               inputs:
-                  hosts:
-                    - mds1
+                  host: mds1
+                  run: touch test
                   foo: bar
               outputs:
                   id: this.id
@@ -515,9 +617,9 @@ jobs:
         steps:
             - id: step1
               inputs:
-                hosts:
-                  - mds1
-              action: host.add
+                host: mds1
+                run: touch test
+              action: host.ssh_command
               outputs:
                 id: this.id
 timeout: 2 minutes"#
@@ -540,8 +642,8 @@ jobs:
         steps:
             - id: step1
               inputs:
-                hosts:
-                  - mds1
+                host: mds1
+                run: touch test
               outputs:
                 id: this.id
 timeout: 2 minutes"#
@@ -559,17 +661,17 @@ timeout: 2 minutes"#
         let s = r#"
 version: 1
 jobs:
-    add_mds1:
-        name: Add Mds1
-        steps:
-            - action: host.add
-              inputs:
-                hosts:
-                  - mds1
-              outputs:
-                id: this.id
-timeout: 2 minutes"#
-            .trim();
+  deploy_hosts:
+    name: Deploy Hosts
+
+    steps:
+      - action: host.setup_planes_ssh
+        inputs:
+          hosts:
+            - node[2-4]
+          cp_addr: node1
+"#
+        .trim();
 
         let err = deserialize_input_document(s).err().unwrap();
 
@@ -587,7 +689,7 @@ jobs:
         name: Add Mds1
         steps:
             - id: step1
-              action: host.add
+              action: host.ssh_command
               outputs:
 timeout: 2 minutes"#
             .trim();
@@ -608,7 +710,7 @@ jobs:
         name: Add Mds1
         steps:
             - id: step1
-              action: host.add
+              action: host.ssh_command
               inputs: {}
               outputs:
 timeout: 2 minutes"#
@@ -646,7 +748,7 @@ timeout: 2 minutes"#
 
         match err.0[0] {
             InputDocumentError::ValidationErrors(_) => {}
-            InputDocumentError::SerdeYamlPathToError(_) => panic!("Expected a validation error!"),
+            _ => panic!("Expected a validation error!"),
         }
 
         Ok(())
@@ -678,7 +780,7 @@ timeout: 2 minutes"#
 
         match err.0[0] {
             InputDocumentError::ValidationErrors(_) => {}
-            InputDocumentError::SerdeYamlPathToError(_) => panic!("Expected a validation error!"),
+            _ => panic!("Expected a validation error!"),
         }
 
         Ok(())
@@ -709,11 +811,93 @@ timeout: 2 minutes"#
         let err = deserialize_input_document(s).err().unwrap();
 
         match err.0[0] {
-            InputDocumentError::ValidationErrors(_) => {
+            InputDocumentError::SerdeYamlPathToError(_) => {}
+            _ => {
                 panic!("Expected a SerdeYamlPathToError error!")
             }
-            InputDocumentError::SerdeYamlPathToError(_) => {}
         }
+
+        Ok(())
+    }
+
+    #[test]
+    fn input_deploy_host() -> Result<(), InputDocumentErrors> {
+        let s = r#"
+version: 1
+jobs:
+  deploy_hosts:
+    name: Deploy Hosts
+
+    steps:
+      - action: host.setup_planes_ssh
+        id: Setup Control plane and dataplane
+        inputs:
+          hosts:
+            - node[2-4]
+          cp_addr: node1
+
+      - action: host.sync_file_ssh
+        id: Sync dataplane token across cluster
+        inputs:
+          from: /etc/emf/tokens/dataplane-token
+          hosts:
+            - node[2-4]
+
+      - action: host.ssh_command
+        id: Install emf agent node1
+        inputs:
+          host: node1
+          run: yum install -y rust-emf-agent rust-emf-cli rust-emf-cli-bash-completion
+
+      - action: host.ssh_command
+        id: Install emf agent node2
+        inputs:
+          host: node2
+          run: yum install -y rust-emf-agent rust-emf-cli rust-emf-cli-bash-completion
+
+      - action: host.ssh_command
+        id: Install emf agent node3
+        inputs:
+          host: node3
+          run: yum install -y rust-emf-agent rust-emf-cli rust-emf-cli-bash-completion
+
+      - action: host.ssh_command
+        id: Install emf agent node4
+        inputs:
+          host: node4
+          run: yum install -y rust-emf-agent rust-emf-cli rust-emf-cli-bash-completion
+
+      - action: host.ssh_command
+        id: Start agent node1
+        inputs:
+          host: node1
+          run: systemctl enable --now emf-agent.target
+
+      - action: host.ssh_command
+        id: Start agent node2
+        inputs:
+          host: node2
+          run: systemctl enable --now emf-agent.target
+
+      - action: host.ssh_command
+        id: Start agent node3
+        inputs:
+          host: node3
+          run: systemctl enable --now emf-agent.target
+
+      - action: host.ssh_command
+        id: Start agent node4
+        inputs:
+          host: node4
+          run: systemctl enable --now emf-agent.target
+"#
+        .trim();
+
+        let doc = deserialize_input_document(s)?;
+
+        insta::with_settings!({sort_maps => true}, {
+            insta::assert_yaml_snapshot!(doc);
+        });
 
         Ok(())
     }

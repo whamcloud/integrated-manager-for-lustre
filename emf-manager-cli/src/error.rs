@@ -77,7 +77,6 @@ pub enum EmfManagerCliError {
     SerdeJsonError(#[from] serde_json::error::Error),
     SystemdError(#[from] emf_systemd::SystemdError),
     TokioJoinError(#[from] tokio::task::JoinError),
-    EmfSShError(#[from] emf_ssh::Error),
     Utf8Error(#[from] Utf8Error),
 }
 
@@ -106,7 +105,6 @@ impl std::fmt::Display for EmfManagerCliError {
             EmfManagerCliError::SerdeJsonError(ref err) => write!(f, "{}", err),
             EmfManagerCliError::SystemdError(ref err) => write!(f, "{}", err),
             EmfManagerCliError::TokioJoinError(ref err) => write!(f, "{}", err),
-            EmfManagerCliError::EmfSShError(ref err) => write!(f, "{}", err),
             EmfManagerCliError::Utf8Error(ref err) => write!(f, "{}", err),
         }
     }

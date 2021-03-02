@@ -6,7 +6,7 @@ version = "0.4.0"
 
 [dependencies]
 chrono = "0.4"
-chrono-humanize = "0.0.11"
+chrono-humanize = "0.1.2"
 combine = "=4.1.0"
 console = "0.11"
 dialoguer = "0.6"
@@ -19,7 +19,6 @@ emf-graphql-queries = {path = "../emf-graphql-queries", version = "0.2"}
 emf-influx = {path = "../emf-influx", version = "0.2"}
 emf-manager-client = {path = "../emf-manager-client", version = "0.4"}
 emf-request-retry = {path = "../emf-request-retry", version = "0.4.0"}
-emf-ssh = {path = "../emf-ssh", version = "0.1"}
 emf-systemd = {path = "../emf-systemd", version = "0.4"}
 emf-tracing = {version = "0.4", path = "../emf-tracing"}
 emf-wire-types = {path = "../emf-wire-types", version = "0.4", features = ["cli"]}
@@ -28,7 +27,7 @@ hostlist-parser = "0.1.3"
 indicatif = "0.15"
 lazy_static = "1.4"
 liblustreapi = {path = "../liblustreapi", version = "0.4"}
-nix = "0.19"
+nix = "0.20"
 number-formatter = {path = "../number-formatter", version = "0.2"}
 prettytable-rs = "0.8"
 reqwest = {version = "0.11", default-features = false, features = ["rustls-tls", "json"]}

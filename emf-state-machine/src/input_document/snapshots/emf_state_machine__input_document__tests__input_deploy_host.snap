@@ -1,0 +1,157 @@
+---
+source: emf-state-machine/src/input_document/mod.rs
+expression: doc
+
+---
+version: 1.0
+jobs:
+  deploy_hosts:
+    name: Deploy Hosts
+    needs: []
+    steps:
+      - action: host.setup_planes_ssh
+        id: Setup Control plane and dataplane
+        inputs:
+          hosts:
+            - "node[2-4]"
+          cp_addr: node1
+          ssh_opts:
+            port: 22
+            user: root
+            auth_opts:
+              agent: false
+              password: ~
+              key_path: ~
+              key_passphrase: ~
+        outputs: ~
+      - action: host.sync_file_ssh
+        id: Sync dataplane token across cluster
+        inputs:
+          hosts:
+            - "node[2-4]"
+          from: /etc/emf/tokens/dataplane-token
+          ssh_opts:
+            port: 22
+            user: root
+            auth_opts:
+              agent: false
+              password: ~
+              key_path: ~
+              key_passphrase: ~
+        outputs: ~
+      - action: host.ssh_command
+        id: Install emf agent node1
+        inputs:
+          host: node1
+          run: yum install -y rust-emf-agent rust-emf-cli rust-emf-cli-bash-completion
+          ssh_opts:
+            port: 22
+            user: root
+            auth_opts:
+              agent: false
+              password: ~
+              key_path: ~
+              key_passphrase: ~
+        outputs: ~
+      - action: host.ssh_command
+        id: Install emf agent node2
+        inputs:
+          host: node2
+          run: yum install -y rust-emf-agent rust-emf-cli rust-emf-cli-bash-completion
+          ssh_opts:
+            port: 22
+            user: root
+            auth_opts:
+              agent: false
+              password: ~
+              key_path: ~
+              key_passphrase: ~
+        outputs: ~
+      - action: host.ssh_command
+        id: Install emf agent node3
+        inputs:
+          host: node3
+          run: yum install -y rust-emf-agent rust-emf-cli rust-emf-cli-bash-completion
+          ssh_opts:
+            port: 22
+            user: root
+            auth_opts:
+              agent: false
+              password: ~
+              key_path: ~
+              key_passphrase: ~
+        outputs: ~
+      - action: host.ssh_command
+        id: Install emf agent node4
+        inputs:
+          host: node4
+          run: yum install -y rust-emf-agent rust-emf-cli rust-emf-cli-bash-completion
+          ssh_opts:
+            port: 22
+            user: root
+            auth_opts:
+              agent: false
+              password: ~
+              key_path: ~
+              key_passphrase: ~
+        outputs: ~
+      - action: host.ssh_command
+        id: Start agent node1
+        inputs:
+          host: node1
+          run: systemctl enable --now emf-agent.target
+          ssh_opts:
+            port: 22
+            user: root
+            auth_opts:
+              agent: false
+              password: ~
+              key_path: ~
+              key_passphrase: ~
+        outputs: ~
+      - action: host.ssh_command
+        id: Start agent node2
+        inputs:
+          host: node2
+          run: systemctl enable --now emf-agent.target
+          ssh_opts:
+            port: 22
+            user: root
+            auth_opts:
+              agent: false
+              password: ~
+              key_path: ~
+              key_passphrase: ~
+        outputs: ~
+      - action: host.ssh_command
+        id: Start agent node3
+        inputs:
+          host: node3
+          run: systemctl enable --now emf-agent.target
+          ssh_opts:
+            port: 22
+            user: root
+            auth_opts:
+              agent: false
+              password: ~
+              key_path: ~
+              key_passphrase: ~
+        outputs: ~
+      - action: host.ssh_command
+        id: Start agent node4
+        inputs:
+          host: node4
+          run: systemctl enable --now emf-agent.target
+          ssh_opts:
+            port: 22
+            user: root
+            auth_opts:
+              agent: false
+              password: ~
+              key_path: ~
+              key_passphrase: ~
+        outputs: ~
+dry_run: true
+timeout: ~
+refresh: false
+

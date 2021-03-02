@@ -20,7 +20,7 @@ pub(crate) enum State {
 
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(untagged)]
-pub(crate) enum Input {
+pub enum Input {
     Start(Start),
     Stop(Stop),
     Create(Create),
@@ -30,7 +30,7 @@ pub(crate) enum Input {
     Clone, Copy, Debug, Ord, PartialOrd, Eq, PartialEq, Hash, serde::Serialize, serde::Deserialize,
 )]
 #[serde(rename_all = "snake_case")]
-pub(crate) enum ActionName {
+pub enum ActionName {
     Start,
     Stop,
     Create,
@@ -74,14 +74,14 @@ where
 #[serde(deny_unknown_fields)]
 pub struct Start {
     #[validate(length(min = 1))]
-    name: String,
+    pub(crate) name: String,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct Stop {
     #[validate(length(min = 1))]
-    name: String,
+    pub(crate) name: String,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
@@ -96,12 +96,12 @@ pub enum MgtType {
 #[serde(deny_unknown_fields)]
 pub struct Create {
     #[validate(length(min = 1))]
-    ost_volumes: Vec<String>,
+    pub(crate) ost_volumes: Vec<String>,
     #[validate(length(min = 1))]
-    name: String,
-    mgt_type: MgtType,
+    pub(crate) name: String,
+    pub(crate) mgt_type: MgtType,
     #[validate(length(min = 1))]
-    mgt: String,
+    pub(crate) mgt: String,
     #[validate(length(min = 1))]
-    mdt_volumes: Vec<String>,
+    pub(crate) mdt_volumes: Vec<String>,
 }

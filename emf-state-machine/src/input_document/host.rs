@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file
 
-use crate::input_document::deserialize_input;
+use crate::input_document::{deserialize_input, SshOpts};
 use serde::Deserializer;
 use std::{
     convert::TryFrom,
@@ -22,22 +22,28 @@ pub(crate) enum State {
 
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(untagged)]
-pub(crate) enum Input {
-    Add(Add),
+pub enum Input {
+    SshCommand(SshCommand),
+    SetupPlanesSsh(SetupPlanesSsh),
+    SyncFileSsh(SyncFileSsh),
 }
 
 #[derive(
     Clone, Copy, Debug, Ord, PartialOrd, Eq, PartialEq, Hash, serde::Serialize, serde::Deserialize,
 )]
 #[serde(rename_all = "snake_case")]
-pub(crate) enum ActionName {
-    Add,
+pub enum ActionName {
+    SshCommand,
+    SetupPlanesSsh,
+    SyncFileSsh,
 }
 
 impl Display for ActionName {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let x = match self {
-            Self::Add => "add",
+            Self::SshCommand => "ssh_command",
+            Self::SetupPlanesSsh => "setup_planes_ssh",
+            Self::SyncFileSsh => "sync_file_ssh",
         };
 
         write!(f, "{}", x)
@@ -62,16 +68,38 @@ where
     D: Deserializer<'de>,
 {
     match action {
-        ActionName::Add => deserialize_input(input).map(Input::Add),
+        ActionName::SshCommand => deserialize_input(input).map(Input::SshCommand),
+        ActionName::SetupPlanesSsh => deserialize_input(input).map(Input::SetupPlanesSsh),
+        ActionName::SyncFileSsh => deserialize_input(input).map(Input::SyncFileSsh),
     }
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Validate)]
 #[serde(deny_unknown_fields)]
-pub struct Add {
+pub struct SshCommand {
     #[validate(length(min = 1))]
-    hosts: Vec<String>,
-    auth: Option<String>,
-    user: Option<String>,
-    tags: Option<Vec<String>>,
+    pub(crate) host: String,
+    pub(crate) run: String,
+    #[serde(default)]
+    pub(crate) ssh_opts: SshOpts,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize, Validate)]
+#[serde(deny_unknown_fields)]
+pub struct SetupPlanesSsh {
+    #[validate(length(min = 1))]
+    pub(crate) hosts: Vec<String>,
+    pub(crate) cp_addr: String,
+    #[serde(default)]
+    pub(crate) ssh_opts: SshOpts,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize, Validate)]
+#[serde(deny_unknown_fields)]
+pub struct SyncFileSsh {
+    #[validate(length(min = 1))]
+    pub(crate) hosts: Vec<String>,
+    pub(crate) from: String,
+    #[serde(default)]
+    pub(crate) ssh_opts: SshOpts,
 }

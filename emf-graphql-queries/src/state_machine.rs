@@ -4,35 +4,32 @@
 
 #[derive(Debug, Clone, serde::Deserialize)]
 pub struct Resp<T> {
+    #[serde(rename(deserialize = "stateMachine"))]
     pub state_machine: T,
 }
 
 pub mod input_document {
     use crate::Query;
+    use emf_wire_types::Command;
 
     pub static QUERY: &str = r#"
         mutation SubmitInputDocument($input_doc: String!) {
-            stateMachine {
-                submitInputDocument(inputDoc: $input_doc) {
-                    command
-                }
+          stateMachine {
+            submitInputDocument(document: $input_doc) {
+              id
             }
-        }
-    "#;
+          }
+        }"#;
 
     #[derive(Debug, serde::Serialize)]
     pub struct Vars {
         input_doc: String,
     }
 
-    pub fn build(
-        input_doc: String,
-    ) -> Query<Vars> {
+    pub fn build(input_doc: String) -> Query<Vars> {
         Query {
             query: QUERY.to_string(),
-            variables: Some(Vars {
-                input_doc,
-            })
+            variables: Some(Vars { input_doc }),
         }
     }
 

@@ -18,7 +18,7 @@ pub(crate) enum State {
 
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(untagged)]
-pub(crate) enum Input {
+pub enum Input {
     Create(Create),
     Unmount(Unmount),
     Mount(Mount),
@@ -28,7 +28,7 @@ pub(crate) enum Input {
     Clone, Copy, Debug, Ord, PartialOrd, Eq, PartialEq, Hash, serde::Serialize, serde::Deserialize,
 )]
 #[serde(rename_all = "snake_case")]
-pub(crate) enum ActionName {
+pub enum ActionName {
     Create,
     Unmount,
     Mount,
@@ -74,12 +74,12 @@ where
 #[serde(deny_unknown_fields)]
 pub struct Create {
     #[validate(length(min = 1))]
-    hosts: Vec<String>,
+    pub(crate) hosts: Vec<String>,
     #[validate(length(min = 1))]
-    mountspec: String,
+    pub(crate) mountspec: String,
     #[validate(length(min = 1))]
-    mountpoint: String,
-    tags: Option<Vec<String>>,
+    pub(crate) mountpoint: String,
+    pub(crate) tags: Option<Vec<String>>,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Validate)]

@@ -3,4 +3,4 @@ source: emf-state-machine/src/input_document/mod.rs
 expression: errs
 
 ---
-jobs.add_mds1.steps[0].inputs.foo: unknown field `foo`, expected one of `hosts`, `auth`, `user`, `tags`
+jobs.add_mds1.steps[0].inputs.foo: unknown field `foo`, expected one of `host`, `run`, `ssh_opts`
