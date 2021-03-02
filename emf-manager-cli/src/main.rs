@@ -70,7 +70,7 @@ pub enum App {
     },
 }
 
-static SETTINGS_FILE: &str = "/etc/emf/emf-settings.conf";
+static SETTINGS_FILE: &str = "/etc/emf/cli.conf";
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -86,7 +86,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         App::Shell { .. } => Ok(()),
         _ => dotenv::from_path(SETTINGS_FILE).map_err(|_| {
             EmfManagerCliError::ConfigError(format!(
-                "Could not load settings from {}",
+                "Could not load settings from {}, ensure EMF has been properly configured",
                 SETTINGS_FILE
             ))
         }),
