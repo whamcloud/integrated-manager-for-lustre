@@ -23,6 +23,7 @@ use tokio::{
     time::interval,
 };
 use tokio_stream::wrappers::UnboundedReceiverStream;
+use uuid::Uuid;
 
 lazy_static! {
     /// Gets the FQDN or panics
@@ -115,21 +116,18 @@ pub fn create_filtered_writer<T: PartialEq + Send + serde::Serialize + Sync + 's
     let url = format!("http://127.0.0.1:{}", port);
 
     tokio::spawn(async move {
-        let mut instance_id: Option<String> = None;
+        let mut instance_id = Uuid::new_v4().to_string();
 
         let mut x = interval(Duration::from_secs(5));
 
         loop {
             x.tick().await;
 
-            let id = match instance_id.as_ref() {
-                Some(x) => x,
-                None => continue,
-            };
+            tracing::debug!("manager_service_instance_id: {}", &instance_id);
 
             let r = client2
                 .get(&url)
-                .header(header::IF_NONE_MATCH, id)
+                .header(header::IF_NONE_MATCH, &instance_id)
                 .send()
                 .await
                 .and_then(|resp| resp.error_for_status());
@@ -165,10 +163,10 @@ pub fn create_filtered_writer<T: PartialEq + Send + serde::Serialize + Sync + 's
                 }
             };
 
-            if &server_id != id {
+            if server_id != instance_id {
                 let _ = tx2.clone().send(Outgoing::ClearCache);
 
-                instance_id = Some(server_id);
+                instance_id = server_id;
             }
         }
     });
