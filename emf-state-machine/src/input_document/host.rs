@@ -26,6 +26,7 @@ pub enum Input {
     SshCommand(SshCommand),
     SetupPlanesSsh(SetupPlanesSsh),
     SyncFileSsh(SyncFileSsh),
+    CreateFileSsh(CreateFileSsh),
 }
 
 #[derive(
@@ -36,6 +37,7 @@ pub enum ActionName {
     SshCommand,
     SetupPlanesSsh,
     SyncFileSsh,
+    CreateFileSsh,
 }
 
 impl Display for ActionName {
@@ -44,6 +46,7 @@ impl Display for ActionName {
             Self::SshCommand => "ssh_command",
             Self::SetupPlanesSsh => "setup_planes_ssh",
             Self::SyncFileSsh => "sync_file_ssh",
+            Self::CreateFileSsh => "create_file_ssh",
         };
 
         write!(f, "{}", x)
@@ -71,6 +74,7 @@ where
         ActionName::SshCommand => deserialize_input(input).map(Input::SshCommand),
         ActionName::SetupPlanesSsh => deserialize_input(input).map(Input::SetupPlanesSsh),
         ActionName::SyncFileSsh => deserialize_input(input).map(Input::SyncFileSsh),
+        ActionName::CreateFileSsh => deserialize_input(input).map(Input::CreateFileSsh),
     }
 }
 
@@ -100,6 +104,16 @@ pub struct SyncFileSsh {
     #[validate(length(min = 1))]
     pub(crate) hosts: Vec<String>,
     pub(crate) from: String,
+    #[serde(default)]
+    pub(crate) ssh_opts: SshOpts,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize, Validate)]
+#[serde(deny_unknown_fields)]
+pub struct CreateFileSsh {
+    pub(crate) host: String,
+    pub(crate) contents: String,
+    pub(crate) path: String,
     #[serde(default)]
     pub(crate) ssh_opts: SshOpts,
 }

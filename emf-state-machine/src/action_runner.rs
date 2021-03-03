@@ -138,6 +138,22 @@ pub(crate) async fn invoke<'a>(input: &'a Input) -> Result<(), Error> {
                     })
                     .await?;
             }
+            host::Input::CreateFileSsh(host::CreateFileSsh {
+                host,
+                contents,
+                ssh_opts,
+                path,
+            }) => {
+                let mut session = emf_ssh::connect(
+                    &host,
+                    ssh_opts.port,
+                    &ssh_opts.user,
+                    (&ssh_opts.auth_opts).into(),
+                )
+                .await?;
+
+                session.stream_file(contents.as_bytes(), path).await?;
+            }
             host::Input::SyncFileSsh(host::SyncFileSsh {
                 hosts,
                 from,
