@@ -151,6 +151,9 @@ Group: System Environment/Libraries
 %{_unitdir}/nginx.service.d/60-emf-embedded.conf
 %{_sysconfdir}/emf/embedded.conf
 
+%post embedded
+%{_bindir}/systemctl daemon-reload >/dev/null 2>&1 || :
+
 # Manager Services
 %package manager
 Summary: EMF manager
@@ -270,6 +273,9 @@ Requires: influxdb < 2
 %{_unitdir}/emf-influx-sidecar.service
 %{_sysconfdir}/emf/dataplanes/influx.yml
 
+%post influx
+%{_bindir}/systemctl daemon-reload >/dev/null 2>&1 || :
+
 
 %package grafana
 Summary: grafana and sidecar
@@ -293,6 +299,8 @@ Requires: grafana
 %{_unitdir}/emf-grafana-sidecar.service
 %{_sysconfdir}/emf/dataplanes/grafana.yml
 
+%post grafana
+%{_bindir}/systemctl daemon-reload >/dev/null 2>&1 || :
 
 %package nginx
 Summary: nginx gateway and sidecar
@@ -320,6 +328,10 @@ Requires: nginx >= 1:1.12.2
 %{emf_root}/emf-gateway.conf.template
 %{_unitdir}/emf-nginx-sidecar.service
 %{_sysconfdir}/emf/dataplanes/nginx.yml
+
+
+%post nginx
+%{_bindir}/systemctl daemon-reload >/dev/null 2>&1 || :
 
 
 %package cli
