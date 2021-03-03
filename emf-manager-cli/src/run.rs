@@ -22,7 +22,9 @@ pub async fn cli(path: PathBuf) -> Result<(), EmfManagerCliError> {
     let resp: emf_graphql_queries::Response<state_machine_queries::input_document::Resp> =
         wrap_fut("Submitting Input...", graphql(query)).await?;
 
-    tracing::debug!(?resp);
+    let x = Result::from(resp)?.data.state_machine.submit_input_document;
+
+    tracing::debug!(?x);
 
     Ok(())
 }

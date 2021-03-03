@@ -4,6 +4,7 @@
 
 use crate::graphql::Context;
 use emf_wire_types::Command;
+use juniper::{FieldError, Value};
 
 pub(crate) struct StateMachineMutation;
 
@@ -26,8 +27,14 @@ impl StateMachineMutation {
             .send()
             .await?;
 
-        let x = resp.bytes().await?;
+        let status = resp.status();
 
-        Ok(Command { id: 1 })
+        if status.is_client_error() || status.is_server_error() {
+            let err_text = resp.text().await?;
+
+            Err(FieldError::new(err_text, Value::null()))
+        } else {
+            Ok(resp.json().await?)
+        }
     }
 }

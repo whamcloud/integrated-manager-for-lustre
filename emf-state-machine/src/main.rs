@@ -13,7 +13,7 @@ use emf_state_machine::{
     input_document::deserialize_input_document,
     Error,
 };
-use emf_wire_types::{ActionResult, Fqdn};
+use emf_wire_types::{ActionResult, Command, Fqdn};
 use futures::TryFutureExt;
 use std::{collections::HashMap, convert::Infallible, sync::Arc};
 use tokio::sync::mpsc::UnboundedSender;
@@ -87,7 +87,7 @@ async fn main() -> Result<(), Error> {
 
                     let _ = tx.send(graphs);
 
-                    Ok::<_, Error>("".into_response())
+                    Ok::<_, Error>(warp::reply::json(&Command { id: 1 }).into_response())
                 }
                 .map_err(warp::reject::custom)
             },
