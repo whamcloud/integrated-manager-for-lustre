@@ -222,7 +222,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --locked
+          args: --locked --all-features
 
       - name: Run db tests
         uses: actions-rs/cargo@v1
