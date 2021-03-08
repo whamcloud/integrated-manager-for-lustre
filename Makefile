@@ -23,7 +23,8 @@ ALWAYS_NUKE_LOGS ?= false
 DB_NAME ?= emf
 DB_USER ?= $(DB_NAME)
 
-all: rust-core-rpms device-scanner-rpms emf-gui-rpm sos-rpm
+# all: rust-core-rpms device-scanner-rpms emf-gui-rpm sos-rpm
+all: rust-core-rpms device-scanner-rpms sos-rpm
 
 tests/framework/utils/defaults.sh: tests/framework/utils/defaults.sh.in Makefile
 
