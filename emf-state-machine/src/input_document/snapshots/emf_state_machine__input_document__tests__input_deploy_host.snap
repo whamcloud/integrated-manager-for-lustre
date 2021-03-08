@@ -5,16 +5,16 @@ expression: doc
 ---
 version: 1.0
 jobs:
-  deploy_hosts:
-    name: Deploy Hosts
+  deploy_node1:
+    name: Deploy Node 1
     needs: []
     steps:
-      - action: host.setup_planes_ssh
-        id: Setup Control plane and dataplane
+      - action: host.create_file_ssh
+        id: add emf repo
         inputs:
-          hosts:
-            - "node[2-4]"
-          cp_addr: node1
+          host: node1
+          contents: "[emf]\nname=emf repo\nbaseurl=http://node1:7080/repo/emf_repo/\ngpgcheck=0\n"
+          path: /etc/yum.repos.d/emf.repo
           ssh_opts:
             port: 22
             user: root
@@ -24,12 +24,12 @@ jobs:
               key_path: ~
               key_passphrase: ~
         outputs: ~
-      - action: host.sync_file_ssh
-        id: Sync dataplane token across cluster
+      - action: host.create_file_ssh
+        id: add cli config
         inputs:
-          hosts:
-            - "node[2-4]"
-          from: /etc/emf/tokens/dataplane-token
+          host: node1
+          contents: "SERVER_HTTP_URL=https://node1:7443"
+          path: /etc/emf/cli.conf
           ssh_opts:
             port: 22
             user: root
@@ -43,49 +43,7 @@ jobs:
         id: Install emf agent node1
         inputs:
           host: node1
-          run: yum install -y rust-emf-agent rust-emf-cli rust-emf-cli-bash-completion
-          ssh_opts:
-            port: 22
-            user: root
-            auth_opts:
-              agent: false
-              password: ~
-              key_path: ~
-              key_passphrase: ~
-        outputs: ~
-      - action: host.ssh_command
-        id: Install emf agent node2
-        inputs:
-          host: node2
-          run: yum install -y rust-emf-agent rust-emf-cli rust-emf-cli-bash-completion
-          ssh_opts:
-            port: 22
-            user: root
-            auth_opts:
-              agent: false
-              password: ~
-              key_path: ~
-              key_passphrase: ~
-        outputs: ~
-      - action: host.ssh_command
-        id: Install emf agent node3
-        inputs:
-          host: node3
-          run: yum install -y rust-emf-agent rust-emf-cli rust-emf-cli-bash-completion
-          ssh_opts:
-            port: 22
-            user: root
-            auth_opts:
-              agent: false
-              password: ~
-              key_path: ~
-              key_passphrase: ~
-        outputs: ~
-      - action: host.ssh_command
-        id: Install emf agent node4
-        inputs:
-          host: node4
-          run: yum install -y rust-emf-agent rust-emf-cli rust-emf-cli-bash-completion
+          run: yum install -y rust-emf-agent rust-emf-cli rust-emf-cli-bash-completion emf-sos-plugin
           ssh_opts:
             port: 22
             user: root
@@ -109,11 +67,163 @@ jobs:
               key_path: ~
               key_passphrase: ~
         outputs: ~
+  deploy_node2:
+    name: Deploy Node 2
+    needs: []
+    steps:
+      - action: host.setup_planes_ssh
+        id: Setup Control plane and dataplane
+        inputs:
+          host: node2
+          cp_addr: node1
+          ssh_opts:
+            port: 22
+            user: root
+            auth_opts:
+              agent: false
+              password: ~
+              key_path: ~
+              key_passphrase: ~
+        outputs: ~
+      - action: host.sync_file_ssh
+        id: Sync dataplane token across cluster
+        inputs:
+          host: node2
+          from: /etc/emf/tokens/dataplane-token
+          ssh_opts:
+            port: 22
+            user: root
+            auth_opts:
+              agent: false
+              password: ~
+              key_path: ~
+              key_passphrase: ~
+        outputs: ~
+      - action: host.create_file_ssh
+        id: add emf repo
+        inputs:
+          host: node2
+          contents: "[emf]\nname=emf repo\nbaseurl=http://node1:7080/repo/emf_repo/\ngpgcheck=0\n"
+          path: /etc/yum.repos.d/emf.repo
+          ssh_opts:
+            port: 22
+            user: root
+            auth_opts:
+              agent: false
+              password: ~
+              key_path: ~
+              key_passphrase: ~
+        outputs: ~
+      - action: host.create_file_ssh
+        id: add cli config
+        inputs:
+          host: node2
+          contents: "SERVER_HTTP_URL=https://node1:7443"
+          path: /etc/emf/cli.conf
+          ssh_opts:
+            port: 22
+            user: root
+            auth_opts:
+              agent: false
+              password: ~
+              key_path: ~
+              key_passphrase: ~
+        outputs: ~
+      - action: host.ssh_command
+        id: Install emf agent node2
+        inputs:
+          host: node2
+          run: yum install -y rust-emf-agent rust-emf-cli rust-emf-cli-bash-completion emf-sos-plugin
+          ssh_opts:
+            port: 22
+            user: root
+            auth_opts:
+              agent: false
+              password: ~
+              key_path: ~
+              key_passphrase: ~
+        outputs: ~
       - action: host.ssh_command
         id: Start agent node2
         inputs:
           host: node2
           run: systemctl enable --now emf-agent.target
+          ssh_opts:
+            port: 22
+            user: root
+            auth_opts:
+              agent: false
+              password: ~
+              key_path: ~
+              key_passphrase: ~
+        outputs: ~
+  deploy_node3:
+    name: Deploy Node 3
+    needs: []
+    steps:
+      - action: host.setup_planes_ssh
+        id: Setup Control plane and dataplane
+        inputs:
+          host: node3
+          cp_addr: node1
+          ssh_opts:
+            port: 22
+            user: root
+            auth_opts:
+              agent: false
+              password: ~
+              key_path: ~
+              key_passphrase: ~
+        outputs: ~
+      - action: host.sync_file_ssh
+        id: Sync dataplane token across cluster
+        inputs:
+          host: node3
+          from: /etc/emf/tokens/dataplane-token
+          ssh_opts:
+            port: 22
+            user: root
+            auth_opts:
+              agent: false
+              password: ~
+              key_path: ~
+              key_passphrase: ~
+        outputs: ~
+      - action: host.create_file_ssh
+        id: add emf repo
+        inputs:
+          host: node3
+          contents: "[emf]\nname=emf repo\nbaseurl=http://node1:7080/repo/emf_repo/\ngpgcheck=0\n"
+          path: /etc/yum.repos.d/emf.repo
+          ssh_opts:
+            port: 22
+            user: root
+            auth_opts:
+              agent: false
+              password: ~
+              key_path: ~
+              key_passphrase: ~
+        outputs: ~
+      - action: host.create_file_ssh
+        id: add cli config
+        inputs:
+          host: node3
+          contents: "SERVER_HTTP_URL=https://node1:7443"
+          path: /etc/emf/cli.conf
+          ssh_opts:
+            port: 22
+            user: root
+            auth_opts:
+              agent: false
+              password: ~
+              key_path: ~
+              key_passphrase: ~
+        outputs: ~
+      - action: host.ssh_command
+        id: Install emf agent node3
+        inputs:
+          host: node3
+          run: yum install -y rust-emf-agent rust-emf-cli rust-emf-cli-bash-completion emf-sos-plugin
           ssh_opts:
             port: 22
             user: root
@@ -137,11 +247,162 @@ jobs:
               key_path: ~
               key_passphrase: ~
         outputs: ~
+  deploy_node4:
+    name: Deploy Node 4
+    needs: []
+    steps:
+      - action: host.setup_planes_ssh
+        id: Setup Control plane and dataplane
+        inputs:
+          host: node4
+          cp_addr: node1
+          ssh_opts:
+            port: 22
+            user: root
+            auth_opts:
+              agent: false
+              password: ~
+              key_path: ~
+              key_passphrase: ~
+        outputs: ~
+      - action: host.sync_file_ssh
+        id: Sync dataplane token across cluster
+        inputs:
+          host: node4
+          from: /etc/emf/tokens/dataplane-token
+          ssh_opts:
+            port: 22
+            user: root
+            auth_opts:
+              agent: false
+              password: ~
+              key_path: ~
+              key_passphrase: ~
+        outputs: ~
+      - action: host.create_file_ssh
+        id: add emf repo
+        inputs:
+          host: node4
+          contents: "[emf]\nname=emf repo\nbaseurl=http://node1:7080/repo/emf_repo/\ngpgcheck=0\n"
+          path: /etc/yum.repos.d/emf.repo
+          ssh_opts:
+            port: 22
+            user: root
+            auth_opts:
+              agent: false
+              password: ~
+              key_path: ~
+              key_passphrase: ~
+        outputs: ~
+      - action: host.create_file_ssh
+        id: add cli config
+        inputs:
+          host: node4
+          contents: "SERVER_HTTP_URL=https://node1:7443"
+          path: /etc/emf/cli.conf
+          ssh_opts:
+            port: 22
+            user: root
+            auth_opts:
+              agent: false
+              password: ~
+              key_path: ~
+              key_passphrase: ~
+        outputs: ~
+      - action: host.ssh_command
+        id: Install emf agent node4
+        inputs:
+          host: node4
+          run: yum install -y rust-emf-agent rust-emf-cli rust-emf-cli-bash-completion emf-sos-plugin
+          ssh_opts:
+            port: 22
+            user: root
+            auth_opts:
+              agent: false
+              password: ~
+              key_path: ~
+              key_passphrase: ~
+        outputs: ~
       - action: host.ssh_command
         id: Start agent node4
         inputs:
           host: node4
           run: systemctl enable --now emf-agent.target
+          ssh_opts:
+            port: 22
+            user: root
+            auth_opts:
+              agent: false
+              password: ~
+              key_path: ~
+              key_passphrase: ~
+        outputs: ~
+  deploy_ubuntu1:
+    name: Deploy Ubuntu1
+    needs: []
+    steps:
+      - action: host.setup_planes_ssh
+        id: Setup Control plane and dataplane
+        inputs:
+          host: ubuntu1
+          cp_addr: node1
+          ssh_opts:
+            port: 22
+            user: root
+            auth_opts:
+              agent: false
+              password: ~
+              key_path: ~
+              key_passphrase: ~
+        outputs: ~
+      - action: host.sync_file_ssh
+        id: Sync dataplane token across cluster
+        inputs:
+          host: ubuntu1
+          from: /etc/emf/tokens/dataplane-token
+          ssh_opts:
+            port: 22
+            user: root
+            auth_opts:
+              agent: false
+              password: ~
+              key_path: ~
+              key_passphrase: ~
+        outputs: ~
+      - action: host.create_file_ssh
+        id: add emf repo
+        inputs:
+          host: ubuntu1
+          contents: "deb [trusted=yes] http://node1:7080/apt-repo/ emf non-free"
+          path: /etc/apt/sources.list.d/emf.list
+          ssh_opts:
+            port: 22
+            user: root
+            auth_opts:
+              agent: false
+              password: ~
+              key_path: ~
+              key_passphrase: ~
+        outputs: ~
+      - action: host.ssh_command
+        id: Install emf agent ubuntu1
+        inputs:
+          host: ubuntu1
+          run: "apt update\napt install -y \\\n  emf-action-agent \\\n  emf-device-agent \\\n  emf-journal-agent \\\n  emf-network-agent \\\n  emf-host-agent \\\n  emf-ntp-agent \\\n  emf-stats-agent\n"
+          ssh_opts:
+            port: 22
+            user: root
+            auth_opts:
+              agent: false
+              password: ~
+              key_path: ~
+              key_passphrase: ~
+        outputs: ~
+      - action: host.ssh_command
+        id: Start agent ubuntu1
+        inputs:
+          host: ubuntu1
+          run: "systemctl enable --now \\\nemf-action-agent \\\nemf-device-agent \\\nemf-journal-agent \\\nemf-network-agent \\\nemf-host-agent \\\nemf-ntp-agent \\\nemf-stats-agent \\\nemf-agent.target\n"
           ssh_opts:
             port: 22
             user: root

@@ -667,8 +667,7 @@ jobs:
     steps:
       - action: host.setup_planes_ssh
         inputs:
-          hosts:
-            - node[2-4]
+          host: node2
           cp_addr: node1
 "#
         .trim();
@@ -822,76 +821,7 @@ timeout: 2 minutes"#
 
     #[test]
     fn input_deploy_host() -> Result<(), InputDocumentErrors> {
-        let s = r#"
-version: 1
-jobs:
-  deploy_hosts:
-    name: Deploy Hosts
-
-    steps:
-      - action: host.setup_planes_ssh
-        id: Setup Control plane and dataplane
-        inputs:
-          hosts:
-            - node[2-4]
-          cp_addr: node1
-
-      - action: host.sync_file_ssh
-        id: Sync dataplane token across cluster
-        inputs:
-          from: /etc/emf/tokens/dataplane-token
-          hosts:
-            - node[2-4]
-
-      - action: host.ssh_command
-        id: Install emf agent node1
-        inputs:
-          host: node1
-          run: yum install -y rust-emf-agent rust-emf-cli rust-emf-cli-bash-completion
-
-      - action: host.ssh_command
-        id: Install emf agent node2
-        inputs:
-          host: node2
-          run: yum install -y rust-emf-agent rust-emf-cli rust-emf-cli-bash-completion
-
-      - action: host.ssh_command
-        id: Install emf agent node3
-        inputs:
-          host: node3
-          run: yum install -y rust-emf-agent rust-emf-cli rust-emf-cli-bash-completion
-
-      - action: host.ssh_command
-        id: Install emf agent node4
-        inputs:
-          host: node4
-          run: yum install -y rust-emf-agent rust-emf-cli rust-emf-cli-bash-completion
-
-      - action: host.ssh_command
-        id: Start agent node1
-        inputs:
-          host: node1
-          run: systemctl enable --now emf-agent.target
-
-      - action: host.ssh_command
-        id: Start agent node2
-        inputs:
-          host: node2
-          run: systemctl enable --now emf-agent.target
-
-      - action: host.ssh_command
-        id: Start agent node3
-        inputs:
-          host: node3
-          run: systemctl enable --now emf-agent.target
-
-      - action: host.ssh_command
-        id: Start agent node4
-        inputs:
-          host: node4
-          run: systemctl enable --now emf-agent.target
-"#
-        .trim();
+        let s = std::include_str!("../../fixtures/deploy-hosts.yml");
 
         let doc = deserialize_input_document(s)?;
 

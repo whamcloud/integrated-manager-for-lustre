@@ -1331,14 +1331,12 @@ dependencies = [
 name = "emf-state-machine"
 version = "0.1.0"
 dependencies = [
- "combine 4.1.0",
  "emf-manager-env",
  "emf-postgres",
  "emf-ssh",
  "emf-tracing",
  "emf-wire-types",
  "futures",
- "hostlist-parser",
  "humantime-serde",
  "insta",
  "maplit",

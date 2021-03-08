@@ -33,8 +33,6 @@ pub enum Error {
     SshError(#[from] emf_ssh::Error),
     #[error(transparent)]
     InputDocumentErrors(#[from] InputDocumentErrors),
-    #[error(transparent)]
-    CombineEasyError(#[from] combine::stream::easy::Errors<char, String, usize>),
 }
 
 impl reject::Reject for Error {}

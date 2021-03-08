@@ -92,7 +92,7 @@ pub struct SshCommand {
 #[serde(deny_unknown_fields)]
 pub struct SetupPlanesSsh {
     #[validate(length(min = 1))]
-    pub(crate) hosts: Vec<String>,
+    pub(crate) host: String,
     pub(crate) cp_addr: String,
     #[serde(default)]
     pub(crate) ssh_opts: SshOpts,
@@ -102,7 +102,7 @@ pub struct SetupPlanesSsh {
 #[serde(deny_unknown_fields)]
 pub struct SyncFileSsh {
     #[validate(length(min = 1))]
-    pub(crate) hosts: Vec<String>,
+    pub(crate) host: String,
     pub(crate) from: String,
     #[serde(default)]
     pub(crate) ssh_opts: SshOpts,

@@ -4,12 +4,9 @@
 
 use emf_ssh::{Output, SshChannelExt as _, SshHandleExt};
 use emf_wire_types::{Action, ActionId, ActionName, AgentResult, Fqdn};
-use futures::{stream, StreamExt, TryFutureExt, TryStreamExt};
+use futures::TryFutureExt;
 use once_cell::sync::Lazy;
-use std::{
-    collections::{BTreeSet, HashMap},
-    sync::Arc,
-};
+use std::{collections::HashMap, sync::Arc};
 use tokio::sync::{
     oneshot::{self, Receiver, Sender},
     Mutex,
@@ -74,19 +71,6 @@ pub(crate) async fn invoke_remote(
     (tx, rx)
 }
 
-pub fn parse_hosts(hosts: &[String]) -> Result<BTreeSet<String>, Error> {
-    let parsed: Vec<BTreeSet<String>> = hosts
-        .iter()
-        .map(|x| hostlist_parser::parse(x).map_err(|x| x.map_range(|r| r.to_string())))
-        .collect::<Result<_, _>>()?;
-
-    let union = parsed
-        .into_iter()
-        .fold(BTreeSet::new(), |acc, h| acc.union(&h).cloned().collect());
-
-    Ok(union)
-}
-
 pub(crate) async fn invoke<'a>(input: &'a Input) -> Result<(), Error> {
     match input {
         Input::Host(x) => match x {
@@ -111,31 +95,22 @@ pub(crate) async fn invoke<'a>(input: &'a Input) -> Result<(), Error> {
                 }
             }
             host::Input::SetupPlanesSsh(host::SetupPlanesSsh {
-                hosts,
+                host,
                 cp_addr,
                 ssh_opts,
             }) => {
-                let hosts = parse_hosts(&hosts)?;
+                let mut session = emf_ssh::connect(
+                    &host,
+                    ssh_opts.port,
+                    &ssh_opts.user,
+                    (&ssh_opts.auth_opts).into(),
+                )
+                .await?;
 
-                stream::iter(hosts)
-                    .map(Ok)
-                    .try_for_each_concurrent(10, |host| async move {
-                        let mut session = emf_ssh::connect(
-                            &host,
-                            ssh_opts.port,
-                            &ssh_opts.user,
-                            (&ssh_opts.auth_opts).into(),
-                        )
-                        .await?;
+                let overrides = format!("CP_ADDR={}\nMGMT_ADDR={}", cp_addr, host);
 
-                        let overrides = format!("CP_ADDR={}\nMGMT_ADDR={}", cp_addr, host);
-
-                        session
-                            .stream_file(overrides.as_bytes(), "/etc/emf/overrides.conf")
-                            .await?;
-
-                        Ok::<_, Error>(())
-                    })
+                session
+                    .stream_file(overrides.as_bytes(), "/etc/emf/overrides.conf")
                     .await?;
             }
             host::Input::CreateFileSsh(host::CreateFileSsh {
@@ -155,28 +130,19 @@ pub(crate) async fn invoke<'a>(input: &'a Input) -> Result<(), Error> {
                 session.stream_file(contents.as_bytes(), path).await?;
             }
             host::Input::SyncFileSsh(host::SyncFileSsh {
-                hosts,
+                host,
                 from,
                 ssh_opts,
             }) => {
-                let hosts = parse_hosts(&hosts)?;
+                let mut session = emf_ssh::connect(
+                    &host,
+                    ssh_opts.port,
+                    &ssh_opts.user,
+                    (&ssh_opts.auth_opts).into(),
+                )
+                .await?;
 
-                stream::iter(hosts)
-                    .map(Ok)
-                    .try_for_each_concurrent(10, |host| async move {
-                        let mut session = emf_ssh::connect(
-                            &host,
-                            ssh_opts.port,
-                            &ssh_opts.user,
-                            (&ssh_opts.auth_opts).into(),
-                        )
-                        .await?;
-
-                        session.push_file(&from, &from).await?;
-
-                        Ok::<_, Error>(())
-                    })
-                    .await?;
+                session.push_file(&from, &from).await?;
             }
         },
         Input::Lnet(x) => match x {

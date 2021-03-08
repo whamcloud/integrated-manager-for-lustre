@@ -1,0 +1,226 @@
+version: 1
+jobs:
+  deploy_node1:
+    name: Deploy Node 1
+
+    steps:
+      - action: host.create_file_ssh
+        id: add emf repo
+        inputs:
+          host: node1
+          contents: |
+            [emf]
+            name=emf repo
+            baseurl=http://node1:7080/repo/emf_repo/
+            gpgcheck=0
+          path: /etc/yum.repos.d/emf.repo
+
+      - action: host.create_file_ssh
+        id: add cli config
+        inputs:
+          host: node1
+          contents: SERVER_HTTP_URL=https://node1:7443
+          path: /etc/emf/cli.conf
+
+      - action: host.ssh_command
+        id: Install emf agent node1
+        inputs:
+          host: node1
+          run: yum install -y rust-emf-agent rust-emf-cli rust-emf-cli-bash-completion emf-sos-plugin
+
+      - action: host.ssh_command
+        id: Start agent node1
+        inputs:
+          host: node1
+          run: systemctl enable --now emf-agent.target
+
+  deploy_node2:
+    name: Deploy Node 2
+
+    steps:
+      - action: host.setup_planes_ssh
+        id: Setup Control plane and dataplane
+        inputs:
+          host: node2
+          cp_addr: node1
+
+      - action: host.sync_file_ssh
+        id: Sync dataplane token across cluster
+        inputs:
+          from: /etc/emf/tokens/dataplane-token
+          host: node2
+
+      - action: host.create_file_ssh
+        id: add emf repo
+        inputs:
+          host: node2
+          contents: |
+            [emf]
+            name=emf repo
+            baseurl=http://node1:7080/repo/emf_repo/
+            gpgcheck=0
+          path: /etc/yum.repos.d/emf.repo
+
+      - action: host.create_file_ssh
+        id: add cli config
+        inputs:
+          host: node2
+          contents: SERVER_HTTP_URL=https://node1:7443
+          path: /etc/emf/cli.conf
+
+      - action: host.ssh_command
+        id: Install emf agent node2
+        inputs:
+          host: node2
+          run: yum install -y rust-emf-agent rust-emf-cli rust-emf-cli-bash-completion emf-sos-plugin
+
+      - action: host.ssh_command
+        id: Start agent node2
+        inputs:
+          host: node2
+          run: systemctl enable --now emf-agent.target
+
+  deploy_node3:
+    name: Deploy Node 3
+
+    steps:
+      - action: host.setup_planes_ssh
+        id: Setup Control plane and dataplane
+        inputs:
+          host: node3
+          cp_addr: node1
+
+      - action: host.sync_file_ssh
+        id: Sync dataplane token across cluster
+        inputs:
+          from: /etc/emf/tokens/dataplane-token
+          host: node3
+
+      - action: host.create_file_ssh
+        id: add emf repo
+        inputs:
+          host: node3
+          contents: |
+            [emf]
+            name=emf repo
+            baseurl=http://node1:7080/repo/emf_repo/
+            gpgcheck=0
+          path: /etc/yum.repos.d/emf.repo
+
+      - action: host.create_file_ssh
+        id: add cli config
+        inputs:
+          host: node3
+          contents: SERVER_HTTP_URL=https://node1:7443
+          path: /etc/emf/cli.conf
+
+      - action: host.ssh_command
+        id: Install emf agent node3
+        inputs:
+          host: node3
+          run: yum install -y rust-emf-agent rust-emf-cli rust-emf-cli-bash-completion emf-sos-plugin
+
+      - action: host.ssh_command
+        id: Start agent node3
+        inputs:
+          host: node3
+          run: systemctl enable --now emf-agent.target
+
+  deploy_node4:
+    name: Deploy Node 4
+
+    steps:
+      - action: host.setup_planes_ssh
+        id: Setup Control plane and dataplane
+        inputs:
+          host: node4
+          cp_addr: node1
+
+      - action: host.sync_file_ssh
+        id: Sync dataplane token across cluster
+        inputs:
+          from: /etc/emf/tokens/dataplane-token
+          host: node4
+
+      - action: host.create_file_ssh
+        id: add emf repo
+        inputs:
+          host: node4
+          contents: |
+            [emf]
+            name=emf repo
+            baseurl=http://node1:7080/repo/emf_repo/
+            gpgcheck=0
+          path: /etc/yum.repos.d/emf.repo
+
+      - action: host.create_file_ssh
+        id: add cli config
+        inputs:
+          host: node4
+          contents: SERVER_HTTP_URL=https://node1:7443
+          path: /etc/emf/cli.conf
+
+      - action: host.ssh_command
+        id: Install emf agent node4
+        inputs:
+          host: node4
+          run: yum install -y rust-emf-agent rust-emf-cli rust-emf-cli-bash-completion emf-sos-plugin
+
+      - action: host.ssh_command
+        id: Start agent node4
+        inputs:
+          host: node4
+          run: systemctl enable --now emf-agent.target
+
+  deploy_ubuntu1:
+    name: Deploy Ubuntu1
+
+    steps:
+      - action: host.setup_planes_ssh
+        id: Setup Control plane and dataplane
+        inputs:
+          host: ubuntu1
+          cp_addr: node1
+
+      - action: host.sync_file_ssh
+        id: Sync dataplane token across cluster
+        inputs:
+          from: /etc/emf/tokens/dataplane-token
+          host: ubuntu1
+
+      - action: host.create_file_ssh
+        id: add emf repo
+        inputs:
+          host: ubuntu1
+          contents: deb [trusted=yes] http://node1:7080/apt-repo/ emf non-free
+          path: /etc/apt/sources.list.d/emf.list
+
+      - action: host.ssh_command
+        id: Install emf agent ubuntu1
+        inputs:
+          host: ubuntu1
+          run: |
+            apt update
+            apt install -y \
+              emf-action-agent \
+              emf-device-agent \
+              emf-journal-agent \
+              emf-network-agent \
+              emf-host-agent \
+              emf-ntp-agent \
+              emf-stats-agent
+
+      - action: host.ssh_command
+        id: Start agent ubuntu1
+        inputs:
+          host: ubuntu1
+          run: |
+            systemctl enable --now \
+            emf-action-agent \
+            emf-device-agent \
+            emf-journal-agent \
+            emf-network-agent \
+            emf-host-agent \
+            emf-ntp-agent \
+            emf-stats-agent \
+            emf-agent.target
