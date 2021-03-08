@@ -5,6 +5,8 @@ name = "emf-state-machine"
 version = "0.1.0"
 
 [dependencies]
+bytes = "1.0"
+chrono = "0.4"
 emf-manager-env = {path = "../emf-manager-env", version = "0.4"}
 emf-postgres = {path = "../emf-postgres", version = "0.4"}
 emf-ssh = {path = "../emf-ssh", version = "0.1"}
@@ -23,6 +25,7 @@ sqlx = {version = "0.5", features = ["json", "offline", "postgres", "runtime-tok
 thiserror = "1.0"
 tokio = {version = "1", features = ["macros", "rt-multi-thread"]}
 tokio-stream = {version = "0.1", features = ["net"]}
+tokio-util = {version = "0.6", features = ["io"]}
 uuid = {version = "0.8", features = ["v4"]}
 validator = {version = "0.12", features = ["derive"]}
 warp = "0.3"

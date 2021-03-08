@@ -5,7 +5,7 @@ jobs:
 
     steps:
       - action: host.create_file_ssh
-        id: add emf repo
+        id: Add emf repo to node1
         inputs:
           host: node1
           contents: |
@@ -16,20 +16,20 @@ jobs:
           path: /etc/yum.repos.d/emf.repo
 
       - action: host.create_file_ssh
-        id: add cli config
+        id: Add CLI config to node1
         inputs:
           host: node1
           contents: SERVER_HTTP_URL=https://node1:7443
           path: /etc/emf/cli.conf
 
       - action: host.ssh_command
-        id: Install emf agent node1
+        id: Install emf agent on node1
         inputs:
           host: node1
           run: yum install -y rust-emf-agent rust-emf-cli rust-emf-cli-bash-completion emf-sos-plugin
 
       - action: host.ssh_command
-        id: Start agent node1
+        id: Start agent on node1
         inputs:
           host: node1
           run: systemctl enable --now emf-agent.target
@@ -39,19 +39,19 @@ jobs:
 
     steps:
       - action: host.setup_planes_ssh
-        id: Setup Control plane and dataplane
+        id: Setup Control plane and dataplane on node2
         inputs:
           host: node2
           cp_addr: node1
 
       - action: host.sync_file_ssh
-        id: Sync dataplane token across cluster
+        id: Sync dataplane token on node2
         inputs:
           from: /etc/emf/tokens/dataplane-token
           host: node2
 
       - action: host.create_file_ssh
-        id: add emf repo
+        id: Add emf repo to node2
         inputs:
           host: node2
           contents: |
@@ -62,7 +62,7 @@ jobs:
           path: /etc/yum.repos.d/emf.repo
 
       - action: host.create_file_ssh
-        id: add cli config
+        id: Add CLI config to node2
         inputs:
           host: node2
           contents: SERVER_HTTP_URL=https://node1:7443
@@ -85,7 +85,7 @@ jobs:
 
     steps:
       - action: host.setup_planes_ssh
-        id: Setup Control plane and dataplane
+        id: Setup Control plane and dataplane for node3
         inputs:
           host: node3
           cp_addr: node1
@@ -97,7 +97,7 @@ jobs:
           host: node3
 
       - action: host.create_file_ssh
-        id: add emf repo
+        id: add emf repo to node3
         inputs:
           host: node3
           contents: |
@@ -108,20 +108,20 @@ jobs:
           path: /etc/yum.repos.d/emf.repo
 
       - action: host.create_file_ssh
-        id: add cli config
+        id: add CLI config to node3
         inputs:
           host: node3
           contents: SERVER_HTTP_URL=https://node1:7443
           path: /etc/emf/cli.conf
 
       - action: host.ssh_command
-        id: Install emf agent node3
+        id: Install emf agent on node3
         inputs:
           host: node3
           run: yum install -y rust-emf-agent rust-emf-cli rust-emf-cli-bash-completion emf-sos-plugin
 
       - action: host.ssh_command
-        id: Start agent node3
+        id: Start agent on node3
         inputs:
           host: node3
           run: systemctl enable --now emf-agent.target
@@ -131,19 +131,19 @@ jobs:
 
     steps:
       - action: host.setup_planes_ssh
-        id: Setup Control plane and dataplane
+        id: Setup Control plane and dataplane on node4
         inputs:
           host: node4
           cp_addr: node1
 
       - action: host.sync_file_ssh
-        id: Sync dataplane token across cluster
+        id: Sync dataplane token to node4
         inputs:
           from: /etc/emf/tokens/dataplane-token
           host: node4
 
       - action: host.create_file_ssh
-        id: add emf repo
+        id: add emf repo to node4
         inputs:
           host: node4
           contents: |
@@ -154,20 +154,20 @@ jobs:
           path: /etc/yum.repos.d/emf.repo
 
       - action: host.create_file_ssh
-        id: add cli config
+        id: add CLI config to node4
         inputs:
           host: node4
           contents: SERVER_HTTP_URL=https://node1:7443
           path: /etc/emf/cli.conf
 
       - action: host.ssh_command
-        id: Install emf agent node4
+        id: Install emf agent on node4
         inputs:
           host: node4
           run: yum install -y rust-emf-agent rust-emf-cli rust-emf-cli-bash-completion emf-sos-plugin
 
       - action: host.ssh_command
-        id: Start agent node4
+        id: Start agent on node4
         inputs:
           host: node4
           run: systemctl enable --now emf-agent.target
@@ -177,13 +177,13 @@ jobs:
 
     steps:
       - action: host.setup_planes_ssh
-        id: Setup Control plane and dataplane
+        id: Setup Control plane and dataplane on ubuntu1
         inputs:
           host: ubuntu1
           cp_addr: node1
 
       - action: host.sync_file_ssh
-        id: Sync dataplane token across cluster
+        id: Sync dataplane token to ubuntu1
         inputs:
           from: /etc/emf/tokens/dataplane-token
           host: ubuntu1

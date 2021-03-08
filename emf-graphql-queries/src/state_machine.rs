@@ -17,6 +17,8 @@ pub mod input_document {
           stateMachine {
             submitInputDocument(document: $input_doc) {
               id
+              plan
+              state
             }
           }
         }"#;
@@ -40,4 +42,40 @@ pub mod input_document {
     }
 
     pub type Resp = super::Resp<SubmitInputDocument>;
+}
+
+pub mod get_cmd {
+    use crate::Query;
+    use emf_wire_types::Command;
+
+    pub static QUERY: &str = r#"
+        query GetCmd($id: Int!) {
+          stateMachine {
+            getCmd(id: $id) {
+              id
+              plan
+              state
+            }
+          }
+        }"#;
+
+    #[derive(Debug, serde::Serialize)]
+    pub struct Vars {
+        id: i32,
+    }
+
+    pub fn build(id: i32) -> Query<Vars> {
+        Query {
+            query: QUERY.to_string(),
+            variables: Some(Vars { id }),
+        }
+    }
+
+    #[derive(Debug, Clone, serde::Deserialize)]
+    pub struct GetCmd {
+        #[serde(rename(deserialize = "getCmd"))]
+        pub get_cmd: Option<Command>,
+    }
+
+    pub type Resp = super::Resp<GetCmd>;
 }

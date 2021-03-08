@@ -1310,6 +1310,51 @@
       ]
     }
   },
+  "33a5d7631d5a8d64882371b06f6ec8a8d0e23902d3cfb8048f9407fa80059e52": {
+    "query": "\n            SELECT id, plan, state as \"state: State\"\n            FROM command_plan WHERE id = $1\n            ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "plan",
+          "type_info": "Jsonb"
+        },
+        {
+          "ordinal": 2,
+          "name": "state: State",
+          "type_info": {
+            "Custom": {
+              "name": "state",
+              "kind": {
+                "Enum": [
+                  "pending",
+                  "running",
+                  "completed",
+                  "canceled",
+                  "failed"
+                ]
+              }
+            }
+          }
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Int4"
+        ]
+      },
+      "nullable": [
+        false,
+        false,
+        false
+      ]
+    }
+  },
   "36eaa3a68bb597f0fd1e9dd92b6ca5aac60d2feb62de621717efa78d1ff87b42": {
     "query": "\n                SELECT (nmh.corosync_node_id).name AS \"name!\" FROM corosync_node_host nmh\n                WHERE host_id = $1\n            ",
     "describe": {
@@ -2353,6 +2398,26 @@
       ]
     }
   },
+  "7766f65b401716346fd35d334d1eba577ea998cd7221fae7ef65cefacfbffb40": {
+    "query": "INSERT INTO command_plan (plan) VALUES ($1) RETURNING id",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Jsonb"
+        ]
+      },
+      "nullable": [
+        false
+      ]
+    }
+  },
   "78c0a9b94fb389d1d68e37cc85e27f70fd0958f9ad707ab737ec9b6b13a2403c": {
     "query": "\n            DELETE from sfajob\n            WHERE (index, storage_system)\n            IN (\n                SELECT *\n                FROM UNNEST($1::int[], $2::text[])\n            )\n        ",
     "describe": {
@@ -2556,6 +2621,33 @@
       "nullable": [
         true
       ]
+    }
+  },
+  "87f6516cd9325e66b59d97a106bf81c548d24bee4844d42477318ce29aa5509b": {
+    "query": "UPDATE command_plan SET plan = $1, state = $2 WHERE id = $3",
+    "describe": {
+      "columns": [],
+      "parameters": {
+        "Left": [
+          "Jsonb",
+          {
+            "Custom": {
+              "name": "state",
+              "kind": {
+                "Enum": [
+                  "pending",
+                  "running",
+                  "completed",
+                  "canceled",
+                  "failed"
+                ]
+              }
+            }
+          },
+          "Int4"
+        ]
+      },
+      "nullable": []
     }
   },
   "887609a7e7ea9cef95029792894dd387b682e22aad669cf31e1ac9793630bbbf": {

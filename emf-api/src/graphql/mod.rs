@@ -90,6 +90,9 @@ impl QueryRoot {
     fn task(&self) -> task::TaskQuery {
         task::TaskQuery
     }
+    fn state_machine(&self) -> state_machine::StateMachineQuery {
+        state_machine::StateMachineQuery
+    }
     /// Given a host id, try to find the matching corosync node name
     #[graphql(arguments(host_id(description = "The id to search on")))]
     async fn corosync_node_name_by_host(

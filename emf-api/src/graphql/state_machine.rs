@@ -3,8 +3,34 @@
 // license that can be found in the LICENSE file.
 
 use crate::graphql::Context;
-use emf_wire_types::Command;
+use emf_wire_types::{json::GraphQLJson, Command, State};
 use juniper::{FieldError, Value};
+
+pub(crate) struct StateMachineQuery;
+
+#[juniper::graphql_object(Context = Context)]
+impl StateMachineQuery {
+    /// Get a `Command` by id
+    #[graphql(arguments(id(description = "The id of the `Command` to fetch"),))]
+    async fn get_cmd(context: &Context, id: i32) -> juniper::FieldResult<Option<Command>> {
+        let cmd = sqlx::query!(
+            r#"
+            SELECT id, plan, state as "state: State"
+            FROM command_plan WHERE id = $1
+            "#,
+            id
+        )
+        .fetch_optional(&context.pg_pool)
+        .await?
+        .map(|cmd| Command {
+            id: cmd.id,
+            plan: GraphQLJson(cmd.plan),
+            state: cmd.state,
+        });
+
+        Ok(cmd)
+    }
+}
 
 pub(crate) struct StateMachineMutation;
 

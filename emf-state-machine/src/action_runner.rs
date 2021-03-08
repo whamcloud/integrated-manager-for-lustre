@@ -2,22 +2,25 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file
 
+use crate::{
+    command_plan::OutputWriter,
+    input_document::{client_mount, filesystem, host, lnet, mdt, mgt, mgt_mdt},
+    state_schema::Input,
+    Error,
+};
 use emf_ssh::{Output, SshChannelExt as _, SshHandleExt};
 use emf_wire_types::{Action, ActionId, ActionName, AgentResult, Fqdn};
 use futures::TryFutureExt;
 use once_cell::sync::Lazy;
 use std::{collections::HashMap, sync::Arc};
-use tokio::sync::{
-    oneshot::{self, Receiver, Sender},
-    Mutex,
+use tokio::{
+    io::AsyncWriteExt,
+    sync::{
+        oneshot::{self, Receiver, Sender},
+        Mutex,
+    },
 };
 use uuid::Uuid;
-
-use crate::{
-    input_document::{client_mount, filesystem, host, lnet, mdt, mgt, mgt_mdt},
-    state_schema::Input,
-    Error,
-};
 
 pub type OutgoingHostQueues = Arc<Mutex<HashMap<Fqdn, Vec<Action>>>>;
 
@@ -71,7 +74,11 @@ pub(crate) async fn invoke_remote(
     (tx, rx)
 }
 
-pub(crate) async fn invoke<'a>(input: &'a Input) -> Result<(), Error> {
+pub(crate) async fn invoke<'a>(
+    mut stdout_writer: OutputWriter,
+    mut stderr_writer: OutputWriter,
+    input: &'a Input,
+) -> Result<(), Error> {
     match input {
         Input::Host(x) => match x {
             host::Input::SshCommand(x) => {
@@ -87,6 +94,9 @@ pub(crate) async fn invoke<'a>(input: &'a Input) -> Result<(), Error> {
                     .await?;
 
                 let x = channel.exec_cmd(&x.run).await?;
+
+                stdout_writer.write_all(x.stdout.as_bytes()).await?;
+                stderr_writer.write_all(x.stderr.as_bytes()).await?;
 
                 if !x.success() {
                     let x: Result<Output, emf_ssh::Error> = x.into();

@@ -167,6 +167,7 @@ dependencies = [
  "humantime",
  "im",
  "ipnetwork",
+ "petgraph",
  "serde",
  "serde_json",
  "serde_repr",
@@ -491,6 +492,8 @@ checksum = "467d164a6de56270bd7c4d070df81d07beace25012d5103ced4e9ff08d6afdb7"
 dependencies = [
  "fixedbitset",
  "indexmap",
+ "serde",
+ "serde_derive",
 ]
 
 [[package]]

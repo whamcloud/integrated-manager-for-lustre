@@ -8,12 +8,12 @@ use emf_state_machine::{
     action_runner::{
         IncomingHostQueues, OutgoingHostQueues, INCOMING_HOST_QUEUES, OUTGOING_HOST_QUEUES,
     },
-    command_plan::{build_job_graphs, JobGraph},
+    command_plan::{build_command, build_job_graphs, JobGraph},
     executor::get_executor,
     input_document::deserialize_input_document,
     Error,
 };
-use emf_wire_types::{ActionResult, Command, Fqdn};
+use emf_wire_types::{ActionResult, Fqdn};
 use futures::TryFutureExt;
 use std::{collections::HashMap, convert::Infallible, sync::Arc};
 use tokio::sync::mpsc::UnboundedSender;
@@ -34,7 +34,7 @@ async fn main() -> Result<(), Error> {
 
     sqlx::migrate!("../migrations").run(&pool).await?;
 
-    let tx = get_executor();
+    let tx = get_executor(&pool);
 
     let get_actions = warp::get()
         .and(warp::header("x-client-fqdn"))
@@ -58,7 +58,7 @@ async fn main() -> Result<(), Error> {
         .and(warp::any().map(move || pool.clone()))
         .and(warp::any().map(move || tx.clone()))
         .and_then(
-            |x: Bytes, pg_pool, tx: UnboundedSender<HashMap<String, JobGraph>>| {
+            |x: Bytes, pg_pool, tx: UnboundedSender<(i32, HashMap<String, JobGraph>)>| {
                 async move {
                     let x = match deserialize_input_document(x) {
                         Ok(x) => x,
@@ -85,9 +85,11 @@ async fn main() -> Result<(), Error> {
 
                     let graphs = build_job_graphs(x);
 
-                    let _ = tx.send(graphs);
+                    let cmd = build_command(&pg_pool, &graphs).await?;
 
-                    Ok::<_, Error>(warp::reply::json(&Command { id: 1 }).into_response())
+                    let _ = tx.send((cmd.id, graphs));
+
+                    Ok::<_, Error>(warp::reply::json(&cmd).into_response())
                 }
                 .map_err(warp::reject::custom)
             },

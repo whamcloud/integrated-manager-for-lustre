@@ -4,6 +4,7 @@
 
 use emf_manager_cli::{
     api::{self, api_cli, graphql_cli},
+    command,
     display_utils::display_error,
     error::EmfManagerCliError,
     filesystem::{self, filesystem_cli},
@@ -20,6 +21,9 @@ use structopt::StructOpt;
 #[derive(Debug, StructOpt)]
 #[structopt(setting = structopt::clap::AppSettings::ColoredHelp)]
 pub enum App {
+    #[structopt(name = "command")]
+    /// Work with commands
+    Command { id: i32 },
     #[structopt(name = "stratagem")]
     /// Work with Stratagem server
     Stratagem {
@@ -104,6 +108,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let r = match matches {
+        App::Command { id } => command::cli(id).await,
         App::DebugApi(command) => api_cli(command).await,
         App::DebugQl(command) => graphql_cli(command).await,
         App::Filesystem { command } => filesystem_cli(command).await,

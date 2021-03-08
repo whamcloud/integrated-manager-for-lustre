@@ -14,7 +14,7 @@ use crate::{
     state_schema::{ActionName, State},
 };
 use sqlx::migrate::MigrateError;
-use std::collections::HashMap;
+use std::{collections::HashMap, io};
 use validator::{Validate, ValidationErrors};
 use warp::reject;
 
@@ -33,6 +33,8 @@ pub enum Error {
     SshError(#[from] emf_ssh::Error),
     #[error(transparent)]
     InputDocumentErrors(#[from] InputDocumentErrors),
+    #[error(transparent)]
+    IoError(#[from] io::Error),
 }
 
 impl reject::Reject for Error {}
@@ -54,7 +56,7 @@ impl<T: Validate> ValidateAddon for HashMap<String, T> {
 mod tests {
     use super::*;
     use crate::{
-        command_plan::build_job_graphs,
+        command_plan::{build_job_graphs, OutputWriter},
         executor::build_execution_graph,
         input_document::{deserialize_input_document, host, SshOpts, Step, StepPair},
         state_schema::Input,
@@ -64,7 +66,7 @@ mod tests {
     use once_cell::sync::Lazy;
     use petgraph::visit::NodeIndexable;
     use std::{ops::Deref, pin::Pin, sync::Arc};
-    use tokio::sync::Mutex;
+    use tokio::sync::{mpsc, Mutex};
 
     #[tokio::test]
     async fn graph_execution_stacks_population() -> Result<(), Box<dyn std::error::Error>> {
@@ -130,6 +132,8 @@ jobs:
         graph.add_edge(node4, node5, ());
 
         fn invoke_box(
+            _: OutputWriter,
+            _: OutputWriter,
             input: &Input,
         ) -> Pin<Box<dyn Future<Output = Result<(), Error>> + Send + '_>> {
             Box::pin(async move {
@@ -144,7 +148,9 @@ jobs:
             })
         }
 
-        let stacks = build_execution_graph(Arc::new(graph), invoke_box);
+        let (tx, _rx) = mpsc::unbounded_channel();
+
+        let stacks = build_execution_graph("foo", tx, Arc::new(graph), invoke_box);
 
         // There should be exactly two stacks
         assert_eq!(stacks.len(), 2);

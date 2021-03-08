@@ -4,6 +4,8 @@
 
 pub mod api;
 pub mod api_utils;
+pub mod command;
+pub mod command_utils;
 pub mod config_utils;
 pub mod display_utils;
 pub mod error;
