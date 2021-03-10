@@ -12,7 +12,7 @@ use lustre_collector::{
     HostStats, LNetStats, NodeStats, Record, Target, TargetStats,
     {
         types::{BrwStats, TargetVariant},
-        Stat, TargetStat,
+        BytesStat, JobStatMdt, JobStatOst, ReqsStat, Stat, TargetStat,
     },
 };
 use url::Url;
@@ -73,6 +73,152 @@ fn handle_stats_record(x: TargetStat<Vec<Stat>>, host: &Fqdn) -> Option<Vec<Poin
             })
             .collect(),
     )
+}
+
+fn build_bytesstat_query(stat: &BytesStat, optype: &str, query: Point) -> Point {
+    let mut q = query;
+    q = q.add_tag("name", Value::String(optype.to_string()));
+    q = q.add_tag("unit", Value::String(stat.unit.to_string()));
+
+    q = q.add_field("samples", Value::Integer(stat.samples as i64));
+    tracing::debug!("BytesStat Stat - samples: {}", stat.samples);
+
+    q = q.add_field("min", Value::Integer(stat.min as i64));
+    tracing::debug!("BytesStat Stat - min: {}", stat.min);
+
+    q = q.add_field("max", Value::Integer(stat.max));
+    tracing::debug!("BytesStat Stat - max: {}", stat.max);
+
+    q = q.add_field("sum", Value::Integer(stat.sum));
+    tracing::debug!("BytesStat Stat - sum: {}", stat.sum);
+
+    tracing::debug!(
+        "BytesStat Stats: optype: {:?}, unit: {}",
+        &*optype,
+        &*stat.unit,
+    );
+
+    q
+}
+
+fn build_reqsstat_query(stat: &ReqsStat, optype: &str, query: Point) -> Point {
+    let mut q = query;
+    q = q.add_tag("name", Value::String(optype.to_string()));
+    q = q.add_tag("unit", Value::String(stat.unit.to_string()));
+
+    q = q.add_field("samples", Value::Integer(stat.samples as i64));
+
+    tracing::debug!(
+        "ReqsStat Stats: optype: {:?}, unit: {}, samples: {}",
+        &*optype,
+        &*stat.unit,
+        stat.samples,
+    );
+
+    q
+}
+
+fn build_jobstat_ost_querys(stat: &JobStatOst, query: Point) -> Vec<Point> {
+    vec![
+        build_bytesstat_query(&stat.read_bytes, "read_bytes", query.clone()),
+        build_bytesstat_query(&stat.write_bytes, "write_bytes", query.clone()),
+        build_reqsstat_query(&stat.getattr, "getattr", query.clone()),
+        build_reqsstat_query(&stat.setattr, "setattr", query.clone()),
+        build_reqsstat_query(&stat.punch, "punch", query.clone()),
+        build_reqsstat_query(&stat.sync, "sync", query.clone()),
+        build_reqsstat_query(&stat.destroy, "destroy", query.clone()),
+        build_reqsstat_query(&stat.create, "create", query.clone()),
+        build_reqsstat_query(&stat.statfs, "statfs", query.clone()),
+        build_reqsstat_query(&stat.get_info, "get_info", query.clone()),
+        build_reqsstat_query(&stat.set_info, "set_info", query.clone()),
+        build_reqsstat_query(&stat.quotactl, "quotactl", query.clone()),
+    ]
+}
+
+fn handle_jobstats_ost_record(
+    x: TargetStat<Option<Vec<JobStatOst>>>,
+    host: &Fqdn,
+) -> Option<Vec<Point>> {
+    let vec_job = x.value.as_ref()?;
+    Some(
+        vec_job
+            .iter()
+            .map(|stat| {
+                let query = Point::new("jobstats")
+                    .add_tag("host", Value::String(host.0.to_string()))
+                    .add_tag("target", Value::String(x.target.to_string()))
+                    .add_tag("kind", Value::String(x.kind.to_string()))
+                    .add_tag("job_id", Value::String(stat.job_id.to_string()))
+                    .add_tag(
+                        "snapshot_time",
+                        Value::String(stat.snapshot_time.to_string()),
+                    );
+
+                let querys = build_jobstat_ost_querys(stat, query);
+
+                querys
+            })
+            .collect::<Vec<Vec<_>>>()
+            .into_iter()
+            .flatten()
+            .collect(),
+    )
+}
+
+fn build_jobstat_mdt_querys(stat: &JobStatMdt, query: Point) -> Vec<Point> {
+    vec![
+        build_bytesstat_query(&stat.open, "open", query.clone()),
+        build_bytesstat_query(&stat.close, "close", query.clone()),
+        build_bytesstat_query(&stat.mknod, "mknod", query.clone()),
+        build_bytesstat_query(&stat.link, "link", query.clone()),
+        build_bytesstat_query(&stat.unlink, "unlink", query.clone()),
+        build_bytesstat_query(&stat.mkdir, "mkdir", query.clone()),
+        build_bytesstat_query(&stat.rmdir, "rmdir", query.clone()),
+        build_bytesstat_query(&stat.rename, "rename", query.clone()),
+        build_bytesstat_query(&stat.getattr, "getattr", query.clone()),
+        build_bytesstat_query(&stat.setattr, "setattr", query.clone()),
+        build_bytesstat_query(&stat.getxattr, "getxattr", query.clone()),
+        build_bytesstat_query(&stat.statfs, "statfs", query.clone()),
+        build_bytesstat_query(&stat.sync, "sync", query.clone()),
+        build_bytesstat_query(&stat.samedir_rename, "samedir_rename", query.clone()),
+        build_bytesstat_query(&stat.crossdir_rename, "crossdir_rename", query.clone()),
+        build_bytesstat_query(&stat.read_bytes, "read_bytes", query.clone()),
+        build_bytesstat_query(&stat.write_bytes, "write_bytes", query.clone()),
+        build_bytesstat_query(&stat.punch, "punch", query.clone()),
+    ]
+}
+
+fn handle_jobstats_mdt_record(
+    x: TargetStat<Option<Vec<JobStatMdt>>>,
+    host: &Fqdn,
+) -> Option<Vec<Point>> {
+    if let Some(ref vec_job) = x.value {
+        Some(
+            vec_job
+                .iter()
+                .map(|stat| {
+                    let query = Point::new("jobstats")
+                        .add_tag("host", Value::String(host.0.to_string()))
+                        .add_tag("target", Value::String(x.target.to_string()))
+                        .add_tag("kind", Value::String(x.kind.to_string()))
+                        .add_tag("job_id", Value::String(stat.job_id.to_string()))
+                        .add_tag(
+                            "snapshot_time",
+                            Value::String(stat.snapshot_time.to_string()),
+                        );
+
+                    let querys = build_jobstat_mdt_querys(stat, query);
+
+                    querys
+                })
+                .collect::<Vec<Vec<_>>>()
+                .into_iter()
+                .flatten()
+                .collect(),
+        )
+    } else {
+        None
+    }
 }
 
 fn handle_brw_stats(x: TargetStat<Vec<BrwStats>>, host: &Fqdn) -> Option<Vec<Point>> {
@@ -368,9 +514,15 @@ fn handle_target_records(target_stats: TargetStats, host: &Fqdn) -> Option<Vec<P
 
             None
         }
-        TargetStats::JobStatsOst(_) => {
-            // Not storing jobstats... yet.
-            None
+        TargetStats::JobStatsOst(x) => {
+            tracing::debug!("JobStatsOst - {:?}", x);
+
+            handle_jobstats_ost_record(x, &host)
+        }
+        TargetStats::JobStatsMdt(x) => {
+            tracing::debug!("JobStatsMdt - {:?}", x);
+
+            handle_jobstats_mdt_record(x, &host)
         }
     }
 }

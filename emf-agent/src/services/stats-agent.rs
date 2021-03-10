@@ -16,10 +16,7 @@ use std::{io, str, time::Duration};
 use tokio::time::interval;
 
 fn params() -> Vec<String> {
-    parser::params()
-        .into_iter()
-        .filter(|x| x != "obdfilter.*OST*.job_stats")
-        .collect()
+    parser::params().into_iter().collect()
 }
 
 #[tokio::main]
@@ -89,7 +86,7 @@ async fn main() -> Result<(), EmfAgentError> {
 mod tests {
 
     #[test]
-    fn test_no_job_stats() {
+    fn test_job_stats() {
         let xs = super::params();
 
         insta::assert_debug_snapshot!(xs);
