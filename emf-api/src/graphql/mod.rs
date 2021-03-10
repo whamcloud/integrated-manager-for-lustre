@@ -17,7 +17,7 @@ use chrono::{DateTime, Utc};
 use emf_postgres::{active_mgs_host_fqdn, fqdn_by_host_id, get_fs_target_resources};
 use emf_wire_types::{
     db::{LogMessageRecord, LustreFid},
-    graphql_duration::GraphQLDuration,
+    duration::GraphQLDuration,
     logs::{LogResponse, Meta},
     snapshot::{ReserveUnit, Snapshot, SnapshotInterval, SnapshotRetention},
     task::Task,

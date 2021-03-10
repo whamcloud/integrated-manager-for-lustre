@@ -6,7 +6,7 @@
 
 use crate::{
     db::{Id, TableName},
-    graphql_duration::GraphQLDuration,
+    duration::GraphQLDuration,
 };
 use chrono::{offset::Utc, DateTime};
 use std::str::FromStr;

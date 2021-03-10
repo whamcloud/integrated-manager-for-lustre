@@ -8,7 +8,7 @@ use crate::{
 };
 use emf_manager_env::get_report_path;
 use emf_wire_types::{
-    graphql_duration::GraphQLDuration, stratagem, task::TaskArgs, Command, StratagemConfiguration,
+    duration::GraphQLDuration, stratagem, task::TaskArgs, Command, StratagemConfiguration,
     StratagemConfigurationOutput, StratagemReport,
 };
 use futures::{
