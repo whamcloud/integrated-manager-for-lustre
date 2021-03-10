@@ -78,19 +78,9 @@ Vagrant.configure('2') do |config|
         vbx.name = "node#{i}"
       end
 
-      node.vm.provision "exa-file",
-                        type: "file",
-                        source: "./exascaler.conf",
-                        destination: "/tmp/exascaler.conf"
-
-      node.vm.provision "udev-file",
-                        type: "file",
-                        source: "./91-external-storage.rules",
-                        destination: "/tmp/91-external-storage.rules"
-
       node.vm.provision "copy-files", type: 'shell', inline: <<-SHELL
-      mv /tmp/exascaler.conf /etc/ddn/
-      mv /tmp/91-external-storage.rules /etc/udev/rules.d/
+      cp /vagrant/exascaler.conf /etc/ddn/
+      cp /vagrant/91-external-storage.rules /etc/udev/rules.d/
       SHELL
 
       node.vm.provision 'udev-trigger', type: 'shell', inline: <<-SHELL
@@ -158,6 +148,13 @@ Vagrant.configure('2') do |config|
                           type: 'shell',
                           run: 'never',
                           path: './scripts/configure_ha.sh'
+
+        node.vm.provision 'config-pools',
+                         type: 'shell',
+                         run: 'never',
+                         inline: <<-SHELL
+                           config-ost-pools
+                         SHELL
 
         node.vm.provision 'create-esui',
                           type: 'shell',

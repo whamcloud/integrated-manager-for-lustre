@@ -35,7 +35,7 @@ The EMF Team typically uses [Vagrant](https://www.vagrantup.com) and [VirtualBox
    ```sh
    vagrant up
    vagrant provision --provision-with=es-install
-   vagrant provision --provision-with=ha-setup,start-lustre
+   vagrant provision --provision-with=ha-setup,start-lustre,config-pools
    ```
 
 1. (optional) Install New EMF.

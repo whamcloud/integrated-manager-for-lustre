@@ -17,11 +17,11 @@ destroy: clean
 	rm -rf "${VBOX_DIR}"/node[1-4] "${VBOX_DIR}"/client[1-8] "${VBOX_DIR}"/ubuntu[1-8]
 
 docker-local: docker-rpms
-	vagrant rsync
+	vagrant rsync || true
 	vagrant provision --provision-with=install-docker-rpm
 
 agent-local: agent-rpms
-	vagrant rsync
+	vagrant rsync || true
 	vagrant provision --provision-with=install-agent-rpm
 
 # DIRECTORY BUILD TARGETS
