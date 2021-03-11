@@ -1,0 +1,2 @@
+primitive sfa-home-vd ocf:ddn:sfa-home-vd params 3: rule defined system-type and system-type eq block system_type=block params 2: rule defined system-type and system-type eq embedded system_type=embedded params 1: system_type=invalid op start interval=0 timeout=300 op monitor interval=3600 on-fail=ignore timeout=300 op stop interval=0 timeout=300
+clone cl-sfa-home-vd sfa-home-vd meta interleave=true priority=410 target-role=Started

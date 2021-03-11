@@ -1,0 +1,36 @@
+<group id="emf-docker-grp">
+  <primitive id="emf-ip" class="ocf" provider="heartbeat" type="IPaddr2">
+    <instance_attributes id="emf-ip-instance_attributes">
+      <nvpair name="ip" value="10.73.10.10" id="emf-ip-instance_attributes-ip"/>
+      <nvpair name="nic" value="enp0s9" id="emf-ip-instance_attributes-nic"/>
+      <nvpair name="cidr_netmask" value="22" id="emf-ip-instance_attributes-cidr_netmask"/>
+    </instance_attributes>
+    <operations>
+      <op name="monitor" interval="30" timeout="30" id="emf-ip-monitor-30"/>
+    </operations>
+  </primitive>
+  <primitive id="emf-fs" class="ocf" provider="heartbeat" type="Filesystem">
+    <instance_attributes id="emf-fs-instance_attributes">
+      <nvpair name="device" value="/dev/mapper/vg_mgs-emf" id="emf-fs-instance_attributes-device"/>
+      <nvpair name="directory" value="/ui_data" id="emf-fs-instance_attributes-directory"/>
+      <nvpair name="fstype" value="ext4" id="emf-fs-instance_attributes-fstype"/>
+    </instance_attributes>
+    <operations>
+      <op name="monitor" interval="30" timeout="60" id="emf-fs-monitor-30"/>
+    </operations>
+  </primitive>
+  <primitive id="docker" class="systemd" type="docker.service">
+    <operations>
+      <op name="start" interval="0" timeout="120" id="docker-start-0"/>
+      <op name="stop" interval="0" timeout="120" id="docker-stop-0"/>
+      <op name="monitor" interval="30" timeout="120" id="docker-monitor-30"/>
+    </operations>
+  </primitive>
+  <primitive id="emf-docker" class="systemd" type="emf-docker.service">
+    <operations>
+      <op name="start" interval="0" timeout="900" id="emf-docker-start-0"/>
+      <op name="stop" interval="0" timeout="360" id="emf-docker-stop-0"/>
+      <op name="monitor" interval="60" timeout="120" id="emf-docker-monitor-60"/>
+    </operations>
+  </primitive>
+</group>

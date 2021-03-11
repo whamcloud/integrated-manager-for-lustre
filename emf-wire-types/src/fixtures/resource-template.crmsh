@@ -1,0 +1,1 @@
+rsc_template lustre-fs-mdt ocf:ddn:lustre-server params lustre_resource_type=ddn manage_directory=1 options="max_sectors_kb=0" meta priority=100 utilization lustre-object=1 op start interval=0 record-pending=true timeout=450 op monitor interval=30 timeout=300 op stop interval=0 record-pending=true timeout=300

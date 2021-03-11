@@ -22,7 +22,7 @@ emf-request-retry = {path = "../emf-request-retry", version = "0.4.0"}
 emf-systemd = {path = "../emf-systemd", version = "0.4.0"}
 emf-tracing = {version = "0.4", path = "../emf-tracing"}
 emf-util = {path = "../emf-util", version = "0.4.0"}
-emf-wire-types = {path = "../emf-wire-types", version = "0.4", features = ["cli"]}
+emf-wire-types = {path = "../emf-wire-types", version = "0.4", features = ["cli", "xml"]}
 exitcode = "1.1"
 futures = "0.3"
 http = "0.2"

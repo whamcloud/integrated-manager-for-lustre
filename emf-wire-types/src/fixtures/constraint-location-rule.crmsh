@@ -1,0 +1,1 @@
+location fs-placement fs resource-discovery=never rule -inf: #kind ne cluster

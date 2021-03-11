@@ -1,0 +1,31 @@
+<clone id="cl-sfa-home-vd">
+  <meta_attributes id="cl-sfa-home-vd-meta_attributes">
+    <nvpair name="priority" value="410" id="cl-sfa-home-vd-meta_attributes-priority"/>
+    <nvpair name="interleave" value="true" id="cl-sfa-home-vd-meta_attributes-interleave"/>
+    <nvpair id="cl-sfa-home-vd-meta_attributes-target-role" name="target-role" value="Started"/>
+  </meta_attributes>
+  <primitive id="sfa-home-vd" class="ocf" provider="ddn" type="sfa-home-vd">
+    <instance_attributes score="3" id="sfa-home-vd-instance_attributes">
+      <rule score="INFINITY" id="sfa-home-vd-instance_attributes-rule">
+        <expression attribute="system-type" operation="defined" id="sfa-home-vd-instance_attributes-rule-expression"/>
+        <expression attribute="system-type" operation="eq" value="block" id="sfa-home-vd-instance_attributes-rule-expression-0"/>
+      </rule>
+      <nvpair name="system_type" value="block" id="sfa-home-vd-instance_attributes-system_type"/>
+    </instance_attributes>
+    <instance_attributes score="2" id="sfa-home-vd-instance_attributes-0">
+      <rule score="INFINITY" id="sfa-home-vd-instance_attributes-0-rule">
+        <expression attribute="system-type" operation="defined" id="sfa-home-vd-instance_attributes-0-rule-expression"/>
+        <expression attribute="system-type" operation="eq" value="embedded" id="sfa-home-vd-instance_attributes-0-rule-expression-0"/>
+      </rule>
+      <nvpair name="system_type" value="embedded" id="sfa-home-vd-instance_attributes-0-system_type"/>
+    </instance_attributes>
+    <instance_attributes score="1" id="sfa-home-vd-instance_attributes-1">
+      <nvpair name="system_type" value="invalid" id="sfa-home-vd-instance_attributes-1-system_type"/>
+    </instance_attributes>
+    <operations>
+      <op name="monitor" interval="3600" on-fail="ignore" timeout="300" id="sfa-home-vd-monitor-3600"/>
+      <op name="start" interval="0" timeout="300" id="sfa-home-vd-start-0"/>
+      <op name="stop" interval="0" timeout="300" id="sfa-home-vd-stop-0"/>
+    </operations>
+  </primitive>
+</clone>

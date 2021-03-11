@@ -54,10 +54,6 @@ pub fn create_registry() -> action_plugins::Actions {
             "ha_resource_create",
             high_availability::create_single_resource,
         )
-        .add_plugin(
-            "ha_resource_create_cloned",
-            high_availability::create_cloned_resource,
-        )
         .add_plugin("ha_resource_destroy", high_availability::destroy_resource)
         .add_plugin(
             "ha_cloned_client_create",

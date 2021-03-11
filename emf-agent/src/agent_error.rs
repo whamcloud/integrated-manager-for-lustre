@@ -112,6 +112,8 @@ pub enum EmfAgentError {
     #[error(transparent)]
     OneshotCanceled(#[from] futures::channel::oneshot::Canceled),
     #[error(transparent)]
+    PacemakerError(#[from] emf_wire_types::pacemaker::Error),
+    #[error(transparent)]
     ParseBoolError(#[from] std::str::ParseBoolError),
     #[error(transparent)]
     ParseIntError(#[from] std::num::ParseIntError),

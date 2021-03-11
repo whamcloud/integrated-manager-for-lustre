@@ -1,0 +1,5 @@
+primitive emf-ip ocf:heartbeat:IPaddr2 params cidr_netmask=22 ip=10.73.10.10 nic=enp0s9 op monitor interval=30 timeout=30
+primitive emf-fs ocf:heartbeat:Filesystem params device="/dev/mapper/vg_mgs-emf" directory="/ui_data" fstype=ext4 op monitor interval=30 timeout=60
+primitive docker systemd:docker.service op start interval=0 timeout=120 op monitor interval=30 timeout=120 op stop interval=0 timeout=120
+primitive emf-docker systemd:emf-docker.service op start interval=0 timeout=900 op monitor interval=60 timeout=120 op stop interval=0 timeout=360
+group emf-docker-grp emf-ip emf-fs docker emf-docker

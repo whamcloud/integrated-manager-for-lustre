@@ -1,0 +1,18 @@
+<template id="lustre-fs-mdt" class="ocf" provider="ddn" type="lustre-server">
+  <instance_attributes id="lustre-fs-mdt-instance_attributes">
+    <nvpair name="lustre_resource_type" value="ddn" id="lustre-fs-mdt-instance_attributes-lustre_resource_type"/>
+    <nvpair name="manage_directory" value="1" id="lustre-fs-mdt-instance_attributes-manage_directory"/>
+    <nvpair name="options" value="max_sectors_kb=0" id="lustre-fs-mdt-instance_attributes-options"/>
+  </instance_attributes>
+  <meta_attributes id="lustre-fs-mdt-meta_attributes">
+    <nvpair name="priority" value="100" id="lustre-fs-mdt-meta_attributes-priority"/>
+  </meta_attributes>
+  <utilization id="lustre-fs-mdt-utilization">
+    <nvpair name="lustre-object" value="1" id="lustre-fs-mdt-utilization-lustre-object"/>
+  </utilization>
+  <operations>
+    <op name="start" interval="0" record-pending="true" timeout="450" id="lustre-fs-mdt-start-0"/>
+    <op name="stop" interval="0" record-pending="true" timeout="300" id="lustre-fs-mdt-stop-0"/>
+    <op name="monitor" interval="30" timeout="300" id="lustre-fs-mdt-monitor-30"/>
+  </operations>
+</template>

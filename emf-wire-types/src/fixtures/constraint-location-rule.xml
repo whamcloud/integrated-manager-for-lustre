@@ -1,0 +1,5 @@
+<rsc_location id="fs-placement" rsc="fs" resource-discovery="never">
+  <rule score="-INFINITY" id="fs-placement-rule">
+    <expression attribute="#kind" operation="ne" value="cluster" id="fs-placement-rule-expression"/>
+  </rule>
+</rsc_location>

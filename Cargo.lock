@@ -1461,6 +1461,7 @@ version = "0.4.0"
 dependencies = [
  "bytes 1.0.1",
  "chrono",
+ "elementtree",
  "emf-api-utils",
  "emf-change",
  "humantime",
