@@ -8,18 +8,21 @@ use crate::{
     state_schema::Input,
     Error,
 };
-use emf_ssh::{Output, SshChannelExt as _, SshHandleExt};
+use bytes::BytesMut;
+use emf_ssh::{SshChannelExt as _, SshHandleExt};
+use emf_tracing::tracing;
 use emf_wire_types::{Action, ActionId, ActionName, AgentResult, Fqdn};
 use futures::TryFutureExt;
 use once_cell::sync::Lazy;
 use std::{collections::HashMap, sync::Arc};
 use tokio::{
-    io::AsyncWriteExt,
+    io::{copy, AsyncReadExt, AsyncWriteExt},
     sync::{
         oneshot::{self, Receiver, Sender},
         Mutex,
     },
 };
+use tokio_util::io::ReaderStream;
 use uuid::Uuid;
 
 pub type OutgoingHostQueues = Arc<Mutex<HashMap<Fqdn, Vec<Action>>>>;
@@ -88,20 +91,33 @@ pub(crate) async fn invoke<'a>(
                     emf_ssh::connect(&x.host, opts.port, &opts.user, (&opts.auth_opts).into())
                         .await?;
 
-                let mut channel = session
+                let channel = session
                     .channel_open_session()
                     .err_into::<emf_ssh::Error>()
                     .await?;
 
-                let x = channel.exec_cmd(&x.run).await?;
+                let mut child = channel.spawn(&x.run).await?;
 
-                stdout_writer.write_all(x.stdout.as_bytes()).await?;
-                stderr_writer.write_all(x.stderr.as_bytes()).await?;
+                if let Some(mut x) = child.stdout.take() {
+                    tokio::spawn(
+                        async move { copy(&mut x, &mut stdout_writer).await }
+                            .map_ok(drop)
+                            .map_err(|e| tracing::warn!("Could not copy stdout {:?}", e)),
+                    );
+                }
 
-                if !x.success() {
-                    let x: Result<Output, emf_ssh::Error> = x.into();
+                if let Some(mut x) = child.stderr.take() {
+                    tokio::spawn(
+                        async move { copy(&mut x, &mut stderr_writer).await }
+                            .map_ok(drop)
+                            .map_err(|e| tracing::warn!("Could not copy stderr {:?}", e)),
+                    );
+                }
 
-                    return x.map(drop).map_err(Error::SshError);
+                let code = child.wait().await?;
+
+                if code != 0 {
+                    return Err(Error::SshError(emf_ssh::Error::BadStatus(code)));
                 }
             }
             host::Input::SetupPlanesSsh(host::SetupPlanesSsh {

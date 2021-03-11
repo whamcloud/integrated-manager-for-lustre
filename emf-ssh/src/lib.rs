@@ -3,10 +3,14 @@
 // license that can be found in the LICENSE file.
 
 use emf_tracing::tracing;
-use futures::{future::BoxFuture, stream, FutureExt, TryStreamExt};
-use std::{io, path::PathBuf, string::FromUtf8Error, sync::Arc, time::Duration};
+use futures::{future::BoxFuture, stream, Future, FutureExt, TryStreamExt};
+use std::{io, path::PathBuf, pin::Pin, string::FromUtf8Error, sync::Arc, time::Duration};
 use thrussh::client;
 pub use thrussh::client::{Channel, Handle};
+use tokio::{
+    io::{AsyncWriteExt, BufReader, DuplexStream},
+    sync::watch::error::RecvError,
+};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -30,6 +34,30 @@ pub enum Error {
     NoSshDir,
     #[error("Command Failed. Exit Code: {0}. Message: {1}")]
     FailedCmd(u32, String),
+    #[error("Bad Exit Code: {0}.")]
+    BadStatus(u32),
+    #[error(transparent)]
+    RecvError(#[from] RecvError),
+}
+
+pub struct Child {
+    pub stderr: Option<BufReader<DuplexStream>>,
+    pub stdout: Option<BufReader<DuplexStream>>,
+    exit_status: tokio::sync::watch::Receiver<u32>,
+    abort: tokio::sync::watch::Sender<()>,
+}
+
+impl Child {
+    /// Send a SIGKILL to the remote process
+    pub fn kill(&self) {
+        let _ = self.abort.send(());
+    }
+    /// Wait for the spawned process to complete
+    pub async fn wait(&mut self) -> Result<u32, Error> {
+        self.exit_status.changed().await?;
+
+        Ok(*self.exit_status.borrow())
+    }
 }
 
 /// Various ways to Authenticate the SSH client
@@ -291,6 +319,11 @@ pub trait SshChannelExt {
         data: R,
         to: impl Into<PathBuf> + std::fmt::Debug,
     ) -> BoxFuture<'a, Result<(), Error>>;
+    // Spawn a process on the remote host and stream data back in a child
+    fn spawn(
+        self,
+        cmd: impl ToString + std::fmt::Debug,
+    ) -> Pin<Box<dyn Future<Output = Result<Child, Error>> + Send>>;
 }
 
 impl SshChannelExt for Channel {
@@ -402,6 +435,62 @@ impl SshChannelExt for Channel {
             };
 
             Ok(out)
+        }
+        .boxed()
+    }
+    #[tracing::instrument(skip(self))]
+    fn spawn(
+        mut self,
+        cmd: impl ToString + std::fmt::Debug,
+    ) -> Pin<Box<dyn Future<Output = Result<Child, Error>> + Send>> {
+        let cmd = cmd.to_string();
+        let (mut stdout_tx, stdout_rx) = tokio::io::duplex(10_000);
+        let (mut stderr_tx, stderr_rx) = tokio::io::duplex(10_000);
+        let (status_tx, status_rx) = tokio::sync::watch::channel::<u32>(1);
+        let (abort_tx, mut abort_rx) = tokio::sync::watch::channel(());
+
+        async move {
+            self.exec(true, cmd).await?;
+
+            tokio::spawn(async move {
+                loop {
+                    tokio::select! {
+                        _ = abort_rx.changed() => self.signal(thrussh::Sig::KILL).await.unwrap(),
+                        msg = self.wait() => {
+                            let msg = match msg {
+                                Some(x) => x,
+                                None => break
+                            };
+
+                            match msg {
+                                thrussh::ChannelMsg::Data { ref data } => {
+                                    let _ = stdout_tx.write_all(&data.to_vec()).await;
+                                }
+                                thrussh::ChannelMsg::ExtendedData { ref data, ext } => {
+                                    if ext == 1 {
+                                        let _ = stderr_tx.write_all(&data.to_vec()).await;
+                                    }
+                                }
+                                thrussh::ChannelMsg::ExitStatus { exit_status: x } => {
+                                    let _ = status_tx.send(x);
+
+                                    break;
+                                }
+                                x => {
+                                    tracing::debug!("Got ssh ChannelMsg {:?}", x);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            Ok(Child {
+                stdout: Some(BufReader::new(stdout_rx)),
+                stderr: Some(BufReader::new(stderr_rx)),
+                exit_status: status_rx,
+                abort: abort_tx,
+            })
         }
         .boxed()
     }
