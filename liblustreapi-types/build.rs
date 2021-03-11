@@ -9,6 +9,8 @@ fn main() {
         return;
     }
 
+    println!("cargo:rerun-if-changed=wrapper.h");
+
     let out_file = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("src")
         .join("bindings.rs");

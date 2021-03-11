@@ -5,7 +5,7 @@
 pub mod error;
 
 use error::LiblustreError;
-use libloading as lib;
+use libloading::{Library, Symbol};
 use liblustreapi_types as types;
 use std::{
     convert::From,
@@ -133,12 +133,12 @@ fn buf2string(mut buf: Vec<u8>) -> Result<String, LiblustreError> {
 
 #[derive(Clone, Debug)]
 pub struct Llapi {
-    lib: Arc<lib::Library>,
+    lib: Arc<Library>,
 }
 
 impl Llapi {
     pub fn create() -> Result<Llapi, LiblustreError> {
-        let lib = lib::Library::new(LIBLUSTRE)?;
+        let lib = unsafe { Library::new(LIBLUSTRE)? };
         Ok(Llapi { lib: Arc::new(lib) })
     }
     /// Get a pointer to function or static variable by symbol name
@@ -147,10 +147,7 @@ impl Llapi {
     ///
     /// Pointer to a value of arbitrary type is returned. Using a value with wrong type is
     /// undefined.
-    pub unsafe fn get<T>(
-        &self,
-        symbol: &[u8],
-    ) -> Result<libloading::Symbol<'_, T>, LiblustreError> {
+    pub unsafe fn get<T>(&self, symbol: &[u8]) -> Result<Symbol<'_, T>, LiblustreError> {
         let x = self.lib.get(symbol)?;
 
         Ok(x)
@@ -248,7 +245,7 @@ impl Llapi {
 
         let f = unsafe { self.get(b"llapi_fid2path\0")? };
 
-        let func: lib::Symbol<
+        let func: Symbol<
             extern "C" fn(
                 *const libc::c_char,
                 *const libc::c_char,
@@ -291,7 +288,7 @@ impl Llapi {
 
         let f = unsafe { self.lib.get(b"llapi_path2fid\0")? };
 
-        let func: lib::Symbol<extern "C" fn(*const libc::c_char, *mut Fid) -> libc::c_int> = f;
+        let func: Symbol<extern "C" fn(*const libc::c_char, *mut Fid) -> libc::c_int> = f;
         let rc = func(pathptr, &mut fid as *mut Fid);
 
         unsafe {
@@ -319,9 +316,7 @@ impl Llapi {
 
         let f = unsafe { self.lib.get(b"llapi_search_fsname\0")? };
 
-        let func: lib::Symbol<
-            extern "C" fn(*const libc::c_char, *mut libc::c_char) -> libc::c_int,
-        > = f;
+        let func: Symbol<extern "C" fn(*const libc::c_char, *mut libc::c_char) -> libc::c_int> = f;
         let rc = func(fsc.as_ptr(), ptr);
 
         if rc != 0 {
@@ -346,9 +341,7 @@ impl Llapi {
 
         let f = unsafe { self.get(b"llapi_search_rootpath\0")? };
 
-        let func: lib::Symbol<
-            extern "C" fn(*mut libc::c_char, *const libc::c_char) -> libc::c_int,
-        > = f;
+        let func: Symbol<extern "C" fn(*mut libc::c_char, *const libc::c_char) -> libc::c_int> = f;
 
         let rc = func(ptr, fsc.as_ptr());
 
@@ -361,7 +354,7 @@ impl Llapi {
     }
 
     fn llapi_rmfid(&self, mntpt: &str, fidlist: &[String]) -> Result<(), LiblustreError> {
-        let func: lib::Symbol<extern "C" fn(*const libc::c_char, *const RmfidsArg) -> libc::c_int> =
+        let func: Symbol<extern "C" fn(*const libc::c_char, *const RmfidsArg) -> libc::c_int> =
             unsafe { self.get(b"llapi_rmfid\0")? };
 
         let devptr = CString::new(mntpt).map(|c| c.into_raw())?;
