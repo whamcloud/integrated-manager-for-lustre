@@ -27,8 +27,8 @@ AAAECX2qbiNLy1bWr6ju5C0k7hX+pLcPU2yzFtDczxiaJsi6ZVvq0GUyjpJ16N/MPu0p5/
 5x319+mofSpRyyPQl3AVAAAAFXNvbWVvbmVAc29tZXBsYWNlLmNvbQ==
 -----END OPENSSH PRIVATE KEY-----"#;
 
-pub fn start_server() -> Receiver<()> {
-    let (server, server_rx) = setup_server();
+pub fn start_server(port: u16) -> Receiver<()> {
+    let (server, server_rx) = setup_server(port);
 
     tokio::spawn(async move {
         let _ = server.await;
@@ -37,10 +37,10 @@ pub fn start_server() -> Receiver<()> {
     server_rx
 }
 
-pub async fn connect() -> Result<Handle<Client>, emf_ssh::Error> {
+pub async fn connect(port: u16) -> Result<Handle<Client>, emf_ssh::Error> {
     emf_ssh::connect(
         "127.0.0.1",
-        2222,
+        port,
         "root",
         emf_ssh::Auth::Password("abc123".into()),
     )
@@ -56,7 +56,9 @@ pub async fn read_into_buffer(
     tx.send(buffer).unwrap();
 }
 
-fn setup_server() -> (
+fn setup_server(
+    port: u16,
+) -> (
     impl Future<Output = Result<(), std::io::Error>>,
     Receiver<()>,
 ) {
@@ -73,7 +75,7 @@ fn setup_server() -> (
     };
     let (tx, rx) = tokio::sync::oneshot::channel::<()>();
 
-    (run(config, "0.0.0.0:2222", sh, tx), rx)
+    (run(config, format!("0.0.0.0:{}", port), sh, tx), rx)
 }
 
 /// Run a server.
@@ -82,7 +84,7 @@ fn setup_server() -> (
 /// been bound to an address.
 async fn run<H: thrussh::server::Server + Send + 'static>(
     config: Arc<Config>,
-    addr: &str,
+    addr: String,
     mut server: H,
     tx: Sender<()>,
 ) -> Result<(), std::io::Error> {

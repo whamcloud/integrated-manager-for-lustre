@@ -4,9 +4,9 @@ use emf_ssh::{SshChannelExt as _, SshHandleExt as _};
 
 #[tokio::test]
 async fn test_successful_remote_command() -> Result<(), Box<dyn std::error::Error>> {
-    common::start_server().await?;
+    common::start_server(2222).await?;
 
-    let mut handle = common::connect().await?;
+    let mut handle = common::connect(2222).await?;
     let channel = handle.create_channel().await?;
     let mut child = channel.spawn(&"echo This is a test!").await?;
 
@@ -29,9 +29,9 @@ async fn test_successful_remote_command() -> Result<(), Box<dyn std::error::Erro
 
 #[tokio::test]
 async fn test_remote_command_errored() -> Result<(), Box<dyn std::error::Error>> {
-    common::start_server().await?;
+    common::start_server(2223).await?;
 
-    let mut handle = common::connect().await?;
+    let mut handle = common::connect(2223).await?;
     let channel = handle.create_channel().await?;
     let mut child = channel.spawn(&"ls unknown-file").await?;
 
@@ -46,11 +46,10 @@ async fn test_remote_command_errored() -> Result<(), Box<dyn std::error::Error>>
 
     let buf_val = buf_rx.await?;
 
-    assert_eq!(
-        buf_val,
-        "stderr: ls: unknown-file: No such file or directory"
-    );
-    assert_eq!(exit_code, 1);
+    assert!(buf_val.contains("stderr: ls:"));
+    // Return code on OS X is 1
+    // Return code on linux is 2
+    assert!(vec![1, 2].contains(&exit_code));
 
     Ok(())
 }
