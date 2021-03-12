@@ -159,7 +159,7 @@ impl server::Handler for Server {
         mut self,
         channel: ChannelId,
         data: &[u8],
-        mut session: Session,
+        session: Session,
     ) -> Self::FutureUnit {
         let cmd = std::str::from_utf8(&data).unwrap().to_string();
 

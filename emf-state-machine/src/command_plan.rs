@@ -166,8 +166,8 @@ impl CommandStepWriterExt for CommandStepWriter {
         let (stdout_tx, stdout_rx) = tokio::io::duplex(10_000);
         let (stderr_tx, stderr_rx) = tokio::io::duplex(10_000);
 
-        let mut stdout_rx = ReaderStream::new(stdout_rx);
-        let mut stderr_rx = ReaderStream::new(stderr_rx);
+        let mut stdout_rx = ReaderStream::new(stdout_rx).fuse();
+        let mut stderr_rx = ReaderStream::new(stderr_rx).fuse();
 
         let tx = self.clone();
 

@@ -464,17 +464,23 @@ impl SshChannelExt for Channel {
 
                             match msg {
                                 thrussh::ChannelMsg::Data { ref data } => {
-                                    let _ = stdout_tx.write_all(&data.to_vec()).await;
+                                    let d = data.to_vec();
+
+                                    if let Err(e) = stdout_tx.write_all(&d).await {
+                                        tracing::warn!("Writing stdout: {} has failed: {:?}", String::from_utf8_lossy(&d), e);
+                                    };
                                 }
                                 thrussh::ChannelMsg::ExtendedData { ref data, ext } => {
                                     if ext == 1 {
-                                        let _ = stderr_tx.write_all(&data.to_vec()).await;
+                                        let d = data.to_vec();
+
+                                        if let Err(e) = stderr_tx.write_all(&d).await {
+                                            tracing::warn!("Writing stderr: {} has failed: {:?}", String::from_utf8_lossy(&d), e);
+                                        };
                                     }
                                 }
                                 thrussh::ChannelMsg::ExitStatus { exit_status: x } => {
                                     let _ = status_tx.send(x);
-
-                                    break;
                                 }
                                 x => {
                                     tracing::debug!("Got ssh ChannelMsg {:?}", x);
