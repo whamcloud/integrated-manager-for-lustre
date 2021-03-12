@@ -8,14 +8,16 @@ use emf_state_machine::{
     action_runner::{
         IncomingHostQueues, OutgoingHostQueues, INCOMING_HOST_QUEUES, OUTGOING_HOST_QUEUES,
     },
-    command_plan::{build_command, build_job_graphs, JobGraph},
+    command_plan::{build_command, build_job_graphs, JobGraphs},
     executor::get_executor,
     input_document::deserialize_input_document,
     Error,
 };
+use emf_tracing::tracing;
 use emf_wire_types::{ActionResult, Fqdn};
 use futures::TryFutureExt;
-use std::{collections::HashMap, convert::Infallible, sync::Arc};
+use petgraph::graph::NodeIndex;
+use std::{convert::Infallible, sync::Arc};
 use tokio::sync::mpsc::UnboundedSender;
 use warp::{http, hyper::body::Bytes, Filter as _, Reply as _};
 
@@ -58,7 +60,7 @@ async fn main() -> Result<(), Error> {
         .and(warp::any().map(move || pool.clone()))
         .and(warp::any().map(move || tx.clone()))
         .and_then(
-            |x: Bytes, pg_pool, tx: UnboundedSender<(i32, HashMap<String, JobGraph>)>| {
+            |x: Bytes, pg_pool, tx: UnboundedSender<(i32, JobGraphs, Vec<NodeIndex>)>| {
                 async move {
                     let x = match deserialize_input_document(x) {
                         Ok(x) => x,
@@ -73,6 +75,28 @@ async fn main() -> Result<(), Error> {
 
                     let input_doc_json: serde_json::Value = serde_json::to_value(&x)?;
 
+                    let graphs = build_job_graphs(x);
+
+                    let sorted_jobs = match petgraph::algo::toposort(&graphs, None) {
+                        Ok(x) => x,
+                        Err(e) => {
+                            let msg = format!(
+                                "This graph has a cycle at job {:?}. It will not be processed",
+                                &(&graphs[e.node_id()]).0
+                            );
+
+                            tracing::error!("{}", &msg);
+
+                            return Ok(warp::reply::with_status(
+                                msg,
+                                http::StatusCode::BAD_REQUEST,
+                            )
+                            .into_response());
+                        }
+                    };
+
+                    let cmd = build_command(&pg_pool, &graphs).await?;
+
                     sqlx::query!(
                         r#"
                     INSERT INTO input_document (document)
@@ -83,11 +107,7 @@ async fn main() -> Result<(), Error> {
                     .execute(&pg_pool)
                     .await?;
 
-                    let graphs = build_job_graphs(x);
-
-                    let cmd = build_command(&pg_pool, &graphs).await?;
-
-                    let _ = tx.send((cmd.id, graphs));
+                    let _ = tx.send((cmd.id, graphs, sorted_jobs));
 
                     Ok::<_, Error>(warp::reply::json(&cmd).into_response())
                 }

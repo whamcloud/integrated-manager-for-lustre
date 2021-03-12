@@ -64,7 +64,7 @@ mod tests {
     use emf_wire_types::ComponentType;
     use futures::Future;
     use once_cell::sync::Lazy;
-    use petgraph::visit::NodeIndexable;
+    use petgraph::{graph::NodeIndex, visit::NodeIndexable};
     use std::{ops::Deref, pin::Pin, sync::Arc};
     use tokio::sync::{mpsc, Mutex};
 
@@ -97,10 +97,11 @@ jobs:
           run: command3"#;
 
         let doc = deserialize_input_document(input_document)?;
-        let mut graph_map = build_job_graphs(doc);
-        let mut graph = graph_map.remove("test_job1".into()).unwrap();
+        let mut job_graphs = build_job_graphs(doc);
+        let mut graph = job_graphs.remove_node(NodeIndex::new(0)).unwrap().1;
+        let graph_ref = Arc::get_mut(&mut graph).unwrap();
 
-        let node4 = graph.add_node(Step {
+        let node4 = graph_ref.add_node(Step {
             action: StepPair::new(
                 ComponentType::Host,
                 ActionName::Host(host::ActionName::SshCommand),
@@ -114,7 +115,7 @@ jobs:
             outputs: None,
         });
 
-        let node5 = graph.add_node(Step {
+        let node5 = graph_ref.add_node(Step {
             action: StepPair::new(
                 ComponentType::Host,
                 ActionName::Host(host::ActionName::SshCommand),
@@ -128,8 +129,8 @@ jobs:
             outputs: None,
         });
 
-        graph.add_edge(graph.from_index(0), node4, ());
-        graph.add_edge(node4, node5, ());
+        graph_ref.add_edge(graph_ref.from_index(0), node4, ());
+        graph_ref.add_edge(node4, node5, ());
 
         fn invoke_box(
             _: OutputWriter,
@@ -150,7 +151,7 @@ jobs:
 
         let (tx, _rx) = mpsc::unbounded_channel();
 
-        let stacks = build_execution_graph("foo", tx, Arc::new(graph), invoke_box);
+        let stacks = build_execution_graph(tx, graph, invoke_box);
 
         // There should be exactly two stacks
         assert_eq!(stacks.len(), 2);

@@ -4,10 +4,10 @@
 
 use crate::json::GraphQLJson;
 use chrono::{DateTime, Utc};
-use std::{collections::HashMap, convert::TryFrom, fmt, time::Duration};
+use std::{convert::TryFrom, fmt, time::Duration};
 
 pub type CommandGraph = petgraph::graph::DiGraph<CommandStep, ()>;
-pub type CommandPlan = HashMap<String, CommandGraph>;
+pub type CommandPlan = petgraph::graph::DiGraph<(String, CommandGraph), ()>;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]

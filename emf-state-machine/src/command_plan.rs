@@ -3,17 +3,17 @@
 // license that can be found in the LICENSE file
 
 use crate::{
-    input_document::{InputDocument, Step},
+    input_document::{InputDocument, Job, Step},
     Error,
 };
 use bytes::Bytes;
 use chrono::{DateTime, Utc};
 use emf_postgres::PgPool;
 use emf_tracing::tracing;
-use emf_wire_types::{Command, CommandStep, State};
+use emf_wire_types::{Command, CommandPlan, CommandStep, State};
 use futures::{StreamExt, TryFutureExt};
-use petgraph::graph::NodeIndex;
-use std::{cmp::max, collections::HashMap, convert::TryInto, ops::IndexMut};
+use petgraph::{graph::NodeIndex, visit::IntoNodeReferences};
+use std::{cmp::max, collections::HashMap, convert::TryInto, sync::Arc};
 use tokio::{
     io::{BufWriter, DuplexStream},
     sync::mpsc,
@@ -21,41 +21,53 @@ use tokio::{
 use tokio_util::io::ReaderStream;
 
 pub type JobGraph = petgraph::graph::DiGraph<Step, ()>;
-pub type JobGraphs = HashMap<String, JobGraph>;
+pub type JobGraphs = petgraph::graph::DiGraph<(String, Arc<JobGraph>), ()>;
 
 pub fn build_job_graphs(input_doc: InputDocument) -> JobGraphs {
-    input_doc
-        .jobs
-        .into_iter()
-        .map(|(job_name, job)| {
-            let g = job
-                .steps
-                .into_iter()
-                .fold((JobGraph::new(), None), |(mut g, last), step| {
-                    let node_idx = g.add_node(step);
+    // Add job nodes to the job graph
+    let mut job_graphs = JobGraphs::new();
+    let mut job_map = HashMap::new();
 
-                    if let Some(last_idx) = last {
-                        g.add_edge(last_idx, node_idx, ());
-                    };
+    for (name, Job { steps, needs, .. }) in input_doc.jobs {
+        let g = steps
+            .into_iter()
+            .fold((JobGraph::new(), None), |(mut g, last), step| {
+                let node_idx = g.add_node(step);
 
-                    (g, Some(node_idx))
-                })
-                .0;
+                if let Some(last_idx) = last {
+                    g.add_edge(last_idx, node_idx, ());
+                };
 
-            (job_name, g)
-        })
-        .collect()
+                (g, Some(node_idx))
+            })
+            .0;
+
+        let idx = job_graphs.add_node((name.to_string(), Arc::new(g)));
+        job_map.insert(name, (idx, needs));
+    }
+
+    // Link all job nodes based on their dependencies
+    for (job_index, needs) in job_map.values() {
+        for need in needs {
+            let idx = job_map[need].0;
+
+            job_graphs.add_edge(idx, *job_index, ());
+        }
+    }
+
+    job_graphs
 }
 
 pub async fn build_command(pg_pool: &PgPool, job_graphs: &JobGraphs) -> Result<Command, Error> {
-    let plan: CommandPlan = job_graphs
-        .iter()
-        .map(|(k, job_graph)| {
-            let command_graph = job_graph.map(|_, x| x.into(), |_, x| *x);
-
-            (k.to_string(), command_graph)
-        })
-        .collect();
+    let plan: CommandPlan = job_graphs.map(
+        |_, (name, job_graph)| {
+            (
+                name.to_string(),
+                job_graph.as_ref().map(|_, x| x.into(), |_, x| *x),
+            )
+        },
+        |_, x| *x,
+    );
 
     let id = sqlx::query!(
         "INSERT INTO command_plan (plan) VALUES ($1) RETURNING id",
@@ -95,29 +107,46 @@ impl From<&Step> for CommandStep {
     }
 }
 
-type CommandGraph = petgraph::graph::DiGraph<CommandStep, ()>;
-
-type CommandPlan = HashMap<String, CommandGraph>;
-
 /// Used to send `Change`s for a given `CommandPlan`
-pub(crate) type CommandPlanWriter = mpsc::UnboundedSender<(String, NodeIndex, Change)>;
+pub(crate) type CommandPlanWriter = mpsc::UnboundedSender<(NodeIndex, NodeIndex, Change)>;
 
 pub(crate) trait CommandPlanWriterExt {
-    /// Returns a new `CommandStepWriter` That can write changes scoped to a `CommandStep`
-    fn get_command_state_writer(&self, job_name: &str, node_idx: NodeIndex) -> CommandStepWriter;
+    /// Returns a new `CommandJobWriter` That can write changes scoped to a Job
+    fn get_command_job_writer(&self, job_idx: NodeIndex) -> CommandJobWriter;
 }
 
 impl CommandPlanWriterExt for CommandPlanWriter {
-    fn get_command_state_writer(&self, job_name: &str, node_idx: NodeIndex) -> CommandStepWriter {
+    fn get_command_job_writer(&self, job_idx: NodeIndex) -> CommandJobWriter {
         let (tx, mut rx) = mpsc::unbounded_channel();
 
         let outer_tx = self.clone();
 
-        let job_name = job_name.to_string();
+        tokio::spawn(async move {
+            while let Some((step_idx, change)) = rx.recv().await {
+                let _ = outer_tx.send((job_idx, step_idx, change));
+            }
+        });
+
+        tx
+    }
+}
+
+pub(crate) type CommandJobWriter = mpsc::UnboundedSender<(NodeIndex, Change)>;
+
+pub(crate) trait CommandJobWriterExt {
+    /// Returns a new `CommandStepWriter` That can write changes scoped to a `CommandStep`
+    fn get_command_state_writer(&self, step_idx: NodeIndex) -> CommandStepWriter;
+}
+
+impl CommandJobWriterExt for CommandJobWriter {
+    fn get_command_state_writer(&self, step_idx: NodeIndex) -> CommandStepWriter {
+        let (tx, mut rx) = mpsc::unbounded_channel();
+
+        let outer_tx = self.clone();
 
         tokio::spawn(async move {
             while let Some(change) = rx.recv().await {
-                let _ = outer_tx.send((job_name.to_string(), node_idx, change));
+                let _ = outer_tx.send((step_idx, change));
             }
         });
 
@@ -172,26 +201,27 @@ pub(crate) async fn command_plan_writer(
 ) -> Result<CommandPlanWriter, Error> {
     let (tx, mut rx) = mpsc::unbounded_channel();
 
-    let mut command_plan: CommandPlan = job_graphs
-        .iter()
-        .map(|(k, job_graph)| {
-            let command_graph = job_graph.map(|_, x| x.into(), |_, x| *x);
-
-            (k.to_string(), command_graph)
-        })
-        .collect();
+    let mut command_plan: CommandPlan = job_graphs.map(
+        |_, (name, job_graph)| {
+            (
+                name.to_string(),
+                job_graph.as_ref().map(|_, x| x.into(), |_, x| *x),
+            )
+        },
+        |_, x| *x,
+    );
 
     let pool2 = pool.clone();
 
     tokio::spawn(async move {
-        while let Some((job_name, node_idx, change)) = rx.recv().await {
-            let mut x: &mut CommandStep = match command_plan
-                .get_mut(&job_name)
-                .map(|x| x.index_mut(node_idx))
+        while let Some((job_idx, step_idx, change)) = rx.recv().await {
+            let x = match command_plan
+                .node_weight_mut(job_idx)
+                .and_then(|(_, x)| x.node_weight_mut(step_idx))
             {
                 Some(x) => x,
                 None => {
-                    tracing::warn!("Could not find node for {}.{:?}", job_name, node_idx);
+                    tracing::warn!("Could not find node for {:?}.{:?}", job_idx, step_idx);
                     continue;
                 }
             };
@@ -210,13 +240,11 @@ pub(crate) async fn command_plan_writer(
                 Change::Stderr(buf) => x.stderr += &String::from_utf8_lossy(&buf),
             }
 
-            let state = command_plan.values().fold(State::Pending, |state, x| {
-                let sub_state = x
-                    .node_indices()
-                    .fold(State::Pending, |state, n| max(x[n].state, state));
-
-                max(state, sub_state)
-            });
+            let state = command_plan
+                .node_references()
+                .flat_map(|(_, (_, g))| g.node_references())
+                .map(|(_, n)| n.state)
+                .fold(State::Pending, max);
 
             let x = match serde_json::to_value(&command_plan) {
                 Ok(x) => x,

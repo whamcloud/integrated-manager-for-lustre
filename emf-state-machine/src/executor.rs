@@ -5,8 +5,8 @@
 use crate::{
     action_runner::invoke,
     command_plan::{
-        command_plan_writer, Change, CommandPlanWriter, CommandPlanWriterExt as _,
-        CommandStepWriterExt as _, JobGraph, OutputWriter,
+        command_plan_writer, Change, CommandJobWriter, CommandJobWriterExt as _,
+        CommandPlanWriterExt as _, CommandStepWriterExt as _, JobGraph, JobGraphs, OutputWriter,
     },
     state_schema::Input,
     Error,
@@ -23,14 +23,14 @@ use std::{cmp::max, collections::HashMap, ops::Deref, pin::Pin, sync::Arc};
 use tokio::sync::mpsc::{self, UnboundedSender};
 use tokio_stream::wrappers::UnboundedReceiverStream;
 
-pub fn get_executor(pg_pool: &PgPool) -> UnboundedSender<(i32, HashMap<String, JobGraph>)> {
+pub fn get_executor(pg_pool: &PgPool) -> UnboundedSender<(i32, JobGraphs, Vec<NodeIndex>)> {
     let (tx, rx) = mpsc::unbounded_channel();
     let mut rx = UnboundedReceiverStream::new(rx);
 
     let pg_pool = pg_pool.clone();
 
     tokio::spawn(async move {
-        while let Some((plan_id, job_graphs)) = rx.next().await {
+        while let Some((plan_id, job_graphs, sorted_jobs)) = rx.next().await {
             let tx = match command_plan_writer(&pg_pool, plan_id, &job_graphs).await {
                 Ok(tx) => tx,
                 Err(e) => {
@@ -39,8 +39,78 @@ pub fn get_executor(pg_pool: &PgPool) -> UnboundedSender<(i32, HashMap<String, J
                 }
             };
 
-            for (n, g) in job_graphs {
-                tokio::spawn(execute_graph(n, Arc::new(g), tx.clone()));
+            let mut visited: HashMap<
+                NodeIndex,
+                Shared<Pin<Box<dyn Future<Output = State> + std::marker::Send>>>,
+            > = HashMap::new();
+
+            let mut stacks = vec![];
+
+            for jobs_idx in sorted_jobs {
+                let xs: Vec<_> = visited
+                    .iter()
+                    .filter(|(visited, _)| job_graphs.find_edge(**visited, jobs_idx).is_some())
+                    .map(|(_, f)| f.clone())
+                    .collect();
+
+                let tx = tx.get_command_job_writer(jobs_idx);
+
+                let (name, job_graph) = &job_graphs[jobs_idx];
+                let name = name.to_string();
+                let name2 = name.to_string();
+                let job_graph2 = Arc::clone(job_graph);
+
+                tracing::debug!("Found Job: {}", name);
+
+                let fut = async move {
+                    tracing::info!("Starting Job: {}", name);
+
+                    let state = join_all(xs).await.into_iter().fold(State::Completed, max);
+
+                    if state == State::Canceled || state == State::Failed {
+                        tracing::info!("Job {} canceled because parent job {}", name, state);
+
+                        return State::Canceled;
+                    }
+
+                    let stacks = build_execution_graph(tx, job_graph2, invoke_box);
+
+                    let mut hndls = vec![];
+
+                    for stack in stacks {
+                        let join = tokio::spawn(stack);
+
+                        hndls.push(join);
+                    }
+
+                    join_all(hndls)
+                        .await
+                        .into_iter()
+                        .map(|x| match x {
+                            Ok(x) => x,
+                            Err(_) => State::Failed,
+                        })
+                        .fold(State::Completed, max)
+                }
+                .boxed()
+                .shared();
+
+                visited.insert(jobs_idx, fut.clone());
+
+                if job_graphs
+                    .edges_directed(jobs_idx, Direction::Outgoing)
+                    .next()
+                    .is_none()
+                {
+                    tracing::debug!("Pushing Job {} fut", name2);
+                    stacks.push(fut);
+                }
+            }
+
+            tracing::debug!("Number of job stacks: {}", stacks.len());
+
+            for stack in stacks {
+                tokio::spawn(stack);
             }
         }
     });
@@ -56,17 +126,8 @@ fn invoke_box(
     Box::pin(invoke(stdout_writer, stderr_writer, input))
 }
 
-async fn execute_graph(job_name: String, g: Arc<JobGraph>, tx: CommandPlanWriter) {
-    let stacks = build_execution_graph(&job_name, tx, Arc::clone(&g), invoke_box);
-
-    for stack in stacks {
-        tokio::spawn(stack);
-    }
-}
-
 pub(crate) fn build_execution_graph(
-    job_name: &str,
-    tx: CommandPlanWriter,
+    tx: CommandJobWriter,
     g: Arc<JobGraph>,
     invoke_fn: fn(
         OutputWriter,
@@ -92,7 +153,7 @@ pub(crate) fn build_execution_graph(
 
         let g2 = Arc::clone(&g);
 
-        let tx = tx.get_command_state_writer(job_name, curr);
+        let tx = tx.get_command_state_writer(curr);
 
         let fut = async move {
             let step = &g2[curr];

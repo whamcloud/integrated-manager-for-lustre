@@ -5,7 +5,7 @@
 use crate::display_utils::{format_cancelled, format_error, format_success};
 use console::style;
 use emf_wire_types::{CommandGraph, CommandPlan, State};
-use petgraph::{graph::NodeIndex, visit::Dfs};
+use petgraph::{graph::NodeIndex, visit::Dfs, Direction};
 use ptree::{PrintConfig, Style, TreeItem};
 use std::{borrow::Cow, io};
 
@@ -48,19 +48,47 @@ impl<'a> TreeItem for CommandTree<'a> {
     }
 }
 
+#[derive(Clone)]
+pub(crate) struct JobTree<'a>(&'a CommandPlan, NodeIndex);
+
+impl<'a> TreeItem for JobTree<'a> {
+    type Child = Self;
+
+    fn write_self<W: io::Write>(&self, f: &mut W, style: &Style) -> io::Result<()> {
+        if let Some((name, w)) = self.0.node_weight(self.1) {
+            let x = CommandTree(w, NodeIndex::new(0));
+
+            let mut s = vec![];
+            ptree::write_tree(&x, &mut s)?;
+
+            let x = format!("{}\n{}", name, String::from_utf8_lossy(&s));
+
+            write!(f, "{}", style.paint(x))
+        } else {
+            Ok(())
+        }
+    }
+
+    fn children(&self) -> Cow<[Self::Child]> {
+        let v: Vec<_> = self.0.neighbors(self.1).map(|i| Self(self.0, i)).collect();
+
+        Cow::from(v)
+    }
+}
+
 pub(crate) fn render_command_plan(plan: &CommandPlan) -> io::Result<()> {
     let cfg = PrintConfig::from_env();
 
-    for (k, g) in plan {
-        println!("\nJob: {}\n", style(k).bold());
+    let roots = plan.externals(Direction::Incoming);
 
-        ptree::print_tree_with(&CommandTree(&g, NodeIndex::new(0)), &cfg)?;
+    for root in roots {
+        ptree::print_tree_with(&JobTree(&plan, root), &cfg)?;
     }
 
-    for (k, g) in plan {
-        println!("\n\nJob Details: {}\n", style(k).bold());
-        render_job_details(&g);
-    }
+    // for (k, g) in plan {
+    //     println!("\n\nJob Details: {}\n", style(k).bold());
+    //     render_job_details(&g);
+    // }
 
     Ok(())
 }

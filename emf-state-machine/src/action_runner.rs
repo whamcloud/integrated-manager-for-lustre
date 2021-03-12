@@ -8,7 +8,6 @@ use crate::{
     state_schema::Input,
     Error,
 };
-use bytes::BytesMut;
 use emf_ssh::{SshChannelExt as _, SshHandleExt};
 use emf_tracing::tracing;
 use emf_wire_types::{Action, ActionId, ActionName, AgentResult, Fqdn};
@@ -16,13 +15,12 @@ use futures::TryFutureExt;
 use once_cell::sync::Lazy;
 use std::{collections::HashMap, sync::Arc};
 use tokio::{
-    io::{copy, AsyncReadExt, AsyncWriteExt},
+    io::copy,
     sync::{
         oneshot::{self, Receiver, Sender},
         Mutex,
     },
 };
-use tokio_util::io::ReaderStream;
 use uuid::Uuid;
 
 pub type OutgoingHostQueues = Arc<Mutex<HashMap<Fqdn, Vec<Action>>>>;

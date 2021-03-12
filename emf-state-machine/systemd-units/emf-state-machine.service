@@ -6,8 +6,7 @@ After=emf-state-machine-sidecar.service
 
 [Service]
 Type=simple
-Environment=RUST_LOG=info,sqlx::query=warn
-EnvironmentFile=/etc/emf/bootstrap.conf
+Environment=RUST_LOG=info,sqlx::query=warn,thrussh::client::encrypted=warn
 EnvironmentFile=-/etc/emf/overrides.conf
 ExecStart=/usr/bin/emf-state-machine
 Restart=always
