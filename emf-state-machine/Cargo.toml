@@ -23,7 +23,7 @@ serde_path_to_error = "0.1"
 serde_yaml = "0.8"
 sqlx = {version = "0.5", features = ["json", "offline", "postgres", "runtime-tokio-rustls", "chrono"]}
 thiserror = "1.0"
-tokio = {version = "1", features = ["macros", "rt-multi-thread"]}
+tokio = {version = "1", features = ["macros", "rt-multi-thread", "time"]}
 tokio-stream = {version = "0.1", features = ["net"]}
 tokio-util = {version = "0.6", features = ["io"]}
 uuid = {version = "0.8", features = ["v4"]}

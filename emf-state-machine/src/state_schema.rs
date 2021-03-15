@@ -340,6 +340,7 @@ impl ValidateAddon for Input {
             Self::Host(host::Input::SetupPlanesSsh(x)) => x.validate()?,
             Self::Host(host::Input::SyncFileSsh(x)) => x.validate()?,
             Self::Host(host::Input::CreateFileSsh(x)) => x.validate()?,
+            Self::Host(host::Input::IsAvailable(x)) => x.validate()?,
             Self::Lnet(lnet::Input::Configure(x)) => x.validate()?,
             Self::Lnet(lnet::Input::Export(x)) => x.validate()?,
             Self::Lnet(lnet::Input::Import(x)) => x.validate()?,

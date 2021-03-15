@@ -65,7 +65,7 @@ fn setup_server(
     let key = decode_secret_key(PKCS8_ENCRYPTED, None).unwrap();
 
     let mut config = thrussh::server::Config::default();
-    config.connection_timeout = Some(std::time::Duration::from_secs(30));
+    config.connection_timeout = Some(std::time::Duration::from_secs(1));
     config.auth_rejection_time = std::time::Duration::from_secs(3);
     config.methods = MethodSet::PASSWORD;
     config.keys.push(key);

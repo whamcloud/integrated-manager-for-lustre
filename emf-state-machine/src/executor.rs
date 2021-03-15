@@ -62,6 +62,8 @@ pub fn get_executor(pg_pool: &PgPool) -> UnboundedSender<(i32, JobGraphs, Vec<No
 
                 tracing::debug!("Found Job: {}", name);
 
+                let pg_pool = pg_pool.clone();
+
                 let fut = async move {
                     tracing::info!("Starting Job: {}", name);
 
@@ -73,7 +75,7 @@ pub fn get_executor(pg_pool: &PgPool) -> UnboundedSender<(i32, JobGraphs, Vec<No
                         return State::Canceled;
                     }
 
-                    let stacks = build_execution_graph(tx, job_graph2, invoke_box);
+                    let stacks = build_execution_graph(&pg_pool, tx, job_graph2, invoke_box);
 
                     let mut hndls = vec![];
 
@@ -119,21 +121,26 @@ pub fn get_executor(pg_pool: &PgPool) -> UnboundedSender<(i32, JobGraphs, Vec<No
 }
 
 fn invoke_box(
+    pg_pool: PgPool,
     stdout_writer: OutputWriter,
     stderr_writer: OutputWriter,
     input: &Input,
 ) -> Pin<Box<dyn Future<Output = Result<(), Error>> + Send + '_>> {
-    Box::pin(invoke(stdout_writer, stderr_writer, input))
+    Box::pin(invoke(pg_pool, stdout_writer, stderr_writer, input))
 }
 
+type InvokeBoxFn = fn(
+    pg_pool: PgPool,
+    OutputWriter,
+    OutputWriter,
+    &Input,
+) -> Pin<Box<dyn Future<Output = Result<(), Error>> + Send + '_>>;
+
 pub(crate) fn build_execution_graph(
+    pool: &PgPool,
     tx: CommandJobWriter,
     g: Arc<JobGraph>,
-    invoke_fn: fn(
-        OutputWriter,
-        OutputWriter,
-        &Input,
-    ) -> Pin<Box<dyn Future<Output = Result<(), Error>> + Send + '_>>,
+    invoke_fn: InvokeBoxFn,
 ) -> Vec<Shared<Pin<Box<dyn Future<Output = State> + std::marker::Send>>>> {
     let mut visited: HashMap<
         NodeIndex<u32>,
@@ -155,6 +162,8 @@ pub(crate) fn build_execution_graph(
 
         let tx = tx.get_command_state_writer(curr);
 
+        let pool = pool.clone();
+
         let fut = async move {
             let step = &g2[curr];
             let inputs = &step.inputs;
@@ -175,7 +184,7 @@ pub(crate) fn build_execution_graph(
 
             let (stdout, stderr) = tx.get_output_handles();
 
-            let r = invoke_fn(stdout, stderr, inputs).await;
+            let r = invoke_fn(pool, stdout, stderr, inputs).await;
 
             let state = if r.is_ok() {
                 tracing::info!("{} Completed", step);

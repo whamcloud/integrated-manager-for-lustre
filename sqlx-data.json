@@ -3973,6 +3973,26 @@
       ]
     }
   },
+  "ce5f751c9f6da96e14886f2b6495a7c668de029a9753604b3dde518e9f9cda4f": {
+    "query": "SELECT id FROM host WHERE fqdn = $1 AND state = 'up'",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        }
+      ],
+      "parameters": {
+        "Left": [
+          "Text"
+        ]
+      },
+      "nullable": [
+        false
+      ]
+    }
+  },
   "d25d9b947b944996f36160c464abe1097b6aab8eb999d70760f4c75f5072f4b0": {
     "query": "\n                INSERT INTO task (\n                    name,\n                    start,\n                    state,\n                    fids_total,\n                    fids_completed,\n                    fids_failed,\n                    data_transfered,\n                    single_runner,\n                    keep_failed,\n                    actions,\n                    args,\n                    filesystem_id\n                )\n                VALUES (\n                    $1,\n                    now(),\n                    $2,\n                    0,\n                    0,\n                    0,\n                    0,\n                    $3,\n                    $4,\n                    $5,\n                    $6,\n                    $7\n                )\n                RETURNING *\n            ",
     "describe": {

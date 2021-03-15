@@ -61,6 +61,7 @@ mod tests {
         input_document::{deserialize_input_document, host, SshOpts, Step, StepPair},
         state_schema::Input,
     };
+    use emf_postgres::PgPool;
     use emf_wire_types::ComponentType;
     use futures::Future;
     use once_cell::sync::Lazy;
@@ -69,7 +70,10 @@ mod tests {
     use tokio::sync::{mpsc, Mutex};
 
     #[tokio::test]
+    #[ignore = "Requires an active and populated DB"]
     async fn graph_execution_stacks_population() -> Result<(), Box<dyn std::error::Error>> {
+        let pool = emf_postgres::test_setup().await?;
+
         static GLOBAL_DATA: Lazy<Mutex<Vec<String>>> = Lazy::new(|| {
             let xs = vec![];
             Mutex::new(xs)
@@ -133,6 +137,7 @@ jobs:
         graph_ref.add_edge(node4, node5, ());
 
         fn invoke_box(
+            _: PgPool,
             _: OutputWriter,
             _: OutputWriter,
             input: &Input,
@@ -151,7 +156,7 @@ jobs:
 
         let (tx, _rx) = mpsc::unbounded_channel();
 
-        let stacks = build_execution_graph(tx, graph, invoke_box);
+        let stacks = build_execution_graph(&pool, tx, graph, invoke_box);
 
         // There should be exactly two stacks
         assert_eq!(stacks.len(), 2);

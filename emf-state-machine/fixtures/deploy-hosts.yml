@@ -34,6 +34,11 @@ jobs:
           host: node1
           run: systemctl enable --now emf-agent.target
 
+      - action: host.is_available
+        id: Wait for node1 agent to report in
+        inputs:
+          fqdn: node1
+
   deploy_node2:
     name: Deploy Node 2
 
@@ -69,7 +74,7 @@ jobs:
           path: /etc/emf/cli.conf
 
       - action: host.ssh_command
-        id: Install emf agent node2
+        id: Install emf agent on node2
         inputs:
           host: node2
           run: yum install -y rust-emf-agent rust-emf-cli rust-emf-cli-bash-completion emf-sos-plugin
@@ -79,6 +84,11 @@ jobs:
         inputs:
           host: node2
           run: systemctl enable --now emf-agent.target
+
+      - action: host.is_available
+        id: Wait for node2 agent to report in
+        inputs:
+          fqdn: node2
 
   deploy_node3:
     name: Deploy Node 3
@@ -126,6 +136,11 @@ jobs:
           host: node3
           run: systemctl enable --now emf-agent.target
 
+      - action: host.is_available
+        id: Wait for node3 agent to report in
+        inputs:
+          fqdn: node3
+
   deploy_node4:
     name: Deploy Node 4
 
@@ -171,6 +186,11 @@ jobs:
         inputs:
           host: node4
           run: systemctl enable --now emf-agent.target
+
+      - action: host.is_available
+        id: Wait for node4 agent to report in
+        inputs:
+          fqdn: node4
 
   deploy_ubuntu1:
     name: Deploy Ubuntu1
@@ -224,3 +244,8 @@ jobs:
             emf-ntp-agent \
             emf-stats-agent \
             emf-agent.target
+
+      - action: host.is_available
+        id: Wait for ubuntu1 agent to report in
+        inputs:
+          fqdn: ubuntu1.local

@@ -8,6 +8,7 @@ use std::{
     convert::TryFrom,
     fmt::{self, Display},
     io,
+    time::Duration,
 };
 use validator::Validate;
 
@@ -27,6 +28,7 @@ pub enum Input {
     SetupPlanesSsh(SetupPlanesSsh),
     SyncFileSsh(SyncFileSsh),
     CreateFileSsh(CreateFileSsh),
+    IsAvailable(IsAvailable),
 }
 
 #[derive(
@@ -38,6 +40,7 @@ pub enum ActionName {
     SetupPlanesSsh,
     SyncFileSsh,
     CreateFileSsh,
+    IsAvailable,
 }
 
 impl Display for ActionName {
@@ -47,6 +50,7 @@ impl Display for ActionName {
             Self::SetupPlanesSsh => "setup_planes_ssh",
             Self::SyncFileSsh => "sync_file_ssh",
             Self::CreateFileSsh => "create_file_ssh",
+            Self::IsAvailable => "is_available",
         };
 
         write!(f, "{}", x)
@@ -75,6 +79,7 @@ where
         ActionName::SetupPlanesSsh => deserialize_input(input).map(Input::SetupPlanesSsh),
         ActionName::SyncFileSsh => deserialize_input(input).map(Input::SyncFileSsh),
         ActionName::CreateFileSsh => deserialize_input(input).map(Input::CreateFileSsh),
+        ActionName::IsAvailable => deserialize_input(input).map(Input::IsAvailable),
     }
 }
 
@@ -116,4 +121,17 @@ pub struct CreateFileSsh {
     pub(crate) path: String,
     #[serde(default)]
     pub(crate) ssh_opts: SshOpts,
+}
+
+/// Wait for a host with the given `fqdn` to appear in the EMF database
+/// until `timeout`.
+///
+/// If timeout is not defined, it defaults to 30 seconds.
+#[derive(Debug, serde::Serialize, serde::Deserialize, Validate)]
+#[serde(deny_unknown_fields)]
+pub struct IsAvailable {
+    pub(crate) fqdn: String,
+    #[serde(with = "humantime_serde")]
+    #[serde(default)]
+    pub(crate) timeout: Option<Duration>,
 }

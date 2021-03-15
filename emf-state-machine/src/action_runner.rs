@@ -8,18 +8,20 @@ use crate::{
     state_schema::Input,
     Error,
 };
+use emf_postgres::PgPool;
 use emf_ssh::{SshChannelExt as _, SshHandleExt};
 use emf_tracing::tracing;
 use emf_wire_types::{Action, ActionId, ActionName, AgentResult, Fqdn};
-use futures::TryFutureExt;
+use futures::{FutureExt, TryFutureExt};
 use once_cell::sync::Lazy;
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, sync::Arc, time::Duration};
 use tokio::{
-    io::copy,
+    io::{copy, AsyncWriteExt},
     sync::{
         oneshot::{self, Receiver, Sender},
         Mutex,
     },
+    time::{self, timeout_at, Instant},
 };
 use uuid::Uuid;
 
@@ -76,6 +78,7 @@ pub(crate) async fn invoke_remote(
 }
 
 pub(crate) async fn invoke<'a>(
+    pg_pool: PgPool,
     mut stdout_writer: OutputWriter,
     mut stderr_writer: OutputWriter,
     input: &'a Input,
@@ -167,6 +170,66 @@ pub(crate) async fn invoke<'a>(
                 .await?;
 
                 session.push_file(&from, &from).await?;
+            }
+            host::Input::IsAvailable(host::IsAvailable { fqdn, timeout }) => {
+                let timeout = timeout.unwrap_or_else(|| Duration::from_secs(30));
+
+                let mut interval = time::interval(Duration::from_millis(500));
+
+                let f = async {
+                    loop {
+                        interval.tick().await;
+
+                        let x = sqlx::query!(
+                            "SELECT id FROM host WHERE fqdn = $1 AND state = 'up'",
+                            &fqdn
+                        )
+                        .fetch_optional(&pg_pool)
+                        .await
+                        .transpose();
+
+                        match x {
+                            Some(Ok(_)) => break,
+                            _ => continue,
+                        };
+                    }
+                };
+
+                match timeout_at(Instant::now() + timeout, f).await {
+                    Ok(_) => {
+                        stdout_writer
+                            .write_all(format!("FQDN: {} found in EMF database", fqdn).as_bytes())
+                            .map_err(|e| tracing::warn!("Could not write stdout {:?}", e))
+                            .map(drop)
+                            .await;
+
+                        stdout_writer
+                            .flush()
+                            .map_err(|e| tracing::warn!("Could not flush stdout {:?}", e))
+                            .map(drop)
+                            .await;
+                    }
+                    Err(_) => {
+                        stderr_writer
+                            .write_all(
+                                format!(
+                                    "FQDN: {} not found in EMF database after waiting {} seconds",
+                                    fqdn,
+                                    timeout.as_secs()
+                                )
+                                .as_bytes(),
+                            )
+                            .map_err(|e| tracing::warn!("Could not write stderr {:?}", e))
+                            .map(drop)
+                            .await;
+
+                        stderr_writer
+                            .flush()
+                            .map_err(|e| tracing::warn!("Could not flush stderr {:?}", e))
+                            .map(drop)
+                            .await;
+                    }
+                };
             }
         },
         Input::Lnet(x) => match x {
