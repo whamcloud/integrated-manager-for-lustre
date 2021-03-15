@@ -5,7 +5,7 @@
 use crate::{
     api_utils::graphql,
     command_utils::{render_command_details, render_command_plan},
-    display_utils::{wrap_fut, DisplayType},
+    display_utils::{wrap_fut, DisplayType, IntoDisplayType as _},
     error::EmfManagerCliError,
 };
 use emf_graphql_queries::state_machine as state_machine_queries;
@@ -42,7 +42,26 @@ pub async fn cli(cmd: Option<Command>) -> Result<(), EmfManagerCliError> {
     });
 
     match cmd {
-        Command::List { display_type } => {}
+        Command::List { display_type } => {
+            let query = state_machine_queries::list_cmds::build();
+
+            let resp: emf_graphql_queries::Response<state_machine_queries::list_cmds::Resp> =
+                wrap_fut("Fetching cmds...", graphql(query)).await?;
+
+            let xs = Result::from(resp)?.data.state_machine.list_cmds;
+
+            tracing::debug!(?xs);
+
+            if xs.is_empty() {
+                return Err(EmfManagerCliError::ConfigError(format!(
+                    "No commands found"
+                )));
+            }
+
+            let x = xs.into_display_type(display_type);
+
+            println!("{}", x);
+        }
         Command::Show { id } => {
             let query = state_machine_queries::get_cmd::build(id);
 

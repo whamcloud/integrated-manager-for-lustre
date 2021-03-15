@@ -1505,6 +1505,49 @@
       ]
     }
   },
+  "3b59e973677758c24454fe7bf4fe126ceb663ead86ed882e7035e7b1f8ce87ea": {
+    "query": "\n            SELECT id, plan, state as \"state: State\"\n            FROM command_plan\n            ORDER BY id ASC\n            ",
+    "describe": {
+      "columns": [
+        {
+          "ordinal": 0,
+          "name": "id",
+          "type_info": "Int4"
+        },
+        {
+          "ordinal": 1,
+          "name": "plan",
+          "type_info": "Jsonb"
+        },
+        {
+          "ordinal": 2,
+          "name": "state: State",
+          "type_info": {
+            "Custom": {
+              "name": "state",
+              "kind": {
+                "Enum": [
+                  "pending",
+                  "running",
+                  "completed",
+                  "canceled",
+                  "failed"
+                ]
+              }
+            }
+          }
+        }
+      ],
+      "parameters": {
+        "Left": []
+      },
+      "nullable": [
+        false,
+        false,
+        false
+      ]
+    }
+  },
   "3b87fce6dce80a66ed29a4b271afc989aab7a157a65c30a9db5bf6230857dd6a": {
     "query": "\n            SELECT t.name as \"name!\", t.dev_path, h.fqdn as \"fqdn!\"\n            FROM target t\n            INNER JOIN host h\n            ON t.active_host_id = h.id\n            WHERE $1 = ANY(t.filesystems)\n        ",
     "describe": {

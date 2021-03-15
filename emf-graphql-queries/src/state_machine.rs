@@ -44,6 +44,37 @@ pub mod input_document {
     pub type Resp = super::Resp<SubmitInputDocument>;
 }
 
+pub mod list_cmds {
+    use crate::Query;
+    use emf_wire_types::Command;
+
+    pub static QUERY: &str = r#"
+        query ListCmds {
+          stateMachine {
+            listCmds {
+              id
+              plan
+              state
+            }
+          }
+        }"#;
+
+    pub fn build() -> Query<()> {
+        Query {
+            query: QUERY.to_string(),
+            variables: None,
+        }
+    }
+
+    #[derive(Debug, Clone, serde::Deserialize)]
+    pub struct ListCmds {
+        #[serde(rename(deserialize = "listCmds"))]
+        pub list_cmds: Vec<Command>,
+    }
+
+    pub type Resp = super::Resp<ListCmds>;
+}
+
 pub mod get_cmd {
     use crate::Query;
     use emf_wire_types::Command;

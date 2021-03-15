@@ -4,12 +4,33 @@
 
 use crate::graphql::Context;
 use emf_wire_types::{json::GraphQLJson, Command, State};
+use futures::TryStreamExt;
 use juniper::{FieldError, Value};
 
 pub(crate) struct StateMachineQuery;
 
 #[juniper::graphql_object(Context = Context)]
 impl StateMachineQuery {
+    /// List all known `Command`s
+    async fn list_cmds(context: &Context) -> juniper::FieldResult<Vec<Command>> {
+        let cmd = sqlx::query!(
+            r#"
+            SELECT id, plan, state as "state: State"
+            FROM command_plan
+            ORDER BY id ASC
+            "#
+        )
+        .fetch(&context.pg_pool)
+        .map_ok(|cmd| Command {
+            id: cmd.id,
+            plan: GraphQLJson(cmd.plan),
+            state: cmd.state,
+        })
+        .try_collect()
+        .await?;
+
+        Ok(cmd)
+    }
     /// Get a `Command` by id
     #[graphql(arguments(id(description = "The id of the `Command` to fetch"),))]
     async fn get_cmd(context: &Context, id: i32) -> juniper::FieldResult<Option<Command>> {

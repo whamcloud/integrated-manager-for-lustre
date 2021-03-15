@@ -141,7 +141,7 @@ jobs:
           toolchain: stable
           override: true
 
-      - run: cargo install sqlx-cli --no-default-features --features postgres --git https://github.com/launchbadge/sqlx --tag v0.4.2
+      - run: cargo install sqlx-cli --no-default-features --features postgres
       - uses: actions-rs/cargo@v1
         env:
           DATABASE_URL: postgres://emf:emf@localhost:5432/emf
@@ -209,7 +209,7 @@ jobs:
           override: true
 
       - uses: actions-rs/cargo@v1
-      - run: cargo install sqlx-cli --no-default-features --features postgres --git https://github.com/launchbadge/sqlx --tag v0.4.2
+      - run: cargo install sqlx-cli --no-default-features --features postgres
 
       - uses: actions-rs/cargo@v1
         env:
