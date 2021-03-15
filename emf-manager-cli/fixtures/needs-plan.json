@@ -1,0 +1,120 @@
+{
+  "id": 30,
+  "plan": {
+    "edges": [
+      [4, 0, null],
+      [0, 1, null],
+      [2, 1, null],
+      [0, 2, null]
+    ],
+    "nodes": [
+      [
+        "list_node2",
+        {
+          "edges": [],
+          "nodes": [
+            {
+              "id": "list node 2",
+              "state": "completed",
+              "action": "host.ssh_command",
+              "stderr": "",
+              "stdout": "total 68\n-rw-------. 1 root root 17343 Mar  2 22:07 anaconda-ks.cfg\ndrwxrwxr-x. 3 root root  4096 Mar  2 22:04 EXAScaler-5.2.1\n-rw-------. 1 root root 12629 Mar  2 22:07 original-ks.cfg\n-rw-r--r--. 1 root root 15468 Mar  2 22:07 post-install.log\n-rw-r--r--. 1 root root     0 Mar  2 22:07 post-install-mlnx-patch.log\n-rw-r--r--. 1 root root  5185 Mar  2 22:04 post-nochroot-install.log\n-rw-r--r--. 1 root root  3693 Mar  2 22:04 pre-install.log\n",
+              "started_at": "2021-03-12T14:32:15.416262552Z",
+              "finished_at": "2021-03-12T14:32:15.607285436Z"
+            }
+          ],
+          "node_holes": [],
+          "edge_property": "directed"
+        }
+      ],
+      [
+        "list_node4",
+        {
+          "edges": [],
+          "nodes": [
+            {
+              "id": "list node 4",
+              "state": "completed",
+              "action": "host.ssh_command",
+              "stderr": "",
+              "stdout": "total 68\n-rw-------. 1 root root 17343 Mar  2 22:07 anaconda-ks.cfg\ndrwxrwxr-x. 3 root root  4096 Mar  2 22:04 EXAScaler-5.2.1\n-rw-------. 1 root root 12629 Mar  2 22:07 original-ks.cfg\n-rw-r--r--. 1 root root 15468 Mar  2 22:07 post-install.log\n-rw-r--r--. 1 root root     0 Mar  2 22:07 post-install-mlnx-patch.log\n-rw-r--r--. 1 root root  5185 Mar  2 22:04 post-nochroot-install.log\n-rw-r--r--. 1 root root  3693 Mar  2 22:04 pre-install.log\n",
+              "started_at": "2021-03-12T14:32:15.786021742Z",
+              "finished_at": "2021-03-12T14:32:15.962793659Z"
+            }
+          ],
+          "node_holes": [],
+          "edge_property": "directed"
+        }
+      ],
+      [
+        "list_node3",
+        {
+          "edges": [],
+          "nodes": [
+            {
+              "id": "list node 3",
+              "state": "completed",
+              "action": "host.ssh_command",
+              "stderr": "",
+              "stdout": "total 68\n-rw-------. 1 root root 17343 Mar  2 22:07 anaconda-ks.cfg\ndrwxrwxr-x. 3 root root  4096 Mar  2 22:04 EXAScaler-5.2.1\n-rw-------. 1 root root 12629 Mar  2 22:07 original-ks.cfg\n-rw-r--r--. 1 root root 15468 Mar  2 22:07 post-install.log\n-rw-r--r--. 1 root root     0 Mar  2 22:07 post-install-mlnx-patch.log\n-rw-r--r--. 1 root root  5185 Mar  2 22:04 post-nochroot-install.log\n-rw-r--r--. 1 root root  3693 Mar  2 22:04 pre-install.log\n",
+              "started_at": "2021-03-12T14:32:15.607317951Z",
+              "finished_at": "2021-03-12T14:32:15.785977290Z"
+            }
+          ],
+          "node_holes": [],
+          "edge_property": "directed"
+        }
+      ],
+      [
+        "list_ubuntu1",
+        {
+          "edges": [],
+          "nodes": [
+            {
+              "id": "list node ubuntu1",
+              "state": "completed",
+              "action": "host.ssh_command",
+              "stderr": "",
+              "stdout": "total 4\ndrwxr-xr-x 3 root root 4096 Mar 10 23:53 snap\n",
+              "started_at": "2021-03-12T14:32:15.078054347Z",
+              "finished_at": "2021-03-12T14:32:15.867509341Z"
+            }
+          ],
+          "node_holes": [],
+          "edge_property": "directed"
+        }
+      ],
+      [
+        "list_node1",
+        {
+          "edges": [[0, 1, null]],
+          "nodes": [
+            {
+              "id": "list node 1",
+              "state": "completed",
+              "action": "host.ssh_command",
+              "stderr": "",
+              "stdout": "total 331076\n-rw-------. 1 root root     17343 Mar  2 22:07 anaconda-ks.cfg\n-rw-r--r--  1 root root       964 Mar 11 16:04 client.cert.pem\n-rw-r--r--  1 root root       887 Mar 11 16:00 client.csr\n-rw-r--r--  1 root root 330177535 Mar 11 15:25 emf_repo_rpm.zip\ndrwxrwxr-x. 3 root root      4096 Mar  2 22:04 EXAScaler-5.2.1\n-rw-------. 1 root root     12629 Mar  2 22:07 original-ks.cfg\n-rw-r--r--. 1 root root     15468 Mar  2 22:07 post-install.log\n-rw-r--r--. 1 root root         0 Mar  2 22:07 post-install-mlnx-patch.log\n-rw-r--r--. 1 root root      5185 Mar  2 22:04 post-nochroot-install.log\n-rw-r--r--. 1 root root      3693 Mar  2 22:04 pre-install.log\n-rw-r--r--  1 root root   4584764 Mar 11 23:46 rust-emf-cli-0.5.0-1.el7.x86_64.rpm\n-rw-r--r--  1 root root   4168628 Mar 12 14:31 rust-emf-state-machine-0.5.0-1.el7.x86_64.rpm\ndrwxr-xr-x  2 root root      4096 Mar 11 15:30 x86_64\n",
+              "started_at": "2021-03-12T14:32:15.078074466Z",
+              "finished_at": "2021-03-12T14:32:15.246881706Z"
+            },
+            {
+              "id": "list node 1 again",
+              "state": "completed",
+              "action": "host.ssh_command",
+              "stderr": "",
+              "stdout": "total 331076\n-rw-------. 1 root root     17343 Mar  2 22:07 anaconda-ks.cfg\n-rw-r--r--  1 root root       964 Mar 11 16:04 client.cert.pem\n-rw-r--r--  1 root root       887 Mar 11 16:00 client.csr\n-rw-r--r--  1 root root 330177535 Mar 11 15:25 emf_repo_rpm.zip\ndrwxrwxr-x. 3 root root      4096 Mar  2 22:04 EXAScaler-5.2.1\n-rw-------. 1 root root     12629 Mar  2 22:07 original-ks.cfg\n-rw-r--r--. 1 root root     15468 Mar  2 22:07 post-install.log\n-rw-r--r--. 1 root root         0 Mar  2 22:07 post-install-mlnx-patch.log\n-rw-r--r--. 1 root root      5185 Mar  2 22:04 post-nochroot-install.log\n-rw-r--r--. 1 root root      3693 Mar  2 22:04 pre-install.log\n-rw-r--r--  1 root root   4584764 Mar 11 23:46 rust-emf-cli-0.5.0-1.el7.x86_64.rpm\n-rw-r--r--  1 root root   4168628 Mar 12 14:31 rust-emf-state-machine-0.5.0-1.el7.x86_64.rpm\ndrwxr-xr-x  2 root root      4096 Mar 11 15:30 x86_64\n",
+              "started_at": "2021-03-12T14:32:15.246886146Z",
+              "finished_at": "2021-03-12T14:32:15.416221597Z"
+            }
+          ],
+          "node_holes": [],
+          "edge_property": "directed"
+        }
+      ]
+    ],
+    "node_holes": [],
+    "edge_property": "directed"
+  },
+  "state": "completed"
+}

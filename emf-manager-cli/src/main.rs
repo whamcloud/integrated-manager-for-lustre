@@ -21,9 +21,12 @@ use structopt::StructOpt;
 #[derive(Debug, StructOpt)]
 #[structopt(setting = structopt::clap::AppSettings::ColoredHelp)]
 pub enum App {
-    #[structopt(name = "command")]
     /// Work with commands
-    Command { id: i32 },
+    #[structopt(name = "command")]
+    Command {
+        #[structopt(subcommand)]
+        command: Option<command::Command>,
+    },
     #[structopt(name = "stratagem")]
     /// Work with Stratagem server
     Stratagem {
@@ -108,7 +111,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let r = match matches {
-        App::Command { id } => command::cli(id).await,
+        App::Command { command } => command::cli(command).await,
         App::DebugApi(command) => api_cli(command).await,
         App::DebugQl(command) => graphql_cli(command).await,
         App::Filesystem { command } => filesystem_cli(command).await,

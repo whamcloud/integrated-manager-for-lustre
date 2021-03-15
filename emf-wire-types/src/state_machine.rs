@@ -4,10 +4,23 @@
 
 use crate::json::GraphQLJson;
 use chrono::{DateTime, Utc};
-use std::{convert::TryFrom, fmt, time::Duration};
+use petgraph::visit::IntoNodeReferences;
+use std::{cmp::max, convert::TryFrom, fmt, time::Duration};
 
 pub type CommandGraph = petgraph::graph::DiGraph<CommandStep, ()>;
 pub type CommandPlan = petgraph::graph::DiGraph<(String, CommandGraph), ()>;
+
+pub trait CommandGraphExt {
+    fn get_state(&self) -> State;
+}
+
+impl CommandGraphExt for CommandGraph {
+    fn get_state(&self) -> State {
+        self.node_references()
+            .map(|(_, n)| n.state)
+            .fold(State::Pending, max)
+    }
+}
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]

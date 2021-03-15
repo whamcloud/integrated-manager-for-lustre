@@ -22,20 +22,7 @@ pub mod snapshot;
 pub mod stratagem;
 pub mod target;
 
-use std::{collections::BTreeSet, env};
-
-pub fn parse_hosts(hosts: &[String]) -> Result<BTreeSet<String>, error::EmfManagerCliError> {
-    let parsed: Vec<BTreeSet<String>> = hosts
-        .iter()
-        .map(|x| hostlist_parser::parse(x))
-        .collect::<Result<_, _>>()?;
-
-    let union = parsed
-        .into_iter()
-        .fold(BTreeSet::new(), |acc, h| acc.union(&h).cloned().collect());
-
-    Ok(union)
-}
+use std::env;
 
 fn exe_name() -> Option<String> {
     Some(

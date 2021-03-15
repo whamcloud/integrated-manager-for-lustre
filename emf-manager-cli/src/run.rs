@@ -2,13 +2,10 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{
-    api_utils::graphql, command_utils::render_command_plan, display_utils::wrap_fut,
-    error::EmfManagerCliError,
-};
+use crate::{api_utils::graphql, display_utils::wrap_fut, error::EmfManagerCliError};
+use console::style;
 use emf_graphql_queries::state_machine as state_machine_queries;
-use emf_wire_types::CommandPlan;
-use std::{convert::TryInto, path::PathBuf};
+use std::path::PathBuf;
 use tokio::fs;
 
 pub async fn cli(path: PathBuf) -> Result<(), EmfManagerCliError> {
@@ -30,9 +27,12 @@ pub async fn cli(path: PathBuf) -> Result<(), EmfManagerCliError> {
 
     tracing::debug!(?x);
 
-    let plan: CommandPlan = x.plan.try_into()?;
-
-    render_command_plan(&plan)?;
+    println!("Plan submitted.");
+    println!(
+        "To view progress: {} {}",
+        style("emf command show").bold(),
+        style(x.id.to_string()).bold()
+    );
 
     Ok(())
 }

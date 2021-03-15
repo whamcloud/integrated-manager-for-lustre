@@ -7,9 +7,7 @@ version = "0.4.0"
 [dependencies]
 chrono = "0.4"
 chrono-humanize = "0.1.2"
-combine = "=4.1.0"
 console = "0.14"
-dialoguer = "0.7"
 dotenv = "0.15"
 emf-api-utils = {path = "../emf-api-utils", version = "0.4"}
 emf-cmd = {path = "../emf-cmd", version = "0.4"}

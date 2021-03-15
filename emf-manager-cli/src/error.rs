@@ -61,7 +61,6 @@ pub enum EmfManagerCliError {
     ClientRequestError(#[from] emf_manager_client::EmfManagerClientError),
     ConfigError(String),
     EmfCmdError(#[from] emf_cmd::CmdError),
-    CombineEasyError(combine::stream::easy::Errors<char, &'static str, usize>),
     DoesNotExist(String),
     FromUtf8Error(#[from] std::string::FromUtf8Error),
     Infallible(#[from] std::convert::Infallible),
@@ -86,7 +85,6 @@ impl std::fmt::Display for EmfManagerCliError {
             EmfManagerCliError::ClientRequestError(ref err) => write!(f, "{}", err),
             EmfManagerCliError::ConfigError(ref err) => write!(f, "{}", err),
             EmfManagerCliError::EmfCmdError(ref err) => write!(f, "{}", err),
-            EmfManagerCliError::CombineEasyError(ref err) => write!(f, "{}", err),
             EmfManagerCliError::DoesNotExist(ref err) => write!(f, "{} does not exist", err),
             EmfManagerCliError::FromUtf8Error(ref err) => write!(f, "{}", err),
             EmfManagerCliError::EmfGraphqlQueriesErrors(ref err) => write!(f, "{}", err),
@@ -117,11 +115,5 @@ impl std::fmt::Display for RunStratagemValidationError {
 impl std::error::Error for RunStratagemValidationError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         None
-    }
-}
-
-impl From<combine::stream::easy::Errors<char, &str, usize>> for EmfManagerCliError {
-    fn from(err: combine::stream::easy::Errors<char, &str, usize>) -> Self {
-        EmfManagerCliError::CombineEasyError(err.map_range(|_| ""))
     }
 }

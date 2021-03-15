@@ -3,92 +3,34 @@
 // license that can be found in the LICENSE file.
 
 use crate::display_utils::{format_cancelled, format_error, format_success};
+use chrono::SecondsFormat;
 use console::style;
-use emf_wire_types::{CommandGraph, CommandPlan, State};
+use emf_wire_types::{CommandGraph, CommandGraphExt as _, CommandPlan, State};
 use petgraph::{graph::NodeIndex, visit::Dfs, Direction};
-use ptree::{PrintConfig, Style, TreeItem};
-use std::{borrow::Cow, io};
-
-#[derive(Clone)]
-pub(crate) struct CommandTree<'a>(&'a CommandGraph, NodeIndex<u32>);
-
-impl<'a> TreeItem for CommandTree<'a> {
-    type Child = Self;
-
-    fn write_self<W: io::Write>(&self, f: &mut W, style: &Style) -> io::Result<()> {
-        if let Some(w) = self.0.node_weight(self.1) {
-            let d = w
-                .duration()
-                .map(|x| humantime::format_duration(x.into()).to_string())
-                .map(|x| format!(" ({})", x))
-                .unwrap_or_default();
-
-            let entry = match w.state {
-                State::Pending => format!("... {} pending", w.id),
-                State::Running => format!("{} running", w.id),
-                State::Completed => format_success(format!("{} completed{}", w.id, d)),
-                State::Failed => format_error(format!("{} failed{}", w.id, d)),
-                State::Canceled => format_cancelled(format!("{} cancelled", w.id)),
-            };
-
-            write!(f, "{}", style.paint(entry))
-        } else {
-            Ok(())
-        }
-    }
-
-    fn children(&self) -> Cow<[Self::Child]> {
-        let v: Vec<_> = self
-            .0
-            .neighbors(self.1)
-            .map(|i| CommandTree(self.0, i))
-            .collect();
-
-        Cow::from(v)
-    }
-}
-
-#[derive(Clone)]
-pub(crate) struct JobTree<'a>(&'a CommandPlan, NodeIndex);
-
-impl<'a> TreeItem for JobTree<'a> {
-    type Child = Self;
-
-    fn write_self<W: io::Write>(&self, f: &mut W, style: &Style) -> io::Result<()> {
-        if let Some((name, w)) = self.0.node_weight(self.1) {
-            let x = CommandTree(w, NodeIndex::new(0));
-
-            let mut s = vec![];
-            ptree::write_tree(&x, &mut s)?;
-
-            let x = format!("{}\n{}", name, String::from_utf8_lossy(&s));
-
-            write!(f, "{}", style.paint(x))
-        } else {
-            Ok(())
-        }
-    }
-
-    fn children(&self) -> Cow<[Self::Child]> {
-        let v: Vec<_> = self.0.neighbors(self.1).map(|i| Self(self.0, i)).collect();
-
-        Cow::from(v)
-    }
-}
+use ptree::{item::StringItem, TreeBuilder};
+use std::io;
 
 pub(crate) fn render_command_plan(plan: &CommandPlan) -> io::Result<()> {
-    let cfg = PrintConfig::from_env();
+    let tree = build_command_plan_tree(&plan);
 
+    ptree::print_tree(&tree)?;
+
+    Ok(())
+}
+
+pub(crate) fn render_command_details(plan: &CommandPlan) -> io::Result<()> {
     let roots = plan.externals(Direction::Incoming);
 
     for root in roots {
-        ptree::print_tree_with(&JobTree(&plan, root), &cfg)?;
-    }
+        let mut dfs = Dfs::new(plan, root);
 
-    // for (k, g) in plan {
-    //     println!("\n\nJob Details: {}\n", style(k).bold());
-    //     render_job_details(&g);
-    // }
+        while let Some(nx) = dfs.next(plan) {
+            let (job_name, command_job) = &plan[nx];
+
+            println!("Job: {}\n", job_name);
+            render_job_details(&command_job);
+        }
+    }
 
     Ok(())
 }
@@ -99,9 +41,125 @@ fn render_job_details(g: &CommandGraph) {
     while let Some(nx) = dfs.next(g) {
         let node = &g[nx];
 
-        println!("Action: {}\n", style(&node.id).bold());
-        println!("State: {}\n", style(&node.state).bold());
-        println!("Stdout: \n{}\n", style(&node.stdout).dim());
-        println!("Stderr: \n{}\n", style(&node.stderr).red());
+        println!("{}:{}", style("Action").bold(), &node.id);
+        println!("{}:{}", style("State").bold(), &node.state);
+        println!(
+            "{}:{}",
+            style("Started").bold(),
+            &node
+                .started_at
+                .map(|dt| dt.to_rfc3339_opts(SecondsFormat::Millis, true))
+                .unwrap_or("---".to_string())
+        );
+        println!(
+            "{}:{}",
+            style("Ended").bold(),
+            &node
+                .finished_at
+                .map(|dt| dt.to_rfc3339_opts(SecondsFormat::Millis, true))
+                .unwrap_or("---".to_string())
+        );
+        println!(
+            "{}:\n{}\n",
+            style("Stdout").bold(),
+            style(&node.stdout).dim()
+        );
+        println!(
+            "{}: \n{}\n\n",
+            style("Stderr").bold(),
+            style(&node.stderr).red()
+        );
+    }
+}
+
+fn build_command_plan_tree(plan: &CommandPlan) -> StringItem {
+    let mut tree = TreeBuilder::new("Command".to_string());
+
+    let roots = plan.externals(Direction::Incoming);
+
+    for root in roots {
+        let mut dfs = Dfs::new(plan, root);
+        let mut depth = 0;
+
+        while let Some(nx) = dfs.next(plan) {
+            let (job_name, steps) = &plan[nx];
+
+            let entry = match steps.get_state() {
+                State::Pending => format!("... Job: {} pending", job_name),
+                State::Running => format!("Job: {} running", job_name),
+                State::Completed => format_success(format!("Job: {} completed", job_name)),
+                State::Failed => format_error(format!("Job: {} failed", job_name)),
+                State::Canceled => format_cancelled(format!("Job: {} cancelled", job_name)),
+            };
+
+            tree.begin_child(entry);
+
+            let mut steps_dfs = Dfs::new(steps, NodeIndex::new(0));
+
+            let mut step_depth = 0;
+
+            while let Some(nx) = steps_dfs.next(steps) {
+                let step = &steps[nx];
+                let d = step
+                    .duration()
+                    .map(|x| humantime::format_duration(x.into()).to_string())
+                    .map(|x| format!(" ({})", x))
+                    .unwrap_or_default();
+
+                let entry = match step.state {
+                    State::Pending => format!("... Step: {} pending", step.id),
+                    State::Running => format!("Step: {} running", step.id),
+                    State::Completed => format_success(format!("Step: {} completed{}", step.id, d)),
+                    State::Failed => format_error(format!("Step: {} failed{}", step.id, d)),
+                    State::Canceled => format_cancelled(format!("Step: {} cancelled", step.id)),
+                };
+
+                tree.begin_child(entry);
+
+                step_depth += 1;
+            }
+
+            for _ in 0..step_depth {
+                tree.end_child();
+            }
+
+            depth += 1;
+        }
+
+        for _ in 0..depth {
+            tree.end_child();
+        }
+    }
+
+    tree.build()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::build_command_plan_tree;
+    use emf_wire_types::{Command, CommandPlan};
+    use ptree::write_tree;
+    use std::{convert::TryInto, env};
+
+    #[test]
+    fn test_plan_tree() -> Result<(), Box<dyn std::error::Error>> {
+        // Remove colors from snapshot output
+        env::set_var("NO_COLOR", "1");
+
+        let command = include_str!("../fixtures/needs-plan.json");
+
+        let command: Command = serde_json::from_str(command)?;
+
+        let plan: CommandPlan = command.plan.try_into()?;
+
+        let x = build_command_plan_tree(&plan);
+
+        let mut buf = vec![];
+
+        write_tree(&x, &mut buf)?;
+
+        insta::assert_display_snapshot!(String::from_utf8_lossy(&buf));
+
+        Ok(())
     }
 }

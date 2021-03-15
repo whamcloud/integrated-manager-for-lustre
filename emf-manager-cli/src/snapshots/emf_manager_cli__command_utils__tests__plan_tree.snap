@@ -1,0 +1,18 @@
+---
+source: emf-manager-cli/src/command_utils.rs
+expression: "String::from_utf8_lossy(&buf)"
+
+---
+Command
+├─ ✔ Job: list_ubuntu1 completed
+│  └─ ✔ Step: list node ubuntu1 completed (789ms 454us 994ns)
+└─ ✔ Job: list_node1 completed
+   ├─ ✔ Step: list node 1 completed (168ms 807us 240ns)
+   │  └─ ✔ Step: list node 1 again completed (169ms 335us 451ns)
+   └─ ✔ Job: list_node2 completed
+      ├─ ✔ Step: list node 2 completed (191ms 22us 884ns)
+      └─ ✔ Job: list_node4 completed
+         ├─ ✔ Step: list node 4 completed (176ms 771us 917ns)
+         └─ ✔ Job: list_node3 completed
+            └─ ✔ Step: list node 3 completed (178ms 659us 339ns)
+
