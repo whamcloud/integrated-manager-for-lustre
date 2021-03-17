@@ -23,6 +23,7 @@ jobs:
               password: ~
               key_path: ~
               key_passphrase: ~
+            proxy_opts: ~
         outputs: ~
       - action: host.create_file_ssh
         id: Add CLI config to node1
@@ -38,6 +39,7 @@ jobs:
               password: ~
               key_path: ~
               key_passphrase: ~
+            proxy_opts: ~
         outputs: ~
       - action: host.ssh_command
         id: Install emf agent on node1
@@ -52,6 +54,7 @@ jobs:
               password: ~
               key_path: ~
               key_passphrase: ~
+            proxy_opts: ~
         outputs: ~
       - action: host.ssh_command
         id: Start agent on node1
@@ -66,6 +69,7 @@ jobs:
               password: ~
               key_path: ~
               key_passphrase: ~
+            proxy_opts: ~
         outputs: ~
       - action: host.is_available
         id: Wait for node1 agent to report in
@@ -90,6 +94,7 @@ jobs:
               password: ~
               key_path: ~
               key_passphrase: ~
+            proxy_opts: ~
         outputs: ~
       - action: host.sync_file_ssh
         id: Sync dataplane token on node2
@@ -104,6 +109,7 @@ jobs:
               password: ~
               key_path: ~
               key_passphrase: ~
+            proxy_opts: ~
         outputs: ~
       - action: host.create_file_ssh
         id: Add emf repo to node2
@@ -119,6 +125,7 @@ jobs:
               password: ~
               key_path: ~
               key_passphrase: ~
+            proxy_opts: ~
         outputs: ~
       - action: host.create_file_ssh
         id: Add CLI config to node2
@@ -134,6 +141,7 @@ jobs:
               password: ~
               key_path: ~
               key_passphrase: ~
+            proxy_opts: ~
         outputs: ~
       - action: host.ssh_command
         id: Install emf agent on node2
@@ -148,6 +156,7 @@ jobs:
               password: ~
               key_path: ~
               key_passphrase: ~
+            proxy_opts: ~
         outputs: ~
       - action: host.ssh_command
         id: Start agent node2
@@ -162,6 +171,7 @@ jobs:
               password: ~
               key_path: ~
               key_passphrase: ~
+            proxy_opts: ~
         outputs: ~
       - action: host.is_available
         id: Wait for node2 agent to report in
@@ -186,6 +196,7 @@ jobs:
               password: ~
               key_path: ~
               key_passphrase: ~
+            proxy_opts: ~
         outputs: ~
       - action: host.sync_file_ssh
         id: Sync dataplane token across cluster
@@ -200,6 +211,7 @@ jobs:
               password: ~
               key_path: ~
               key_passphrase: ~
+            proxy_opts: ~
         outputs: ~
       - action: host.create_file_ssh
         id: add emf repo to node3
@@ -215,6 +227,7 @@ jobs:
               password: ~
               key_path: ~
               key_passphrase: ~
+            proxy_opts: ~
         outputs: ~
       - action: host.create_file_ssh
         id: add CLI config to node3
@@ -230,6 +243,7 @@ jobs:
               password: ~
               key_path: ~
               key_passphrase: ~
+            proxy_opts: ~
         outputs: ~
       - action: host.ssh_command
         id: Install emf agent on node3
@@ -244,6 +258,7 @@ jobs:
               password: ~
               key_path: ~
               key_passphrase: ~
+            proxy_opts: ~
         outputs: ~
       - action: host.ssh_command
         id: Start agent on node3
@@ -258,6 +273,7 @@ jobs:
               password: ~
               key_path: ~
               key_passphrase: ~
+            proxy_opts: ~
         outputs: ~
       - action: host.is_available
         id: Wait for node3 agent to report in
@@ -282,6 +298,7 @@ jobs:
               password: ~
               key_path: ~
               key_passphrase: ~
+            proxy_opts: ~
         outputs: ~
       - action: host.sync_file_ssh
         id: Sync dataplane token to node4
@@ -296,6 +313,7 @@ jobs:
               password: ~
               key_path: ~
               key_passphrase: ~
+            proxy_opts: ~
         outputs: ~
       - action: host.create_file_ssh
         id: add emf repo to node4
@@ -311,6 +329,7 @@ jobs:
               password: ~
               key_path: ~
               key_passphrase: ~
+            proxy_opts: ~
         outputs: ~
       - action: host.create_file_ssh
         id: add CLI config to node4
@@ -326,6 +345,7 @@ jobs:
               password: ~
               key_path: ~
               key_passphrase: ~
+            proxy_opts: ~
         outputs: ~
       - action: host.ssh_command
         id: Install emf agent on node4
@@ -340,6 +360,7 @@ jobs:
               password: ~
               key_path: ~
               key_passphrase: ~
+            proxy_opts: ~
         outputs: ~
       - action: host.ssh_command
         id: Start agent on node4
@@ -354,6 +375,7 @@ jobs:
               password: ~
               key_path: ~
               key_passphrase: ~
+            proxy_opts: ~
         outputs: ~
       - action: host.is_available
         id: Wait for node4 agent to report in
@@ -378,6 +400,7 @@ jobs:
               password: ~
               key_path: ~
               key_passphrase: ~
+            proxy_opts: ~
         outputs: ~
       - action: host.sync_file_ssh
         id: Sync dataplane token to ubuntu1
@@ -392,6 +415,7 @@ jobs:
               password: ~
               key_path: ~
               key_passphrase: ~
+            proxy_opts: ~
         outputs: ~
       - action: host.create_file_ssh
         id: add emf repo
@@ -407,6 +431,7 @@ jobs:
               password: ~
               key_path: ~
               key_passphrase: ~
+            proxy_opts: ~
         outputs: ~
       - action: host.ssh_command
         id: Install emf agent ubuntu1
@@ -421,6 +446,7 @@ jobs:
               password: ~
               key_path: ~
               key_passphrase: ~
+            proxy_opts: ~
         outputs: ~
       - action: host.ssh_command
         id: Start agent ubuntu1
@@ -435,6 +461,7 @@ jobs:
               password: ~
               key_path: ~
               key_passphrase: ~
+            proxy_opts: ~
         outputs: ~
       - action: host.is_available
         id: Wait for ubuntu1 agent to report in

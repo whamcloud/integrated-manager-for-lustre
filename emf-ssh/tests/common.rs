@@ -43,6 +43,7 @@ pub async fn connect(port: u16) -> Result<Handle<Client>, emf_ssh::Error> {
         port,
         "root",
         emf_ssh::Auth::Password("abc123".into()),
+        None,
     )
     .await
 }

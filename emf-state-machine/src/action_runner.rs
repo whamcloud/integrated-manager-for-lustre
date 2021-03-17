@@ -88,9 +88,14 @@ pub(crate) async fn invoke<'a>(
             host::Input::SshCommand(x) => {
                 let opts = &x.ssh_opts;
 
-                let mut session =
-                    emf_ssh::connect(&x.host, opts.port, &opts.user, (&opts.auth_opts).into())
-                        .await?;
+                let mut session = emf_ssh::connect(
+                    &x.host,
+                    opts.port,
+                    &opts.user,
+                    (&opts.auth_opts).into(),
+                    opts.proxy_opts.as_ref().map(From::from),
+                )
+                .await?;
 
                 let channel = session
                     .channel_open_session()
@@ -131,6 +136,7 @@ pub(crate) async fn invoke<'a>(
                     ssh_opts.port,
                     &ssh_opts.user,
                     (&ssh_opts.auth_opts).into(),
+                    ssh_opts.proxy_opts.as_ref().map(From::from),
                 )
                 .await?;
 
@@ -151,6 +157,7 @@ pub(crate) async fn invoke<'a>(
                     ssh_opts.port,
                     &ssh_opts.user,
                     (&ssh_opts.auth_opts).into(),
+                    ssh_opts.proxy_opts.as_ref().map(From::from),
                 )
                 .await?;
 
@@ -166,6 +173,7 @@ pub(crate) async fn invoke<'a>(
                     ssh_opts.port,
                     &ssh_opts.user,
                     (&ssh_opts.auth_opts).into(),
+                    ssh_opts.proxy_opts.as_ref().map(From::from),
                 )
                 .await?;
 

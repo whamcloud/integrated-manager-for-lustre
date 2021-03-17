@@ -375,6 +375,45 @@ pub fn deserialize_input_document(
 pub mod ssh_opts {
     use validator::{Validate, ValidationError};
 
+    fn default_port() -> u16 {
+        22
+    }
+
+    fn default_user() -> String {
+        "root".to_string()
+    }
+
+    #[derive(Debug, serde::Serialize, serde::Deserialize, Validate)]
+    pub struct SshProxyOpts {
+        pub host: String,
+        /// SSH port
+        #[serde(default = "default_port")]
+        pub port: u16,
+        /// SSH user
+        #[serde(default = "default_user")]
+        pub user: String,
+        /// SSH password. If empty, key auth will be used
+        #[serde(default)]
+        pub password: Option<String>,
+    }
+
+    impl From<&SshProxyOpts> for emf_ssh::ProxyCfg {
+        fn from(cfg: &SshProxyOpts) -> Self {
+            let auth = if let Some(pw) = cfg.password.as_ref() {
+                emf_ssh::ProxyAuth::Password(pw.to_string())
+            } else {
+                emf_ssh::ProxyAuth::Key
+            };
+
+            Self {
+                host: cfg.host.to_string(),
+                user: cfg.user.to_string(),
+                port: Some(cfg.port),
+                auth,
+            }
+        }
+    }
+
     #[derive(Debug, serde::Serialize, serde::Deserialize, Validate)]
     #[serde(default)]
     pub struct SshOpts {
@@ -384,6 +423,7 @@ pub mod ssh_opts {
         pub user: String,
         #[validate(custom(function = "validate_auth"))]
         pub auth_opts: AuthOpts,
+        pub proxy_opts: Option<SshProxyOpts>,
     }
 
     impl Default for SshOpts {
@@ -391,7 +431,7 @@ pub mod ssh_opts {
             Self {
                 port: 22,
                 user: "root".to_string(),
-
+                proxy_opts: None,
                 auth_opts: AuthOpts {
                     agent: false,
                     password: None,
@@ -512,6 +552,11 @@ jobs:
         inputs:
           host: mds1
           run: touch test
+          ssh_opts:
+            port: 22
+            user: root
+            proxy_opts:
+              host: proxy-host
         outputs:
           id: this.id
   configure_lnet:

@@ -22,6 +22,11 @@ jobs:
               password: ~
               key_path: ~
               key_passphrase: ~
+            proxy_opts:
+              host: proxy-host
+              port: 22
+              user: root
+              password: ~
         outputs:
           id: this.id
   configure_lnet:

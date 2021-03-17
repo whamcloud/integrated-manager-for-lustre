@@ -4,11 +4,20 @@
 
 use emf_tracing::tracing;
 use futures::{future::BoxFuture, stream, Future, FutureExt, TryStreamExt};
-use std::{io, path::PathBuf, pin::Pin, string::FromUtf8Error, sync::Arc, time::Duration};
+use std::{
+    io::{self, ErrorKind},
+    path::PathBuf,
+    pin::Pin,
+    process::Stdio,
+    string::FromUtf8Error,
+    sync::Arc,
+    time::Duration,
+};
 use thrussh::client;
 pub use thrussh::client::{Channel, Handle};
 use tokio::{
     io::{AsyncWriteExt, BufReader, DuplexStream},
+    process::Command,
     sync::watch::error::RecvError,
 };
 
@@ -32,6 +41,8 @@ pub enum Error {
     NoHomeDir,
     #[error("No .ssh directory found")]
     NoSshDir,
+    #[error("sshpass command not found on PATH, proxy password support disabled.")]
+    NoSshPass,
     #[error("Command Failed. Exit Code: {0}. Message: {1}")]
     FailedCmd(u32, String),
     #[error("Bad Exit Code: {0}.")]
@@ -77,35 +88,14 @@ pub enum Auth {
     Auto,
 }
 
-/// Connect to the given `host` on the given `port` with the given `user` and selected `auth`.
-/// A successful connection will return a session that can be used to obtain a channel.
-pub async fn connect(
-    host: impl ToString,
-    port: impl Into<Option<u16>>,
-    user: impl ToString,
+async fn authenticate(
     auth: Auth,
+    user: &str,
+    mut session: client::Handle<Client>,
 ) -> Result<client::Handle<Client>, Error> {
-    let cfg = client::Config {
-        connection_timeout: Some(Duration::from_secs(60)),
-        ..Default::default()
-    };
-    let cfg = Arc::new(cfg);
-
-    let port = port.into();
-
-    let host = host.to_string();
-
-    let user = user.to_string();
-
-    let address = format!("{}:{}", &host, port.unwrap_or(22));
-
-    let sh = Client { host, port };
-
-    let mut session: Handle<Client> = client::connect(cfg, address, sh).await?;
-
     let (session, authed) = match auth {
         Auth::Password(password) => {
-            let x = session.authenticate_password(&user, password).await?;
+            let x = session.authenticate_password(user, password).await?;
 
             (session, x)
         }
@@ -116,7 +106,7 @@ pub async fn connect(
             let keypair = thrussh_keys::load_secret_key(key_path, password)?;
 
             let x = session
-                .authenticate_publickey(&user, Arc::new(keypair))
+                .authenticate_publickey(user, Arc::new(keypair))
                 .await?;
 
             (session, x)
@@ -129,19 +119,15 @@ pub async fn connect(
             let (_, session, x) = stream::iter(identities.into_iter().map(Ok::<_, Error>))
                 .try_fold(
                     (agent, session, false),
-                    |(agent, mut session, authed), x| {
-                        let user = &user;
-
-                        async move {
-                            if authed {
-                                return Ok((agent, session, authed));
-                            }
-
-                            let (agent, authed) = session.authenticate_future(user, x, agent).await;
-                            let authed = authed.map_err(|_| Error::AuthenticationFailed)?;
-
-                            Ok((agent, session, authed))
+                    |(agent, mut session, authed), x| async move {
+                        if authed {
+                            return Ok((agent, session, authed));
                         }
+
+                        let (agent, authed) = session.authenticate_future(user, x, agent).await;
+                        let authed = authed.map_err(|_| Error::AuthenticationFailed)?;
+
+                        Ok((agent, session, authed))
                     },
                 )
                 .await?;
@@ -173,7 +159,7 @@ pub async fn connect(
                 let keypair = thrussh_keys::load_secret_key(k, None)?;
 
                 authed = session
-                    .authenticate_publickey(&user, Arc::new(keypair))
+                    .authenticate_publickey(user, Arc::new(keypair))
                     .await?;
 
                 if authed {
@@ -190,6 +176,73 @@ pub async fn connect(
     } else {
         Err(Error::AuthenticationFailed)
     }
+}
+
+pub enum ProxyAuth {
+    Password(String),
+    Key,
+}
+
+pub struct ProxyCfg {
+    pub host: String,
+    pub user: String,
+    pub port: Option<u16>,
+    pub auth: ProxyAuth,
+}
+
+/// Connect to the given `host` on the given `port` with the given `user` and selected `auth`.
+/// A successful connection will return a session that can be used to obtain a channel.
+pub async fn connect(
+    host: impl ToString,
+    port: impl Into<Option<u16>>,
+    user: impl ToString,
+    auth: Auth,
+    proxy_cfg: Option<ProxyCfg>,
+) -> Result<client::Handle<Client>, Error> {
+    let cfg = client::Config {
+        connection_timeout: Some(Duration::from_secs(60)),
+
+        ..Default::default()
+    };
+    let cfg = Arc::new(cfg);
+
+    let port = port.into();
+
+    let host = host.to_string();
+
+    let user = user.to_string();
+
+    let address = format!("{}:{}", &host, port.unwrap_or(22));
+
+    let sh = Client { host, port };
+
+    let session: Handle<Client> = if let Some(proxy_cfg) = proxy_cfg {
+        let mut cmd = format!(
+            "/usr/bin/ssh -q {}@{} -W {}",
+            proxy_cfg.user, proxy_cfg.host, address
+        );
+
+        if let ProxyAuth::Password(ref x) = proxy_cfg.auth {
+            match Command::new("sshpass").stdout(Stdio::piped()).spawn() {
+                Err(e) if e.kind() == ErrorKind::NotFound => return Err(Error::NoSshPass),
+                _ => {}
+            };
+
+            cmd = format!("sshpass -p {} ", x) + &cmd;
+        } else {
+            cmd = format!("{} -oBatchMode=yes", cmd);
+        }
+
+        let parts: Vec<_> = cmd.split(" ").collect();
+
+        let s = thrussh_config::Stream::proxy_command(parts[0], &parts[1..]).await?;
+
+        client::connect_stream(cfg, s, sh).await?
+    } else {
+        client::connect(cfg, address, sh).await?
+    };
+
+    authenticate(auth, &user, session).await
 }
 
 #[derive(Debug)]
