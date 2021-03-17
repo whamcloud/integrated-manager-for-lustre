@@ -7,6 +7,7 @@ members = [
   'emf-change',
   'emf-cmd',
   'emf-command-utils',
+  'emf-exa-parser',
   'emf-fs',
   'emf-graphql-queries',
   'emf-influx',
@@ -50,5 +51,4 @@ exclude = [
   'device-scanner',
   'emf-gui/crate',
   'emf-system-rpm-tests',
-  'emf-exa-parser',
 ]

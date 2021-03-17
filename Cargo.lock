@@ -996,6 +996,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "emf-exa-parser"
+version = "0.1.0"
+dependencies = [
+ "emf-cmd",
+ "insta",
+ "serde 1.0.124",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "emf-fs"
 version = "0.4.0"
 dependencies = [

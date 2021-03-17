@@ -1,24 +1,20 @@
 ---
-source: tests/integration-tests.rs
+source: emf-exa-parser/tests/integration-tests.rs
 expression: exa
+
 ---
 {
   "ha_settings": {
-    "crypto_hash": "sha1",
-    "rrp_mode": "passive",
-    "window_size": 50,
-    "max_messages": 17,
-    "lustre_start_timeout": 450,
-    "netmtu": 1500,
-    "type": "corosync",
-    "stonith_timeout": 60,
-    "start_on_boot": true,
-    "failover_policy": "standard",
     "corosync_nics": [
       "ring0",
       "ring1"
     ],
-    "secauth": "on",
+    "crypto_cipher": "aes256",
+    "crypto_hash": "sha1",
+    "dampen_ifspeed": 20,
+    "dampen_ping": 20,
+    "failover_policy": "standard",
+    "ha_group_count": 1,
     "ha_groups": [
       [
         "ai400x-7f94-vm00",
@@ -27,59 +23,64 @@ expression: exa
         "ai400x-7f94-vm03"
       ]
     ],
-    "dampen_ifspeed": 20,
+    "lustre_start_timeout": 450,
+    "max_messages": 17,
     "mcastport": 5405,
-    "crypto_cipher": "aes256",
-    "ha_group_count": 1,
+    "netmtu": 1500,
     "no_quorum_policy": "freeze",
-    "zpool_monitor_timeout": 60,
+    "rrp_mode": "passive",
+    "secauth": "on",
+    "stonith_timeout": 60,
+    "start_on_boot": true,
     "transport": "unicast",
-    "dampen_ping": 20
+    "type": "corosync",
+    "window_size": 50,
+    "zpool_monitor_timeout": 60
   },
   "global_settings": {
-    "vg_activation_list": [
-      "auto"
-    ],
     "clients_list": [],
-    "mgs_fs": "ai400hyb",
-    "s2a_list": [],
+    "cluster_name": null,
+    "conf_param_tunings": null,
+    "email_list": [],
+    "email_domain": null,
+    "email_relay": null,
+    "extra_hosts_start": [],
+    "extra_hosts_end": [],
+    "fs_list": [
+      "ai400hyb"
+    ],
     "host_list": [
       "ai400x-7f94-vm00",
       "ai400x-7f94-vm01",
       "ai400x-7f94-vm02",
       "ai400x-7f94-vm03"
     ],
-    "kdump_path": "/scratch/crash",
-    "email_domain": null,
-    "s2a_pass": "password",
-    "pingd": true,
-    "extra_hosts_start": [],
-    "extra_hosts_end": [],
-    "lnet_mr_fault_sensitive": false,
-    "cluster_name": null,
-    "log_dir": "/scratch/log",
     "hsm_active": false,
-    "conf_param_tunings": null,
-    "password_policy": "plain-text",
-    "email_list": [],
-    "shadow_conf": false,
-    "s2a_user": "admin",
+    "kdump_path": "/scratch/crash",
+    "lnet_mr_fault_sensitive": false,
+    "log_dir": "/scratch/log",
     "mdt_backup": "none",
     "mdt_backup_dir": "/scratch",
+    "mgs_fs": "ai400hyb",
     "ntp_list": [],
-    "fs_list": [
-      "ai400hyb"
-    ],
-    "timezone": null,
-    "sfa_list": [
-      "AI400X-7f94"
-    ],
+    "password_policy": "plain-text",
+    "pingd": true,
+    "s2a_list": [],
+    "s2a_pass": "password",
+    "s2a_user": "admin",
     "set_param_tunings": {
       "obdfilter.*.brw_size": "16",
       "osd-ldiskfs.*.read_cache_enable": "0",
       "osd-ldiskfs.*.writethrough_cache_enable": "0"
     },
-    "email_relay": null
+    "sfa_list": [
+      "AI400X-7f94"
+    ],
+    "shadow_conf": false,
+    "timezone": null,
+    "vg_activation_list": [
+      "auto"
+    ]
   },
   "pool_settings": {},
   "sfa_settings": {
@@ -88,136 +89,180 @@ expression: exa
         "10.0.3.1",
         "10.0.3.4"
       ],
+      "name": "AI400X-7f94",
       "password": "user",
-      "user": "user",
-      "name": "AI400X-7f94"
+      "user": "user"
     }
   },
   "zpool_settings": null,
   "host_defaults_settings": {
-    "rest_ext_nic": null,
-    "rest_cert_server": null,
+    "base_ip": {},
+    "bonding_mode": null,
+    "grub_args": "spectre_v2=off nopti",
+    "host_sfa_list": [
+      "AI400X-7f94"
+    ],
+    "ipmi_delay": null,
     "ipmi_method": null,
-    "rest_cert_server_key": null,
-    "serial_port": "ttyS0",
-    "rest_cert_ca": null,
-    "rest_cert_crl": null,
-    "stonith_type": "sfa_vm",
+    "ipmi_monitor": null,
+    "ipmi_power_wait": 5,
     "lnets": [
       "o2ib0(ib0,ib1)"
     ],
     "modprobe_cfg": null,
-    "rest_primary_nic": null,
-    "nics": {
-      "ib0": {
-        "is_bonded": null,
-        "ip": null,
-        "netaddr": null,
-        "netmask": "255.255.0.0",
-        "device": "ib0",
-        "gateway": null
-      },
-      "ib1": {
-        "is_bonded": null,
-        "ip": null,
-        "netaddr": null,
-        "netmask": "255.255.0.0",
-        "device": "ib1",
-        "gateway": null
-      },
-      "mgmt0": {
-        "is_bonded": null,
-        "ip": null,
-        "netaddr": null,
-        "netmask": "255.255.0.0",
-        "device": "mgmt0",
-        "gateway": "10.36.0.1"
-      },
-      "mgmt2": {
-        "is_bonded": null,
-        "ip": null,
-        "netaddr": null,
-        "netmask": "255.255.255.0",
-        "device": "mgmt2",
-        "gateway": null
-      }
-    },
+    "rest_cert_ca": null,
+    "rest_cert_crl": null,
+    "rest_cert_server": null,
+    "rest_cert_server_key": null,
+    "rest_ext_nic": null,
+    "rest_int_nic": null,
     "rest_keepalived_nic": null,
-    "ipmi_delay": null,
-    "host_sfa_list": [
-      "AI400X-7f94"
-    ],
-    "base_ip": {},
-    "ipmi_power_wait": 5,
-    "bonding_mode": null,
+    "rest_primary_nic": null,
     "nic_list": [
       "mgmt0",
       "mgmt2",
       "ib0",
       "ib1"
     ],
-    "serial_speed": "115200",
-    "rest_int_nic": null,
-    "ring1": "ib0",
+    "nics": {
+      "ib0": {
+        "device": "ib0",
+        "gateway": null,
+        "ip": null,
+        "is_bonded": null,
+        "netaddr": null,
+        "netmask": "255.255.0.0"
+      },
+      "ib1": {
+        "device": "ib1",
+        "gateway": null,
+        "ip": null,
+        "is_bonded": null,
+        "netaddr": null,
+        "netmask": "255.255.0.0"
+      },
+      "mgmt0": {
+        "device": "mgmt0",
+        "gateway": "10.36.0.1",
+        "ip": null,
+        "is_bonded": null,
+        "netaddr": null,
+        "netmask": "255.255.0.0"
+      },
+      "mgmt2": {
+        "device": "mgmt2",
+        "gateway": null,
+        "ip": null,
+        "is_bonded": null,
+        "netaddr": null,
+        "netmask": "255.255.255.0"
+      }
+    },
     "ring0": "mgmt2",
-    "grub_args": "spectre_v2=off nopti",
-    "ipmi_monitor": null,
+    "ring1": "ib0",
+    "serial_port": "ttyS0",
+    "serial_speed": "115200",
+    "stonith_pass": null,
     "stonith_user": null,
-    "stonith_pass": null
+    "stonith_type": "sfa_vm"
   },
   "hosts_settings": {
     "ai400x-7f94-vm00": {
-      "sysctl": {
-        "net.ipv4.conf.all.arp_announce": "2",
-        "net.ipv4.conf.all.arp_ignore": "1",
-        "net.ipv4.conf.all.rp_filter": "0",
-        "net.ipv4.conf.defalut.arp_announce": "2",
-        "net.ipv4.conf.default.arp_ignore": "1",
-        "net.ipv4.conf.default.rp_filter": "2",
-        "vm.min_free_kbytes": "2097152"
-      },
-      "rest_ext_nic": null,
-      "rest_cert_server": null,
-      "ipmi_method": null,
-      "rest_cert_server_key": null,
-      "serial_port": "ttyS0",
-      "rest_cert_ca": null,
-      "rest_cert_crl": null,
-      "stonith_type": "sfa_vm",
-      "lnets": [
-        "o2ib0(ib0,ib1)"
+      "fs_list": [
+        "ai400hyb"
       ],
-      "modprobe_cfg": null,
-      "rest_primary_nic": null,
-      "nics": {
-        "is_bonded": null,
-        "ip": null,
-        "netaddr": null,
-        "netmask": null,
-        "device": null,
-        "gateway": null
-      },
-      "rest_keepalived_nic": null,
-      "lnet_nics": [
-        "ib0",
-        "ib1"
-      ],
-      "ipmi_delay": null,
-      "mdt_list": {
-        "ai400hyb": [
-          0
-        ]
-      },
-      "host_sfa_list": [
-        "AI400X-7f94"
-      ],
-      "oid": "0x10000000",
+      "bonding_mode": null,
+      "grub_args": "spectre_v2=off nopti",
       "ha_group": [
         "ai400x-7f94-vm00",
         "ai400x-7f94-vm01",
         "ai400x-7f94-vm02",
         "ai400x-7f94-vm03"
       ],
+      "ha_group_idx": 0,
+      "host_sfa_list": [
+        "AI400X-7f94"
+      ],
+      "ipmi_delay": null,
+      "ipmi_method": null,
+      "ipmi_monitor": null,
+      "ipmi_power_wait": 5,
+      "lnet_members": {
+        "o2ib0": [
+          [
+            "172.16.254.194",
+            "172.16.255.194"
+          ],
+          [
+            "172.16.254.195",
+            "172.16.255.195"
+          ],
+          [
+            "172.16.254.196",
+            "172.16.255.196"
+          ],
+          [
+            "172.16.254.197",
+            "172.16.255.197"
+          ],
+          [
+            "172.16.254.194",
+            "172.16.255.194"
+          ],
+          [
+            "172.16.254.195",
+            "172.16.255.195"
+          ],
+          [
+            "172.16.254.196",
+            "172.16.255.196"
+          ],
+          [
+            "172.16.254.197",
+            "172.16.255.197"
+          ]
+        ]
+      },
+      "lnet_nics": [
+        "ib0",
+        "ib1"
+      ],
+      "lnets": [
+        "o2ib0(ib0,ib1)"
+      ],
+      "mdt_base_device_paths": {
+        "ai400hyb": "/dev/ddn"
+      },
+      "mdt_list": {
+        "ai400hyb": [
+          0
+        ]
+      },
+      "modprobe_cfg": null,
+      "name": "ai400x-7f94-vm00",
+      "nic_list": [
+        "mgmt0",
+        "mgmt2",
+        "ib0",
+        "ib1"
+      ],
+      "nics": {
+        "device": null,
+        "gateway": null,
+        "ip": null,
+        "is_bonded": null,
+        "netaddr": null,
+        "netmask": null
+      },
+      "peers": [
+        "ai400x-7f94-vm01",
+        "ai400x-7f94-vm02",
+        "ai400x-7f94-vm03"
+      ],
+      "oid": "0x10000000",
+      "ost_device_paths": {
+        "ai400hyb": "/dev/ddn"
+      },
       "ost_list": {
         "ai400hyb": [
           0,
@@ -225,34 +270,53 @@ expression: exa
           8
         ]
       },
+      "rest_cert_ca": null,
+      "rest_cert_crl": null,
+      "rest_ext_nic": null,
+      "rest_int_nic": null,
+      "rest_cert_server": null,
+      "rest_cert_server_key": null,
+      "rest_keepalived_nic": null,
+      "rest_primary_nic": null,
+      "ring0": "mgmt2",
+      "ring1": "ib0",
+      "serial_port": "ttyS0",
+      "serial_speed": "115200",
       "stonith_pass": "user",
-      "ipmi_power_wait": 5,
-      "bonding_mode": null,
+      "stonith_primary_peers": [],
       "stonith_secondary_peers": [],
-      "mdt_base_device_paths": {
-        "ai400hyb": "/dev/ddn"
-      },
-      "nic_list": [
-        "mgmt0",
-        "mgmt2",
-        "ib0",
-        "ib1"
+      "stonith_type": "sfa_vm",
+      "stonith_user": "user",
+      "sysctl": {
+        "net.ipv4.conf.all.arp_announce": "2",
+        "net.ipv4.conf.all.arp_ignore": "1",
+        "net.ipv4.conf.all.rp_filter": "0",
+        "net.ipv4.conf.defalut.arp_announce": "2",
+        "net.ipv4.conf.default.arp_ignore": "1",
+        "net.ipv4.conf.default.rp_filter": "2",
+        "vm.min_free_kbytes": "2097152"
+      }
+    },
+    "ai400x-7f94-vm01": {
+      "fs_list": [
+        "ai400hyb"
       ],
-      "peers": [
+      "bonding_mode": null,
+      "grub_args": "spectre_v2=off nopti",
+      "ha_group": [
+        "ai400x-7f94-vm00",
         "ai400x-7f94-vm01",
         "ai400x-7f94-vm02",
         "ai400x-7f94-vm03"
       ],
-      "fs_list": [
-        "ai400hyb"
+      "ha_group_idx": 0,
+      "host_sfa_list": [
+        "AI400X-7f94"
       ],
-      "name": "ai400x-7f94-vm00",
-      "stonith_primary_peers": [],
-      "serial_speed": "115200",
-      "ost_device_paths": {
-        "ai400hyb": "/dev/ddn"
-      },
-      "rest_int_nic": null,
+      "ipmi_delay": null,
+      "ipmi_method": null,
+      "ipmi_monitor": null,
+      "ipmi_power_wait": 5,
       "lnet_members": {
         "o2ib0": [
           [
@@ -289,65 +353,46 @@ expression: exa
           ]
         ]
       },
-      "ring1": "ib0",
-      "ring0": "mgmt2",
-      "grub_args": "spectre_v2=off nopti",
-      "ipmi_monitor": null,
-      "stonith_user": "user",
-      "ha_group_idx": 0
-    },
-    "ai400x-7f94-vm01": {
-      "sysctl": {
-        "net.ipv4.conf.all.arp_announce": "2",
-        "net.ipv4.conf.all.arp_ignore": "1",
-        "net.ipv4.conf.all.rp_filter": "0",
-        "net.ipv4.conf.defalut.arp_announce": "2",
-        "net.ipv4.conf.default.arp_ignore": "1",
-        "net.ipv4.conf.default.rp_filter": "2",
-        "vm.min_free_kbytes": "2097152"
-      },
-      "rest_ext_nic": null,
-      "rest_cert_server": null,
-      "ipmi_method": null,
-      "rest_cert_server_key": null,
-      "serial_port": "ttyS0",
-      "rest_cert_ca": null,
-      "rest_cert_crl": null,
-      "stonith_type": "sfa_vm",
-      "lnets": [
-        "o2ib0(ib0,ib1)"
-      ],
-      "modprobe_cfg": null,
-      "rest_primary_nic": null,
-      "nics": {
-        "is_bonded": null,
-        "ip": null,
-        "netaddr": null,
-        "netmask": null,
-        "device": null,
-        "gateway": null
-      },
-      "rest_keepalived_nic": null,
       "lnet_nics": [
         "ib0",
         "ib1"
       ],
-      "ipmi_delay": null,
+      "lnets": [
+        "o2ib0(ib0,ib1)"
+      ],
+      "mdt_base_device_paths": {
+        "ai400hyb": "/dev/ddn"
+      },
       "mdt_list": {
         "ai400hyb": [
           1
         ]
       },
-      "host_sfa_list": [
-        "AI400X-7f94"
+      "modprobe_cfg": null,
+      "name": "ai400x-7f94-vm01",
+      "nic_list": [
+        "mgmt0",
+        "mgmt2",
+        "ib0",
+        "ib1"
+      ],
+      "nics": {
+        "device": null,
+        "gateway": null,
+        "ip": null,
+        "is_bonded": null,
+        "netaddr": null,
+        "netmask": null
+      },
+      "peers": [
+        "ai400x-7f94-vm00",
+        "ai400x-7f94-vm03",
+        "ai400x-7f94-vm02"
       ],
       "oid": "0x10008000",
-      "ha_group": [
-        "ai400x-7f94-vm00",
-        "ai400x-7f94-vm01",
-        "ai400x-7f94-vm02",
-        "ai400x-7f94-vm03"
-      ],
+      "ost_device_paths": {
+        "ai400hyb": "/dev/ddn"
+      },
       "ost_list": {
         "ai400hyb": [
           2,
@@ -355,34 +400,53 @@ expression: exa
           9
         ]
       },
+      "rest_cert_ca": null,
+      "rest_cert_crl": null,
+      "rest_ext_nic": null,
+      "rest_int_nic": null,
+      "rest_cert_server": null,
+      "rest_cert_server_key": null,
+      "rest_keepalived_nic": null,
+      "rest_primary_nic": null,
+      "ring0": "mgmt2",
+      "ring1": "ib0",
+      "serial_port": "ttyS0",
+      "serial_speed": "115200",
       "stonith_pass": "user",
-      "ipmi_power_wait": 5,
-      "bonding_mode": null,
+      "stonith_primary_peers": [],
       "stonith_secondary_peers": [],
-      "mdt_base_device_paths": {
-        "ai400hyb": "/dev/ddn"
-      },
-      "nic_list": [
-        "mgmt0",
-        "mgmt2",
-        "ib0",
-        "ib1"
-      ],
-      "peers": [
-        "ai400x-7f94-vm00",
-        "ai400x-7f94-vm03",
-        "ai400x-7f94-vm02"
-      ],
+      "stonith_type": "sfa_vm",
+      "stonith_user": "user",
+      "sysctl": {
+        "net.ipv4.conf.all.arp_announce": "2",
+        "net.ipv4.conf.all.arp_ignore": "1",
+        "net.ipv4.conf.all.rp_filter": "0",
+        "net.ipv4.conf.defalut.arp_announce": "2",
+        "net.ipv4.conf.default.arp_ignore": "1",
+        "net.ipv4.conf.default.rp_filter": "2",
+        "vm.min_free_kbytes": "2097152"
+      }
+    },
+    "ai400x-7f94-vm02": {
       "fs_list": [
         "ai400hyb"
       ],
-      "name": "ai400x-7f94-vm01",
-      "stonith_primary_peers": [],
-      "serial_speed": "115200",
-      "ost_device_paths": {
-        "ai400hyb": "/dev/ddn"
-      },
-      "rest_int_nic": null,
+      "bonding_mode": null,
+      "grub_args": "spectre_v2=off nopti",
+      "ha_group": [
+        "ai400x-7f94-vm00",
+        "ai400x-7f94-vm01",
+        "ai400x-7f94-vm02",
+        "ai400x-7f94-vm03"
+      ],
+      "ha_group_idx": 0,
+      "host_sfa_list": [
+        "AI400X-7f94"
+      ],
+      "ipmi_delay": null,
+      "ipmi_method": null,
+      "ipmi_monitor": null,
+      "ipmi_power_wait": 5,
       "lnet_members": {
         "o2ib0": [
           [
@@ -419,65 +483,46 @@ expression: exa
           ]
         ]
       },
-      "ring1": "ib0",
-      "ring0": "mgmt2",
-      "grub_args": "spectre_v2=off nopti",
-      "ipmi_monitor": null,
-      "stonith_user": "user",
-      "ha_group_idx": 0
-    },
-    "ai400x-7f94-vm02": {
-      "sysctl": {
-        "net.ipv4.conf.all.arp_announce": "2",
-        "net.ipv4.conf.all.arp_ignore": "1",
-        "net.ipv4.conf.all.rp_filter": "0",
-        "net.ipv4.conf.defalut.arp_announce": "2",
-        "net.ipv4.conf.default.arp_ignore": "1",
-        "net.ipv4.conf.default.rp_filter": "2",
-        "vm.min_free_kbytes": "2097152"
-      },
-      "rest_ext_nic": null,
-      "rest_cert_server": null,
-      "ipmi_method": null,
-      "rest_cert_server_key": null,
-      "serial_port": "ttyS0",
-      "rest_cert_ca": null,
-      "rest_cert_crl": null,
-      "stonith_type": "sfa_vm",
-      "lnets": [
-        "o2ib0(ib0,ib1)"
-      ],
-      "modprobe_cfg": null,
-      "rest_primary_nic": null,
-      "nics": {
-        "is_bonded": null,
-        "ip": null,
-        "netaddr": null,
-        "netmask": null,
-        "device": null,
-        "gateway": null
-      },
-      "rest_keepalived_nic": null,
       "lnet_nics": [
         "ib0",
         "ib1"
       ],
-      "ipmi_delay": null,
+      "lnets": [
+        "o2ib0(ib0,ib1)"
+      ],
+      "mdt_base_device_paths": {
+        "ai400hyb": "/dev/ddn"
+      },
       "mdt_list": {
         "ai400hyb": [
           2
         ]
       },
-      "host_sfa_list": [
-        "AI400X-7f94"
+      "modprobe_cfg": null,
+      "name": "ai400x-7f94-vm02",
+      "nic_list": [
+        "mgmt0",
+        "mgmt2",
+        "ib0",
+        "ib1"
+      ],
+      "nics": {
+        "device": null,
+        "gateway": null,
+        "ip": null,
+        "is_bonded": null,
+        "netaddr": null,
+        "netmask": null
+      },
+      "peers": [
+        "ai400x-7f94-vm03",
+        "ai400x-7f94-vm00",
+        "ai400x-7f94-vm01"
       ],
       "oid": "0x10000001",
-      "ha_group": [
-        "ai400x-7f94-vm00",
-        "ai400x-7f94-vm01",
-        "ai400x-7f94-vm02",
-        "ai400x-7f94-vm03"
-      ],
+      "ost_device_paths": {
+        "ai400hyb": "/dev/ddn"
+      },
       "ost_list": {
         "ai400hyb": [
           4,
@@ -485,78 +530,23 @@ expression: exa
           10
         ]
       },
-      "stonith_pass": "user",
-      "ipmi_power_wait": 5,
-      "bonding_mode": null,
-      "stonith_secondary_peers": [],
-      "mdt_base_device_paths": {
-        "ai400hyb": "/dev/ddn"
-      },
-      "nic_list": [
-        "mgmt0",
-        "mgmt2",
-        "ib0",
-        "ib1"
-      ],
-      "peers": [
-        "ai400x-7f94-vm03",
-        "ai400x-7f94-vm00",
-        "ai400x-7f94-vm01"
-      ],
-      "fs_list": [
-        "ai400hyb"
-      ],
-      "name": "ai400x-7f94-vm02",
-      "stonith_primary_peers": [],
-      "serial_speed": "115200",
-      "ost_device_paths": {
-        "ai400hyb": "/dev/ddn"
-      },
+      "rest_cert_ca": null,
+      "rest_cert_crl": null,
+      "rest_ext_nic": null,
       "rest_int_nic": null,
-      "lnet_members": {
-        "o2ib0": [
-          [
-            "172.16.254.194",
-            "172.16.255.194"
-          ],
-          [
-            "172.16.254.195",
-            "172.16.255.195"
-          ],
-          [
-            "172.16.254.196",
-            "172.16.255.196"
-          ],
-          [
-            "172.16.254.197",
-            "172.16.255.197"
-          ],
-          [
-            "172.16.254.194",
-            "172.16.255.194"
-          ],
-          [
-            "172.16.254.195",
-            "172.16.255.195"
-          ],
-          [
-            "172.16.254.196",
-            "172.16.255.196"
-          ],
-          [
-            "172.16.254.197",
-            "172.16.255.197"
-          ]
-        ]
-      },
-      "ring1": "ib0",
+      "rest_cert_server": null,
+      "rest_cert_server_key": null,
+      "rest_keepalived_nic": null,
+      "rest_primary_nic": null,
       "ring0": "mgmt2",
-      "grub_args": "spectre_v2=off nopti",
-      "ipmi_monitor": null,
+      "ring1": "ib0",
+      "serial_port": "ttyS0",
+      "serial_speed": "115200",
+      "stonith_pass": "user",
+      "stonith_primary_peers": [],
+      "stonith_secondary_peers": [],
+      "stonith_type": "sfa_vm",
       "stonith_user": "user",
-      "ha_group_idx": 0
-    },
-    "ai400x-7f94-vm03": {
       "sysctl": {
         "net.ipv4.conf.all.arp_announce": "2",
         "net.ipv4.conf.all.arp_ignore": "1",
@@ -565,84 +555,28 @@ expression: exa
         "net.ipv4.conf.default.arp_ignore": "1",
         "net.ipv4.conf.default.rp_filter": "2",
         "vm.min_free_kbytes": "2097152"
-      },
-      "rest_ext_nic": null,
-      "rest_cert_server": null,
-      "ipmi_method": null,
-      "rest_cert_server_key": null,
-      "serial_port": "ttyS0",
-      "rest_cert_ca": null,
-      "rest_cert_crl": null,
-      "stonith_type": "sfa_vm",
-      "lnets": [
-        "o2ib0(ib0,ib1)"
+      }
+    },
+    "ai400x-7f94-vm03": {
+      "fs_list": [
+        "ai400hyb"
       ],
-      "modprobe_cfg": null,
-      "rest_primary_nic": null,
-      "nics": {
-        "is_bonded": null,
-        "ip": null,
-        "netaddr": null,
-        "netmask": null,
-        "device": null,
-        "gateway": null
-      },
-      "rest_keepalived_nic": null,
-      "lnet_nics": [
-        "ib0",
-        "ib1"
-      ],
-      "ipmi_delay": null,
-      "mdt_list": {
-        "ai400hyb": [
-          3
-        ]
-      },
-      "host_sfa_list": [
-        "AI400X-7f94"
-      ],
-      "oid": "0x10008001",
+      "bonding_mode": null,
+      "grub_args": "spectre_v2=off nopti",
       "ha_group": [
         "ai400x-7f94-vm00",
         "ai400x-7f94-vm01",
         "ai400x-7f94-vm02",
         "ai400x-7f94-vm03"
       ],
-      "ost_list": {
-        "ai400hyb": [
-          6,
-          7,
-          11
-        ]
-      },
-      "stonith_pass": "user",
+      "ha_group_idx": 0,
+      "host_sfa_list": [
+        "AI400X-7f94"
+      ],
+      "ipmi_delay": null,
+      "ipmi_method": null,
+      "ipmi_monitor": null,
       "ipmi_power_wait": 5,
-      "bonding_mode": null,
-      "stonith_secondary_peers": [],
-      "mdt_base_device_paths": {
-        "ai400hyb": "/dev/ddn"
-      },
-      "nic_list": [
-        "mgmt0",
-        "mgmt2",
-        "ib0",
-        "ib1"
-      ],
-      "peers": [
-        "ai400x-7f94-vm02",
-        "ai400x-7f94-vm01",
-        "ai400x-7f94-vm00"
-      ],
-      "fs_list": [
-        "ai400hyb"
-      ],
-      "name": "ai400x-7f94-vm03",
-      "stonith_primary_peers": [],
-      "serial_speed": "115200",
-      "ost_device_paths": {
-        "ai400hyb": "/dev/ddn"
-      },
-      "rest_int_nic": null,
       "lnet_members": {
         "o2ib0": [
           [
@@ -679,12 +613,79 @@ expression: exa
           ]
         ]
       },
-      "ring1": "ib0",
+      "lnet_nics": [
+        "ib0",
+        "ib1"
+      ],
+      "lnets": [
+        "o2ib0(ib0,ib1)"
+      ],
+      "mdt_base_device_paths": {
+        "ai400hyb": "/dev/ddn"
+      },
+      "mdt_list": {
+        "ai400hyb": [
+          3
+        ]
+      },
+      "modprobe_cfg": null,
+      "name": "ai400x-7f94-vm03",
+      "nic_list": [
+        "mgmt0",
+        "mgmt2",
+        "ib0",
+        "ib1"
+      ],
+      "nics": {
+        "device": null,
+        "gateway": null,
+        "ip": null,
+        "is_bonded": null,
+        "netaddr": null,
+        "netmask": null
+      },
+      "peers": [
+        "ai400x-7f94-vm02",
+        "ai400x-7f94-vm01",
+        "ai400x-7f94-vm00"
+      ],
+      "oid": "0x10008001",
+      "ost_device_paths": {
+        "ai400hyb": "/dev/ddn"
+      },
+      "ost_list": {
+        "ai400hyb": [
+          6,
+          7,
+          11
+        ]
+      },
+      "rest_cert_ca": null,
+      "rest_cert_crl": null,
+      "rest_ext_nic": null,
+      "rest_int_nic": null,
+      "rest_cert_server": null,
+      "rest_cert_server_key": null,
+      "rest_keepalived_nic": null,
+      "rest_primary_nic": null,
       "ring0": "mgmt2",
-      "grub_args": "spectre_v2=off nopti",
-      "ipmi_monitor": null,
+      "ring1": "ib0",
+      "serial_port": "ttyS0",
+      "serial_speed": "115200",
+      "stonith_pass": "user",
+      "stonith_primary_peers": [],
+      "stonith_secondary_peers": [],
+      "stonith_type": "sfa_vm",
       "stonith_user": "user",
-      "ha_group_idx": 0
+      "sysctl": {
+        "net.ipv4.conf.all.arp_announce": "2",
+        "net.ipv4.conf.all.arp_ignore": "1",
+        "net.ipv4.conf.all.rp_filter": "0",
+        "net.ipv4.conf.defalut.arp_announce": "2",
+        "net.ipv4.conf.default.arp_ignore": "1",
+        "net.ipv4.conf.default.rp_filter": "2",
+        "vm.min_free_kbytes": "2097152"
+      }
     }
   },
   "rest_settings": null,
@@ -698,43 +699,28 @@ expression: exa
   "fs_settings": {
     "ai400hyb": {
       "backfs": "ldiskfs",
-      "mgs_failback": true,
+      "cur_mdt_index": 4,
+      "cur_ost_index": 0,
+      "default_ost_count": 3,
+      "default_mdt_count": 1,
+      "dom_enabled": false,
+      "dom_max_file_size": 65536,
       "host_list": [
         "ai400x-7f94-vm00",
         "ai400x-7f94-vm01",
         "ai400x-7f94-vm02",
         "ai400x-7f94-vm03"
       ],
-      "ost_mke2fs_opts": [
-        "-m1",
-        "-i",
-        "131072",
-        "-E",
-        "lazy_itable_init=0,lazy_journal_init=0,nodiscard",
-        "-O",
-        "project"
-      ],
-      "total_mdt_count": 4,
-      "tune_ost_mke2fs_opts": [
-        "for size > 140737488355328 apply '-E lazy_itable_init=1,nodiscard -N 1073741824 -O project'"
-      ],
-      "mdt_base_device_path": "/dev/ddn",
-      "ost_mount_opts": "max_sectors_kb=0",
-      "mdt_opts": "--param mdt.identity_upcall=NONE",
-      "mmp_update_interval": 5,
-      "mgs_size": "2G",
-      "mdt_parts": null,
-      "default_ost_count": 3,
-      "default_mdt_count": 1,
-      "mgs_standalone": true,
-      "dom_max_file_size": 65536,
+      "hsm_active": false,
+      "log_dir": "/scratch/log/ai400hyb",
       "mds_list": [
         "ai400x-7f94-vm00",
         "ai400x-7f94-vm01",
         "ai400x-7f94-vm02",
         "ai400x-7f94-vm03"
       ],
-      "log_dir": "/scratch/log/ai400hyb",
+      "mdt_base_device_path": "/dev/ddn",
+      "mdt_failback": true,
       "mdt_list": {
         "ai400x-7f94-vm00": [
           0
@@ -749,22 +735,36 @@ expression: exa
           3
         ]
       },
-      "hsm_active": false,
-      "dom_enabled": false,
-      "mgt_mount_opts": "max_sectors_kb=0",
-      "mdt_failback": true,
+      "mdt_mke2fs_opts": [
+        "-m1",
+        "-E",
+        "lazy_itable_init=0,lazy_journal_init=0,nodiscard",
+        "-O",
+        "project"
+      ],
+      "mdt_mount_opts": "max_sectors_kb=0",
+      "mgs_device_path": null,
       "mgs_list": [
         "ai400x-7f94-vm00",
         "ai400x-7f94-vm01"
       ],
+      "mgt_mount_opts": "max_sectors_kb=0",
+      "mdt_opts": "--param mdt.identity_upcall=NONE",
+      "mdt_parts": null,
+      "mdt_size": "90%",
+      "mgs_failback": true,
+      "mgs_internal": true,
+      "mgs_size": "2G",
+      "mgs_standalone": true,
+      "mmp_update_interval": 5,
+      "name": "ai400hyb",
       "oss_list": [
         "ai400x-7f94-vm00",
         "ai400x-7f94-vm01",
         "ai400x-7f94-vm02",
         "ai400x-7f94-vm03"
       ],
-      "ost_opts": null,
-      "cur_ost_index": 0,
+      "ost_device_path": "/dev/ddn",
       "ost_list": {
         "ai400x-7f94-vm00": [
           0,
@@ -788,21 +788,22 @@ expression: exa
         ]
       },
       "ost_lnet_list": {},
-      "total_ost_count": 12,
-      "name": "ai400hyb",
-      "ost_device_path": "/dev/ddn",
-      "mgs_internal": true,
-      "mdt_size": "90%",
-      "cur_mdt_index": 4,
-      "mgs_device_path": null,
-      "pools": [],
-      "mdt_mount_opts": "max_sectors_kb=0",
-      "mdt_mke2fs_opts": [
+      "ost_mke2fs_opts": [
         "-m1",
+        "-i",
+        "131072",
         "-E",
         "lazy_itable_init=0,lazy_journal_init=0,nodiscard",
         "-O",
         "project"
+      ],
+      "ost_mount_opts": "max_sectors_kb=0",
+      "ost_opts": null,
+      "pools": [],
+      "total_mdt_count": 4,
+      "total_ost_count": 12,
+      "tune_ost_mke2fs_opts": [
+        "for size > 140737488355328 apply '-E lazy_itable_init=1,nodiscard -N 1073741824 -O project'"
       ]
     }
   }

@@ -2,9 +2,9 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-mod exaparser;
+pub mod config;
 
-pub use crate::exaparser::exascaler_configuration::ExascalerConfiguration;
+use crate::config::ExascalerConfiguration;
 use emf_cmd::{CheckedCommandExt, Command};
 use std::io;
 use std::string::FromUtf8Error;
@@ -29,18 +29,21 @@ pub enum EXAParserError {
 }
 
 pub async fn parse_exascaler_conf_from_file(
-    path: &str,
+    path: impl Into<Option<&str>>,
 ) -> Result<ExascalerConfiguration, EXAParserError> {
-    let python_code = include_str!("extract_exa_json.py");
-    let output = Command::new("python")
-        .arg("-c")
-        .arg(&python_code)
-        .arg(path)
+    let mut args = vec!["--api"];
+    if let Some(cfg) = path.into() {
+        args.push("--config-file");
+        args.push(cfg);
+    }
+
+    let output = Command::new("es_config_show")
+        .args(args)
         .checked_output()
         .await?;
     let output_str = String::from_utf8(output.stdout)?;
     if output.status.success() {
-        serde_json::from_str(&output_str).map_err(|e| EXAParserError::JsonError(e))
+        serde_json::from_str(&output_str).map_err(EXAParserError::JsonError)
     } else {
         let err = String::from_utf8(output.stderr)?;
         Err(EXAParserError::PythonError { err })

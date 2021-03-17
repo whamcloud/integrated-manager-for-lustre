@@ -1,0 +1,1569 @@
+{
+    "ha_settings": {
+        "crypto_hash": "sha1",
+        "rrp_mode": "passive",
+        "window_size": 50,
+        "max_messages": 17,
+        "lustre_start_timeout": 450,
+        "netmtu": 1500,
+        "type": "corosync",
+        "stonith_timeout": 60,
+        "start_on_boot": true,
+        "failover_policy": "standard",
+        "corosync_nics": [
+            "ring0",
+            "ring1"
+        ],
+        "secauth": "on",
+        "ha_groups": [
+            [
+                "mds0",
+                "mds1",
+                "oss0",
+                "oss1",
+                "oss2",
+                "oss3",
+                "rbh",
+                "client3"
+            ]
+        ],
+        "dampen_ifspeed": 60,
+        "mcastport": 5405,
+        "crypto_cipher": "aes256",
+        "ha_group_count": 1,
+        "no_quorum_policy": "freeze",
+        "zpool_monitor_timeout": 60,
+        "transport": "multicast",
+        "dampen_ping": 40
+    },
+    "global_settings": {
+        "vg_activation_list": [
+            "auto"
+        ],
+        "clients_list": [
+            "client3"
+        ],
+        "mgs_fs": "testfs",
+        "s2a_list": [
+
+        ],
+        "host_list": [
+            "mds0",
+            "mds1",
+            "oss0",
+            "oss1",
+            "oss2",
+            "oss3",
+            "rbh",
+            "client3"
+        ],
+        "kdump_path": "/scratch/crash",
+        "email_domain": "example.com",
+        "s2a_pass": "password",
+        "pingd": true,
+        "extra_hosts_start": [
+            "rbh"
+        ],
+        "extra_hosts_end": [
+            "client3"
+        ],
+        "lnet_mr_fault_sensitive": false,
+        "cluster_name": "es-cluster",
+        "log_dir": "/scratch/log",
+        "hsm_active": false,
+        "conf_param_tunings": {
+            "testfs.llite.max_read_ahead_mb": "128",
+            "testfs.llite.max_read_ahead_per_file_mb": "64"
+        },
+        "password_policy": "encryption",
+        "email_list": [
+            "Test User <test@example.com>"
+        ],
+        "shadow_conf": false,
+        "s2a_user": "admin",
+        "mdt_backup": "none",
+        "mdt_backup_dir": "/scratch",
+        "ntp_list": [
+            "ddn.ntp.server"
+        ],
+        "fs_list": [
+            "testfs"
+        ],
+        "timezone": "UTC",
+        "sfa_list": [
+            "sfa12k",
+            "es7k"
+        ],
+        "set_param_tunings": {
+            "osc.*.max_dirty_mb": "512",
+            "osc.*.max_rpcs_in_flight": "64",
+            "osc.*.max_pages_per_rpc": "1024",
+            "ost.OSS.ost.threads_min": "116",
+            "ost.OSS.ost_io.threads_min": "116",
+            "obdfilter.*.brw_size": "4",
+            "debug": "0",
+            "obdfilter.*.checksum_t10pi_enforce": "1",
+            "llite.*.checksum_pages": "1",
+            "osc.*.checksum_type": "t10ip4K"
+        },
+        "email_relay": "mail.example.com"
+    },
+    "pool_settings": {
+        "fast_pool": {
+            "ost_list": [
+                "OST0",
+                "OST1",
+                "OST2",
+                "OST3"
+            ],
+            "name": "fast_pool"
+        }
+    },
+    "sfa_settings": {
+        "sfa12k": {
+            "controllers": [
+                "10.52.16.44",
+                "10.52.16.45"
+            ],
+            "password": "user",
+            "user": "user",
+            "name": "sfa12k"
+        },
+        "es7k": {
+            "controllers": [
+                "10.52.16.46",
+                "10.52.16.47"
+            ],
+            "password": "user",
+            "user": "user",
+            "name": "es7k"
+        }
+    },
+    "zpool_settings": null,
+    "host_defaults_settings": {
+        "rest_ext_nic": "eth0",
+        "rest_cert_server": "/root/certs/server/es-virt-rest.crt",
+        "ipmi_method": null,
+        "rest_cert_server_key": "/root/certs/server/es-virt2-rest.key",
+        "serial_port": "ttyS0",
+        "rest_cert_ca": "/root/certs/rootca.crt",
+        "rest_cert_crl": "/root/certs/rootca.crl",
+        "stonith_type": "sfa_vm",
+        "lnets": [
+            "o2ib(ib0)",
+            "tcp(eth0)"
+        ],
+        "modprobe_cfg": "\noptions ksocklnd enable_irq_affinity=0\noptions lnet routes=\"o2ib4711 198.51.100.[231-232]@o2ib1o2ib5 130.242.72.[227-228]@o2ib1\" \\\ncheck_routers_before_use=1 router_ping_timeout=250 dead_router_check_interval=300 live_router_check_interval=251\noptions hfi1 krcvqs=4 sge_copy_mode=2 wss_threshold=70 max_mtu=10240",
+        "rest_primary_nic": "eth0",
+        "nics": {
+            "ib0": {
+                "device": "ib0",
+                "netmask": "255.255.255.0"
+            },
+            "eth1": {
+                "device": "eth1",
+                "netmask": "255.255.255.0"
+            },
+            "eth0": {
+                "device": "eth0",
+                "netmask": "255.255.255.0",
+                "gateway": "198.51.100.1"
+            }
+        },
+        "rest_keepalived_nic": "eth0",
+        "ipmi_delay": null,
+        "host_sfa_list": [
+
+        ],
+        "base_ip": {
+            "eth0": [
+                198,
+                51,
+                100,
+                19
+            ]
+        },
+        "ipmi_power_wait": 5,
+        "bonding_mode": "4",
+        "nic_list": [
+            "eth0",
+            "eth1",
+            "ib0"
+        ],
+        "serial_speed": "115200",
+        "rest_int_nic": "eth0",
+        "ring1": "eth1",
+        "ring0": "eth0",
+        "grub_args": "spectre_v2=off nopti crashkernel=1024M",
+        "ipmi_monitor": null,
+        "stonith_user": "username",
+        "stonith_pass": "password"
+    },
+    "hosts_settings": {
+        "client3": {
+            "sysctl": {
+                "net.ipv4.tcp_window_scaling": "2",
+                "vm.min_free_kbytes": "2097152"
+            },
+            "rest_ext_nic": "eth0",
+            "rest_cert_server": "/root/certs/server/es-virt-rest.crt",
+            "ipmi_method": null,
+            "rest_cert_server_key": "/root/certs/server/es-virt2-rest.key",
+            "serial_port": "ttyS0",
+            "rest_cert_ca": "/root/certs/rootca.crt",
+            "rest_cert_crl": "/root/certs/rootca.crl",
+            "stonith_type": "sfa_vm",
+            "lnets": [
+                "o2ib(ib0)",
+                "tcp(eth0)"
+            ],
+            "modprobe_cfg": "\noptions ksocklnd enable_irq_affinity=0\noptions lnet routes=\"o2ib4711 198.51.100.[231-232]@o2ib1o2ib5 130.242.72.[227-228]@o2ib1\" \\\ncheck_routers_before_use=1 router_ping_timeout=250 dead_router_check_interval=300 live_router_check_interval=251\noptions hfi1 krcvqs=4 sge_copy_mode=2 wss_threshold=70 max_mtu=10240",
+            "rest_primary_nic": "eth0",
+            "nics": {
+                "ib0": {
+                    "device": "ib0",
+                    "ip": "192.0.2.17",
+                    "netmask": "255.255.255.0",
+                    "netaddr": "192.0.2.0",
+                    "is_bonded": false
+                },
+                "eth1": {
+                    "device": "eth1",
+                    "ip": "203.0.113.17",
+                    "netmask": "255.255.255.0",
+                    "netaddr": "203.0.113.0",
+                    "is_bonded": false
+                },
+                "eth0": {
+                    "is_bonded": false,
+                    "ip": "198.51.100.18",
+                    "netaddr": "198.51.100.0",
+                    "netmask": "255.255.255.0",
+                    "device": "eth0",
+                    "gateway": "198.51.100.1"
+                }
+            },
+            "rest_keepalived_nic": "eth0",
+            "lnet_nics": [
+                "ib0",
+                "eth0"
+            ],
+            "ipmi_delay": null,
+            "mdt_list": {
+
+            },
+            "host_sfa_list": [
+                "sfa12k"
+            ],
+            "oid": null,
+            "ha_group": [
+                "mds0",
+                "mds1",
+                "oss0",
+                "oss1",
+                "oss2",
+                "oss3",
+                "rbh",
+                "client3"
+            ],
+            "ost_list": {
+
+            },
+            "stonith_pass": "password",
+            "ipmi_power_wait": 5,
+            "bonding_mode": "4",
+            "stonith_secondary_peers": [
+
+            ],
+            "mdt_base_device_paths": {
+
+            },
+            "nic_list": [
+                "eth0",
+                "eth1",
+                "ib0"
+            ],
+            "peers": [
+
+            ],
+            "fs_list": [
+
+            ],
+            "name": "client3",
+            "stonith_primary_peers": [
+
+            ],
+            "serial_speed": "115200",
+            "ost_device_paths": {
+
+            },
+            "rest_int_nic": "eth0",
+            "lnet_members": {
+                "o2ib": [
+                    [
+                        "192.0.2.10"
+                    ],
+                    [
+                        "192.0.2.11"
+                    ],
+                    [
+                        "192.0.2.12"
+                    ],
+                    [
+                        "192.0.2.13"
+                    ],
+                    [
+                        "192.0.2.14"
+                    ],
+                    [
+                        "192.0.2.17"
+                    ]
+                ],
+                "tcp": [
+                    [
+                        "198.51.100.10"
+                    ],
+                    [
+                        "198.51.100.11"
+                    ],
+                    [
+                        "198.51.100.12"
+                    ],
+                    [
+                        "198.51.100.13"
+                    ],
+                    [
+                        "198.51.100.14"
+                    ],
+                    [
+                        "198.51.100.15"
+                    ],
+                    [
+                        "198.51.100.16"
+                    ],
+                    [
+                        "198.51.100.18"
+                    ]
+                ]
+            },
+            "ring1": "eth1",
+            "ring0": "eth0",
+            "grub_args": "spectre_v2=off nopti crashkernel=1024M",
+            "ipmi_monitor": null,
+            "stonith_user": "username",
+            "ha_group_idx": 0
+        },
+        "oss3": {
+            "sysctl": {
+                "net.ipv4.tcp_window_scaling": "2",
+                "vm.min_free_kbytes": "2097152"
+            },
+            "rest_ext_nic": "eth0",
+            "rest_cert_server": "/root/certs/server/es-virt-rest.crt",
+            "ipmi_method": null,
+            "rest_cert_server_key": "/root/certs/server/es-virt2-rest.key",
+            "serial_port": "ttyS0",
+            "rest_cert_ca": "/root/certs/rootca.crt",
+            "rest_cert_crl": "/root/certs/rootca.crl",
+            "stonith_type": "sfa_vm",
+            "lnets": [
+                "o2ib(ib0)",
+                "tcp(eth0)"
+            ],
+            "modprobe_cfg": "\noptions ksocklnd enable_irq_affinity=0\noptions lnet routes=\"o2ib4711 198.51.100.[231-232]@o2ib1o2ib5 130.242.72.[227-228]@o2ib1\" \\\ncheck_routers_before_use=1 router_ping_timeout=250 dead_router_check_interval=300 live_router_check_interval=251\noptions hfi1 krcvqs=4 sge_copy_mode=2 wss_threshold=70 max_mtu=10240",
+            "rest_primary_nic": "eth0",
+            "nics": {
+                "ib0": {
+                    "device": "ib0",
+                    "ip": "192.0.2.13",
+                    "netmask": "255.255.255.0",
+                    "netaddr": "192.0.2.0",
+                    "is_bonded": false
+                },
+                "eth1": {
+                    "device": "eth1",
+                    "ip": "203.0.113.15",
+                    "netmask": "255.255.255.0",
+                    "netaddr": "203.0.113.0",
+                    "is_bonded": false
+                },
+                "eth0": {
+                    "is_bonded": false,
+                    "ip": "198.51.100.15",
+                    "netaddr": "198.51.100.0",
+                    "netmask": "255.255.255.0",
+                    "device": "eth0",
+                    "gateway": "198.51.100.1"
+                }
+            },
+            "rest_keepalived_nic": "eth0",
+            "lnet_nics": [
+                "ib0",
+                "eth0"
+            ],
+            "ipmi_delay": null,
+            "mdt_list": {
+                "testfs": [
+
+                ]
+            },
+            "host_sfa_list": [
+                "sfa12k"
+            ],
+            "oid": "0x10000002",
+            "ha_group": [
+                "mds0",
+                "mds1",
+                "oss0",
+                "oss1",
+                "oss2",
+                "oss3",
+                "rbh",
+                "client3"
+            ],
+            "ost_list": {
+                "testfs": [
+                    12,
+                    13,
+                    14,
+                    15
+                ]
+            },
+            "stonith_pass": "password",
+            "ipmi_power_wait": 5,
+            "bonding_mode": "4",
+            "stonith_secondary_peers": [
+                "mds0",
+                "oss0",
+                "oss1"
+            ],
+            "mdt_base_device_paths": {
+                "testfs": "/dev/ddn"
+            },
+            "nic_list": [
+                "eth0",
+                "eth1",
+                "ib0"
+            ],
+            "peers": [
+                "oss2",
+                "oss1",
+                "oss0"
+            ],
+            "fs_list": [
+                "testfs"
+            ],
+            "name": "oss3",
+            "stonith_primary_peers": [
+                "mds1",
+                "oss2"
+            ],
+            "serial_speed": "115200",
+            "ost_device_paths": {
+                "testfs": "/dev/ddn"
+            },
+            "rest_int_nic": "eth0",
+            "lnet_members": {
+                "o2ib": [
+                    [
+                        "192.0.2.10"
+                    ],
+                    [
+                        "192.0.2.11"
+                    ],
+                    [
+                        "192.0.2.12"
+                    ],
+                    [
+                        "192.0.2.13"
+                    ],
+                    [
+                        "192.0.2.14"
+                    ],
+                    [
+                        "192.0.2.17"
+                    ]
+                ],
+                "tcp": [
+                    [
+                        "198.51.100.10"
+                    ],
+                    [
+                        "198.51.100.11"
+                    ],
+                    [
+                        "198.51.100.12"
+                    ],
+                    [
+                        "198.51.100.13"
+                    ],
+                    [
+                        "198.51.100.14"
+                    ],
+                    [
+                        "198.51.100.15"
+                    ],
+                    [
+                        "198.51.100.16"
+                    ],
+                    [
+                        "198.51.100.18"
+                    ]
+                ]
+            },
+            "ring1": "eth1",
+            "ring0": "eth0",
+            "grub_args": "spectre_v2=off nopti crashkernel=1024M",
+            "ipmi_monitor": null,
+            "stonith_user": "username",
+            "ha_group_idx": 0
+        },
+        "oss2": {
+            "sysctl": {
+                "net.ipv4.tcp_window_scaling": "2",
+                "vm.min_free_kbytes": "2097152"
+            },
+            "rest_ext_nic": "eth0",
+            "rest_cert_server": "/root/certs/server/es-virt-rest.crt",
+            "ipmi_method": null,
+            "rest_cert_server_key": "/root/certs/server/es-virt2-rest.key",
+            "serial_port": "ttyS0",
+            "rest_cert_ca": "/root/certs/rootca.crt",
+            "rest_cert_crl": "/root/certs/rootca.crl",
+            "stonith_type": "sfa_vm",
+            "lnets": [
+                "o2ib(ib0)",
+                "tcp(eth0)"
+            ],
+            "modprobe_cfg": "\noptions ksocklnd enable_irq_affinity=0\noptions lnet routes=\"o2ib4711 198.51.100.[231-232]@o2ib1o2ib5 130.242.72.[227-228]@o2ib1\" \\\ncheck_routers_before_use=1 router_ping_timeout=250 dead_router_check_interval=300 live_router_check_interval=251\noptions hfi1 krcvqs=4 sge_copy_mode=2 wss_threshold=70 max_mtu=10240",
+            "rest_primary_nic": "eth0",
+            "nics": {
+                "ib0": {
+                    "device": "ib0",
+                    "ip": "192.0.2.12",
+                    "netmask": "255.255.255.0",
+                    "netaddr": "192.0.2.0",
+                    "is_bonded": false
+                },
+                "eth1": {
+                    "device": "eth1",
+                    "ip": "203.0.113.14",
+                    "netmask": "255.255.255.0",
+                    "netaddr": "203.0.113.0",
+                    "is_bonded": false
+                },
+                "eth0": {
+                    "is_bonded": false,
+                    "ip": "198.51.100.14",
+                    "netaddr": "198.51.100.0",
+                    "netmask": "255.255.255.0",
+                    "device": "eth0",
+                    "gateway": "198.51.100.1"
+                }
+            },
+            "rest_keepalived_nic": "eth0",
+            "lnet_nics": [
+                "ib0",
+                "eth0"
+            ],
+            "ipmi_delay": null,
+            "mdt_list": {
+                "testfs": [
+
+                ]
+            },
+            "host_sfa_list": [
+                "sfa12k"
+            ],
+            "oid": "0x10000001",
+            "ha_group": [
+                "mds0",
+                "mds1",
+                "oss0",
+                "oss1",
+                "oss2",
+                "oss3",
+                "rbh",
+                "client3"
+            ],
+            "ost_list": {
+                "testfs": [
+                    8,
+                    9,
+                    10,
+                    11
+                ]
+            },
+            "stonith_pass": "password",
+            "ipmi_power_wait": 5,
+            "bonding_mode": "4",
+            "stonith_secondary_peers": [
+                "mds0",
+                "oss0",
+                "oss1"
+            ],
+            "mdt_base_device_paths": {
+                "testfs": "/dev/ddn"
+            },
+            "nic_list": [
+                "eth0",
+                "eth1",
+                "ib0"
+            ],
+            "peers": [
+                "oss3",
+                "oss0",
+                "oss1"
+            ],
+            "fs_list": [
+                "testfs"
+            ],
+            "name": "oss2",
+            "stonith_primary_peers": [
+                "mds1",
+                "oss3"
+            ],
+            "serial_speed": "115200",
+            "ost_device_paths": {
+                "testfs": "/dev/ddn"
+            },
+            "rest_int_nic": "eth0",
+            "lnet_members": {
+                "o2ib": [
+                    [
+                        "192.0.2.10"
+                    ],
+                    [
+                        "192.0.2.11"
+                    ],
+                    [
+                        "192.0.2.12"
+                    ],
+                    [
+                        "192.0.2.13"
+                    ],
+                    [
+                        "192.0.2.14"
+                    ],
+                    [
+                        "192.0.2.17"
+                    ]
+                ],
+                "tcp": [
+                    [
+                        "198.51.100.10"
+                    ],
+                    [
+                        "198.51.100.11"
+                    ],
+                    [
+                        "198.51.100.12"
+                    ],
+                    [
+                        "198.51.100.13"
+                    ],
+                    [
+                        "198.51.100.14"
+                    ],
+                    [
+                        "198.51.100.15"
+                    ],
+                    [
+                        "198.51.100.16"
+                    ],
+                    [
+                        "198.51.100.18"
+                    ]
+                ]
+            },
+            "ring1": "eth1",
+            "ring0": "eth0",
+            "grub_args": "spectre_v2=off nopti crashkernel=1024M",
+            "ipmi_monitor": null,
+            "stonith_user": "username",
+            "ha_group_idx": 0
+        },
+        "oss1": {
+            "sysctl": {
+                "net.ipv4.tcp_window_scaling": "2",
+                "vm.min_free_kbytes": "2097152"
+            },
+            "rest_ext_nic": "eth0",
+            "rest_cert_server": "/root/certs/server/es-virt-rest.crt",
+            "ipmi_method": null,
+            "rest_cert_server_key": "/root/certs/server/es-virt2-rest.key",
+            "serial_port": "ttyS0",
+            "rest_cert_ca": "/root/certs/rootca.crt",
+            "rest_cert_crl": "/root/certs/rootca.crl",
+            "stonith_type": "sfa_vm",
+            "lnets": [
+                "o2ib(ib0)",
+                "tcp(eth0)"
+            ],
+            "modprobe_cfg": "\noptions ksocklnd enable_irq_affinity=0\noptions lnet routes=\"o2ib4711 198.51.100.[231-232]@o2ib1o2ib5 130.242.72.[227-228]@o2ib1\" \\\ncheck_routers_before_use=1 router_ping_timeout=250 dead_router_check_interval=300 live_router_check_interval=251\noptions hfi1 krcvqs=4 sge_copy_mode=2 wss_threshold=70 max_mtu=10240",
+            "rest_primary_nic": "eth0",
+            "nics": {
+                "ib0": {
+                    "device": "ib0",
+                    "ip": "192.0.2.11",
+                    "netmask": "255.255.255.0",
+                    "netaddr": "192.0.2.0",
+                    "is_bonded": false
+                },
+                "eth1": {
+                    "device": "eth1",
+                    "ip": "203.0.113.13",
+                    "netmask": "255.255.255.0",
+                    "netaddr": "203.0.113.0",
+                    "is_bonded": false
+                },
+                "eth0": {
+                    "is_bonded": false,
+                    "ip": "198.51.100.13",
+                    "netaddr": "198.51.100.0",
+                    "netmask": "255.255.255.0",
+                    "device": "eth0",
+                    "gateway": "198.51.100.1"
+                }
+            },
+            "rest_keepalived_nic": "eth0",
+            "lnet_nics": [
+                "ib0",
+                "eth0"
+            ],
+            "ipmi_delay": null,
+            "mdt_list": {
+                "testfs": [
+
+                ]
+            },
+            "host_sfa_list": [
+                "sfa12k"
+            ],
+            "oid": "0x10000002",
+            "ha_group": [
+                "mds0",
+                "mds1",
+                "oss0",
+                "oss1",
+                "oss2",
+                "oss3",
+                "rbh",
+                "client3"
+            ],
+            "ost_list": {
+                "testfs": [
+                    4,
+                    5,
+                    6,
+                    7
+                ]
+            },
+            "stonith_pass": "password",
+            "ipmi_power_wait": 5,
+            "bonding_mode": "4",
+            "stonith_secondary_peers": [
+                "mds1",
+                "oss2",
+                "oss3"
+            ],
+            "mdt_base_device_paths": {
+                "testfs": "/dev/ddn"
+            },
+            "nic_list": [
+                "eth0",
+                "eth1",
+                "ib0"
+            ],
+            "peers": [
+                "oss0",
+                "oss3",
+                "oss2"
+            ],
+            "fs_list": [
+                "testfs"
+            ],
+            "name": "oss1",
+            "stonith_primary_peers": [
+                "mds0",
+                "oss0"
+            ],
+            "serial_speed": "115200",
+            "ost_device_paths": {
+                "testfs": "/dev/ddn"
+            },
+            "rest_int_nic": "eth0",
+            "lnet_members": {
+                "o2ib": [
+                    [
+                        "192.0.2.10"
+                    ],
+                    [
+                        "192.0.2.11"
+                    ],
+                    [
+                        "192.0.2.12"
+                    ],
+                    [
+                        "192.0.2.13"
+                    ],
+                    [
+                        "192.0.2.14"
+                    ],
+                    [
+                        "192.0.2.17"
+                    ]
+                ],
+                "tcp": [
+                    [
+                        "198.51.100.10"
+                    ],
+                    [
+                        "198.51.100.11"
+                    ],
+                    [
+                        "198.51.100.12"
+                    ],
+                    [
+                        "198.51.100.13"
+                    ],
+                    [
+                        "198.51.100.14"
+                    ],
+                    [
+                        "198.51.100.15"
+                    ],
+                    [
+                        "198.51.100.16"
+                    ],
+                    [
+                        "198.51.100.18"
+                    ]
+                ]
+            },
+            "ring1": "eth1",
+            "ring0": "eth0",
+            "grub_args": "spectre_v2=off nopti crashkernel=1024M",
+            "ipmi_monitor": null,
+            "stonith_user": "username",
+            "ha_group_idx": 0
+        },
+        "oss0": {
+            "sysctl": {
+                "net.ipv4.tcp_window_scaling": "1",
+                "vm.min_free_kbytes": "2097152"
+            },
+            "rest_ext_nic": "eth0",
+            "rest_cert_server": "/root/certs/server/es-virt-rest.crt",
+            "ipmi_method": null,
+            "rest_cert_server_key": "/root/certs/server/es-virt2-rest.key",
+            "serial_port": "ttyS0",
+            "rest_cert_ca": "/root/certs/rootca.crt",
+            "rest_cert_crl": "/root/certs/rootca.crl",
+            "stonith_type": "sfa_vm",
+            "lnets": [
+                "o2ib(ib0)",
+                "tcp(eth0)"
+            ],
+            "modprobe_cfg": "\noptions ksocklnd enable_irq_affinity=0\noptions lnet routes=\"o2ib4711 198.51.100.[231-232]@o2ib1o2ib5 130.242.72.[227-228]@o2ib1\" \\\ncheck_routers_before_use=1 router_ping_timeout=250 dead_router_check_interval=300 live_router_check_interval=251\noptions hfi1 krcvqs=4 sge_copy_mode=2 wss_threshold=70 max_mtu=10240",
+            "rest_primary_nic": "eth0",
+            "nics": {
+                "ib0": {
+                    "device": "ib0",
+                    "ip": "192.0.2.10",
+                    "netmask": "255.255.255.0",
+                    "netaddr": "192.0.2.0",
+                    "is_bonded": false
+                },
+                "eth1": {
+                    "device": "eth1",
+                    "ip": "203.0.113.12",
+                    "netmask": "255.255.255.0",
+                    "netaddr": "203.0.113.0",
+                    "is_bonded": false
+                },
+                "eth0": {
+                    "is_bonded": false,
+                    "ip": "198.51.100.12",
+                    "netaddr": "198.51.100.0",
+                    "netmask": "255.255.255.0",
+                    "device": "eth0",
+                    "gateway": "198.51.100.1"
+                }
+            },
+            "rest_keepalived_nic": "eth0",
+            "lnet_nics": [
+                "ib0",
+                "eth0"
+            ],
+            "ipmi_delay": null,
+            "mdt_list": {
+                "testfs": [
+
+                ]
+            },
+            "host_sfa_list": [
+                "sfa12k"
+            ],
+            "oid": "0x10000001",
+            "ha_group": [
+                "mds0",
+                "mds1",
+                "oss0",
+                "oss1",
+                "oss2",
+                "oss3",
+                "rbh",
+                "client3"
+            ],
+            "ost_list": {
+                "testfs": [
+                    0,
+                    1,
+                    2,
+                    3
+                ]
+            },
+            "stonith_pass": "password",
+            "ipmi_power_wait": 5,
+            "bonding_mode": "4",
+            "stonith_secondary_peers": [
+                "mds1",
+                "oss2",
+                "oss3"
+            ],
+            "mdt_base_device_paths": {
+                "testfs": "/dev/ddn"
+            },
+            "nic_list": [
+                "eth0",
+                "eth1",
+                "ib0"
+            ],
+            "peers": [
+                "oss1",
+                "oss2",
+                "oss3"
+            ],
+            "fs_list": [
+                "testfs"
+            ],
+            "name": "oss0",
+            "stonith_primary_peers": [
+                "mds0",
+                "oss1"
+            ],
+            "serial_speed": "115200",
+            "ost_device_paths": {
+                "testfs": "/dev/ddn"
+            },
+            "rest_int_nic": "eth0",
+            "lnet_members": {
+                "o2ib": [
+                    [
+                        "192.0.2.10"
+                    ],
+                    [
+                        "192.0.2.11"
+                    ],
+                    [
+                        "192.0.2.12"
+                    ],
+                    [
+                        "192.0.2.13"
+                    ],
+                    [
+                        "192.0.2.14"
+                    ],
+                    [
+                        "192.0.2.17"
+                    ]
+                ],
+                "tcp": [
+                    [
+                        "198.51.100.10"
+                    ],
+                    [
+                        "198.51.100.11"
+                    ],
+                    [
+                        "198.51.100.12"
+                    ],
+                    [
+                        "198.51.100.13"
+                    ],
+                    [
+                        "198.51.100.14"
+                    ],
+                    [
+                        "198.51.100.15"
+                    ],
+                    [
+                        "198.51.100.16"
+                    ],
+                    [
+                        "198.51.100.18"
+                    ]
+                ]
+            },
+            "ring1": "eth1",
+            "ring0": "eth0",
+            "grub_args": "spectre_v2=off nopti crashkernel=1024M",
+            "ipmi_monitor": null,
+            "stonith_user": "username",
+            "ha_group_idx": 0
+        },
+        "rbh": {
+            "sysctl": {
+                "net.ipv4.tcp_window_scaling": "2",
+                "vm.min_free_kbytes": "2097152"
+            },
+            "rest_ext_nic": "eth0",
+            "rest_cert_server": "/root/certs/server/es-virt-rest.crt",
+            "ipmi_method": null,
+            "rest_cert_server_key": "/root/certs/server/es-virt2-rest.key",
+            "serial_port": "ttyS0",
+            "rest_cert_ca": "/root/certs/rootca.crt",
+            "rest_cert_crl": "/root/certs/rootca.crl",
+            "stonith_type": "sfa_vm",
+            "lnets": [
+                "o2ib(ib0)",
+                "tcp(eth0)"
+            ],
+            "modprobe_cfg": "\noptions ksocklnd enable_irq_affinity=0\noptions lnet routes=\"o2ib4711 198.51.100.[231-232]@o2ib1o2ib5 130.242.72.[227-228]@o2ib1\" \\\ncheck_routers_before_use=1 router_ping_timeout=250 dead_router_check_interval=300 live_router_check_interval=251\noptions hfi1 krcvqs=4 sge_copy_mode=2 wss_threshold=70 max_mtu=10240",
+            "rest_primary_nic": "eth0",
+            "nics": {
+                "ib0": {
+                    "device": "ib0",
+                    "ip": "192.0.2.14",
+                    "netmask": "255.255.255.0",
+                    "netaddr": "192.0.2.0",
+                    "is_bonded": false
+                },
+                "eth1": {
+                    "device": "eth1",
+                    "ip": "203.0.113.16",
+                    "netmask": "255.255.255.0",
+                    "netaddr": "203.0.113.0",
+                    "is_bonded": false
+                },
+                "eth0": {
+                    "is_bonded": false,
+                    "ip": "198.51.100.16",
+                    "netaddr": "198.51.100.0",
+                    "netmask": "255.255.255.0",
+                    "device": "eth0",
+                    "gateway": "198.51.100.1"
+                }
+            },
+            "rest_keepalived_nic": "eth0",
+            "lnet_nics": [
+                "ib0",
+                "eth0"
+            ],
+            "ipmi_delay": null,
+            "mdt_list": {
+
+            },
+            "host_sfa_list": [
+                "sfa12k"
+            ],
+            "oid": null,
+            "ha_group": [
+                "mds0",
+                "mds1",
+                "oss0",
+                "oss1",
+                "oss2",
+                "oss3",
+                "rbh",
+                "client3"
+            ],
+            "ost_list": {
+
+            },
+            "stonith_pass": "password",
+            "ipmi_power_wait": 5,
+            "bonding_mode": "4",
+            "stonith_secondary_peers": [
+
+            ],
+            "mdt_base_device_paths": {
+
+            },
+            "nic_list": [
+                "eth0",
+                "eth1",
+                "ib0"
+            ],
+            "peers": [
+
+            ],
+            "fs_list": [
+
+            ],
+            "name": "rbh",
+            "stonith_primary_peers": [
+
+            ],
+            "serial_speed": "115200",
+            "ost_device_paths": {
+
+            },
+            "rest_int_nic": "eth0",
+            "lnet_members": {
+                "o2ib": [
+                    [
+                        "192.0.2.10"
+                    ],
+                    [
+                        "192.0.2.11"
+                    ],
+                    [
+                        "192.0.2.12"
+                    ],
+                    [
+                        "192.0.2.13"
+                    ],
+                    [
+                        "192.0.2.14"
+                    ],
+                    [
+                        "192.0.2.17"
+                    ]
+                ],
+                "tcp": [
+                    [
+                        "198.51.100.10"
+                    ],
+                    [
+                        "198.51.100.11"
+                    ],
+                    [
+                        "198.51.100.12"
+                    ],
+                    [
+                        "198.51.100.13"
+                    ],
+                    [
+                        "198.51.100.14"
+                    ],
+                    [
+                        "198.51.100.15"
+                    ],
+                    [
+                        "198.51.100.16"
+                    ],
+                    [
+                        "198.51.100.18"
+                    ]
+                ]
+            },
+            "ring1": "eth1",
+            "ring0": "eth0",
+            "grub_args": "spectre_v2=off nopti crashkernel=1024M",
+            "ipmi_monitor": null,
+            "stonith_user": "username",
+            "ha_group_idx": 0
+        },
+        "mds0": {
+            "sysctl": {
+                "net.ipv4.tcp_window_scaling": "2",
+                "vm.min_free_kbytes": "2097152"
+            },
+            "rest_ext_nic": "eth0",
+            "rest_cert_server": "/root/certs/server/es-virt-rest.crt",
+            "ipmi_method": null,
+            "rest_cert_server_key": "/root/certs/server/es-virt2-rest.key",
+            "serial_port": "ttyS0",
+            "rest_cert_ca": "/root/certs/rootca.crt",
+            "rest_cert_crl": "/root/certs/rootca.crl",
+            "stonith_type": "sfa_vm",
+            "lnets": [
+                "tcp(eth0)"
+            ],
+            "modprobe_cfg": "\noptions ksocklnd enable_irq_affinity=0\noptions lnet routes=\"o2ib4711 198.51.100.[231-232]@o2ib1o2ib5 130.242.72.[227-228]@o2ib1\" \\\ncheck_routers_before_use=1 router_ping_timeout=250 dead_router_check_interval=300 live_router_check_interval=251\noptions hfi1 krcvqs=4 sge_copy_mode=2 wss_threshold=70 max_mtu=10240",
+            "rest_primary_nic": "eth0",
+            "nics": {
+                "eth1": {
+                    "device": "eth1",
+                    "ip": "203.0.113.10",
+                    "netmask": "255.255.255.0",
+                    "netaddr": "203.0.113.0",
+                    "is_bonded": false
+                },
+                "eth0": {
+                    "is_bonded": false,
+                    "ip": "198.51.100.10",
+                    "netaddr": "198.51.100.0",
+                    "netmask": "255.255.255.0",
+                    "device": "eth0",
+                    "gateway": "198.51.100.1"
+                }
+            },
+            "rest_keepalived_nic": "eth0",
+            "lnet_nics": [
+                "eth0"
+            ],
+            "ipmi_delay": null,
+            "mdt_list": {
+                "testfs": [
+                    0,
+                    1,
+                    2
+                ]
+            },
+            "host_sfa_list": [
+                "sfa12k"
+            ],
+            "oid": "0x10000000",
+            "ha_group": [
+                "mds0",
+                "mds1",
+                "oss0",
+                "oss1",
+                "oss2",
+                "oss3",
+                "rbh",
+                "client3"
+            ],
+            "ost_list": {
+                "testfs": [
+
+                ]
+            },
+            "stonith_pass": "password",
+            "ipmi_power_wait": 5,
+            "bonding_mode": "4",
+            "stonith_secondary_peers": [
+                "mds1",
+                "oss2",
+                "oss3"
+            ],
+            "mdt_base_device_paths": {
+                "testfs": "/dev/ddn"
+            },
+            "nic_list": [
+                "eth0",
+                "eth1"
+            ],
+            "peers": [
+                "mds1"
+            ],
+            "fs_list": [
+                "testfs"
+            ],
+            "name": "mds0",
+            "stonith_primary_peers": [
+                "oss0",
+                "oss1"
+            ],
+            "serial_speed": "115200",
+            "ost_device_paths": {
+                "testfs": "/dev/ddn"
+            },
+            "rest_int_nic": "eth0",
+            "lnet_members": {
+                "tcp": [
+                    [
+                        "198.51.100.10"
+                    ],
+                    [
+                        "198.51.100.11"
+                    ],
+                    [
+                        "198.51.100.12"
+                    ],
+                    [
+                        "198.51.100.13"
+                    ],
+                    [
+                        "198.51.100.14"
+                    ],
+                    [
+                        "198.51.100.15"
+                    ],
+                    [
+                        "198.51.100.16"
+                    ],
+                    [
+                        "198.51.100.18"
+                    ]
+                ]
+            },
+            "ring1": "eth1",
+            "ring0": "eth0",
+            "grub_args": "spectre_v2=off nopti",
+            "ipmi_monitor": null,
+            "stonith_user": "username",
+            "ha_group_idx": 0
+        },
+        "mds1": {
+            "sysctl": {
+                "net.ipv4.tcp_window_scaling": "2",
+                "vm.min_free_kbytes": "2097152"
+            },
+            "rest_ext_nic": "eth0",
+            "rest_cert_server": "/root/certs/server/es-virt-rest.crt",
+            "ipmi_method": null,
+            "rest_cert_server_key": "/root/certs/server/es-virt2-rest.key",
+            "serial_port": "ttyS0",
+            "rest_cert_ca": "/root/certs/rootca.crt",
+            "rest_cert_crl": "/root/certs/rootca.crl",
+            "stonith_type": "sfa_vm",
+            "lnets": [
+                "tcp(eth0)"
+            ],
+            "modprobe_cfg": "\noptions ksocklnd enable_irq_affinity=0\noptions lnet routes=\"o2ib4711 198.51.100.[231-232]@o2ib1o2ib5 130.242.72.[227-228]@o2ib1\" \\\ncheck_routers_before_use=1 router_ping_timeout=250 dead_router_check_interval=300 live_router_check_interval=251\noptions hfi1 krcvqs=4 sge_copy_mode=2 wss_threshold=70 max_mtu=10240",
+            "rest_primary_nic": "eth0",
+            "nics": {
+                "eth1": {
+                    "device": "eth1",
+                    "ip": "203.0.113.11",
+                    "netmask": "255.255.255.0",
+                    "netaddr": "203.0.113.0",
+                    "is_bonded": false
+                },
+                "eth0": {
+                    "is_bonded": false,
+                    "ip": "198.51.100.11",
+                    "netaddr": "198.51.100.0",
+                    "netmask": "255.255.255.0",
+                    "device": "eth0",
+                    "gateway": "198.51.100.1"
+                }
+            },
+            "rest_keepalived_nic": "eth0",
+            "lnet_nics": [
+                "eth0"
+            ],
+            "ipmi_delay": null,
+            "mdt_list": {
+                "testfs": [
+                    3
+                ]
+            },
+            "host_sfa_list": [
+                "sfa12k"
+            ],
+            "oid": "0x10000000",
+            "ha_group": [
+                "mds0",
+                "mds1",
+                "oss0",
+                "oss1",
+                "oss2",
+                "oss3",
+                "rbh",
+                "client3"
+            ],
+            "ost_list": {
+                "testfs": [
+
+                ]
+            },
+            "stonith_pass": "password",
+            "ipmi_power_wait": 5,
+            "bonding_mode": "4",
+            "stonith_secondary_peers": [
+                "mds0",
+                "oss0",
+                "oss1"
+            ],
+            "mdt_base_device_paths": {
+                "testfs": "/dev/ddn"
+            },
+            "nic_list": [
+                "eth0",
+                "eth1"
+            ],
+            "peers": [
+                "mds0"
+            ],
+            "fs_list": [
+                "testfs"
+            ],
+            "name": "mds1",
+            "stonith_primary_peers": [
+                "oss2",
+                "oss3"
+            ],
+            "serial_speed": "115200",
+            "ost_device_paths": {
+                "testfs": "/dev/ddn"
+            },
+            "rest_int_nic": "eth0",
+            "lnet_members": {
+                "tcp": [
+                    [
+                        "198.51.100.10"
+                    ],
+                    [
+                        "198.51.100.11"
+                    ],
+                    [
+                        "198.51.100.12"
+                    ],
+                    [
+                        "198.51.100.13"
+                    ],
+                    [
+                        "198.51.100.14"
+                    ],
+                    [
+                        "198.51.100.15"
+                    ],
+                    [
+                        "198.51.100.16"
+                    ],
+                    [
+                        "198.51.100.18"
+                    ]
+                ]
+            },
+            "ring1": "eth1",
+            "ring0": "eth0",
+            "grub_args": "spectre_v2=off nopti crashkernel=1024M",
+            "ipmi_monitor": null,
+            "stonith_user": "username",
+            "ha_group_idx": 0
+        }
+    },
+    "esui_settings": {
+        "ip": "1.2.3.4",
+        "cidr": 24,
+        "size": "120GB",
+        "enabled": true,
+        "nic": "eth0"
+    },
+    "rest_settings": {
+        "ext_vip": "198.51.100.100",
+        "ext_vip_fqdn": "es-virt-rest",
+        "int_vip": "198.51.100.110",
+        "ext_mask": "20",
+        "auth_ou": "REST API client",
+        "master_nodes": [
+            "mds0",
+            "mds1"
+        ],
+        "ka_vr_id": "220",
+        "int_mask": "20"
+    },
+    "hsm_settings": null,
+    "fs_settings": {
+        "testfs": {
+            "backfs": "ldiskfs",
+            "mgs_failback": true,
+            "host_list": [
+                "mds0",
+                "mds1",
+                "oss0",
+                "oss1",
+                "oss2",
+                "oss3"
+            ],
+            "ost_mke2fs_opts": [
+                "-m1",
+                "-i",
+                "131072",
+                "-O",
+                "project"
+            ],
+            "total_mdt_count": 4,
+            "tune_ost_mke2fs_opts": [
+                "for size == 824633720832000 apply '-N 1073741824'"
+            ],
+            "mdt_base_device_path": "/dev/ddn",
+            "ost_mount_opts": "max_sectors_kb=0,abort_recov",
+            "mdt_opts": "--param mdt.quota_type=ug",
+            "mmp_update_interval": 5,
+            "mgs_size": "500m",
+            "mdt_parts": 1,
+            "default_ost_count": 100,
+            "default_mdt_count": 2,
+            "mgs_standalone": true,
+            "dom_max_file_size": 128,
+            "mds_list": [
+                "mds0",
+                "mds1"
+            ],
+            "log_dir": "/scratch/log/testfs",
+            "mdt_list": {
+                "mds0": [
+                    0,
+                    1,
+                    2
+                ],
+                "mds1": [
+                    3
+                ]
+            },
+            "hsm_active": false,
+            "dom_enabled": true,
+            "mgt_mount_opts": "max_sectors_kb=0",
+            "mdt_failback": true,
+            "mgs_list": [
+                "mds0",
+                "mds1"
+            ],
+            "oss_list": [
+                "oss0",
+                "oss1",
+                "oss2",
+                "oss3"
+            ],
+            "ost_opts": "--param ost.quota_type=ug",
+            "cur_ost_index": 0,
+            "ost_list": {
+                "oss3": [
+                    12,
+                    13,
+                    14,
+                    15
+                ],
+                "oss2": [
+                    8,
+                    9,
+                    10,
+                    11
+                ],
+                "oss1": [
+                    4,
+                    5,
+                    6,
+                    7
+                ],
+                "oss0": [
+                    0,
+                    1,
+                    2,
+                    3
+                ]
+            },
+            "ost_lnet_list": {
+                "tcp": [
+                    0,
+                    2,
+                    4
+                ]
+            },
+            "total_ost_count": 16,
+            "name": "testfs",
+            "ost_device_path": "/dev/ddn",
+            "mgs_internal": true,
+            "mdt_size": "100g",
+            "cur_mdt_index": 0,
+            "mgs_device_path": null,
+            "pools": [
+                "fast_pool"
+            ],
+            "mdt_mount_opts": "abort_recov",
+            "mdt_mke2fs_opts": [
+                "-i",
+                "2560",
+                "-O",
+                "project"
+            ]
+        }
+    }
+}
