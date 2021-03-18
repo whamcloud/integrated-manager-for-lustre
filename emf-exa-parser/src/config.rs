@@ -13,7 +13,7 @@ pub struct ExascalerConfiguration {
     pub sfa_settings: HashMap<String, SfaSettings>,
     pub zpool_settings: Option<HashMap<String, ZpoolSettings>>,
     pub host_defaults_settings: HostDefaultsSettings,
-    pub hosts_settings: HashMap<String, HostsSettings>,
+    pub hosts_settings: HashMap<String, HostSettings>,
     pub rest_settings: Option<RestSettings>,
     #[serde(rename = "esui_settings")]
     pub emf_settings: EMFSettings,
@@ -164,7 +164,7 @@ pub struct HostDefaultsSettings {
     pub rest_keepalived_nic: Option<String>,
     pub rest_primary_nic: Option<String>,
     pub nic_list: Vec<String>,
-    pub nics: HashMap<String, Nics>,
+    pub nics: HashMap<String, Nic>,
     pub ring0: String,
     pub ring1: String,
     pub serial_port: String,
@@ -175,7 +175,7 @@ pub struct HostDefaultsSettings {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct HostsSettings {
+pub struct HostSettings {
     pub fs_list: Vec<String>,
     pub bonding_mode: Option<String>,
     pub grub_args: String,
@@ -194,7 +194,7 @@ pub struct HostsSettings {
     pub modprobe_cfg: Option<String>,
     pub name: String,
     pub nic_list: Vec<String>,
-    pub nics: Nics,
+    pub nics: HashMap<String, Nic>,
     pub peers: Vec<String>,
     pub oid: Option<String>,
     pub ost_device_paths: HashMap<String, String>,
@@ -220,13 +220,13 @@ pub struct HostsSettings {
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct Nics {
-    device: Option<String>,
-    gateway: Option<String>,
-    ip: Option<String>,
-    is_bonded: Option<bool>,
-    netaddr: Option<String>,
-    netmask: Option<String>,
+pub struct Nic {
+    pub device: String,
+    pub gateway: Option<String>,
+    pub ip: Option<String>,
+    pub is_bonded: Option<bool>,
+    pub netaddr: Option<String>,
+    pub netmask: Option<String>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -249,7 +249,7 @@ pub struct RestSettings {
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SfaSettings {
-    pub controllers: Vec<Option<String>>,
+    pub controllers: Vec<String>,
     pub name: String,
     pub password: String,
     pub user: String,
