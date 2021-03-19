@@ -4,17 +4,17 @@
 
 use crate::{
     command_plan::OutputWriter,
-    input_document::{client_mount, filesystem, host, lnet, mdt, mgt, mgt_mdt},
+    input_document::{client_mount, filesystem, host, lnet, mdt, mgt, mgt_mdt, SshOpts},
     state_schema::Input,
     Error,
 };
 use emf_postgres::PgPool;
-use emf_ssh::{SshChannelExt as _, SshHandleExt};
+use emf_ssh::{Client, Handle, SshChannelExt as _, SshHandleExt};
 use emf_tracing::tracing;
 use emf_wire_types::{Action, ActionId, ActionName, AgentResult, Fqdn};
 use futures::{FutureExt, TryFutureExt};
 use once_cell::sync::Lazy;
-use std::{collections::HashMap, sync::Arc, time::Duration};
+use std::{collections::HashMap, path::PathBuf, sync::Arc, time::Duration};
 use tokio::{
     io::{copy, AsyncWriteExt},
     sync::{
@@ -86,21 +86,9 @@ pub(crate) async fn invoke<'a>(
     match input {
         Input::Host(x) => match x {
             host::Input::SshCommand(x) => {
-                let opts = &x.ssh_opts;
+                let mut session = ssh_connect(&x.host, &x.ssh_opts).await?;
 
-                let mut session = emf_ssh::connect(
-                    &x.host,
-                    opts.port,
-                    &opts.user,
-                    (&opts.auth_opts).into(),
-                    opts.proxy_opts.as_ref().map(From::from),
-                )
-                .await?;
-
-                let channel = session
-                    .channel_open_session()
-                    .err_into::<emf_ssh::Error>()
-                    .await?;
+                let channel = session.create_channel().await?;
 
                 let mut child = channel.spawn(&x.run).await?;
 
@@ -131,14 +119,7 @@ pub(crate) async fn invoke<'a>(
                 cp_addr,
                 ssh_opts,
             }) => {
-                let mut session = emf_ssh::connect(
-                    &host,
-                    ssh_opts.port,
-                    &ssh_opts.user,
-                    (&ssh_opts.auth_opts).into(),
-                    ssh_opts.proxy_opts.as_ref().map(From::from),
-                )
-                .await?;
+                let mut session = ssh_connect(&host, ssh_opts).await?;
 
                 let overrides = format!("CP_ADDR={}\nMGMT_ADDR={}", cp_addr, host);
 
@@ -152,14 +133,7 @@ pub(crate) async fn invoke<'a>(
                 ssh_opts,
                 path,
             }) => {
-                let mut session = emf_ssh::connect(
-                    &host,
-                    ssh_opts.port,
-                    &ssh_opts.user,
-                    (&ssh_opts.auth_opts).into(),
-                    ssh_opts.proxy_opts.as_ref().map(From::from),
-                )
-                .await?;
+                let mut session = ssh_connect(&host, ssh_opts).await?;
 
                 session.stream_file(contents.as_bytes(), path).await?;
             }
@@ -168,14 +142,7 @@ pub(crate) async fn invoke<'a>(
                 from,
                 ssh_opts,
             }) => {
-                let mut session = emf_ssh::connect(
-                    &host,
-                    ssh_opts.port,
-                    &ssh_opts.user,
-                    (&ssh_opts.auth_opts).into(),
-                    ssh_opts.proxy_opts.as_ref().map(From::from),
-                )
-                .await?;
+                let mut session = ssh_connect(&host, ssh_opts).await?;
 
                 session.push_file(&from, &from).await?;
             }
@@ -239,6 +206,114 @@ pub(crate) async fn invoke<'a>(
                     }
                 };
             }
+            host::Input::Chmod(host::Chmod {
+                host,
+                ssh_opts,
+                file_path,
+                permissions,
+            }) => {
+                let mut handle = emf_ssh::connect(
+                    &host,
+                    ssh_opts.port,
+                    &ssh_opts.user,
+                    (&ssh_opts.auth_opts).into(),
+                    ssh_opts.proxy_opts.as_ref().map(From::from),
+                )
+                .await?;
+
+                let mut channel = handle.create_channel().await?;
+
+                let r = channel
+                    .exec_cmd(format!("chmod {} {}", permissions, file_path))
+                    .await?;
+
+                if r.exit_status == Some(0) {
+                    stdout_writer
+                        .write_all(
+                            format!(
+                                "chmod: Changed permissions for {} to {} on {}",
+                                file_path, permissions, host
+                            )
+                            .as_bytes(),
+                        )
+                        .map_err(|e| tracing::warn!("Could not write stdout {:?}", e))
+                        .map(drop)
+                        .await;
+                } else {
+                    stderr_writer
+                        .write_all(
+                            format!(
+                                "chmod: Failed to change permissions for {} to {} on {}",
+                                file_path, permissions, host
+                            )
+                            .as_bytes(),
+                        )
+                        .map_err(|e| tracing::warn!("Could not write stderr {:?}", e))
+                        .map(drop)
+                        .await;
+                }
+            }
+            host::Input::ConfigureIfConfigSsh(host::ConfigureIfConfigSsh {
+                host,
+                ssh_opts,
+                nic,
+                device,
+                cfg,
+                master,
+                ip,
+                netmask,
+                gateway,
+            }) => {
+                let mut handle = ssh_connect(host, ssh_opts).await?;
+
+                let default_filename = format!("ifcfg-{}", nic);
+                let mut channel = handle.create_channel().await?;
+                let default_file_exists = channel
+                    .exec_cmd(format!(
+                        "ls /etc/sysconfig/network-scripts/{}",
+                        default_filename
+                    ))
+                    .await?
+                    .exit_status
+                    == Some(0);
+
+                let filename = if device != nic && !default_file_exists {
+                    format!("ifcfg-{}", device)
+                } else {
+                    default_filename
+                };
+
+                let ifcfg_filepath: PathBuf = ["/etc", "sysconfig", "network-scripts", &filename]
+                    .iter()
+                    .collect();
+
+                let mut file_content: Vec<String> = vec![
+                    format!("DEVICE={}", device),
+                    "ONBOOT=yes".into(),
+                    "NOZEROCONF=yes".into(),
+                ];
+
+                if let Some(cfg) = cfg {
+                    file_content.push(cfg.to_string());
+                }
+
+                if let Some(master) = master {
+                    file_content.push(format!("MASTER={}", master));
+                    file_content.push("SLAVE=yes".into());
+                } else {
+                    file_content.push(format!("IPADDR={}", ip));
+                    file_content.push(format!("NETMASK={}", netmask));
+
+                    if let Some(gateway) = gateway {
+                        file_content.push(format!("GATEWAY={}", gateway));
+                    }
+                }
+
+                let mut channel = handle.create_channel().await?;
+                channel
+                    .stream_file(file_content.join("\n").as_bytes(), ifcfg_filepath)
+                    .await?;
+            }
         },
         Input::Lnet(x) => match x {
             lnet::Input::Start(x) => {}
@@ -283,4 +358,17 @@ pub(crate) async fn invoke<'a>(
     };
 
     Ok(())
+}
+
+async fn ssh_connect(host: &str, ssh_opts: &SshOpts) -> Result<Handle<Client>, Error> {
+    let session = emf_ssh::connect(
+        host,
+        ssh_opts.port,
+        &ssh_opts.user,
+        (&ssh_opts.auth_opts).into(),
+        ssh_opts.proxy_opts.as_ref().map(From::from),
+    )
+    .await?;
+
+    Ok(session)
 }

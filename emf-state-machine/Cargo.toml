@@ -32,3 +32,4 @@ warp = "0.3"
 
 [dev-dependencies]
 insta = "1"
+emf-postgres = {path = "../emf-postgres", version = "0.4", features = ["test"]}

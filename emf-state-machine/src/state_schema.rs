@@ -36,6 +36,14 @@ pub(crate) static STATE_SCHEMA: Lazy<Schema> = Lazy::new(|| Schema {
                        provisional: true,
                        state: None
                    },
+                   ActionName::Host(host::ActionName::Chmod) => Action {
+                        provisional: true,
+                        state: None,
+                   },
+                   ActionName::Host(host::ActionName::ConfigureIfConfigSsh) => Action {
+                       provisional: true,
+                       state: None,
+                   }
                }
            },
            ComponentType::Lnet => Component {
@@ -339,8 +347,10 @@ impl ValidateAddon for Input {
             Self::Host(host::Input::SshCommand(x)) => x.validate()?,
             Self::Host(host::Input::SetupPlanesSsh(x)) => x.validate()?,
             Self::Host(host::Input::SyncFileSsh(x)) => x.validate()?,
+            Self::Host(host::Input::Chmod(x)) => x.validate()?,
             Self::Host(host::Input::CreateFileSsh(x)) => x.validate()?,
             Self::Host(host::Input::IsAvailable(x)) => x.validate()?,
+            Self::Host(host::Input::ConfigureIfConfigSsh(x)) => x.validate()?,
             Self::Lnet(lnet::Input::Configure(x)) => x.validate()?,
             Self::Lnet(lnet::Input::Export(x)) => x.validate()?,
             Self::Lnet(lnet::Input::Import(x)) => x.validate()?,

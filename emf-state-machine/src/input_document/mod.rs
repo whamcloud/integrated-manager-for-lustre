@@ -446,6 +446,7 @@ pub mod ssh_opts {
 
     pub struct AuthOpts {
         /// Use ssh-agent to authenticate
+        #[serde(default)]
         pub agent: bool,
         /// Use password authentication
         pub password: Option<String>,
