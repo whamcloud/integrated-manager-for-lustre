@@ -1,0 +1,918 @@
+---
+source: emf-exa-parser/tests/integration-tests.rs
+expression: exa
+
+---
+{
+  "ha_settings": {
+    "corosync_nics": [
+      "ring0",
+      "ring1"
+    ],
+    "crypto_cipher": "aes256",
+    "crypto_hash": "sha1",
+    "dampen_ifspeed": 20,
+    "dampen_ping": 20,
+    "failover_policy": "standard",
+    "ha_group_count": 1,
+    "ha_groups": [
+      [
+        "mds0",
+        "mds1",
+        "vm01-es7k01",
+        "vm02-es7k01"
+      ]
+    ],
+    "lustre_start_timeout": 450,
+    "max_messages": 17,
+    "mcastport": 5405,
+    "netmtu": 1500,
+    "no_quorum_policy": "freeze",
+    "rrp_mode": "passive",
+    "secauth": "on",
+    "stonith_timeout": 60,
+    "start_on_boot": true,
+    "transport": "unicast",
+    "type": "corosync",
+    "window_size": 50,
+    "zpool_monitor_timeout": 60
+  },
+  "global_settings": {
+    "clients_list": [],
+    "cluster_name": null,
+    "conf_param_tunings": null,
+    "email_list": [],
+    "email_domain": null,
+    "email_relay": null,
+    "extra_hosts_start": [],
+    "extra_hosts_end": [],
+    "fs_list": [
+      "testfs"
+    ],
+    "host_list": [
+      "mds0",
+      "mds1",
+      "vm01-es7k01",
+      "vm02-es7k01"
+    ],
+    "hsm_active": false,
+    "kdump_path": "/scratch/crash",
+    "lnet_mr_fault_sensitive": false,
+    "log_dir": "/scratch/log",
+    "mdt_backup": "none",
+    "mdt_backup_dir": "/scratch",
+    "mgs_fs": "testfs",
+    "ntp_list": [],
+    "password_policy": "plain-text",
+    "pingd": true,
+    "s2a_list": [],
+    "s2a_pass": "password",
+    "s2a_user": "admin",
+    "set_param_tunings": null,
+    "sfa_list": [
+      "es7k01",
+      "sfa12k"
+    ],
+    "shadow_conf": false,
+    "timezone": null,
+    "vg_activation_list": [
+      "auto"
+    ]
+  },
+  "pool_settings": {},
+  "sfa_settings": {
+    "es7k01": {
+      "controllers": [
+        "192.168.0.100",
+        "192.168.0.101"
+      ],
+      "name": "es7k01",
+      "password": "user",
+      "user": "user"
+    },
+    "sfa12k": {
+      "controllers": [
+        "192.168.0.102",
+        "192.168.0.103"
+      ],
+      "name": "sfa12k",
+      "password": "user",
+      "user": "user"
+    }
+  },
+  "zpool_settings": null,
+  "host_defaults_settings": {
+    "base_ip": {
+      "bond0": [
+        172,
+        30,
+        12,
+        5
+      ],
+      "eth0": [
+        192,
+        168,
+        0,
+        14
+      ],
+      "ipmi": [
+        10,
+        128,
+        15,
+        102
+      ]
+    },
+    "bonding_mode": null,
+    "grub_args": null,
+    "host_sfa_list": [],
+    "ipmi_delay": null,
+    "ipmi_method": null,
+    "ipmi_monitor": null,
+    "ipmi_power_wait": 5,
+    "lnets": [
+      "tcp(bond0)"
+    ],
+    "modprobe_cfg": null,
+    "rest_cert_ca": null,
+    "rest_cert_crl": null,
+    "rest_cert_server": null,
+    "rest_cert_server_key": null,
+    "rest_ext_nic": null,
+    "rest_int_nic": null,
+    "rest_keepalived_nic": null,
+    "rest_primary_nic": null,
+    "nic_list": [
+      "eth0",
+      "bond0",
+      "eth1",
+      "eth2",
+      "eth3",
+      "eth4",
+      "eth5"
+    ],
+    "nics": {
+      "bond0": {
+        "cfg": null,
+        "device": "bond0",
+        "gateway": null,
+        "ip": null,
+        "is_bonded": null,
+        "master": null,
+        "netaddr": null,
+        "netmask": "255.240.0.0",
+        "slaves": null
+      },
+      "eth0": {
+        "cfg": null,
+        "device": "eth0",
+        "gateway": "192.168.0.1",
+        "ip": null,
+        "is_bonded": null,
+        "master": null,
+        "netaddr": null,
+        "netmask": "255.255.255.0",
+        "slaves": null
+      },
+      "eth1": {
+        "cfg": null,
+        "device": "eth1",
+        "gateway": null,
+        "ip": null,
+        "is_bonded": null,
+        "master": null,
+        "netaddr": null,
+        "netmask": null,
+        "slaves": null
+      },
+      "eth2": {
+        "cfg": null,
+        "device": "eth2",
+        "gateway": null,
+        "ip": null,
+        "is_bonded": null,
+        "master": null,
+        "netaddr": null,
+        "netmask": null,
+        "slaves": null
+      },
+      "eth3": {
+        "cfg": "MTU=9000",
+        "device": "eth3",
+        "gateway": null,
+        "ip": null,
+        "is_bonded": null,
+        "master": null,
+        "netaddr": null,
+        "netmask": null,
+        "slaves": null
+      },
+      "eth4": {
+        "cfg": "MTU=9000",
+        "device": "eth4",
+        "gateway": null,
+        "ip": null,
+        "is_bonded": null,
+        "master": null,
+        "netaddr": null,
+        "netmask": null,
+        "slaves": null
+      },
+      "eth5": {
+        "cfg": "MTU=9000",
+        "device": "eth5",
+        "gateway": null,
+        "ip": null,
+        "is_bonded": null,
+        "master": null,
+        "netaddr": null,
+        "netmask": null,
+        "slaves": null
+      },
+      "ipmi": {
+        "cfg": null,
+        "device": null,
+        "gateway": null,
+        "ip": null,
+        "is_bonded": null,
+        "master": null,
+        "netaddr": null,
+        "netmask": "255.255.248.0",
+        "slaves": null
+      }
+    },
+    "ring0": "bond0",
+    "ring1": "eth0",
+    "serial_port": "ttyS0",
+    "serial_speed": "115200",
+    "stonith_pass": "password",
+    "stonith_user": "root",
+    "stonith_type": "ipmi"
+  },
+  "hosts_settings": {
+    "mds0": {
+      "fs_list": [
+        "testfs"
+      ],
+      "bonding_mode": "6",
+      "grub_args": null,
+      "ha_group": [
+        "mds0",
+        "mds1",
+        "vm01-es7k01",
+        "vm02-es7k01"
+      ],
+      "ha_group_idx": 0,
+      "host_sfa_list": [
+        "sfa12k"
+      ],
+      "ipmi_delay": 15,
+      "ipmi_method": "onoff",
+      "ipmi_monitor": 60,
+      "ipmi_power_wait": 5,
+      "lnet_members": {
+        "tcp": [
+          [
+            "172.30.12.1"
+          ],
+          [
+            "172.30.12.2"
+          ],
+          [
+            "172.30.12.3"
+          ],
+          [
+            "172.30.12.4"
+          ]
+        ]
+      },
+      "lnet_nics": [
+        "bond0"
+      ],
+      "lnets": [
+        "tcp(bond0)"
+      ],
+      "mdt_base_device_paths": {
+        "testfs": "/dev/mapper"
+      },
+      "mdt_list": {
+        "testfs": [
+          0
+        ]
+      },
+      "modprobe_cfg": null,
+      "name": "mds0",
+      "nic_list": [
+        "eth0",
+        "bond0",
+        "eth4",
+        "eth5"
+      ],
+      "nics": {
+        "bond0": {
+          "cfg": null,
+          "device": "bond0",
+          "gateway": null,
+          "ip": "172.30.12.1",
+          "is_bonded": true,
+          "master": null,
+          "netaddr": "172.16.0.0",
+          "netmask": "255.240.0.0",
+          "slaves": "eth4 eth5"
+        },
+        "eth0": {
+          "cfg": null,
+          "device": "eth0",
+          "gateway": "192.168.0.1",
+          "ip": "192.168.0.10",
+          "is_bonded": false,
+          "master": null,
+          "netaddr": "192.168.0.0",
+          "netmask": "255.255.255.0",
+          "slaves": null
+        },
+        "eth4": {
+          "cfg": "MTU=9000",
+          "device": "eth4",
+          "gateway": null,
+          "ip": null,
+          "is_bonded": false,
+          "master": "bond0",
+          "netaddr": null,
+          "netmask": null,
+          "slaves": null
+        },
+        "eth5": {
+          "cfg": "MTU=9000",
+          "device": "eth5",
+          "gateway": null,
+          "ip": null,
+          "is_bonded": false,
+          "master": "bond0",
+          "netaddr": null,
+          "netmask": null,
+          "slaves": null
+        },
+        "ipmi": {
+          "cfg": null,
+          "device": null,
+          "gateway": null,
+          "ip": "10.128.15.100",
+          "is_bonded": false,
+          "master": null,
+          "netaddr": null,
+          "netmask": "255.255.248.0",
+          "slaves": null
+        }
+      },
+      "peers": [
+        "mds1"
+      ],
+      "oid": null,
+      "ost_device_paths": {
+        "testfs": "/dev/ddn"
+      },
+      "ost_list": {
+        "testfs": []
+      },
+      "rest_cert_ca": null,
+      "rest_cert_crl": null,
+      "rest_ext_nic": null,
+      "rest_int_nic": null,
+      "rest_cert_server": null,
+      "rest_cert_server_key": null,
+      "rest_keepalived_nic": null,
+      "rest_primary_nic": null,
+      "ring0": "bond0",
+      "ring1": "eth0",
+      "serial_port": "ttyS0",
+      "serial_speed": "115200",
+      "stonith_pass": "password",
+      "stonith_primary_peers": [],
+      "stonith_secondary_peers": [],
+      "stonith_type": "ipmi",
+      "stonith_user": "root",
+      "sysctl": {
+        "vm.min_free_kbytes": "2097152"
+      }
+    },
+    "mds1": {
+      "fs_list": [
+        "testfs"
+      ],
+      "bonding_mode": "6",
+      "grub_args": null,
+      "ha_group": [
+        "mds0",
+        "mds1",
+        "vm01-es7k01",
+        "vm02-es7k01"
+      ],
+      "ha_group_idx": 0,
+      "host_sfa_list": [
+        "sfa12k"
+      ],
+      "ipmi_delay": 15,
+      "ipmi_method": "onoff",
+      "ipmi_monitor": 60,
+      "ipmi_power_wait": 5,
+      "lnet_members": {
+        "tcp": [
+          [
+            "172.30.12.1"
+          ],
+          [
+            "172.30.12.2"
+          ],
+          [
+            "172.30.12.3"
+          ],
+          [
+            "172.30.12.4"
+          ]
+        ]
+      },
+      "lnet_nics": [
+        "bond0"
+      ],
+      "lnets": [
+        "tcp(bond0)"
+      ],
+      "mdt_base_device_paths": {
+        "testfs": "/dev/mapper"
+      },
+      "mdt_list": {
+        "testfs": []
+      },
+      "modprobe_cfg": null,
+      "name": "mds1",
+      "nic_list": [
+        "eth0",
+        "bond0",
+        "eth4",
+        "eth5"
+      ],
+      "nics": {
+        "bond0": {
+          "cfg": null,
+          "device": "bond0",
+          "gateway": null,
+          "ip": "172.30.12.2",
+          "is_bonded": true,
+          "master": null,
+          "netaddr": "172.16.0.0",
+          "netmask": "255.240.0.0",
+          "slaves": "eth4 eth5"
+        },
+        "eth0": {
+          "cfg": null,
+          "device": "eth0",
+          "gateway": "192.168.0.1",
+          "ip": "192.168.0.11",
+          "is_bonded": false,
+          "master": null,
+          "netaddr": "192.168.0.0",
+          "netmask": "255.255.255.0",
+          "slaves": null
+        },
+        "eth4": {
+          "cfg": "MTU=9000",
+          "device": "eth4",
+          "gateway": null,
+          "ip": null,
+          "is_bonded": false,
+          "master": "bond0",
+          "netaddr": null,
+          "netmask": null,
+          "slaves": null
+        },
+        "eth5": {
+          "cfg": "MTU=9000",
+          "device": "eth5",
+          "gateway": null,
+          "ip": null,
+          "is_bonded": false,
+          "master": "bond0",
+          "netaddr": null,
+          "netmask": null,
+          "slaves": null
+        },
+        "ipmi": {
+          "cfg": null,
+          "device": null,
+          "gateway": null,
+          "ip": "10.128.15.101",
+          "is_bonded": false,
+          "master": null,
+          "netaddr": null,
+          "netmask": "255.255.248.0",
+          "slaves": null
+        }
+      },
+      "peers": [
+        "mds0"
+      ],
+      "oid": null,
+      "ost_device_paths": {
+        "testfs": "/dev/ddn"
+      },
+      "ost_list": {
+        "testfs": []
+      },
+      "rest_cert_ca": null,
+      "rest_cert_crl": null,
+      "rest_ext_nic": null,
+      "rest_int_nic": null,
+      "rest_cert_server": null,
+      "rest_cert_server_key": null,
+      "rest_keepalived_nic": null,
+      "rest_primary_nic": null,
+      "ring0": "bond0",
+      "ring1": "eth0",
+      "serial_port": "ttyS0",
+      "serial_speed": "115200",
+      "stonith_pass": "password",
+      "stonith_primary_peers": [],
+      "stonith_secondary_peers": [],
+      "stonith_type": "ipmi",
+      "stonith_user": "root",
+      "sysctl": {
+        "vm.min_free_kbytes": "2097152"
+      }
+    },
+    "vm01-es7k01": {
+      "fs_list": [
+        "testfs"
+      ],
+      "bonding_mode": "6",
+      "grub_args": null,
+      "ha_group": [
+        "mds0",
+        "mds1",
+        "vm01-es7k01",
+        "vm02-es7k01"
+      ],
+      "ha_group_idx": 0,
+      "host_sfa_list": [
+        "es7k01"
+      ],
+      "ipmi_delay": null,
+      "ipmi_method": null,
+      "ipmi_monitor": null,
+      "ipmi_power_wait": 5,
+      "lnet_members": {
+        "tcp": [
+          [
+            "172.30.12.1"
+          ],
+          [
+            "172.30.12.2"
+          ],
+          [
+            "172.30.12.3"
+          ],
+          [
+            "172.30.12.4"
+          ]
+        ]
+      },
+      "lnet_nics": [
+        "bond0"
+      ],
+      "lnets": [
+        "tcp(bond0)"
+      ],
+      "mdt_base_device_paths": {
+        "testfs": "/dev/mapper"
+      },
+      "mdt_list": {
+        "testfs": []
+      },
+      "modprobe_cfg": null,
+      "name": "vm01-es7k01",
+      "nic_list": [
+        "eth0",
+        "bond0",
+        "eth2",
+        "eth3"
+      ],
+      "nics": {
+        "bond0": {
+          "cfg": null,
+          "device": "bond0",
+          "gateway": null,
+          "ip": "172.30.12.3",
+          "is_bonded": true,
+          "master": null,
+          "netaddr": "172.16.0.0",
+          "netmask": "255.240.0.0",
+          "slaves": "eth2 eth3"
+        },
+        "eth0": {
+          "cfg": null,
+          "device": "eth0",
+          "gateway": "192.168.0.1",
+          "ip": "192.168.0.12",
+          "is_bonded": false,
+          "master": null,
+          "netaddr": "192.168.0.0",
+          "netmask": "255.255.255.0",
+          "slaves": null
+        },
+        "eth2": {
+          "cfg": null,
+          "device": "eth2",
+          "gateway": null,
+          "ip": null,
+          "is_bonded": false,
+          "master": "bond0",
+          "netaddr": null,
+          "netmask": null,
+          "slaves": null
+        },
+        "eth3": {
+          "cfg": "MTU=9000",
+          "device": "eth3",
+          "gateway": null,
+          "ip": null,
+          "is_bonded": false,
+          "master": "bond0",
+          "netaddr": null,
+          "netmask": null,
+          "slaves": null
+        }
+      },
+      "peers": [
+        "vm02-es7k01"
+      ],
+      "oid": "0x10000000",
+      "ost_device_paths": {
+        "testfs": "/dev/ddn"
+      },
+      "ost_list": {
+        "testfs": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ]
+      },
+      "rest_cert_ca": null,
+      "rest_cert_crl": null,
+      "rest_ext_nic": null,
+      "rest_int_nic": null,
+      "rest_cert_server": null,
+      "rest_cert_server_key": null,
+      "rest_keepalived_nic": null,
+      "rest_primary_nic": null,
+      "ring0": "bond0",
+      "ring1": "eth0",
+      "serial_port": "ttyS0",
+      "serial_speed": "115200",
+      "stonith_pass": "user",
+      "stonith_primary_peers": [],
+      "stonith_secondary_peers": [],
+      "stonith_type": "sfa_vm",
+      "stonith_user": "user",
+      "sysctl": {
+        "vm.min_free_kbytes": "2097152"
+      }
+    },
+    "vm02-es7k01": {
+      "fs_list": [
+        "testfs"
+      ],
+      "bonding_mode": "6",
+      "grub_args": null,
+      "ha_group": [
+        "mds0",
+        "mds1",
+        "vm01-es7k01",
+        "vm02-es7k01"
+      ],
+      "ha_group_idx": 0,
+      "host_sfa_list": [
+        "es7k01"
+      ],
+      "ipmi_delay": null,
+      "ipmi_method": null,
+      "ipmi_monitor": null,
+      "ipmi_power_wait": 5,
+      "lnet_members": {
+        "tcp": [
+          [
+            "172.30.12.1"
+          ],
+          [
+            "172.30.12.2"
+          ],
+          [
+            "172.30.12.3"
+          ],
+          [
+            "172.30.12.4"
+          ]
+        ]
+      },
+      "lnet_nics": [
+        "bond0"
+      ],
+      "lnets": [
+        "tcp(bond0)"
+      ],
+      "mdt_base_device_paths": {
+        "testfs": "/dev/mapper"
+      },
+      "mdt_list": {
+        "testfs": []
+      },
+      "modprobe_cfg": null,
+      "name": "vm02-es7k01",
+      "nic_list": [
+        "eth0",
+        "bond0",
+        "eth2",
+        "eth3"
+      ],
+      "nics": {
+        "bond0": {
+          "cfg": null,
+          "device": "bond0",
+          "gateway": null,
+          "ip": "172.30.12.4",
+          "is_bonded": true,
+          "master": null,
+          "netaddr": "172.16.0.0",
+          "netmask": "255.240.0.0",
+          "slaves": "eth2 eth3"
+        },
+        "eth0": {
+          "cfg": null,
+          "device": "eth0",
+          "gateway": "192.168.0.1",
+          "ip": "192.168.0.13",
+          "is_bonded": false,
+          "master": null,
+          "netaddr": "192.168.0.0",
+          "netmask": "255.255.255.0",
+          "slaves": null
+        },
+        "eth2": {
+          "cfg": null,
+          "device": "eth2",
+          "gateway": null,
+          "ip": null,
+          "is_bonded": false,
+          "master": "bond0",
+          "netaddr": null,
+          "netmask": null,
+          "slaves": null
+        },
+        "eth3": {
+          "cfg": "MTU=9000",
+          "device": "eth3",
+          "gateway": null,
+          "ip": null,
+          "is_bonded": false,
+          "master": "bond0",
+          "netaddr": null,
+          "netmask": null,
+          "slaves": null
+        }
+      },
+      "peers": [
+        "vm01-es7k01"
+      ],
+      "oid": "0x10008000",
+      "ost_device_paths": {
+        "testfs": "/dev/ddn"
+      },
+      "ost_list": {
+        "testfs": [
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13
+        ]
+      },
+      "rest_cert_ca": null,
+      "rest_cert_crl": null,
+      "rest_ext_nic": null,
+      "rest_int_nic": null,
+      "rest_cert_server": null,
+      "rest_cert_server_key": null,
+      "rest_keepalived_nic": null,
+      "rest_primary_nic": null,
+      "ring0": "bond0",
+      "ring1": "eth0",
+      "serial_port": "ttyS0",
+      "serial_speed": "115200",
+      "stonith_pass": "user",
+      "stonith_primary_peers": [],
+      "stonith_secondary_peers": [],
+      "stonith_type": "sfa_vm",
+      "stonith_user": "user",
+      "sysctl": {
+        "vm.min_free_kbytes": "2097152"
+      }
+    }
+  },
+  "rest_settings": null,
+  "emf_settings": null,
+  "fs_settings": {
+    "testfs": {
+      "backfs": "ldiskfs",
+      "cur_mdt_index": 1,
+      "cur_ost_index": 14,
+      "default_ost_count": 7,
+      "default_mdt_count": 0,
+      "dom_enabled": false,
+      "dom_max_file_size": 65536,
+      "host_list": [
+        "mds0",
+        "mds1",
+        "vm01-es7k01",
+        "vm02-es7k01"
+      ],
+      "hsm_active": false,
+      "log_dir": "/scratch/log/testfs",
+      "mds_list": [
+        "mds0",
+        "mds1"
+      ],
+      "mdt_base_device_path": "/dev/mapper",
+      "mdt_failback": true,
+      "mdt_list": {
+        "mds0": [
+          0
+        ],
+        "mds1": []
+      },
+      "mdt_mke2fs_opts": [
+        "-E",
+        "lazy_itable_init=0,lazy_journal_init=0",
+        "-O",
+        "project"
+      ],
+      "mdt_mount_opts": "max_sectors_kb=0",
+      "mgs_device_path": null,
+      "mgs_list": [
+        "mds0",
+        "mds1"
+      ],
+      "mgt_mount_opts": "max_sectors_kb=0",
+      "mdt_opts": null,
+      "mdt_parts": 2,
+      "mdt_size": "90g",
+      "mgs_failback": true,
+      "mgs_internal": true,
+      "mgs_size": "500m",
+      "mgs_standalone": true,
+      "mmp_update_interval": 5,
+      "name": "testfs",
+      "oss_list": [
+        "vm01-es7k01",
+        "vm02-es7k01"
+      ],
+      "ost_device_path": "/dev/ddn",
+      "ost_list": {
+        "vm01-es7k01": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "vm02-es7k01": [
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13
+        ]
+      },
+      "ost_lnet_list": {},
+      "ost_mke2fs_opts": [
+        "-E",
+        "lazy_itable_init=0,lazy_journal_init=0",
+        "-O",
+        "project"
+      ],
+      "ost_mount_opts": "max_sectors_kb=0",
+      "ost_opts": null,
+      "pools": [],
+      "total_mdt_count": 1,
+      "total_ost_count": 14,
+      "tune_ost_mke2fs_opts": []
+    }
+  }
+}

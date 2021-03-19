@@ -792,7 +792,7 @@
             "ha_group_idx": 0
         }
     },
-    "esui_settings": {
+    "emf_settings": {
         "ip": "10.36.6.194",
         "cidr": 16,
         "size": "80G",

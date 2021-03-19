@@ -126,36 +126,48 @@ expression: exa
     ],
     "nics": {
       "ib0": {
+        "cfg": null,
         "device": "ib0",
         "gateway": null,
         "ip": null,
         "is_bonded": null,
+        "master": null,
         "netaddr": null,
-        "netmask": "255.255.0.0"
+        "netmask": "255.255.0.0",
+        "slaves": null
       },
       "ib1": {
+        "cfg": null,
         "device": "ib1",
         "gateway": null,
         "ip": null,
         "is_bonded": null,
+        "master": null,
         "netaddr": null,
-        "netmask": "255.255.0.0"
+        "netmask": "255.255.0.0",
+        "slaves": null
       },
       "mgmt0": {
+        "cfg": null,
         "device": "mgmt0",
         "gateway": "10.36.0.1",
         "ip": null,
         "is_bonded": null,
+        "master": null,
         "netaddr": null,
-        "netmask": "255.255.0.0"
+        "netmask": "255.255.0.0",
+        "slaves": null
       },
       "mgmt2": {
+        "cfg": null,
         "device": "mgmt2",
         "gateway": null,
         "ip": null,
         "is_bonded": null,
+        "master": null,
         "netaddr": null,
-        "netmask": "255.255.255.0"
+        "netmask": "255.255.255.0",
+        "slaves": null
       }
     },
     "ring0": "mgmt2",
@@ -248,36 +260,48 @@ expression: exa
       ],
       "nics": {
         "ib0": {
+          "cfg": null,
           "device": "ib0",
           "gateway": null,
           "ip": "172.16.254.194",
           "is_bonded": false,
+          "master": null,
           "netaddr": "172.16.0.0",
-          "netmask": "255.255.0.0"
+          "netmask": "255.255.0.0",
+          "slaves": null
         },
         "ib1": {
+          "cfg": null,
           "device": "ib1",
           "gateway": null,
           "ip": "172.16.255.194",
           "is_bonded": false,
+          "master": null,
           "netaddr": "172.16.0.0",
-          "netmask": "255.255.0.0"
+          "netmask": "255.255.0.0",
+          "slaves": null
         },
         "mgmt0": {
+          "cfg": null,
           "device": "mgmt0",
           "gateway": "10.36.0.1",
           "ip": "10.36.5.194",
           "is_bonded": false,
+          "master": null,
           "netaddr": "10.36.0.0",
-          "netmask": "255.255.0.0"
+          "netmask": "255.255.0.0",
+          "slaves": null
         },
         "mgmt2": {
+          "cfg": null,
           "device": "mgmt2",
           "gateway": null,
           "ip": "10.0.3.2",
           "is_bonded": false,
+          "master": null,
           "netaddr": "10.0.3.0",
-          "netmask": "255.255.255.0"
+          "netmask": "255.255.255.0",
+          "slaves": null
         }
       },
       "peers": [
@@ -404,36 +428,48 @@ expression: exa
       ],
       "nics": {
         "ib0": {
+          "cfg": null,
           "device": "ib0",
           "gateway": null,
           "ip": "172.16.254.195",
           "is_bonded": false,
+          "master": null,
           "netaddr": "172.16.0.0",
-          "netmask": "255.255.0.0"
+          "netmask": "255.255.0.0",
+          "slaves": null
         },
         "ib1": {
+          "cfg": null,
           "device": "ib1",
           "gateway": null,
           "ip": "172.16.255.195",
           "is_bonded": false,
+          "master": null,
           "netaddr": "172.16.0.0",
-          "netmask": "255.255.0.0"
+          "netmask": "255.255.0.0",
+          "slaves": null
         },
         "mgmt0": {
+          "cfg": null,
           "device": "mgmt0",
           "gateway": "10.36.0.1",
           "ip": "10.36.5.195",
           "is_bonded": false,
+          "master": null,
           "netaddr": "10.36.0.0",
-          "netmask": "255.255.0.0"
+          "netmask": "255.255.0.0",
+          "slaves": null
         },
         "mgmt2": {
+          "cfg": null,
           "device": "mgmt2",
           "gateway": null,
           "ip": "10.0.3.5",
           "is_bonded": false,
+          "master": null,
           "netaddr": "10.0.3.0",
-          "netmask": "255.255.255.0"
+          "netmask": "255.255.255.0",
+          "slaves": null
         }
       },
       "peers": [
@@ -560,36 +596,48 @@ expression: exa
       ],
       "nics": {
         "ib0": {
+          "cfg": null,
           "device": "ib0",
           "gateway": null,
           "ip": "172.16.254.196",
           "is_bonded": false,
+          "master": null,
           "netaddr": "172.16.0.0",
-          "netmask": "255.255.0.0"
+          "netmask": "255.255.0.0",
+          "slaves": null
         },
         "ib1": {
+          "cfg": null,
           "device": "ib1",
           "gateway": null,
           "ip": "172.16.255.196",
           "is_bonded": false,
+          "master": null,
           "netaddr": "172.16.0.0",
-          "netmask": "255.255.0.0"
+          "netmask": "255.255.0.0",
+          "slaves": null
         },
         "mgmt0": {
+          "cfg": null,
           "device": "mgmt0",
           "gateway": "10.36.0.1",
           "ip": "10.36.5.196",
           "is_bonded": false,
+          "master": null,
           "netaddr": "10.36.0.0",
-          "netmask": "255.255.0.0"
+          "netmask": "255.255.0.0",
+          "slaves": null
         },
         "mgmt2": {
+          "cfg": null,
           "device": "mgmt2",
           "gateway": null,
           "ip": "10.0.3.3",
           "is_bonded": false,
+          "master": null,
           "netaddr": "10.0.3.0",
-          "netmask": "255.255.255.0"
+          "netmask": "255.255.255.0",
+          "slaves": null
         }
       },
       "peers": [
@@ -716,36 +764,48 @@ expression: exa
       ],
       "nics": {
         "ib0": {
+          "cfg": null,
           "device": "ib0",
           "gateway": null,
           "ip": "172.16.254.197",
           "is_bonded": false,
+          "master": null,
           "netaddr": "172.16.0.0",
-          "netmask": "255.255.0.0"
+          "netmask": "255.255.0.0",
+          "slaves": null
         },
         "ib1": {
+          "cfg": null,
           "device": "ib1",
           "gateway": null,
           "ip": "172.16.255.197",
           "is_bonded": false,
+          "master": null,
           "netaddr": "172.16.0.0",
-          "netmask": "255.255.0.0"
+          "netmask": "255.255.0.0",
+          "slaves": null
         },
         "mgmt0": {
+          "cfg": null,
           "device": "mgmt0",
           "gateway": "10.36.0.1",
           "ip": "10.36.5.197",
           "is_bonded": false,
+          "master": null,
           "netaddr": "10.36.0.0",
-          "netmask": "255.255.0.0"
+          "netmask": "255.255.0.0",
+          "slaves": null
         },
         "mgmt2": {
+          "cfg": null,
           "device": "mgmt2",
           "gateway": null,
           "ip": "10.0.3.6",
           "is_bonded": false,
+          "master": null,
           "netaddr": "10.0.3.0",
-          "netmask": "255.255.255.0"
+          "netmask": "255.255.255.0",
+          "slaves": null
         }
       },
       "peers": [
@@ -793,7 +853,7 @@ expression: exa
     }
   },
   "rest_settings": null,
-  "esui_settings": {
+  "emf_settings": {
     "ip": "10.36.6.194",
     "cidr": 16,
     "size": "80G",

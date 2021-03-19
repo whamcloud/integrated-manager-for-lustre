@@ -15,8 +15,7 @@ pub struct ExascalerConfiguration {
     pub host_defaults_settings: HostDefaultsSettings,
     pub hosts_settings: HashMap<String, HostSettings>,
     pub rest_settings: Option<RestSettings>,
-    #[serde(rename = "esui_settings")]
-    pub emf_settings: EMFSettings,
+    pub emf_settings: Option<EMFSettings>,
     pub fs_settings: HashMap<String, FsSettings>,
 }
 
@@ -63,7 +62,7 @@ pub struct FsSettings {
     pub mgs_device_path: Option<String>,
     pub mgs_list: Vec<String>,
     pub mgt_mount_opts: String,
-    pub mdt_opts: String,
+    pub mdt_opts: Option<String>,
     pub mdt_parts: Option<u32>,
     pub mdt_size: String,
     pub mgs_failback: bool,
@@ -147,11 +146,11 @@ pub struct HaSettings {
 pub struct HostDefaultsSettings {
     pub base_ip: HashMap<String, Vec<u32>>,
     pub bonding_mode: Option<String>,
-    pub grub_args: String,
+    pub grub_args: Option<String>,
     pub host_sfa_list: Vec<String>,
     pub ipmi_delay: Option<u64>,
     pub ipmi_method: Option<String>,
-    pub ipmi_monitor: Option<String>,
+    pub ipmi_monitor: Option<u64>,
     pub ipmi_power_wait: u64,
     pub lnets: Vec<String>,
     pub modprobe_cfg: Option<String>,
@@ -178,13 +177,13 @@ pub struct HostDefaultsSettings {
 pub struct HostSettings {
     pub fs_list: Vec<String>,
     pub bonding_mode: Option<String>,
-    pub grub_args: String,
+    pub grub_args: Option<String>,
     pub ha_group: Vec<String>,
     pub ha_group_idx: u32,
     pub host_sfa_list: Vec<String>,
     pub ipmi_delay: Option<u64>,
     pub ipmi_method: Option<String>,
-    pub ipmi_monitor: Option<String>,
+    pub ipmi_monitor: Option<u64>,
     pub ipmi_power_wait: u64,
     pub lnet_members: HashMap<String, Vec<Vec<String>>>,
     pub lnet_nics: Vec<String>,
@@ -221,12 +220,15 @@ pub struct HostSettings {
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Nic {
-    pub device: String,
+    pub cfg: Option<String>,
+    pub device: Option<String>,
     pub gateway: Option<String>,
     pub ip: Option<String>,
     pub is_bonded: Option<bool>,
+    pub master: Option<String>,
     pub netaddr: Option<String>,
     pub netmask: Option<String>,
+    pub slaves: Option<String>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Serialize, Deserialize)]

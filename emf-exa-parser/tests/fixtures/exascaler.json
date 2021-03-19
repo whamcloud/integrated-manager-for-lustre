@@ -1429,7 +1429,7 @@
             "ha_group_idx": 0
         }
     },
-    "esui_settings": {
+    "emf_settings": {
         "ip": "1.2.3.4",
         "cidr": 24,
         "size": "120GB",
