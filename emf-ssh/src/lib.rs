@@ -43,6 +43,10 @@ pub enum Error {
     NoSshDir,
     #[error("sshpass command not found on PATH, proxy password support disabled.")]
     NoSshPass,
+    #[error("Could not connect to Host {0}")]
+    ConnectError(String),
+    #[error("Could not connect to Host {0} via proxy {1}")]
+    ConnectProxyError(String, String),
     #[error("Command Failed. Exit Code: {0}. Message: {1}")]
     FailedCmd(u32, String),
     #[error("Bad Exit Code: {0}.")]
@@ -217,9 +221,11 @@ pub async fn connect(
     let sh = Client { host, port };
 
     let session: Handle<Client> = if let Some(proxy_cfg) = proxy_cfg {
+        let proxy_address = format!("{}:{}", proxy_cfg.host, proxy_cfg.port.unwrap_or(22));
+
         let mut cmd = format!(
             "/usr/bin/ssh -q {}@{} -W {}",
-            proxy_cfg.user, proxy_cfg.host, address
+            proxy_cfg.user, &proxy_address, address
         );
 
         if let ProxyAuth::Password(ref x) = proxy_cfg.auth {
@@ -237,9 +243,22 @@ pub async fn connect(
 
         let s = thrussh_config::Stream::proxy_command(parts[0], &parts[1..]).await?;
 
-        client::connect_stream(cfg, s, sh).await?
+        client::connect_stream(cfg, s, sh).await.map_err(|e| {
+            tracing::warn!(
+                "Error during stream connect Address: {} ProxyAddress: {} Error: {:?}",
+                &address,
+                proxy_address,
+                e
+            );
+
+            Error::ConnectProxyError(address, proxy_address)
+        })?
     } else {
-        client::connect(cfg, address, sh).await?
+        client::connect(cfg, &address, sh).await.map_err(|e| {
+            tracing::warn!("Error during connect Address: {} Error: {:?}", &address, e);
+
+            Error::ConnectError(address)
+        })?
     };
 
     authenticate(auth, &user, session).await

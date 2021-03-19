@@ -91,6 +91,7 @@ pub(crate) enum Change {
     State(State),
     Stdout(Bytes),
     Stderr(Bytes),
+    Result(Result<String, String>),
 }
 
 impl From<&Step> for CommandStep {
@@ -98,6 +99,7 @@ impl From<&Step> for CommandStep {
         Self {
             action: step.action.into(),
             id: step.id.to_string(),
+            msg: None,
             state: State::Pending,
             started_at: None,
             finished_at: None,
@@ -159,6 +161,7 @@ pub(crate) type CommandStepWriter = mpsc::UnboundedSender<Change>;
 pub(crate) trait CommandStepWriterExt {
     /// Returns a pair of `OutputWriter`s that can write to stdout and stderr respectively for the associated `CommandStep`.
     fn get_output_handles(&self) -> (OutputWriter, OutputWriter);
+    fn send_change(&self, change: Change);
 }
 
 impl CommandStepWriterExt for CommandStepWriter {
@@ -189,6 +192,11 @@ impl CommandStepWriterExt for CommandStepWriter {
         );
 
         (BufWriter::new(stdout_tx), BufWriter::new(stderr_tx))
+    }
+    fn send_change(&self, change: Change) {
+        if let Err(e) = self.send(change) {
+            tracing::warn!("Could not send change {:?} to command", e.0);
+        };
     }
 }
 
@@ -238,6 +246,7 @@ pub(crate) async fn command_plan_writer(
                 }
                 Change::Stdout(buf) => x.stdout += &String::from_utf8_lossy(&buf),
                 Change::Stderr(buf) => x.stderr += &String::from_utf8_lossy(&buf),
+                Change::Result(r) => x.msg = Some(r),
             }
 
             let state = command_plan

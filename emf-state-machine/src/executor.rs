@@ -169,13 +169,16 @@ pub(crate) fn build_execution_graph(
             let inputs = &step.inputs;
             let state = join_all(xs).await.into_iter().fold(State::Completed, max);
 
-            tx.send(Change::Started(chrono::Utc::now()));
+            tx.send_change(Change::Started(chrono::Utc::now()));
 
             if state == State::Canceled || state == State::Failed {
-                tracing::info!("{} canceled because parent {}", step, state);
+                let msg = format!("{} canceled because parent {}", step, state);
 
-                tx.send(Change::State(State::Canceled));
-                tx.send(Change::Ended(chrono::Utc::now()));
+                tracing::info!("{}", msg);
+
+                tx.send_change(Change::State(State::Canceled));
+                tx.send_change(Change::Ended(chrono::Utc::now()));
+                tx.send_change(Change::Result(Err(msg)));
 
                 return State::Canceled;
             }
@@ -186,18 +189,22 @@ pub(crate) fn build_execution_graph(
 
             let r = invoke_fn(pool, stdout, stderr, inputs).await;
 
-            let state = if r.is_ok() {
-                tracing::info!("{} Completed", step);
+            let state = match r {
+                Ok(_) => {
+                    tracing::info!("{} Completed", step);
 
-                State::Completed
-            } else {
-                tracing::info!("{} failed: {:?}", step, r);
+                    State::Completed
+                }
+                Err(e) => {
+                    tracing::info!("{} failed: {:?}", step, e);
 
-                State::Failed
+                    tx.send_change(Change::Result(Err(format!("{}", e))));
+                    State::Failed
+                }
             };
 
-            tx.send(Change::State(state));
-            tx.send(Change::Ended(chrono::Utc::now()));
+            tx.send_change(Change::State(state));
+            tx.send_change(Change::Ended(chrono::Utc::now()));
 
             state
         }

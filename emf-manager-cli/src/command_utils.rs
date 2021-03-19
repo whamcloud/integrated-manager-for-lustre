@@ -43,6 +43,18 @@ fn render_job_details(g: &CommandGraph) {
 
         println!("{}:{}", style("Action").bold(), &node.id);
         println!("{}:{}", style("State").bold(), &node.state);
+
+        if let Some(x) = node.msg.as_ref() {
+            match x {
+                Ok(x) => {
+                    println!("{}: {}", style("Result (Ok)").bold(), x);
+                }
+                Err(e) => {
+                    println!("{}: {}", style("Result (Error)").bold(), e);
+                }
+            }
+        };
+
         println!(
             "{}:{}",
             style("Started").bold(),

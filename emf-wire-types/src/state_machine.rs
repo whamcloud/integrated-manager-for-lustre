@@ -35,6 +35,7 @@ pub struct CommandStep {
     pub action: String,
     pub id: String,
     pub state: State,
+    pub msg: Option<Result<String, String>>,
     pub started_at: Option<DateTime<Utc>>,
     pub finished_at: Option<DateTime<Utc>>,
     pub stdout: String,
