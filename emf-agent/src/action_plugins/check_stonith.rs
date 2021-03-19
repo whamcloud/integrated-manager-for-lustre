@@ -5,13 +5,13 @@
 use crate::agent_error::{CibError, EmfAgentError};
 use elementtree::Element;
 use emf_cmd::{CheckedCommandExt, Command};
-use emf_wire_types::{ComponentState, ConfigState, RunState, ServiceState};
-use std::default::Default;
+use emf_wire_types::{
+    pacemaker::{InstanceAttribute, MetaAttribute, Primitive, ResourceAgentOrTemplate},
+    ComponentState, ConfigState, RunState, ServiceState,
+};
+use std::convert::TryFrom;
 
-/// This processes <instance_attributes> section of a stonith
-/// "<primitive>" type from the pacemaker cib.
-///
-/// There are two variables of concern in the attributes:
+/// This processes instance_attributes
 /// * pcmk_host_check -
 ///   - static-list - pcmk_host_list defines comma deliniated list of hosts
 ///     controlled by this fencing agent
@@ -19,84 +19,66 @@ use std::default::Default;
 ///     agent (assume same as "none")
 ///   - none - any host can fence any host
 /// * pcmk_host_list - list of hosts controlled
-///
-fn check_instance_attr(elem: Option<&Element>, node: &str) -> Result<(), String> {
-    if let Some(instance) = elem {
-        let mut hl = "";
-        let mut hl_set = false;
-        let mut static_hc = false;
-        for e in instance.children() {
-            match e.get_attr("name") {
-                Some("pcmk_host_list") => {
-                    hl_set = true;
-                    hl = e.get_attr("value").map_or("", |v| v);
-                }
-                Some("pcmk_host_check") => match e.get_attr("value") {
-                    Some("static-list") => static_hc = true,
-                    _ => return Ok(()),
-                },
-                _ => (),
-            }
-        }
-        // pcmk_host_check
-        // "none" -> any host can fence any host
-        // "dynamic-list" -> ASSUME fence agent check
-        // "static-list" -> only hosts specified in pcmk_host_list will work
-        // MISSING -> if host list is missing, default to dynamic-list, else
-        // check host list
-        if static_hc || hl_set {
-            let v: Vec<&str> = hl.split(',').collect();
-            if !v.contains(&node) {
-                return Err(format!("{} missing from host list", node));
-            }
-        }
-    }
-    Ok(())
-}
-
-/// This processes <meta_attributes> section of a stonith <primitive>
-/// from the pacemaker cib
-///
-fn check_meta_attr(elem: Option<&Element>) -> Result<(), String> {
-    if let Some(meta) = elem {
-        for e in meta.children() {
-            if Some("target-role") == e.get_attr("name") {
-                match e.get_attr("value") {
-                    Some("Started") => return Ok(()),
-                    Some(other) => return Err(format!("role: {}", other)),
-                    None => (),
-                }
-            }
-        }
-    }
-    Ok(())
-}
-
+/// Returns:
+///   bool - true == enabled
+///   String - Message
+///   ConfigState
 fn stonith_ok(
     elem: &Element,
     nodename: &str,
 ) -> Result<(bool, String, ConfigState), EmfAgentError> {
-    match elem.get_attr("type") {
-        None => Err(EmfAgentError::CibError(CibError(format!(
-            "{} is missing type attribute",
-            elem.tag()
+    let prim = Primitive::try_from(elem)?;
+
+    match prim.agent {
+        ResourceAgentOrTemplate::Template(t) => Err(EmfAgentError::CibError(CibError(format!(
+            "Stonith Agent ({}) is Template @{}",
+            prim.id, t
         )))),
-        Some("fence_chroma") => match elem.find("instance_attributes") {
-            None => Ok((
-                false,
-                "fence_chroma - unconfigured".to_string(),
-                ConfigState::EMF,
-            )),
-            Some(_) => Ok((true, "fence_chroma".to_string(), ConfigState::EMF)),
-        },
-        Some(t) => {
-            if let Err(err) = check_meta_attr(elem.find("meta_attributes")) {
-                Ok((false, format!("{} - {}", t, err), ConfigState::Other))
-            } else if let Err(err) = check_instance_attr(elem.find("instance_attributes"), nodename)
-            {
-                Ok((false, format!("{} - {}", t, err), ConfigState::Other))
+
+        ResourceAgentOrTemplate::ResourceAgent(ref ra) => {
+            if matches!(
+                ra.ocftype.as_str(),
+                "fence_chroma" | "fence_ddn_ssh" | "fence_sfa_vm" | "fence_ddn_sfa10ke"
+            ) {
+                return if prim.instance_attributes.is_empty() {
+                    Ok((
+                        false,
+                        format!("{} - unconfigured", ra.ocftype),
+                        ConfigState::EMF,
+                    ))
+                } else {
+                    Ok((true, ra.ocftype.to_string(), ConfigState::EMF))
+                };
+            }
+            if let Some(other) = prim.get_meta("target-role") {
+                if other != "Started" {
+                    return Ok((
+                        false,
+                        format!("{} - role: {}", ra, other),
+                        ConfigState::Other,
+                    ));
+                }
+            }
+            if Some("static-list".to_string()) == prim.get_instance("pcmk_host_check") {
+                if let Some(hl) = prim.get_instance("pcmk_host_list") {
+                    if hl.split(',').any(|s| s == nodename) {
+                        Ok((true, ra.ocftype.to_string(), ConfigState::Other))
+                    } else {
+                        Ok((
+                            false,
+                            format!(
+                                "{} - {} missing from host list",
+                                ra.ocftype.to_string(),
+                                nodename
+                            ),
+                            ConfigState::Other,
+                        ))
+                    }
+                } else {
+                    Ok((false, "No host list".to_string(), ConfigState::Other))
+                }
             } else {
-                Ok((true, t.to_string(), ConfigState::Other))
+                Ok((true, ra.ocftype.to_string(), ConfigState::Other))
             }
         }
     }
@@ -313,7 +295,7 @@ mod tests {
             ComponentState {
                 state: true,
                 info: "fence_sfa_vm".to_string(),
-                config: ConfigState::Other,
+                config: ConfigState::EMF,
                 service: ServiceState::Configured(RunState::Setup),
                 ..Default::default()
             }

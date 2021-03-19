@@ -92,26 +92,6 @@ fn xml_add_nvpair(elem: &mut Element, id: &str, name: &str, value: &str) {
         .set_attr("value", value);
 }
 
-pub fn attribute_extend(
-    attributes: &mut Vec<Nvpair>,
-    id: impl Into<String>,
-    nvpairs: BTreeMap<String, String>,
-) {
-    let id = id.into();
-
-    if let Some(attr) = attributes.first_mut() {
-        // @@ search for id == attr.id?
-        attr.nvpairs.extend(nvpairs);
-    } else {
-        let nvpair = Nvpair {
-            id,
-            nvpairs,
-            ..Default::default()
-        };
-        attributes.push(nvpair);
-    }
-}
-
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("{0} Missing {1}")]
@@ -134,7 +114,7 @@ impl Error {
     }
 }
 
-trait ToCrmsh {
+pub trait ToCrmsh {
     /// Output crm shell configuration for object
     fn to_crmsh(&self) -> String;
 
@@ -142,6 +122,152 @@ trait ToCrmsh {
     fn to_crmsh_wo_id(&self, id: &str) -> String {
         let _ = id;
         self.to_crmsh()
+    }
+}
+
+pub trait Id {
+    fn id(&self) -> &String;
+}
+
+pub trait Instance {
+    fn instance(&self) -> &Vec<Nvpair>;
+    fn instance_mut(&mut self) -> &mut Vec<Nvpair>;
+}
+
+pub trait InstanceAttribute {
+    fn extend_instance(&mut self, nvpairs: BTreeMap<String, String>) -> &mut Self;
+    /// Set Instance Attributes
+    fn set_instance(&mut self, key: impl Into<String>, value: impl Into<String>) -> &mut Self;
+    fn get_instance(&self, key: impl Into<String>) -> Option<String>;
+}
+
+impl<T: Id + Instance> InstanceAttribute for T {
+    fn extend_instance(&mut self, nvpairs: BTreeMap<String, String>) -> &mut Self {
+        let id = format!("{}-instance_attributes", self.id());
+        let instance = self.instance_mut();
+
+        if let Some(attr) = instance.first_mut() {
+            attr.nvpairs.extend(nvpairs);
+        } else {
+            let nvpair = Nvpair {
+                id,
+                nvpairs,
+                ..Default::default()
+            };
+            instance.push(nvpair);
+        }
+        self
+    }
+
+    /// Set Instance Attributes
+    fn set_instance(&mut self, key: impl Into<String>, value: impl Into<String>) -> &mut Self {
+        self.extend_instance(vec![(key.into(), value.into())].into_iter().collect())
+    }
+
+    /// Get Instance Attributes
+    fn get_instance(&self, key: impl Into<String>) -> Option<String> {
+        let key = key.into();
+        self.instance()
+            .iter()
+            .rfind(|nv| nv.nvpairs.contains_key(&key))
+            .map(|nv| nv.nvpairs.get(&key).map(|s| s.to_string()))
+            .flatten()
+    }
+}
+
+pub trait Meta {
+    fn meta(&self) -> &Vec<Nvpair>;
+    fn meta_mut(&mut self) -> &mut Vec<Nvpair>;
+}
+
+pub trait MetaAttribute {
+    fn extend_meta(&mut self, nvpairs: BTreeMap<String, String>) -> &mut Self;
+
+    /// Set Meta Attributes
+    fn set_meta(&mut self, key: impl Into<String>, value: impl Into<String>) -> &mut Self;
+
+    /// Get Meta Attributes
+    fn get_meta(&self, key: impl Into<String>) -> Option<String>;
+}
+
+impl<T: Id + Meta> MetaAttribute for T {
+    fn extend_meta(&mut self, nvpairs: BTreeMap<String, String>) -> &mut Self {
+        let id = format!("{}-meta_attributes", self.id());
+        let meta = self.meta_mut();
+
+        if let Some(attr) = meta.first_mut() {
+            attr.nvpairs.extend(nvpairs);
+        } else {
+            let nvpair = Nvpair {
+                id,
+                nvpairs,
+                ..Default::default()
+            };
+            meta.push(nvpair);
+        }
+        self
+    }
+
+    fn set_meta(&mut self, key: impl Into<String>, value: impl Into<String>) -> &mut Self {
+        self.extend_meta(vec![(key.into(), value.into())].into_iter().collect())
+    }
+
+    fn get_meta(&self, key: impl Into<String>) -> Option<String> {
+        let key = key.into();
+        self.meta()
+            .iter()
+            .rfind(|nv| nv.nvpairs.contains_key(&key))
+            .map(|nv| nv.nvpairs.get(&key).map(|s| s.to_string()))
+            .flatten()
+    }
+}
+
+/// Utilization accessor methods
+pub trait Util {
+    fn util(&self) -> &Vec<Nvpair>;
+    fn util_mut(&mut self) -> &mut Vec<Nvpair>;
+}
+
+/// Utilization nvpair set/get methods
+pub trait Utilization {
+    fn extend_util(&mut self, nvpairs: BTreeMap<String, String>) -> &mut Self;
+
+    /// Set Utilization
+    fn set_util(&mut self, key: impl Into<String>, value: impl Into<String>) -> &mut Self;
+
+    /// Get Utilization
+    fn get_util(&self, key: impl Into<String>) -> Option<String>;
+}
+
+impl<T: Id + Util> Utilization for T {
+    fn extend_util(&mut self, nvpairs: BTreeMap<String, String>) -> &mut Self {
+        let id = format!("{}-utilization", self.id());
+        let utilization = self.util_mut();
+
+        if let Some(attr) = utilization.first_mut() {
+            attr.nvpairs.extend(nvpairs);
+        } else {
+            let nvpair = Nvpair {
+                id,
+                nvpairs,
+                ..Default::default()
+            };
+            utilization.push(nvpair);
+        }
+        self
+    }
+
+    fn set_util(&mut self, key: impl Into<String>, value: impl Into<String>) -> &mut Self {
+        self.extend_util(vec![(key.into(), value.into())].into_iter().collect())
+    }
+
+    fn get_util(&self, key: impl Into<String>) -> Option<String> {
+        let key = key.into();
+        self.util()
+            .iter()
+            .rfind(|nv| nv.nvpairs.contains_key(&key))
+            .map(|nv| nv.nvpairs.get(&key).map(|s| s.to_string()))
+            .flatten()
     }
 }
 
@@ -255,6 +381,28 @@ impl ToCrmsh for Clone {
                 "instance_attributes"
             ),
         )
+    }
+}
+
+impl Id for Clone {
+    fn id(&self) -> &String {
+        &self.id
+    }
+}
+impl Instance for Clone {
+    fn instance(&self) -> &Vec<Nvpair> {
+        &self.instance_attributes
+    }
+    fn instance_mut(&mut self) -> &mut Vec<Nvpair> {
+        &mut self.instance_attributes
+    }
+}
+impl Meta for Clone {
+    fn meta(&self) -> &Vec<Nvpair> {
+        &self.meta_attributes
+    }
+    fn meta_mut(&mut self) -> &mut Vec<Nvpair> {
+        &mut self.meta_attributes
     }
 }
 
@@ -669,6 +817,28 @@ impl ToCrmsh for Group {
     }
 }
 
+impl Id for Group {
+    fn id(&self) -> &String {
+        &self.id
+    }
+}
+impl Instance for Group {
+    fn instance(&self) -> &Vec<Nvpair> {
+        &self.instance_attributes
+    }
+    fn instance_mut(&mut self) -> &mut Vec<Nvpair> {
+        &mut self.instance_attributes
+    }
+}
+impl Meta for Group {
+    fn meta(&self) -> &Vec<Nvpair> {
+        &self.meta_attributes
+    }
+    fn meta_mut(&mut self) -> &mut Vec<Nvpair> {
+        &mut self.meta_attributes
+    }
+}
+
 #[cfg(feature = "xml")]
 impl TryFrom<&Element> for Group {
     type Error = Error;
@@ -812,6 +982,28 @@ impl ToCrmsh for Node {
             ),
             nvlist_or_none("utilization", &self.utilization, &self.id, "utilization"),
         )
+    }
+}
+
+impl Id for Node {
+    fn id(&self) -> &String {
+        &self.id
+    }
+}
+impl Instance for Node {
+    fn instance(&self) -> &Vec<Nvpair> {
+        &self.instance_attributes
+    }
+    fn instance_mut(&mut self) -> &mut Vec<Nvpair> {
+        &mut self.instance_attributes
+    }
+}
+impl Util for Node {
+    fn util(&self) -> &Vec<Nvpair> {
+        &self.utilization
+    }
+    fn util_mut(&mut self) -> &mut Vec<Nvpair> {
+        &mut self.utilization
     }
 }
 
@@ -1080,6 +1272,18 @@ impl Operations {
         }
     }
 
+    pub fn new_monitor(interval: String, timeout: impl Into<Option<String>>) -> Self {
+        Self {
+            start: None,
+            monitor: Some(Op {
+                interval,
+                timeout: timeout.into(),
+                ..Default::default()
+            }),
+            stop: None,
+        }
+    }
+
     pub fn is_any_some(&self) -> bool {
         self.start.is_some() || self.stop.is_some() || self.monitor.is_some()
     }
@@ -1213,14 +1417,39 @@ impl ToCrmsh for Primitive {
                 "instance_attributes"
             ),
             nvlist_or_none("meta", &self.meta_attributes, &self.id, "meta_attributes"),
-            nvlist_or_none(
-                "utilization",
-                &self.meta_attributes,
-                &self.id,
-                "utilization"
-            ),
+            nvlist_or_none("utilization", &self.utilization, &self.id, "utilization"),
             self.ops.to_crmsh(),
         )
+    }
+}
+
+impl Id for Primitive {
+    fn id(&self) -> &String {
+        &self.id
+    }
+}
+impl Instance for Primitive {
+    fn instance(&self) -> &Vec<Nvpair> {
+        &self.instance_attributes
+    }
+    fn instance_mut(&mut self) -> &mut Vec<Nvpair> {
+        &mut self.instance_attributes
+    }
+}
+impl Meta for Primitive {
+    fn meta(&self) -> &Vec<Nvpair> {
+        &self.meta_attributes
+    }
+    fn meta_mut(&mut self) -> &mut Vec<Nvpair> {
+        &mut self.meta_attributes
+    }
+}
+impl Util for Primitive {
+    fn util(&self) -> &Vec<Nvpair> {
+        &self.utilization
+    }
+    fn util_mut(&mut self) -> &mut Vec<Nvpair> {
+        &mut self.utilization
     }
 }
 
@@ -1305,7 +1534,7 @@ pub enum PrimitiveOrGroup {
 }
 
 impl PrimitiveOrGroup {
-    pub fn id(&self) -> String {
+    fn id(&self) -> String {
         match self {
             PrimitiveOrGroup::Primitive(x) => x.id.to_string(),
             PrimitiveOrGroup::Group(x) => x.id.to_string(),
@@ -1375,31 +1604,38 @@ pub enum Resource {
 }
 
 impl Resource {
-    pub fn id(&self) -> String {
+    pub fn set_target_role(&mut self, role: &str) {
+        self.set_meta("target-role", role);
+    }
+}
+
+impl Id for Resource {
+    fn id(&self) -> &String {
         match self {
-            Resource::Primitive(x) => x.id.to_string(),
-            Resource::Template(x) => x.id.to_string(),
-            Resource::Group(x) => x.id.to_string(),
-            Resource::Clone(x) => x.id.to_string(),
+            Resource::Primitive(x) => x.id(),
+            Resource::Template(x) => x.id(),
+            Resource::Group(x) => x.id(),
+            Resource::Clone(x) => x.id(),
         }
     }
+}
 
-    pub fn set_target_role(&mut self, role: &str) {
-        let id = self.id();
-
-        let meta = match self {
-            Resource::Primitive(x) => &mut x.meta_attributes,
-            Resource::Template(x) => &mut x.meta_attributes,
-            Resource::Group(x) => &mut x.meta_attributes,
-            Resource::Clone(x) => &mut x.meta_attributes,
-        };
-
-        let role: BTreeMap<_, _> = vec![("target-role", role)]
-            .iter()
-            .map(|(k, v)| (k.to_string(), v.to_string()))
-            .collect();
-
-        attribute_extend(meta, format!("{}-meta_attributes", id), role);
+impl Meta for Resource {
+    fn meta(&self) -> &Vec<Nvpair> {
+        match self {
+            Resource::Primitive(x) => x.meta(),
+            Resource::Template(x) => x.meta(),
+            Resource::Group(x) => x.meta(),
+            Resource::Clone(x) => x.meta(),
+        }
+    }
+    fn meta_mut(&mut self) -> &mut Vec<Nvpair> {
+        match self {
+            Resource::Primitive(x) => x.meta_mut(),
+            Resource::Template(x) => x.meta_mut(),
+            Resource::Group(x) => x.meta_mut(),
+            Resource::Clone(x) => x.meta_mut(),
+        }
     }
 }
 
@@ -1543,6 +1779,15 @@ impl ToCrmsh for ResourceAgentOrTemplate {
 impl From<ResourceAgent> for ResourceAgentOrTemplate {
     fn from(ra: ResourceAgent) -> Self {
         ResourceAgentOrTemplate::ResourceAgent(ra)
+    }
+}
+
+impl PartialEq<ResourceAgent> for ResourceAgentOrTemplate {
+    fn eq(&self, other: &ResourceAgent) -> bool {
+        match self {
+            ResourceAgentOrTemplate::ResourceAgent(ra) => ra == other,
+            ResourceAgentOrTemplate::Template(_) => false,
+        }
     }
 }
 
@@ -1988,6 +2233,36 @@ impl ToCrmsh for Template {
             nvlist_or_none("utilization", &self.utilization, &self.id, "utilization"),
             self.ops.to_crmsh()
         )
+    }
+}
+
+impl Id for Template {
+    fn id(&self) -> &String {
+        &self.id
+    }
+}
+impl Instance for Template {
+    fn instance(&self) -> &Vec<Nvpair> {
+        &self.instance_attributes
+    }
+    fn instance_mut(&mut self) -> &mut Vec<Nvpair> {
+        &mut self.instance_attributes
+    }
+}
+impl Meta for Template {
+    fn meta(&self) -> &Vec<Nvpair> {
+        &self.meta_attributes
+    }
+    fn meta_mut(&mut self) -> &mut Vec<Nvpair> {
+        &mut self.meta_attributes
+    }
+}
+impl Util for Template {
+    fn util(&self) -> &Vec<Nvpair> {
+        &self.utilization
+    }
+    fn util_mut(&mut self) -> &mut Vec<Nvpair> {
+        &mut self.utilization
     }
 }
 

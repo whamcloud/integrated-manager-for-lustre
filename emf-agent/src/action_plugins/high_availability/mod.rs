@@ -16,7 +16,7 @@ use emf_cmd::{CheckedCommandExt, Command};
 use emf_fs::file_exists;
 use emf_wire_types::{
     pacemaker::{
-        AttributeActions, Constraint, KindOrScore, LossPolicy, Operations, Primitive, Resource,
+        AttributeActions, Constraint, Id, KindOrScore, LossPolicy, Operations, Primitive, Resource,
         ResourceAgent, Score,
     },
     ComponentState, ConfigState, ServiceState,
