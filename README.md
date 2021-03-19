@@ -12,6 +12,12 @@ For example, to connect to a local emf db running on localhost the `.env` file w
 DATABASE_URL=postgres://emf@localhost:5432/emf
 ```
 
+Once you have a db configured migrations can be run with:
+
+```sh
+make migrate_db
+```
+
 Once a change has been made to a query, run the following in this directory:
 
 ```sh
@@ -27,8 +33,9 @@ cargo sqlx prepare --merged --check -- --tests
 You may need to install the sqlx-cli as well:
 
 ```sh
-cargo install sqlx-cli --no-default-features --features postgres --git https://github.com/launchbadge/sqlx --tag v0.4.2
+cargo install sqlx-cli --no-default-features --features postgres
 ```
+
 
 Precommit checks are run by [rusty-hook](https://github.com/swellaby/rusty-hook). To setup do the following:
 
