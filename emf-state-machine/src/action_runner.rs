@@ -206,7 +206,7 @@ pub(crate) async fn invoke<'a>(
                     }
                 };
             }
-            host::Input::Chmod(host::Chmod {
+            host::Input::ChmodSsh(host::ChmodSsh {
                 host,
                 ssh_opts,
                 file_path,
@@ -312,6 +312,33 @@ pub(crate) async fn invoke<'a>(
                 let mut channel = handle.create_channel().await?;
                 channel
                     .stream_file(file_content.join("\n").as_bytes(), ifcfg_filepath)
+                    .await?;
+            }
+            host::Input::ConfigureNetworkSsh(host::ConfigureNetworkSsh {
+                host,
+                ssh_opts,
+                hostname,
+                gateway_device,
+            }) => {
+                let mut network_content: Vec<String> = vec![
+                    "NETWORKING=yes".into(),
+                    "NETWORKING_IPV6=no".into(),
+                    format!("HOSTNAME={}", hostname),
+                ];
+
+                if let Some(gateway_device) = gateway_device {
+                    network_content.push(format!("GATEWAYDEV={}", gateway_device));
+                }
+                network_content.push("".into());
+
+                let mut handle = ssh_connect(host, ssh_opts).await?;
+                let mut channel = handle.create_channel().await?;
+
+                channel
+                    .stream_file(
+                        network_content.join("\n").as_bytes(),
+                        "/etc/sysconfig/network",
+                    )
                     .await?;
             }
         },

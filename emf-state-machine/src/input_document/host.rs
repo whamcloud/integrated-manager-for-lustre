@@ -24,8 +24,9 @@ pub(crate) enum State {
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(untagged)]
 pub enum Input {
-    Chmod(Chmod),
+    ChmodSsh(ChmodSsh),
     ConfigureIfConfigSsh(ConfigureIfConfigSsh),
+    ConfigureNetworkSsh(ConfigureNetworkSsh),
     CreateFileSsh(CreateFileSsh),
     IsAvailable(IsAvailable),
     SetupPlanesSsh(SetupPlanesSsh),
@@ -38,8 +39,9 @@ pub enum Input {
 )]
 #[serde(rename_all = "snake_case")]
 pub enum ActionName {
-    Chmod,
+    ChmodSsh,
     ConfigureIfConfigSsh,
+    ConfigureNetworkSsh,
     CreateFileSsh,
     IsAvailable,
     SetupPlanesSsh,
@@ -50,8 +52,9 @@ pub enum ActionName {
 impl Display for ActionName {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let x = match self {
-            Self::Chmod => "chmod",
+            Self::ChmodSsh => "chmod_ssh",
             Self::ConfigureIfConfigSsh => "configure_if_config_ssh",
+            Self::ConfigureNetworkSsh => "configure_network_ssh",
             Self::CreateFileSsh => "create_file_ssh",
             Self::IsAvailable => "is_available",
             Self::SetupPlanesSsh => "setup_planes_ssh",
@@ -84,12 +87,13 @@ where
         ActionName::SshCommand => deserialize_input(input).map(Input::SshCommand),
         ActionName::SetupPlanesSsh => deserialize_input(input).map(Input::SetupPlanesSsh),
         ActionName::SyncFileSsh => deserialize_input(input).map(Input::SyncFileSsh),
-        ActionName::Chmod => deserialize_input(input).map(Input::Chmod),
+        ActionName::ChmodSsh => deserialize_input(input).map(Input::ChmodSsh),
         ActionName::CreateFileSsh => deserialize_input(input).map(Input::CreateFileSsh),
         ActionName::IsAvailable => deserialize_input(input).map(Input::IsAvailable),
         ActionName::ConfigureIfConfigSsh => {
             deserialize_input(input).map(Input::ConfigureIfConfigSsh)
         }
+        ActionName::ConfigureNetworkSsh => deserialize_input(input).map(Input::ConfigureNetworkSsh),
     }
 }
 
@@ -175,7 +179,7 @@ pub struct ConfigureIfConfigSsh {
 /// Change the permissions of a file on the host.
 #[derive(Debug, serde::Serialize, serde::Deserialize, Validate)]
 #[serde(deny_unknown_fields)]
-pub struct Chmod {
+pub struct ChmodSsh {
     #[validate(length(min = 1))]
     pub(crate) host: String,
     #[serde(default)]
@@ -184,4 +188,18 @@ pub struct Chmod {
     pub(crate) file_path: String,
     #[validate(length(min = 1))]
     pub(crate) permissions: String,
+}
+
+/// Tune's `/etc/sysconfig/network`
+#[derive(Debug, serde::Serialize, serde::Deserialize, Validate)]
+#[serde(deny_unknown_fields)]
+pub struct ConfigureNetworkSsh {
+    #[validate(length(min = 1))]
+    pub(crate) host: String,
+    #[serde(default)]
+    pub(crate) ssh_opts: SshOpts,
+    #[validate(length(min = 1))]
+    pub(crate) hostname: String,
+    #[serde(default)]
+    pub(crate) gateway_device: Option<String>,
 }
