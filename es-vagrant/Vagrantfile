@@ -421,8 +421,6 @@ def get_machine_folder()
       .first
 end
 
-# Creates Disks registers them so they can later attached as multiattach
-# c.f. https://www.virtualbox.org/ticket/18296
 def create_disks(vbox)
   dir = "#{get_machine_folder()}/esvdisks"
   FileUtils.mkdir_p dir unless File.directory?(dir)
@@ -430,7 +428,7 @@ def create_disks(vbox)
   osts = (1..8).map { |x| ["OST#{x}_", '5120'] }
 
   [
-    %w[mgt_ 84992],
+    %w[mgt_ 5800],
     %w[mdt1_ 5120],
     %w[mdt2_ 5120],
   ].concat(osts).each_with_index do |(name, size), i|
@@ -447,25 +445,22 @@ def create_disks(vbox)
                       '--format',
                       'VDI',
                       '--variant',
-                      'standard']
-      # Attach then detach so it can be attached as multiattach
-      vbox.customize ['storageattach', :id,
-                      '--storagectl', 'SATA Controller',
-                      '--port', port,
-                      '--type', 'hdd',
-                      '--medium', file_to_disk,
-                      '--device', '0']
-      vbox.customize ['storageattach', :id,
-                      '--storagectl', 'SATA Controller',
-                      '--port', port,
-                      '--medium', 'none',
-                      '--device', '0']
+                      'fixed']
+      vbox.customize ['modifymedium', file_to_disk, '--type', 'shareable']
     end
   end
 end
 
 def attach_disks(vbox)
   dir = "#{get_machine_folder()}/esvdisks"
+
+  # Makes upgrade testing easier
+  vbox.customize ['storageattach', :id,
+                  '--storagectl', 'IDE Controller',
+                  '--port', '0',
+                  '--device', '1',
+                  '--type', 'dvddrive',
+                  '--medium', 'emptydrive']
 
   osts = (1..8).map { |x| "OST#{x}_" }
 
@@ -481,7 +476,7 @@ def attach_disks(vbox)
                     '--storagectl', 'SATA Controller',
                     '--port', port,
                     '--type', 'hdd',
-                    '--mtype', 'multiattach',
+                    '--mtype', 'shareable',
                     '--medium', file_to_disk,
                     '--device', '0']
 
