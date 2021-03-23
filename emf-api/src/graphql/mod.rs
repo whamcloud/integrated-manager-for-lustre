@@ -2,6 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
+mod alert;
 mod filesystem;
 mod host;
 mod ostpool;
@@ -18,11 +19,11 @@ use emf_postgres::{active_mgs_host_fqdn, fqdn_by_host_id, get_fs_target_resource
 use emf_wire_types::{
     db::{LogMessageRecord, LustreFid},
     duration::GraphQLDuration,
-    logs::{LogResponse, Meta},
+    logs::LogResponse,
     snapshot::{ReserveUnit, Snapshot, SnapshotInterval, SnapshotRetention},
     task::Task,
-    BannedResource, Command, FsType, LogMessage, LogSeverity, MessageClass, SortDir, TargetRecord,
-    TargetResource,
+    BannedResource, Command, FsType, LogMessage, LogSeverity, MessageClass, Meta, SortDir,
+    TargetRecord, TargetResource,
 };
 use futures::{future::join_all, TryStreamExt};
 use itertools::Itertools;
@@ -75,6 +76,9 @@ pub(crate) struct QueryRoot;
 
 #[juniper::graphql_object(Context = Context)]
 impl QueryRoot {
+    fn alert(&self) -> alert::AlertQuery {
+        alert::AlertQuery
+    }
     fn host(&self) -> host::HostQuery {
         host::HostQuery
     }

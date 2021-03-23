@@ -26,7 +26,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     while let Some((fqdn, state)) = rx.next().await {
         tracing::debug!("fqdn: {:?} state: {:?}", fqdn, state);
 
-        let host = sqlx::query!("select * from host where fqdn = $1", fqdn.to_string())
+        let host = sqlx::query!("SELECT * from host WHERE fqdn = $1", fqdn.to_string())
             .fetch_optional(&pool)
             .await?;
 

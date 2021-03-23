@@ -6,8 +6,8 @@ use chrono_humanize::{Accuracy, HumanTime, Tense};
 use console::style;
 use emf_wire_types::{
     snapshot::{ReserveUnit, Snapshot, SnapshotInterval, SnapshotRetention},
-    Command, Filesystem, Host, OstPoolGraphql, StratagemConfigurationOutput, StratagemReport,
-    TargetRecord,
+    AlertState, Command, Filesystem, Host, OstPoolGraphql, StratagemConfigurationOutput,
+    StratagemReport, TargetRecord,
 };
 use futures::{Future, FutureExt};
 use indicatif::ProgressBar;
@@ -294,6 +294,25 @@ impl IntoTable for Vec<Command> {
             &["Id", "State"],
             self.into_iter()
                 .map(|x| vec![x.id.to_string(), x.state.to_string()]),
+        )
+    }
+}
+
+impl IntoTable for Vec<AlertState> {
+    fn into_table(self) -> Table {
+        generate_table(
+            &["Id", "Message", "Active", "Raised At", "Lowered At"],
+            self.into_iter().map(|x| {
+                vec![
+                    x.id.to_string(),
+                    x.message.unwrap_or_else(|| "---".to_string()),
+                    x.active.to_string(),
+                    x.begin.to_rfc2822(),
+                    x.end
+                        .map(|t| t.to_rfc2822())
+                        .unwrap_or_else(|| "---".to_string()),
+                ]
+            }),
         )
     }
 }

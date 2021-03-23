@@ -43,7 +43,7 @@ pub fn db_record_to_change_record((msg_type, record): (MessageType, DbRecord)) -
         },
         DbRecord::AlertState(x) => match (msg_type, x) {
             (MessageType::Delete, x) => RecordChange::Delete(RecordId::ActiveAlert(x.id())),
-            (_, x) if !x.is_active() => RecordChange::Delete(RecordId::ActiveAlert(x.id())),
+            (_, x) if !x.active => RecordChange::Delete(RecordId::ActiveAlert(x.id())),
             (MessageType::Insert, x) | (MessageType::Update, x) => {
                 RecordChange::Update(Record::ActiveAlert(x))
             }

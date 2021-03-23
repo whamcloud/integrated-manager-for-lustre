@@ -50,19 +50,30 @@ pub use target::*;
 #[cfg_attr(feature = "postgres-interop", sqlx(type_name = "component"))]
 #[cfg_attr(feature = "postgres-interop", sqlx(rename_all = "snake_case"))]
 #[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "graphql", derive(juniper::GraphQLEnum))]
 #[derive(
     PartialEq, Eq, Clone, Copy, Debug, serde::Serialize, serde::Deserialize, Ord, PartialOrd, Hash,
 )]
 pub enum ComponentType {
+    #[cfg_attr(feature = "graphql", graphql(name = "host"))]
     Host,
+    #[cfg_attr(feature = "graphql", graphql(name = "filesystem"))]
     Filesystem,
+    #[cfg_attr(feature = "graphql", graphql(name = "lnet"))]
     Lnet,
+    #[cfg_attr(feature = "graphql", graphql(name = "target"))]
     Target,
+    #[cfg_attr(feature = "graphql", graphql(name = "client_mount"))]
     ClientMount,
+    #[cfg_attr(feature = "graphql", graphql(name = "ntp"))]
     Ntp,
+    #[cfg_attr(feature = "graphql", graphql(name = "mgt"))]
     Mgt,
+    #[cfg_attr(feature = "graphql", graphql(name = "ost"))]
     Ost,
+    #[cfg_attr(feature = "graphql", graphql(name = "mdt"))]
     Mdt,
+    #[cfg_attr(feature = "graphql", graphql(name = "mgt_mdt"))]
     MgtMdt,
 }
 
@@ -628,20 +639,20 @@ impl Deref for SortDir {
     }
 }
 
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+#[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
+pub struct Meta {
+    pub total_count: i32,
+}
+
 pub mod logs {
     use crate::LogMessage;
 
     #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
     #[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
-    pub struct Meta {
-        pub total_count: i32,
-    }
-
-    #[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
-    #[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
     pub struct LogResponse {
         pub data: Vec<LogMessage>,
-        pub meta: Meta,
+        pub meta: super::Meta,
     }
 }
 

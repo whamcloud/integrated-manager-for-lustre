@@ -3,6 +3,7 @@
 // license that can be found in the LICENSE file.
 
 use emf_manager_cli::{
+    alert,
     api::{self, api_cli, graphql_cli},
     command,
     display_utils::display_error,
@@ -21,6 +22,12 @@ use structopt::StructOpt;
 #[derive(Debug, StructOpt)]
 #[structopt(setting = structopt::clap::AppSettings::ColoredHelp)]
 pub enum App {
+    /// Work with Alerts
+    #[structopt(name = "alert")]
+    Alert {
+        #[structopt(subcommand)]
+        command: Option<alert::Command>,
+    },
     /// Work with commands
     #[structopt(name = "command")]
     Command {
@@ -111,6 +118,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let r = match matches {
+        App::Alert { command } => alert::cli(command).await,
         App::Command { command } => command::cli(command).await,
         App::DebugApi(command) => api_cli(command).await,
         App::DebugQl(command) => graphql_cli(command).await,

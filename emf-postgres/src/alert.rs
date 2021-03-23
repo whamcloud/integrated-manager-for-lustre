@@ -14,7 +14,7 @@ pub async fn lower(
 
     sqlx::query!(
         r#"UPDATE alertstate
-            SET active = Null, "end" = now()
+            SET active = false, "end" = now()
             WHERE
                 active = true
                 AND alert_item_id = $1
@@ -56,7 +56,7 @@ pub async fn raise(
             alert_item_type_id
         )
         VALUES ($1::alert_record_type, '{}', $2, $1, now(), $3, true, false, $4, $5, $6)
-        ON CONFLICT DO NOTHING
+        ON CONFLICT ON CONSTRAINT unique_active_alert DO NOTHING
         "#,
         record_type as AlertRecordType,
         item_id,

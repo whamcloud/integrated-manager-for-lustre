@@ -4,7 +4,7 @@
 
 use crate::{
     db::{self, TableName},
-    ComponentType,
+    ComponentType, Meta,
 };
 use chrono::{DateTime, Utc};
 
@@ -25,37 +25,69 @@ pub enum AlertSeverity {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "postgres-interop", derive(sqlx::Type))]
 #[cfg_attr(feature = "postgres-interop", sqlx(type_name = "alert_record_type"))]
+#[cfg_attr(feature = "graphql", derive(juniper::GraphQLEnum))]
 pub enum AlertRecordType {
+    #[cfg_attr(feature = "graphql", graphql(name = "AlertState"))]
     AlertState,
+    #[cfg_attr(feature = "graphql", graphql(name = "LearnEvent"))]
     LearnEvent,
+    #[cfg_attr(feature = "graphql", graphql(name = "AlertEvent"))]
     AlertEvent,
+    #[cfg_attr(feature = "graphql", graphql(name = "SyslogEvent"))]
     SyslogEvent,
+    #[cfg_attr(feature = "graphql", graphql(name = "ClientConnectEvent"))]
     ClientConnectEvent,
+    #[cfg_attr(feature = "graphql", graphql(name = "CommandRunningAlert"))]
     CommandRunningAlert,
+    #[cfg_attr(feature = "graphql", graphql(name = "CommandSuccessfulAlert"))]
     CommandSuccessfulAlert,
+    #[cfg_attr(feature = "graphql", graphql(name = "CommandCancelledAlert"))]
     CommandCancelledAlert,
+    #[cfg_attr(feature = "graphql", graphql(name = "CommandErroredAlert"))]
     CommandErroredAlert,
+    #[cfg_attr(feature = "graphql", graphql(name = "CorosyncUnknownPeersAlert"))]
     CorosyncUnknownPeersAlert,
+    #[cfg_attr(feature = "graphql", graphql(name = "CorosyncToManyPeersAlert"))]
     CorosyncToManyPeersAlert,
+    #[cfg_attr(feature = "graphql", graphql(name = "CorosyncNoPeersAlert"))]
     CorosyncNoPeersAlert,
+    #[cfg_attr(feature = "graphql", graphql(name = "CorosyncStoppedAlert"))]
     CorosyncStoppedAlert,
+    #[cfg_attr(feature = "graphql", graphql(name = "StonithNotEnabledAlert"))]
     StonithNotEnabledAlert,
+    #[cfg_attr(feature = "graphql", graphql(name = "PacemakerStoppedAlert"))]
     PacemakerStoppedAlert,
+    #[cfg_attr(feature = "graphql", graphql(name = "HostContactAlert"))]
     HostContactAlert,
+    #[cfg_attr(feature = "graphql", graphql(name = "HostOfflineAlert"))]
     HostOfflineAlert,
+    #[cfg_attr(feature = "graphql", graphql(name = "HostRebootEvent"))]
     HostRebootEvent,
+    #[cfg_attr(feature = "graphql", graphql(name = "TargetOfflineAlert"))]
     TargetOfflineAlert,
+    #[cfg_attr(feature = "graphql", graphql(name = "TargetRecoveryAlert"))]
     TargetRecoveryAlert,
+    #[cfg_attr(feature = "graphql", graphql(name = "StorageResourceOffline"))]
     StorageResourceOffline,
+    #[cfg_attr(feature = "graphql", graphql(name = "StorageResourceAlert"))]
     StorageResourceAlert,
+    #[cfg_attr(feature = "graphql", graphql(name = "StorageResourceLearnEvent"))]
     StorageResourceLearnEvent,
+    #[cfg_attr(feature = "graphql", graphql(name = "IpmiBmcUnavailableAlert"))]
     IpmiBmcUnavailableAlert,
+    #[cfg_attr(feature = "graphql", graphql(name = "LNetOfflineAlert"))]
     LNetOfflineAlert,
+    #[cfg_attr(feature = "graphql", graphql(name = "LNetNidsChangedAlert"))]
     LNetNidsChangedAlert,
+    #[cfg_attr(feature = "graphql", graphql(name = "StratagemUnconfiguredAlert"))]
     StratagemUnconfiguredAlert,
+    #[cfg_attr(feature = "graphql", graphql(name = "TimeOutOfSyncAlert"))]
     TimeOutOfSyncAlert,
+    #[cfg_attr(feature = "graphql", graphql(name = "NoTimeSyncAlert"))]
     NoTimeSyncAlert,
+    #[cfg_attr(feature = "graphql", graphql(name = "MultipleTimeSyncAlert"))]
     MultipleTimeSyncAlert,
+    #[cfg_attr(feature = "graphql", graphql(name = "UnknownTimeSyncAlert"))]
     UnknownTimeSyncAlert,
 }
 
@@ -67,6 +99,7 @@ impl ToString for AlertRecordType {
 
 /// Record from the `alertstate` table
 #[derive(Debug, Eq, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
 pub struct AlertState {
     pub id: i32,
     pub alert_item_type_id: Option<ComponentType>,
@@ -74,19 +107,13 @@ pub struct AlertState {
     pub alert_type: String,
     pub begin: DateTime<Utc>,
     pub end: Option<DateTime<Utc>>,
-    pub active: Option<bool>,
+    pub active: bool,
     pub dismissed: bool,
     pub severity: AlertSeverity,
     pub record_type: AlertRecordType,
     pub variant: String,
     pub lustre_pid: Option<i32>,
     pub message: Option<String>,
-}
-
-impl AlertState {
-    pub fn is_active(&self) -> bool {
-        self.active.is_some()
-    }
 }
 
 impl db::Id for AlertState {
@@ -102,3 +129,10 @@ impl db::Id for &AlertState {
 }
 
 pub const ALERT_STATE_TABLE_NAME: TableName = TableName("alertstate");
+
+#[derive(serde::Serialize, serde::Deserialize, Clone, Debug)]
+#[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
+pub struct AlertResponse {
+    pub data: Vec<AlertState>,
+    pub meta: Meta,
+}

@@ -11,7 +11,7 @@ pub(crate) struct OstPoolQuery;
 #[juniper::graphql_object(Context = Context)]
 impl OstPoolQuery {
     /// List all known `OstPool` records.
-    /// Optionall filter by `fsname` or `poolname`
+    /// Optionally filter by `fsname` or `poolname`
     async fn list(
         context: &Context,
         fsname: Option<String>,
