@@ -185,6 +185,8 @@ pub(crate) fn build_execution_graph(
 
             tracing::info!("Running: {}", step);
 
+            tx.send_change(Change::State(State::Running));
+
             let (stdout, stderr) = tx.get_output_handles();
 
             let r = invoke_fn(pool, stdout, stderr, inputs).await;
