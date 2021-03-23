@@ -5,7 +5,7 @@ authors = ["EMF Team <emf@whamcloud.com>"]
 edition = "2018"
 
 [dev-dependencies]
-insta = "1.5.2"
+insta = "1"
 
 [dependencies]
 emf-cmd = {path = "../emf-cmd", version = "0.4.0"}
