@@ -2,18 +2,18 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file
 
-pub(crate) mod client_mount;
-pub(crate) mod filesystem;
-pub(crate) mod host;
-pub(crate) mod lnet;
-pub(crate) mod mdt;
-pub(crate) mod mgt;
-pub(crate) mod mgt_mdt;
-pub(crate) mod ost;
+pub mod client_mount;
+pub mod filesystem;
+pub mod host;
+pub mod lnet;
+pub mod mdt;
+pub mod mgt;
+pub mod mgt_mdt;
+pub mod ost;
 
 use crate::{
     state_schema::{ActionName, Input, STATE_SCHEMA},
-    ValidateAddon,
+    ValidateAddon as _,
 };
 use emf_wire_types::ComponentType;
 use serde::{
@@ -188,17 +188,17 @@ pub enum InputDocumentError {
 #[serde(default)]
 pub struct InputDocument {
     /// The version of this input document
-    pub(crate) version: f32,
+    pub version: f32,
     /// Jobs to submit to the state-machine.
     #[validate]
-    pub(crate) jobs: HashMap<String, Job>,
+    pub jobs: HashMap<String, Job>,
     /// Whether the state-machine should execute this input document or return the changes that would be made if it did. Defaults to true.
-    pub(crate) dry_run: bool,
+    pub dry_run: bool,
     /// How long this input document should wait for completion before aborting. Defaults to no timeout.
     #[serde(with = "humantime_serde")]
-    pub(crate) timeout: Option<Duration>,
+    pub timeout: Option<Duration>,
     /// Whether the relevant components should be refreshed before executing the input document. Defaults to false.
-    pub(crate) refresh: bool,
+    pub refresh: bool,
 }
 
 impl Default for InputDocument {
@@ -214,32 +214,32 @@ impl Default for InputDocument {
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Validate)]
-pub(crate) struct Job {
+pub struct Job {
     /// The name to display for this job.
     #[validate(length(min = 1))]
-    pub(crate) name: String,
+    pub name: String,
     /// A list of jobs that must be completed before this job can run.
     #[serde(default)]
-    pub(crate) needs: BTreeSet<String>,
+    pub needs: BTreeSet<String>,
     /// A list of steps to submit to the state-machine for this job. Each step will run sequentially
     #[validate]
     #[validate(length(min = 1))]
-    pub(crate) steps: Vec<Step>,
+    pub steps: Vec<Step>,
 }
 
 #[derive(serde::Serialize, Validate)]
 pub struct Step {
     /// The action to be run from the registry in `component.action` format.
-    pub(crate) action: StepPair,
+    pub action: StepPair,
     /// The step identifier.
     #[validate(length(min = 1))]
-    pub(crate) id: String,
+    pub id: String,
     /// The input to supply to this step.
     #[serde(default)]
     #[validate]
-    pub(crate) inputs: Input,
+    pub inputs: Input,
     /// Output that will be used in a future job when building the graph.
-    pub(crate) outputs: Option<HashMap<String, serde_json::Value>>,
+    pub outputs: Option<HashMap<String, serde_json::Value>>,
 }
 
 impl fmt::Display for Step {
@@ -397,6 +397,7 @@ pub mod ssh_opts {
         pub password: Option<String>,
     }
 
+    #[cfg(feature = "ssh-conversions")]
     impl From<&SshProxyOpts> for emf_ssh::ProxyCfg {
         fn from(cfg: &SshProxyOpts) -> Self {
             let auth = if let Some(pw) = cfg.password.as_ref() {
@@ -456,6 +457,7 @@ pub mod ssh_opts {
         pub key_passphrase: Option<String>,
     }
 
+    #[cfg(feature = "ssh-conversions")]
     impl From<&AuthOpts> for emf_ssh::Auth {
         fn from(opts: &AuthOpts) -> Self {
             if opts.agent {

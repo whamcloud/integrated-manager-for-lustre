@@ -59,7 +59,7 @@ pub(crate) fn build_transition_graphs(schema: &Schema) -> BTreeMap<ComponentType
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::state_schema::STATE_SCHEMA;
+    use emf_lib_state_machine::state_schema::STATE_SCHEMA;
     use insta::assert_json_snapshot;
 
     #[test]

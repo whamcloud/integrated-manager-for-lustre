@@ -7,6 +7,7 @@ version = "0.1.0"
 [dependencies]
 bytes = "1.0"
 chrono = "0.4"
+emf-lib-state-machine = {path = "../emf-lib-state-machine", version = "0.1", features = ["ssh-conversions"]}
 emf-manager-env = {path = "../emf-manager-env", version = "0.4"}
 emf-postgres = {path = "../emf-postgres", version = "0.4"}
 emf-ssh = {path = "../emf-ssh", version = "0.1"}
@@ -27,9 +28,9 @@ tokio = {version = "1", features = ["macros", "rt-multi-thread", "time"]}
 tokio-stream = {version = "0.1", features = ["net"]}
 tokio-util = {version = "0.6", features = ["io"]}
 uuid = {version = "0.8", features = ["v4"]}
-validator = {version = "0.12", features = ["derive"]}
+validator = {version = "0.13", features = ["derive"]}
 warp = "0.3"
 
 [dev-dependencies]
-insta = "1"
 emf-postgres = {path = "../emf-postgres", version = "0.4", features = ["test"]}
+insta = "1"

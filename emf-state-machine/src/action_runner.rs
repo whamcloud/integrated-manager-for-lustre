@@ -2,11 +2,10 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file
 
-use crate::{
-    command_plan::OutputWriter,
+use crate::{command_plan::OutputWriter, Error};
+use emf_lib_state_machine::{
     input_document::{client_mount, filesystem, host, lnet, mdt, mgt, mgt_mdt, SshOpts},
     state_schema::Input,
-    Error,
 };
 use emf_postgres::PgPool;
 use emf_ssh::{Client, Handle, SshChannelExt as _, SshHandleExt};
@@ -373,9 +372,9 @@ pub(crate) async fn invoke<'a>(
             mdt::Input::Unmount(x) => {}
         },
         Input::Ost(x) => match x {
-            crate::input_document::ost::Input::Format(x) => {}
-            crate::input_document::ost::Input::Mount(x) => {}
-            crate::input_document::ost::Input::Unmount(x) => {}
+            emf_lib_state_machine::input_document::ost::Input::Format(x) => {}
+            emf_lib_state_machine::input_document::ost::Input::Mount(x) => {}
+            emf_lib_state_machine::input_document::ost::Input::Unmount(x) => {}
         },
         Input::Filesystem(x) => match x {
             filesystem::Input::Start(x) => {}

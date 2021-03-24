@@ -11,6 +11,7 @@ members = [
   'emf-fs',
   'emf-graphql-queries',
   'emf-influx',
+  'emf-lib-state-machine',
   'emf-mailbox',
   'emf-manager-cli',
   'emf-manager-client',

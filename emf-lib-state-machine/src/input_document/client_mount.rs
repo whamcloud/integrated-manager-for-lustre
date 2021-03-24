@@ -11,7 +11,7 @@ use validator::Validate;
     PartialEq, Eq, Clone, Copy, Debug, PartialOrd, Ord, serde::Serialize, serde::Deserialize, Hash,
 )]
 #[serde(rename_all = "snake_case")]
-pub(crate) enum State {
+pub enum State {
     Mounted,
     Unmounted,
 }
@@ -19,9 +19,9 @@ pub(crate) enum State {
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(untagged)]
 pub enum Input {
-    Format(Format),
-    Mount(Mount),
+    Create(Create),
     Unmount(Unmount),
+    Mount(Mount),
 }
 
 #[derive(
@@ -29,9 +29,21 @@ pub enum Input {
 )]
 #[serde(rename_all = "snake_case")]
 pub enum ActionName {
-    Format,
-    Mount,
+    Create,
     Unmount,
+    Mount,
+}
+
+impl fmt::Display for ActionName {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let x = match self {
+            Self::Create => "create",
+            Self::Unmount => "unmount",
+            Self::Mount => "mount",
+        };
+
+        write!(f, "{}", x)
+    }
 }
 
 impl TryFrom<&str> for ActionName {
@@ -41,19 +53,9 @@ impl TryFrom<&str> for ActionName {
         serde_json::from_str(&format!("\"{}\"", s)).map_err(|_| {
             io::Error::new(
                 io::ErrorKind::InvalidInput,
-                format!("{} is not a valid host action", s),
+                format!("{} is not a valid client mount action", s),
             )
         })
-    }
-}
-
-impl fmt::Display for ActionName {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Format => write!(f, "Format"),
-            Self::Mount => write!(f, "Mount"),
-            Self::Unmount => write!(f, "Unmount"),
-        }
     }
 }
 
@@ -62,7 +64,7 @@ where
     D: Deserializer<'de>,
 {
     match action {
-        ActionName::Format => deserialize_input(input).map(Input::Format),
+        ActionName::Create => deserialize_input(input).map(Input::Create),
         ActionName::Mount => deserialize_input(input).map(Input::Mount),
         ActionName::Unmount => deserialize_input(input).map(Input::Unmount),
     }
@@ -70,27 +72,30 @@ where
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Validate)]
 #[serde(deny_unknown_fields)]
-pub struct Format {
+pub struct Create {
     #[validate(length(min = 1))]
-    pub(crate) host: String,
+    pub(crate) hosts: Vec<String>,
     #[validate(length(min = 1))]
-    pub(crate) name: String,
-}
-
-#[derive(Debug, serde::Serialize, serde::Deserialize, Validate)]
-#[serde(deny_unknown_fields)]
-pub struct Mount {
+    pub(crate) mountspec: String,
     #[validate(length(min = 1))]
-    pub(crate) host: String,
-    #[validate(length(min = 1))]
-    pub(crate) name: String,
+    pub(crate) mountpoint: String,
+    pub(crate) tags: Option<Vec<String>>,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct Unmount {
     #[validate(length(min = 1))]
-    pub(crate) host: String,
+    host: String,
     #[validate(length(min = 1))]
-    pub(crate) name: String,
+    mountpoint: String,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize, Validate)]
+#[serde(deny_unknown_fields)]
+pub struct Mount {
+    #[validate(length(min = 1))]
+    host: String,
+    #[validate(length(min = 1))]
+    mountpoint: String,
 }

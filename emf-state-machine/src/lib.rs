@@ -5,13 +5,11 @@
 pub mod action_runner;
 pub mod command_plan;
 pub mod executor;
-pub mod input_document;
-pub mod state_schema;
 pub mod transition_graph;
 
-use crate::{
+use emf_lib_state_machine::{
     input_document::InputDocumentErrors,
-    state_schema::{ActionName, State},
+    state_schema::{self, ActionName, State},
 };
 use sqlx::migrate::MigrateError;
 use std::{collections::HashMap, io};
@@ -58,6 +56,8 @@ mod tests {
     use crate::{
         command_plan::{build_job_graphs, OutputWriter},
         executor::build_execution_graph,
+    };
+    use emf_lib_state_machine::{
         input_document::{deserialize_input_document, host, SshOpts, Step, StepPair},
         state_schema::Input,
     };

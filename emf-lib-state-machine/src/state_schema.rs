@@ -15,7 +15,7 @@ use std::{
 };
 use validator::{Validate, ValidationErrors};
 
-pub(crate) static STATE_SCHEMA: Lazy<Schema> = Lazy::new(|| Schema {
+pub static STATE_SCHEMA: Lazy<Schema> = Lazy::new(|| Schema {
     version: 1,
     components: btreemap! {
            ComponentType::Host => Component {
@@ -419,7 +419,7 @@ impl fmt::Display for ActionName {
 #[derive(
     Clone, Copy, Debug, Eq, PartialEq, PartialOrd, Hash, Ord, serde::Serialize, serde::Deserialize,
 )]
-pub(crate) enum State {
+pub enum State {
     Host(host::State),
     Lnet(lnet::State),
     ClientMount(client_mount::State),
@@ -431,21 +431,21 @@ pub(crate) enum State {
 }
 
 #[derive(Debug, serde::Deserialize, serde::Serialize)]
-pub(crate) struct ActionState {
+pub struct ActionState {
     #[serde(default)]
     pub start: Option<HashSet<State>>,
     pub end: State,
 }
 
 #[derive(Debug, serde::Deserialize, serde::Serialize)]
-pub(crate) struct Action {
+pub struct Action {
     #[serde(default)]
     pub provisional: bool,
     pub state: Option<ActionState>,
 }
 
 #[derive(Debug, serde::Deserialize, serde::Serialize)]
-pub(crate) struct Schema {
+pub struct Schema {
     /// The version of the state schema
     pub version: u16,
     /// Components that can be loaded into the state machine.
@@ -453,7 +453,7 @@ pub(crate) struct Schema {
 }
 
 #[derive(Debug, serde::Deserialize, serde::Serialize)]
-pub(crate) struct Component {
+pub struct Component {
     /// Valid states for the object.
     pub states: HashMap<State, Option<ComponentState>>,
     /// Actions available to the component.
@@ -461,21 +461,21 @@ pub(crate) struct Component {
 }
 
 #[derive(Debug, serde::Deserialize, serde::Serialize)]
-pub(crate) struct ComponentState {
+pub struct ComponentState {
     /// Dependency requirements for the state.
     #[serde(default)]
     pub dependencies: Option<Vec<Dependency>>,
 }
 
 #[derive(Clone, Debug, serde::Deserialize, Eq, Ord, PartialEq, PartialOrd, serde::Serialize)]
-pub(crate) struct DepNode {
+pub struct DepNode {
     pub name: ComponentType,
     pub state: State,
 }
 
 #[derive(Clone, Debug, serde::Deserialize, Eq, Ord, PartialEq, PartialOrd, serde::Serialize)]
 #[serde(rename_all = "lowercase")]
-pub(crate) enum Dependency {
+pub enum Dependency {
     /// A list of deps that can be used with the Or qualifier. The input supplied must match one of the items.
     Or(BTreeSet<DepNode>),
     /// A list of deps that can be used with the All qualifier. The corresponding input must be a list in which all items in the list are in the specified state.

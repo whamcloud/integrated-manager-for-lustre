@@ -16,7 +16,7 @@ use validator::Validate;
     Clone, Copy, Debug, Eq, PartialEq, PartialOrd, Hash, Ord, serde::Serialize, serde::Deserialize,
 )]
 #[serde(rename_all = "snake_case")]
-pub(crate) enum State {
+pub enum State {
     Up,
     Down,
 }
@@ -79,7 +79,7 @@ impl TryFrom<&str> for ActionName {
     }
 }
 
-pub(crate) fn get_input<'de, D>(action: ActionName, input: D) -> Result<Input, D::Error>
+pub fn get_input<'de, D>(action: ActionName, input: D) -> Result<Input, D::Error>
 where
     D: Deserializer<'de>,
 {
@@ -101,40 +101,40 @@ where
 #[serde(deny_unknown_fields)]
 pub struct SshCommand {
     #[validate(length(min = 1))]
-    pub(crate) host: String,
-    pub(crate) run: String,
+    pub host: String,
+    pub run: String,
     #[serde(default)]
-    pub(crate) ssh_opts: SshOpts,
+    pub ssh_opts: SshOpts,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct SetupPlanesSsh {
     #[validate(length(min = 1))]
-    pub(crate) host: String,
-    pub(crate) cp_addr: String,
+    pub host: String,
+    pub cp_addr: String,
     #[serde(default)]
-    pub(crate) ssh_opts: SshOpts,
+    pub ssh_opts: SshOpts,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct SyncFileSsh {
     #[validate(length(min = 1))]
-    pub(crate) host: String,
-    pub(crate) from: String,
+    pub host: String,
+    pub from: String,
     #[serde(default)]
-    pub(crate) ssh_opts: SshOpts,
+    pub ssh_opts: SshOpts,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct CreateFileSsh {
-    pub(crate) host: String,
-    pub(crate) contents: String,
-    pub(crate) path: String,
+    pub host: String,
+    pub contents: String,
+    pub path: String,
     #[serde(default)]
-    pub(crate) ssh_opts: SshOpts,
+    pub ssh_opts: SshOpts,
 }
 
 /// Wait for a host with the given `fqdn` to appear in the EMF database
@@ -144,10 +144,10 @@ pub struct CreateFileSsh {
 #[derive(Debug, serde::Serialize, serde::Deserialize, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct IsAvailable {
-    pub(crate) fqdn: String,
+    pub fqdn: String,
     #[serde(with = "humantime_serde")]
     #[serde(default)]
-    pub(crate) timeout: Option<Duration>,
+    pub timeout: Option<Duration>,
 }
 
 /// Configure the interfaces on a given host machine. `nics` provides a map
@@ -157,23 +157,23 @@ pub struct IsAvailable {
 #[serde(deny_unknown_fields)]
 pub struct ConfigureIfConfigSsh {
     #[validate(length(min = 1))]
-    pub(crate) host: String,
+    pub host: String,
     #[serde(default)]
-    pub(crate) ssh_opts: SshOpts,
+    pub ssh_opts: SshOpts,
     #[validate(length(min = 1))]
-    pub(crate) nic: String,
+    pub nic: String,
     #[validate(length(min = 1))]
-    pub(crate) device: String,
+    pub device: String,
     #[serde(default)]
-    pub(crate) cfg: Option<String>,
+    pub cfg: Option<String>,
     #[serde(default)]
-    pub(crate) master: Option<String>,
+    pub master: Option<String>,
     #[validate(length(min = 1))]
-    pub(crate) ip: String,
+    pub ip: String,
     #[validate(length(min = 1))]
-    pub(crate) netmask: String,
+    pub netmask: String,
     #[serde(default)]
-    pub(crate) gateway: Option<String>,
+    pub gateway: Option<String>,
 }
 
 /// Change the permissions of a file on the host.
@@ -181,13 +181,13 @@ pub struct ConfigureIfConfigSsh {
 #[serde(deny_unknown_fields)]
 pub struct ChmodSsh {
     #[validate(length(min = 1))]
-    pub(crate) host: String,
+    pub host: String,
     #[serde(default)]
-    pub(crate) ssh_opts: SshOpts,
+    pub ssh_opts: SshOpts,
     #[validate(length(min = 1))]
-    pub(crate) file_path: String,
+    pub file_path: String,
     #[validate(length(min = 1))]
-    pub(crate) permissions: String,
+    pub permissions: String,
 }
 
 /// Tune's `/etc/sysconfig/network`
@@ -195,11 +195,11 @@ pub struct ChmodSsh {
 #[serde(deny_unknown_fields)]
 pub struct ConfigureNetworkSsh {
     #[validate(length(min = 1))]
-    pub(crate) host: String,
+    pub host: String,
     #[serde(default)]
-    pub(crate) ssh_opts: SshOpts,
+    pub ssh_opts: SshOpts,
     #[validate(length(min = 1))]
-    pub(crate) hostname: String,
+    pub hostname: String,
     #[serde(default)]
-    pub(crate) gateway_device: Option<String>,
+    pub gateway_device: Option<String>,
 }

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file
 
+use emf_lib_state_machine::input_document::deserialize_input_document;
 use emf_manager_env::get_pool_limit;
 use emf_postgres::get_db_pool;
 use emf_state_machine::{
@@ -10,7 +11,6 @@ use emf_state_machine::{
     },
     command_plan::{build_command, build_job_graphs, JobGraphs},
     executor::get_executor,
-    input_document::deserialize_input_document,
     Error,
 };
 use emf_tracing::tracing;

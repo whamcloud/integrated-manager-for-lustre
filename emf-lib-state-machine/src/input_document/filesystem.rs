@@ -11,17 +11,19 @@ use validator::Validate;
     PartialEq, Eq, Clone, Copy, Debug, PartialOrd, Ord, serde::Serialize, serde::Deserialize, Hash,
 )]
 #[serde(rename_all = "snake_case")]
-pub(crate) enum State {
-    Mounted,
-    Unmounted,
+pub enum State {
+    Unavailable,
+    Available,
+    Started,
+    Stopped,
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
 #[serde(untagged)]
 pub enum Input {
+    Start(Start),
+    Stop(Stop),
     Create(Create),
-    Unmount(Unmount),
-    Mount(Mount),
 }
 
 #[derive(
@@ -29,21 +31,9 @@ pub enum Input {
 )]
 #[serde(rename_all = "snake_case")]
 pub enum ActionName {
+    Start,
+    Stop,
     Create,
-    Unmount,
-    Mount,
-}
-
-impl fmt::Display for ActionName {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let x = match self {
-            Self::Create => "create",
-            Self::Unmount => "unmount",
-            Self::Mount => "mount",
-        };
-
-        write!(f, "{}", x)
-    }
 }
 
 impl TryFrom<&str> for ActionName {
@@ -53,9 +43,19 @@ impl TryFrom<&str> for ActionName {
         serde_json::from_str(&format!("\"{}\"", s)).map_err(|_| {
             io::Error::new(
                 io::ErrorKind::InvalidInput,
-                format!("{} is not a valid client mount action", s),
+                format!("{} is not a valid host action", s),
             )
         })
+    }
+}
+
+impl fmt::Display for ActionName {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Start => write!(f, "Start"),
+            Self::Stop => write!(f, "Stop"),
+            Self::Create => write!(f, "Create"),
+        }
     }
 }
 
@@ -64,38 +64,44 @@ where
     D: Deserializer<'de>,
 {
     match action {
+        ActionName::Start => deserialize_input(input).map(Input::Start),
+        ActionName::Stop => deserialize_input(input).map(Input::Stop),
         ActionName::Create => deserialize_input(input).map(Input::Create),
-        ActionName::Mount => deserialize_input(input).map(Input::Mount),
-        ActionName::Unmount => deserialize_input(input).map(Input::Unmount),
     }
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize, Validate)]
+#[serde(deny_unknown_fields)]
+pub struct Start {
+    #[validate(length(min = 1))]
+    pub(crate) name: String,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize, Validate)]
+#[serde(deny_unknown_fields)]
+pub struct Stop {
+    #[validate(length(min = 1))]
+    pub(crate) name: String,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum MgtType {
+    Volume,
+    Target,
+    Combined,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct Create {
     #[validate(length(min = 1))]
-    pub(crate) hosts: Vec<String>,
+    pub(crate) ost_volumes: Vec<String>,
     #[validate(length(min = 1))]
-    pub(crate) mountspec: String,
+    pub(crate) name: String,
+    pub(crate) mgt_type: MgtType,
     #[validate(length(min = 1))]
-    pub(crate) mountpoint: String,
-    pub(crate) tags: Option<Vec<String>>,
-}
-
-#[derive(Debug, serde::Serialize, serde::Deserialize, Validate)]
-#[serde(deny_unknown_fields)]
-pub struct Unmount {
+    pub(crate) mgt: String,
     #[validate(length(min = 1))]
-    host: String,
-    #[validate(length(min = 1))]
-    mountpoint: String,
-}
-
-#[derive(Debug, serde::Serialize, serde::Deserialize, Validate)]
-#[serde(deny_unknown_fields)]
-pub struct Mount {
-    #[validate(length(min = 1))]
-    host: String,
-    #[validate(length(min = 1))]
-    mountpoint: String,
+    pub(crate) mdt_volumes: Vec<String>,
 }

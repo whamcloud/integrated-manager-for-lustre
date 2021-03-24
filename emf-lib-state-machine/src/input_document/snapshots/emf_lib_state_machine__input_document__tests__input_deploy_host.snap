@@ -1,5 +1,5 @@
 ---
-source: emf-state-machine/src/input_document/mod.rs
+source: emf-lib-state-machine/src/input_document/mod.rs
 expression: doc
 
 ---
@@ -9,6 +9,21 @@ jobs:
     name: Deploy Node 1
     needs: []
     steps:
+      - action: host.ssh_command
+        id: Reset machine-id on node1
+        inputs:
+          host: node1
+          run: ": > /etc/machine-id\nsystemd-machine-id-setup\n"
+          ssh_opts:
+            port: 22
+            user: root
+            auth_opts:
+              agent: false
+              password: ~
+              key_path: ~
+              key_passphrase: ~
+            proxy_opts: ~
+        outputs: ~
       - action: host.create_file_ssh
         id: Add emf repo to node1
         inputs:
@@ -81,6 +96,21 @@ jobs:
     name: Deploy Node 2
     needs: []
     steps:
+      - action: host.ssh_command
+        id: Reset machine-id on node2
+        inputs:
+          host: node2
+          run: ": > /etc/machine-id\nsystemd-machine-id-setup\n"
+          ssh_opts:
+            port: 22
+            user: root
+            auth_opts:
+              agent: false
+              password: ~
+              key_path: ~
+              key_passphrase: ~
+            proxy_opts: ~
+        outputs: ~
       - action: host.setup_planes_ssh
         id: Setup Control plane and dataplane on node2
         inputs:
@@ -183,6 +213,21 @@ jobs:
     name: Deploy Node 3
     needs: []
     steps:
+      - action: host.ssh_command
+        id: Reset machine-id on node3
+        inputs:
+          host: node3
+          run: ": > /etc/machine-id\nsystemd-machine-id-setup\n"
+          ssh_opts:
+            port: 22
+            user: root
+            auth_opts:
+              agent: false
+              password: ~
+              key_path: ~
+              key_passphrase: ~
+            proxy_opts: ~
+        outputs: ~
       - action: host.setup_planes_ssh
         id: Setup Control plane and dataplane for node3
         inputs:
@@ -285,6 +330,21 @@ jobs:
     name: Deploy Node 4
     needs: []
     steps:
+      - action: host.ssh_command
+        id: Reset machine-id on node4
+        inputs:
+          host: node4
+          run: ": > /etc/machine-id\nsystemd-machine-id-setup\n"
+          ssh_opts:
+            port: 22
+            user: root
+            auth_opts:
+              agent: false
+              password: ~
+              key_path: ~
+              key_passphrase: ~
+            proxy_opts: ~
+        outputs: ~
       - action: host.setup_planes_ssh
         id: Setup Control plane and dataplane on node4
         inputs:
@@ -387,6 +447,21 @@ jobs:
     name: Deploy Ubuntu1
     needs: []
     steps:
+      - action: host.ssh_command
+        id: Reset machine-id on ubuntu1
+        inputs:
+          host: ubuntu1
+          run: ": > /etc/machine-id\nsystemd-machine-id-setup\n"
+          ssh_opts:
+            port: 22
+            user: root
+            auth_opts:
+              agent: false
+              password: ~
+              key_path: ~
+              key_passphrase: ~
+            proxy_opts: ~
+        outputs: ~
       - action: host.setup_planes_ssh
         id: Setup Control plane and dataplane on ubuntu1
         inputs:

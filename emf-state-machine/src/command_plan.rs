@@ -2,12 +2,10 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file
 
-use crate::{
-    input_document::{InputDocument, Job, Step},
-    Error,
-};
+use crate::Error;
 use bytes::Bytes;
 use chrono::{DateTime, Utc};
+use emf_lib_state_machine::input_document::{InputDocument, Job, Step};
 use emf_postgres::PgPool;
 use emf_tracing::tracing;
 use emf_wire_types::{Command, CommandPlan, CommandStep, State};
@@ -63,7 +61,9 @@ pub async fn build_command(pg_pool: &PgPool, job_graphs: &JobGraphs) -> Result<C
         |_, (name, job_graph)| {
             (
                 name.to_string(),
-                job_graph.as_ref().map(|_, x| x.into(), |_, x| *x),
+                job_graph
+                    .as_ref()
+                    .map(|_, x| StepWrapper(x).into(), |_, x| *x),
             )
         },
         |_, x| *x,
@@ -94,8 +94,10 @@ pub(crate) enum Change {
     Result(Result<String, String>),
 }
 
-impl From<&Step> for CommandStep {
-    fn from(step: &Step) -> Self {
+struct StepWrapper<'a>(&'a Step);
+
+impl From<StepWrapper<'_>> for CommandStep {
+    fn from(StepWrapper(step): StepWrapper) -> Self {
         Self {
             action: step.action.into(),
             id: step.id.to_string(),
@@ -213,7 +215,9 @@ pub(crate) async fn command_plan_writer(
         |_, (name, job_graph)| {
             (
                 name.to_string(),
-                job_graph.as_ref().map(|_, x| x.into(), |_, x| *x),
+                job_graph
+                    .as_ref()
+                    .map(|_, x| StepWrapper(x).into(), |_, x| *x),
             )
         },
         |_, x| *x,

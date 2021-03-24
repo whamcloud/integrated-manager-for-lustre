@@ -11,7 +11,7 @@ use validator::Validate;
     PartialEq, Eq, Clone, Copy, Debug, PartialOrd, Ord, serde::Serialize, serde::Deserialize, Hash,
 )]
 #[serde(rename_all = "snake_case")]
-pub(crate) enum State {
+pub enum State {
     Up,
     Down,
     Loaded,
