@@ -376,7 +376,7 @@ jobs:
           sudo yum install -y cargo || true
           sudo yum-config-manager --add-repo=http://download.virtualbox.org/virtualbox/rpm/rhel/virtualbox.repo
           sudo yum install -y VirtualBox-6.1 || true
-          sudo yum install -y https://releases.hashicorp.com/vagrant/2.2.10/vagrant_2.2.10_x86_64.rpm || true
+          sudo yum install -y https://releases.hashicorp.com/vagrant/2.2.14/vagrant_2.2.14_x86_64.rpm || true
 
           sudo VBoxManage setproperty machinefolder /root/VirtualBox\ VMs
 

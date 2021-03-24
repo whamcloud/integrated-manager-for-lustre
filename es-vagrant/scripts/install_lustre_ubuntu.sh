@@ -1,6 +1,8 @@
 #!/bin/bash
 
-VER=$1
+# VER=$1
+# FIXME: Even though we are using 5.2.2 RC, this is still 5.2.1
+VER="5.2.1"
 
 set -e
 

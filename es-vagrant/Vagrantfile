@@ -19,7 +19,7 @@ VBOX_SSHKEY = (ENV['VBOX_SSHKEY'] || "").freeze
 
 LUSTRE = (ENV['LUSTRE'] || "2.12.5").freeze
 
-EXASCALER = (ENV['EXASCALER'] || "5.2.1").freeze
+EXASCALER = (ENV['EXASCALER'] || "5.2.2_r2").freeze
 
 REPO_URI = (ENV['REPO_URI'] || '').freeze
 
