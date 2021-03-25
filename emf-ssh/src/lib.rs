@@ -221,12 +221,14 @@ pub async fn connect(
     let sh = Client { host, port };
 
     let session: Handle<Client> = if let Some(proxy_cfg) = proxy_cfg {
-        let proxy_address = format!("{}:{}", proxy_cfg.host, proxy_cfg.port.unwrap_or(22));
+        let proxy_port = proxy_cfg.port.unwrap_or(22);
 
         let mut cmd = format!(
-            "/usr/bin/ssh -q {}@{} -W {}",
-            proxy_cfg.user, &proxy_address, address
+            "/usr/bin/ssh -q {}@{} -p {} -W {}",
+            proxy_cfg.user, &proxy_cfg.host, proxy_port, address
         );
+
+        tracing::debug!("proxy command: {}", &cmd);
 
         if let ProxyAuth::Password(ref x) = proxy_cfg.auth {
             match Command::new("sshpass").stdout(Stdio::piped()).spawn() {
@@ -242,6 +244,8 @@ pub async fn connect(
         let parts: Vec<_> = cmd.split(" ").collect();
 
         let s = thrussh_config::Stream::proxy_command(parts[0], &parts[1..]).await?;
+
+        let proxy_address = format!("{}:{}", proxy_cfg.host, proxy_port);
 
         client::connect_stream(cfg, s, sh).await.map_err(|e| {
             tracing::warn!(
