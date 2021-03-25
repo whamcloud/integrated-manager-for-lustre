@@ -19,3 +19,4 @@ Restart=always
 RestartSec=5
 StandardOutput=journal
 StandardError=journal
+LimitNOFILE=4096
