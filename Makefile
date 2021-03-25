@@ -33,6 +33,9 @@ tests/framework/services/runner.sh: tests/framework/services/runner.sh.in Makefi
 rpm-repo-docker:
 	docker run --mount type=volume,src=sccache,dst=/.cache/sccache --mount type=volume,src=rust-core-registry,dst=/root/.cargo/registry -v '${CURDIR}:/build:rw' emfteam/emf-centos7-deps make all
 
+rust-core-rpms-docker-local:
+	docker run --mount type=volume,src=sccache,dst=/.cache/sccache --mount type=volume,src=cargo_target,dst=/cargo_target --mount type=volume,src=rust-core-registry,dst=/root/.cargo/registry --env CARGO_TARGET_DIR=/cargo_target  -v '${CURDIR}:/build:delegated' emfteam/emf-centos7-deps make rust-core-rpms-local
+
 local:
 	$(MAKE) RPM_DIST="0.$(shell date '+%s')" all
 
@@ -119,6 +122,9 @@ rust-core-rpms:
 	rm -rf ${TMPDIR}/_topdir/SOURCES/*
 	cp -rf ${TMPDIR}/_topdir .
 	rm -rf ${TMPDIR}
+
+rust-core-rpms-local:
+	$(MAKE) RPM_DIST="0.$(shell date '+%s')" rust-core-rpms
 
 device-scanner-rpms:
 	mkdir -p ${TMPDIR}/release/emf-device-scanner
