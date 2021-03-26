@@ -5,7 +5,7 @@
 use crate::json::GraphQLJson;
 use chrono::{DateTime, Utc};
 use petgraph::visit::IntoNodeReferences;
-use std::{cmp::max, convert::TryFrom, fmt, time::Duration};
+use std::{cmp::min, convert::TryFrom, fmt, time::Duration};
 
 pub type CommandGraph = petgraph::graph::DiGraph<CommandStep, ()>;
 pub type CommandPlan = petgraph::graph::DiGraph<(String, CommandGraph), ()>;
@@ -16,9 +16,27 @@ pub trait CommandGraphExt {
 
 impl CommandGraphExt for CommandGraph {
     fn get_state(&self) -> State {
-        self.node_references()
-            .map(|(_, n)| n.state)
-            .fold(State::Pending, max)
+        let states: Vec<State> = self.node_references().map(|(_, n)| n.state).collect();
+
+        if states.iter().any(|x| *x == State::Pending)
+            && states
+                .iter()
+                .filter(|x| **x != State::Pending)
+                .all(|x| *x == State::Completed)
+        {
+            State::Pending
+        } else {
+            states
+                .iter()
+                .map(|x| {
+                    if *x == State::Pending {
+                        State::Running
+                    } else {
+                        *x
+                    }
+                })
+                .fold(State::Completed, min)
+        }
     }
 }
 
@@ -78,16 +96,16 @@ impl TryFrom<GraphQLJson> for CommandPlan {
 #[cfg_attr(feature = "graphql", derive(juniper::GraphQLEnum))]
 #[serde(rename_all = "lowercase")]
 pub enum State {
+    #[cfg_attr(feature = "graphql", graphql(name = "failed"))]
+    Failed,
+    #[cfg_attr(feature = "graphql", graphql(name = "canceled"))]
+    Canceled,
     #[cfg_attr(feature = "graphql", graphql(name = "pending"))]
     Pending,
     #[cfg_attr(feature = "graphql", graphql(name = "running"))]
     Running,
     #[cfg_attr(feature = "graphql", graphql(name = "completed"))]
     Completed,
-    #[cfg_attr(feature = "graphql", graphql(name = "failed"))]
-    Failed,
-    #[cfg_attr(feature = "graphql", graphql(name = "canceled"))]
-    Canceled,
 }
 
 impl fmt::Display for State {

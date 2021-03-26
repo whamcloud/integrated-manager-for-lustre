@@ -8,10 +8,10 @@ use chrono::{DateTime, Utc};
 use emf_lib_state_machine::input_document::{InputDocument, Job, Step};
 use emf_postgres::PgPool;
 use emf_tracing::tracing;
-use emf_wire_types::{Command, CommandPlan, CommandStep, State};
+use emf_wire_types::{Command, CommandGraphExt, CommandPlan, CommandStep, State};
 use futures::{StreamExt, TryFutureExt};
 use petgraph::{graph::NodeIndex, visit::IntoNodeReferences};
-use std::{cmp::max, collections::HashMap, convert::TryInto, sync::Arc};
+use std::{cmp::min, collections::HashMap, convert::TryInto, sync::Arc};
 use tokio::{
     io::{BufWriter, DuplexStream},
     sync::mpsc,
@@ -255,9 +255,8 @@ pub(crate) async fn command_plan_writer(
 
             let state = command_plan
                 .node_references()
-                .flat_map(|(_, (_, g))| g.node_references())
-                .map(|(_, n)| n.state)
-                .fold(State::Pending, max);
+                .map(|(_, (_, g))| g.get_state())
+                .fold(State::Completed, min);
 
             let x = match serde_json::to_value(&command_plan) {
                 Ok(x) => x,

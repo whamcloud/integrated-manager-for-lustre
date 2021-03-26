@@ -62,10 +62,10 @@ mod tests {
         state_schema::Input,
     };
     use emf_postgres::PgPool;
-    use emf_wire_types::ComponentType;
+    use emf_wire_types::{CommandGraphExt, CommandStep, ComponentType, State};
     use futures::Future;
     use once_cell::sync::Lazy;
-    use petgraph::{graph::NodeIndex, visit::NodeIndexable};
+    use petgraph::{graph::NodeIndex, visit::NodeIndexable, Graph};
     use std::{ops::Deref, pin::Pin, sync::Arc};
     use tokio::sync::{mpsc, Mutex};
 
@@ -191,5 +191,137 @@ jobs:
         );
 
         Ok(())
+    }
+
+    fn create_command_step(state: State) -> CommandStep {
+        CommandStep {
+            action: "action".into(),
+            id: "action1".into(),
+            state,
+            msg: None,
+            started_at: None,
+            finished_at: None,
+            stdout: "".into(),
+            stderr: "".into(),
+        }
+    }
+
+    #[test]
+    fn test_all_pending_state() {
+        let mut g: Graph<CommandStep, ()> = Graph::<CommandStep, ()>::new();
+
+        let step1 = create_command_step(State::Pending);
+        let step2 = create_command_step(State::Pending);
+        let step3 = create_command_step(State::Pending);
+
+        g.add_node(step1);
+        g.add_node(step2);
+        g.add_node(step3);
+
+        let state = g.get_state();
+
+        assert_eq!(state, State::Pending);
+    }
+
+    #[test]
+    fn test_all_pending_and_running_state() {
+        let mut g: Graph<CommandStep, ()> = Graph::<CommandStep, ()>::new();
+
+        let step1 = create_command_step(State::Pending);
+        let step2 = create_command_step(State::Pending);
+        let step3 = create_command_step(State::Running);
+
+        g.add_node(step1);
+        g.add_node(step2);
+        g.add_node(step3);
+
+        let state = g.get_state();
+
+        assert_eq!(state, State::Running);
+    }
+
+    #[test]
+    fn test_running_state() {
+        let mut g: Graph<CommandStep, ()> = Graph::<CommandStep, ()>::new();
+
+        let step1 = create_command_step(State::Pending);
+        let step2 = create_command_step(State::Running);
+        let step3 = create_command_step(State::Completed);
+
+        g.add_node(step1);
+        g.add_node(step2);
+        g.add_node(step3);
+
+        let state = g.get_state();
+
+        assert_eq!(state, State::Running);
+    }
+
+    #[test]
+    fn test_running_pending_and_completed_state() {
+        let mut g: Graph<CommandStep, ()> = Graph::<CommandStep, ()>::new();
+
+        let step1 = create_command_step(State::Pending);
+        let step2 = create_command_step(State::Pending);
+        let step3 = create_command_step(State::Completed);
+
+        g.add_node(step1);
+        g.add_node(step2);
+        g.add_node(step3);
+
+        let state = g.get_state();
+
+        assert_eq!(state, State::Pending);
+    }
+
+    #[test]
+    fn test_running_complete_state() {
+        let mut g: Graph<CommandStep, ()> = Graph::<CommandStep, ()>::new();
+
+        let step1 = create_command_step(State::Completed);
+        let step2 = create_command_step(State::Completed);
+        let step3 = create_command_step(State::Completed);
+
+        g.add_node(step1);
+        g.add_node(step2);
+        g.add_node(step3);
+
+        let state = g.get_state();
+
+        assert_eq!(state, State::Completed);
+    }
+
+    #[test]
+    fn test_running_failed_state() {
+        let mut g: Graph<CommandStep, ()> = Graph::<CommandStep, ()>::new();
+
+        let step1 = create_command_step(State::Completed);
+        let step2 = create_command_step(State::Failed);
+        let step3 = create_command_step(State::Canceled);
+
+        g.add_node(step1);
+        g.add_node(step2);
+        g.add_node(step3);
+
+        let state = g.get_state();
+
+        assert_eq!(state, State::Failed);
+    }
+
+    #[test]
+    fn test_running_cancelled_state() {
+        let mut g: Graph<CommandStep, ()> = Graph::<CommandStep, ()>::new();
+
+        let step1 = create_command_step(State::Completed);
+        let step2 = create_command_step(State::Canceled);
+        let step3 = create_command_step(State::Completed);
+
+        g.add_node(step1);
+        g.add_node(step2);
+        g.add_node(step3);
+
+        let state = g.get_state();
+
+        assert_eq!(state, State::Canceled);
     }
 }
