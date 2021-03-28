@@ -5,12 +5,12 @@ use futures::{
 };
 use std::collections::hash_map::HashMap;
 use std::{net::ToSocketAddrs, pin::Pin, sync::Arc};
-use thrussh::*;
 use thrussh::{
     client::Handle,
     server::{self, Auth, Config, Session},
     ChannelId, CryptoVec,
 };
+use thrussh::{MethodSet, Sig};
 use thrussh_keys::*;
 use tokio::{
     io::{AsyncReadExt, BufReader, DuplexStream},
@@ -195,6 +195,9 @@ impl server::Handler for Server {
                     h.exit_status_request(channel, out.status.code().unwrap() as u32)
                         .await
                         .unwrap();
+
+                    h.eof(channel).await.unwrap();
+                    h.close(channel).await.unwrap();
                 });
 
                 tokio::spawn(async move {

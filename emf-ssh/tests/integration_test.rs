@@ -73,3 +73,21 @@ async fn test_remote_command_errored() -> Result<(), Box<dyn std::error::Error>>
 
 //     Ok(())
 // }
+
+#[tokio::test]
+async fn test_multiple_commands_from_same_handle() -> Result<(), Box<dyn std::error::Error>> {
+    common::start_server(2224).await?;
+    let mut handle = common::connect(2224).await?;
+
+    let mut channel = handle.create_channel().await?;
+    let r = channel.exec_cmd("echo 'this is a test'").await?;
+
+    assert_eq!(r.exit_status, Some(0));
+
+    let mut channel = handle.create_channel().await?;
+    let r = channel.exec_cmd("echo 'another command'").await?;
+
+    assert_eq!(r.exit_status, Some(0));
+
+    Ok(())
+}
