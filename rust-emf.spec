@@ -6,9 +6,9 @@ BuildRequires: systemd
 
 %global crate emf
 
-%global envoy_version 1.16.2.p0.ge98e41a-1p71.gbe6132a
+%global envoy_version 1.17.1.p0.gd6a4496-1p74.gbb8060d
 
-%global kuma_version 1.0.8-1
+%global kuma_version 1.1.1-1
 
 Name: rust-%{crate}
 Version: 0.5.0

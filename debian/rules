@@ -32,6 +32,8 @@ override_dh_auto_install:
 override_dh_auto_clean:
 	make -f Makefile.build clean
 
+override_dh_gencontrol:
+	dh_gencontrol -- -Tdebian/versions
 
 # No-ops:
 override_dh_auto_test:

@@ -48,4 +48,4 @@ debian/*
 !debian/changelog
 !debian/control
 !debian/rules
-
+!debian/versions

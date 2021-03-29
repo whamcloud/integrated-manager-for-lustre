@@ -121,25 +121,25 @@ jobs:
         uses: dsaltares/fetch-gh-release-asset@e2dbbde846aa9a9d2998a2ce9fa92ab73921c81b
         with:
           repo: "whamcloud/pkg-kuma"
-          version: "tags/v1.0.8-1"
-          file: "kuma-cp-1.0.8-1.el7.x86_64.rpm"
-          target: "emf_rpms/kuma-cp-1.0.8-1.el7.x86_64.rpm"
+          version: "tags/v1.1.1-1"
+          file: "kuma-cp-1.1.1-1.el7.x86_64.rpm"
+          target: "emf_rpms/kuma-cp-1.1.1-1.el7.x86_64.rpm"
           token: ${{ secrets.RELESE_DOWNLOAD_PAT }}
       - name: Download kuma dp
         uses: dsaltares/fetch-gh-release-asset@e2dbbde846aa9a9d2998a2ce9fa92ab73921c81b
         with:
           repo: "whamcloud/pkg-kuma"
-          version: "tags/v1.0.8-1"
-          file: "kuma-dp-1.0.8-1.el7.x86_64.rpm"
-          target: "emf_rpms/kuma-dp-1.0.8-1.el7.x86_64.rpm"
+          version: "tags/v1.1.1-1"
+          file: "kuma-dp-1.1.1-1.el7.x86_64.rpm"
+          target: "emf_rpms/kuma-dp-1.1.1-1.el7.x86_64.rpm"
           token: ${{ secrets.RELESE_DOWNLOAD_PAT }}
       - name: Download kumactl
         uses: dsaltares/fetch-gh-release-asset@e2dbbde846aa9a9d2998a2ce9fa92ab73921c81b
         with:
           repo: "whamcloud/pkg-kuma"
-          version: "tags/v1.0.8-1"
-          file: "kuma-ctl-1.0.8-1.el7.x86_64.rpm"
-          target: "emf_rpms/kuma-ctl-1.0.8-1.el7.x86_64.rpm"
+          version: "tags/v1.1.1-1"
+          file: "kuma-ctl-1.1.1-1.el7.x86_64.rpm"
+          target: "emf_rpms/kuma-ctl-1.1.1-1.el7.x86_64.rpm"
           token: ${{ secrets.RELESE_DOWNLOAD_PAT }}
       # - name: Download GUI RPMs
       #   uses: actions/download-artifact@v1
@@ -275,7 +275,7 @@ jobs:
         run: make deb-repo
 
       - name: Download envoy
-        run: curl -sSfL -O "https://dl.bintray.com/tetrate/getenvoy-deb/pool/stable/g/getenvoy-envoy/getenvoy-envoy_1.16.2.p0.ge98e41a-1p71.gbe6132a_amd64.deb"
+        run: curl -sSfL -O "https://dl.bintray.com/tetrate/getenvoy-deb/pool/stable/g/getenvoy-envoy/getenvoy-envoy_1.17.1.p0.gd6a4496-1p74.gbb8060d_amd64.deb"
 
       - name: Publish envoy
         run: reprepro -vb _deb/repo includedeb emf getenvoy-envoy*.deb
@@ -284,9 +284,9 @@ jobs:
         uses: dsaltares/fetch-gh-release-asset@e2dbbde846aa9a9d2998a2ce9fa92ab73921c81b
         with:
           repo: "whamcloud/pkg-kuma"
-          version: "tags/v1.0.8-1"
-          file: "kuma-dp_1.0.8-1_amd64.deb"
-          target: "kuma-dp_1.0.8-1_amd64.deb"
+          version: "tags/v1.1.1-1"
+          file: "kuma-dp_1.1.1-1_amd64.deb"
+          target: "kuma-dp_1.1.1-1_amd64.deb"
           token: ${{ secrets.RELESE_DOWNLOAD_PAT }}
 
       - name: Publish kuma dp

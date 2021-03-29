@@ -89,6 +89,13 @@ pub struct Setup {
     /// Base config dir
     #[structopt(short, long, default_value = "/etc/emf", env = "KUMA_BASE_DIR")]
     dir: PathBuf,
+    #[structopt(
+        short,
+        long,
+        default_value = "/etc/emf/kuma-work-dir",
+        env = "KUMA_GENERAL_WORK_DIR"
+    )]
+    work_dir: PathBuf,
 }
 
 fn kumactl() -> emf_cmd::Command {
@@ -171,7 +178,7 @@ pub async fn cli(command: Command) -> Result<(), EmfManagerCliError> {
             ));
         }
         Command::Start => restart_unit("kuma.service".to_string()).await?,
-        Command::Setup(Setup { dir }) => {
+        Command::Setup(Setup { dir, work_dir }) => {
             println!("Applying kuma policies...");
 
             wait_for_kuma().await?;
@@ -180,6 +187,8 @@ pub async fn cli(command: Command) -> Result<(), EmfManagerCliError> {
             let policydir = dir.join("policies");
 
             mkdirp(&tokendir).await?;
+
+            mkdirp(&work_dir).await?;
 
             let out = kumactl()
                 .args(vec!["generate", "dataplane-token", "--mesh", "default"])
