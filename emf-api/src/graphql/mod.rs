@@ -512,6 +512,9 @@ impl MutationRoot {
     fn task(&self) -> task::TaskMutation {
         task::TaskMutation
     }
+    fn host(&self) -> host::HostMutation {
+        host::HostMutation
+    }
     fn state_machine(&self) -> state_machine::StateMachineMutation {
         state_machine::StateMachineMutation
     }

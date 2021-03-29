@@ -88,14 +88,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "emf-api-utils"
-version = "0.4.0"
-dependencies = [
- "lazy_static",
- "regex",
-]
-
-[[package]]
 name = "emf-cmd"
 version = "0.4.0"
 dependencies = [
@@ -163,7 +155,6 @@ name = "emf-wire-types"
 version = "0.4.0"
 dependencies = [
  "chrono",
- "emf-api-utils",
  "humantime",
  "im",
  "ipnetwork",

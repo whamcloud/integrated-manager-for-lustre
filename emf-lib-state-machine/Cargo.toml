@@ -5,6 +5,7 @@ name = "emf-lib-state-machine"
 version = "0.1.0"
 
 [dependencies]
+emf-manager-env = {path = "../emf-manager-env", version = "0.4"}
 emf-ssh = {path = "../emf-ssh", version = "0.1", optional = true}
 emf-wire-types = {path = "../emf-wire-types", version = "0.4"}
 humantime-serde = "1.0"

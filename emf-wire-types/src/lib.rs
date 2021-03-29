@@ -15,6 +15,7 @@ pub mod ost_pool;
 pub mod pacemaker;
 pub mod sfa;
 pub mod snapshot;
+pub mod ssh;
 pub mod state_machine;
 pub mod stratagem;
 pub mod target;
@@ -49,11 +50,11 @@ pub use target::*;
 #[cfg_attr(feature = "postgres-interop", derive(sqlx::Type))]
 #[cfg_attr(feature = "postgres-interop", sqlx(type_name = "component"))]
 #[cfg_attr(feature = "postgres-interop", sqlx(rename_all = "snake_case"))]
-#[serde(rename_all = "snake_case")]
 #[cfg_attr(feature = "graphql", derive(juniper::GraphQLEnum))]
 #[derive(
     PartialEq, Eq, Clone, Copy, Debug, serde::Serialize, serde::Deserialize, Ord, PartialOrd, Hash,
 )]
+#[serde(rename_all = "snake_case")]
 pub enum ComponentType {
     #[cfg_attr(feature = "graphql", graphql(name = "host"))]
     Host,

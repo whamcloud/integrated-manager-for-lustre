@@ -6,12 +6,14 @@ version = "0.4.0"
 
 [dependencies]
 chrono = "0.4"
+emf-lib-state-machine = {path = "../emf-lib-state-machine", version = "0.1"}
 emf-manager-client = {path = "../emf-manager-client", version = "0.4"}
 emf-manager-env = {path = "../emf-manager-env", version = "0.4"}
 emf-postgres = {path = "../emf-postgres", version = "0.4"}
 emf-tracing = {version = "0.4", path = "../emf-tracing"}
 emf-wire-types = {path = "../emf-wire-types", version = "0.4", features = ["graphql", "postgres-interop"]}
 futures = "0.3"
+hostlist-parser = "0.1.3"
 humantime = "2.0"
 itertools = "0.10"
 juniper = "0.15"
@@ -19,6 +21,7 @@ lazy_static = "1.4.0"
 reqwest = {version = "0.11", default-features = false, features = ["rustls-tls", "json"]}
 serde = {version = "1", features = ["derive"]}
 serde_json = "1.0"
+serde_yaml = "0.8"
 sqlx = {version = "0.5", features = ["json", "offline", "postgres", "runtime-tokio-rustls", "chrono"]}
 thiserror = "1.0"
 tokio = {version = "1", features = ["macros", "rt-multi-thread"]}

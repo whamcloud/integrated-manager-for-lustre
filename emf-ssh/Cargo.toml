@@ -12,6 +12,6 @@ emf-tracing = {version = "0.4", path = "../emf-tracing"}
 futures = "0.3"
 thiserror = "1.0"
 thrussh = "=0.32.7"
-thrussh-config = {git = "https://github.com/whamcloud/thrussh"}
+thrussh-config = "0.6"
 thrussh-keys = "=0.20.3"
 tokio = {version = "1", features = ["fs"]}

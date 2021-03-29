@@ -2,7 +2,11 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file
 
-use crate::input_document::{deserialize_input, SshOpts};
+use crate::{
+    input_document::{deserialize_input, SshOpts, Step, StepPair},
+    state_schema,
+};
+use emf_wire_types::ComponentType;
 use serde::Deserializer;
 use std::{
     convert::TryFrom,
@@ -34,6 +38,12 @@ pub enum Input {
     SyncFileSsh(SyncFileSsh),
 }
 
+impl From<Input> for state_schema::Input {
+    fn from(input: Input) -> Self {
+        Self::Host(input)
+    }
+}
+
 #[derive(
     Clone, Copy, Debug, Ord, PartialOrd, Eq, PartialEq, Hash, serde::Serialize, serde::Deserialize,
 )]
@@ -47,6 +57,12 @@ pub enum ActionName {
     SetupPlanesSsh,
     SshCommand,
     SyncFileSsh,
+}
+
+impl From<ActionName> for state_schema::ActionName {
+    fn from(name: ActionName) -> Self {
+        Self::Host(name)
+    }
 }
 
 impl Display for ActionName {
@@ -202,4 +218,226 @@ pub struct ConfigureNetworkSsh {
     pub hostname: String,
     #[serde(default)]
     pub gateway_device: Option<String>,
+}
+
+pub fn reset_machine_id_step(host: String, ssh_opts: SshOpts) -> Step {
+    Step {
+        action: StepPair::new(ComponentType::Host, ActionName::SshCommand.into()),
+        id: format!("Reset machine-id on {}", &host),
+        inputs: Input::SshCommand(SshCommand {
+            host,
+            run: r#": > /etc/machine-id
+                              systemd-machine-id-setup"#
+                .to_string(),
+            ssh_opts,
+        })
+        .into(),
+        outputs: None,
+    }
+}
+
+pub fn sync_dataplane_token(host: String, ssh_opts: SshOpts) -> Step {
+    Step {
+        action: StepPair::new(ComponentType::Host, ActionName::SyncFileSsh.into()),
+        id: format!("Sync dataplane token on {}", &host),
+        inputs: Input::SyncFileSsh(SyncFileSsh {
+            host,
+            from: "/etc/emf/tokens/dataplane-token".to_string(),
+            ssh_opts,
+        })
+        .into(),
+        outputs: None,
+    }
+}
+
+pub fn setup_planes(host: String, ssh_opts: SshOpts) -> Step {
+    let cp_addr = emf_manager_env::get_cp_addr();
+
+    Step {
+        action: StepPair::new(ComponentType::Host, ActionName::SetupPlanesSsh.into()),
+        id: format!("Setup Control plane and dataplane on {}", &host),
+        inputs: Input::SetupPlanesSsh(SetupPlanesSsh {
+            host,
+            cp_addr,
+            ssh_opts,
+        })
+        .into(),
+        outputs: None,
+    }
+}
+
+pub fn add_emf_rpm_repo_step(host: String, ssh_opts: SshOpts) -> Step {
+    let port = emf_manager_env::get_port("NGINX_GATEWAY_UNSECURE_PORT");
+    let manager_fqdn = emf_manager_env::get_manager_fqdn();
+
+    Step {
+        action: StepPair::new(ComponentType::Host, ActionName::CreateFileSsh.into()),
+        id: format!("Add emf repo to {}", &host),
+        inputs: Input::CreateFileSsh(CreateFileSsh {
+            host,
+            contents: format!(
+                r#"[emf]
+name=emf repo
+baseurl=http://{}:{}/repo/emf_repo/
+gpgcheck=0"#,
+                &manager_fqdn, port
+            ),
+            path: "/etc/yum.repos.d/emf.repo".to_string(),
+            ssh_opts,
+        })
+        .into(),
+        outputs: None,
+    }
+}
+
+pub fn add_emf_deb_repo_step(host: String, ssh_opts: SshOpts) -> Step {
+    let manager_fqdn = emf_manager_env::get_manager_fqdn();
+
+    let port = emf_manager_env::get_port("NGINX_GATEWAY_UNSECURE_PORT");
+
+    Step {
+        action: StepPair::new(ComponentType::Host, ActionName::CreateFileSsh.into()),
+        id: format!("Add emf deb repo to {}", &host),
+        inputs: Input::CreateFileSsh(CreateFileSsh {
+            host,
+            contents: format!(
+                "deb [trusted=yes] http://{}:{}/apt-repo/ emf non-free",
+                &manager_fqdn, port
+            ),
+            path: "/etc/apt/sources.list.d/emf.list".to_string(),
+            ssh_opts,
+        })
+        .into(),
+        outputs: None,
+    }
+}
+
+pub fn create_cli_conf(host: String, ssh_opts: SshOpts) -> Step {
+    let manager_fqdn = emf_manager_env::get_manager_fqdn();
+    let port = emf_manager_env::get_port("NGINX_GATEWAY_PORT");
+
+    Step {
+        action: StepPair::new(ComponentType::Host, ActionName::CreateFileSsh.into()),
+        id: format!("Add CLI config to {}", &host),
+        inputs: Input::CreateFileSsh(CreateFileSsh {
+            host,
+            contents: format!("SERVER_HTTP_URL=https://{}:{}", manager_fqdn, port),
+            path: "/etc/emf/cli.conf".to_string(),
+            ssh_opts,
+        })
+        .into(),
+        outputs: None,
+    }
+}
+
+pub fn install_agent_rpms(host: String, ssh_opts: SshOpts) -> Step {
+    Step {
+        action: StepPair::new(
+            ComponentType::Host,
+            ActionName::SshCommand.into(),
+        ),
+        id: format!("Install emf agent on {}", &host),
+        inputs: Input::SshCommand(SshCommand {
+            host,
+            run: "yum install -y rust-emf-agent rust-emf-cli rust-emf-cli-bash-completion emf-sos-plugin"
+                .to_string(),
+            ssh_opts,
+        }).into(),
+        outputs: None,
+    }
+}
+
+pub fn install_agent_client_rpms(host: String, ssh_opts: SshOpts) -> Step {
+    Step {
+        action: StepPair::new(ComponentType::Host, ActionName::SshCommand.into()),
+        id: format!("Install emf agent on {}", &host),
+        inputs: Input::SshCommand(SshCommand {
+            host,
+            run: r#"yum install -y \
+emf-action-agent \
+emf-device-agent \
+emf-journal-agent \
+emf-network-agent \
+emf-host-agent \
+emf-ntp-agent \
+emf-stats-agent"#
+                .to_string(),
+            ssh_opts,
+        })
+        .into(),
+        outputs: None,
+    }
+}
+
+pub fn install_agent_debs(host: String, ssh_opts: SshOpts) -> Step {
+    Step {
+        action: StepPair::new(ComponentType::Host, ActionName::SshCommand.into()),
+        id: format!("Install emf agent on {}", &host),
+        inputs: Input::SshCommand(SshCommand {
+            host,
+            run: r#"apt update
+apt install -y \
+emf-action-agent \
+emf-device-agent \
+emf-journal-agent \
+emf-network-agent \
+emf-host-agent \
+emf-ntp-agent \
+emf-stats-agent"#
+                .to_string(),
+            ssh_opts,
+        })
+        .into(),
+        outputs: None,
+    }
+}
+
+pub fn enable_emf_client_agent(host: String, ssh_opts: SshOpts) -> Step {
+    Step {
+        action: StepPair::new(ComponentType::Host, ActionName::SshCommand.into()),
+        id: format!("Start agent on {}", &host),
+        inputs: Input::SshCommand(SshCommand {
+            host,
+            run: r#"systemctl enable --now \
+emf-action-agent \
+emf-device-agent \
+emf-journal-agent \
+emf-network-agent \
+emf-host-agent \
+emf-ntp-agent \
+emf-stats-agent \
+emf-agent.target"#
+                .to_string(),
+            ssh_opts,
+        })
+        .into(),
+        outputs: None,
+    }
+}
+
+pub fn enable_emf_server_agent(host: String, ssh_opts: SshOpts) -> Step {
+    Step {
+        action: StepPair::new(ComponentType::Host, ActionName::SshCommand.into()),
+        id: format!("Start agent on {}", &host),
+        inputs: Input::SshCommand(SshCommand {
+            host,
+            run: "systemctl enable --now emf-agent.target".to_string(),
+            ssh_opts,
+        })
+        .into(),
+        outputs: None,
+    }
+}
+
+pub fn wait_for_host_availability(fqdn: String) -> Step {
+    Step {
+        action: StepPair::new(ComponentType::Host, ActionName::IsAvailable.into()),
+        id: format!("Wait for {} agent to report in", &fqdn),
+        inputs: Input::IsAvailable(IsAvailable {
+            fqdn,
+            timeout: None,
+        })
+        .into(),
+        outputs: None,
+    }
 }

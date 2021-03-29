@@ -48,7 +48,7 @@ impl AlertQuery {
         let record_type =
             record_type.map(|xs| xs.into_iter().map(|x| x.to_string()).collect::<Vec<_>>());
 
-        let results = sqlx::query_as!(
+        let xs = sqlx::query_as!(
             AlertState,
             r#"
                     SELECT
@@ -88,11 +88,6 @@ impl AlertQuery {
         )
         .fetch_all(&context.pg_pool)
         .await?;
-
-        let xs: Vec<AlertState> = results
-            .into_iter()
-            .map(|x| x.try_into())
-            .collect::<Result<_, _>>()?;
 
         let total_count =
             sqlx::query!("SELECT total_rows FROM rowcount WHERE table_name = 'alertstate'")

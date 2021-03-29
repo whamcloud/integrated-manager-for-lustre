@@ -120,7 +120,12 @@ pub(crate) async fn invoke<'a>(
             }) => {
                 let mut session = ssh_connect(&host, ssh_opts).await?;
 
-                let overrides = format!("CP_ADDR={}\nMGMT_ADDR={}", cp_addr, host);
+                let overrides = format!(
+                    r#"CP_ADDR={}
+MGMT_ADDR={}
+MANAGER_FQDN={}"#,
+                    cp_addr, host, cp_addr
+                );
 
                 session
                     .stream_file(overrides.as_bytes(), "/etc/emf/overrides.conf")
@@ -184,15 +189,14 @@ pub(crate) async fn invoke<'a>(
                             .await;
                     }
                     Err(_) => {
+                        let msg = format!(
+                            "FQDN: {} not found in EMF database after waiting {} seconds",
+                            fqdn,
+                            timeout.as_secs()
+                        );
+
                         stderr_writer
-                            .write_all(
-                                format!(
-                                    "FQDN: {} not found in EMF database after waiting {} seconds",
-                                    fqdn,
-                                    timeout.as_secs()
-                                )
-                                .as_bytes(),
-                            )
+                            .write_all(msg.as_bytes())
                             .map_err(|e| tracing::warn!("Could not write stderr {:?}", e))
                             .map(drop)
                             .await;
@@ -202,6 +206,8 @@ pub(crate) async fn invoke<'a>(
                             .map_err(|e| tracing::warn!("Could not flush stderr {:?}", e))
                             .map(drop)
                             .await;
+
+                        return Err(Error::ActionError(msg));
                     }
                 };
             }

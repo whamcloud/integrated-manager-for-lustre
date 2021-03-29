@@ -82,7 +82,7 @@ async fn main() -> Result<(), Error> {
                         Err(e) => {
                             let msg = format!(
                                 "This graph has a cycle at job {:?}. It will not be processed",
-                                &(&graphs[e.node_id()]).0
+                                &(graphs[e.node_id()]).0
                             );
 
                             tracing::error!("{}", &msg);

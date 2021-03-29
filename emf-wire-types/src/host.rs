@@ -2,12 +2,12 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use chrono::{DateTime, Utc};
-
 use crate::{
     db::{self, TableName},
     ComponentType, Label, ToComponentType,
 };
+use chrono::{DateTime, Utc};
+use std::str::FromStr;
 
 #[derive(Debug, Eq, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
@@ -44,3 +44,26 @@ impl ToComponentType for Host {
 }
 
 pub const HOST_TABLE_NAME: TableName = TableName("host");
+
+/// The primary purpose of this host
+#[cfg_attr(feature = "graphql", derive(juniper::GraphQLEnum))]
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum Flavor {
+    Server,
+    Client,
+    UbuntuDgx,
+}
+
+impl FromStr for Flavor {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "server" => Ok(Self::Server),
+            "client" => Ok(Self::Client),
+            "ubuntudgx" | "ubuntu_dgx" => Ok(Self::UbuntuDgx),
+            x => Err(format!("Unexpected '{}'", x)),
+        }
+    }
+}

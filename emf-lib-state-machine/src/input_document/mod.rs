@@ -383,8 +383,9 @@ pub mod ssh_opts {
         "root".to_string()
     }
 
-    #[derive(Debug, serde::Serialize, serde::Deserialize, Validate)]
+    #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, Validate)]
     pub struct SshProxyOpts {
+        /// SSH Proxy Host
         pub host: String,
         /// SSH port
         #[serde(default = "default_port")]
@@ -415,7 +416,7 @@ pub mod ssh_opts {
         }
     }
 
-    #[derive(Debug, serde::Serialize, serde::Deserialize, Validate)]
+    #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, Validate)]
     #[serde(default)]
     pub struct SshOpts {
         /// SSH port
@@ -443,7 +444,7 @@ pub mod ssh_opts {
         }
     }
 
-    #[derive(Debug, serde::Serialize, serde::Deserialize)]
+    #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 
     pub struct AuthOpts {
         /// Use ssh-agent to authenticate
@@ -455,6 +456,28 @@ pub mod ssh_opts {
         pub key_path: Option<String>,
         /// Private key passphrase
         pub key_passphrase: Option<String>,
+    }
+
+    impl Default for AuthOpts {
+        fn default() -> Self {
+            Self {
+                agent: true,
+                password: None,
+                key_path: None,
+                key_passphrase: None,
+            }
+        }
+    }
+
+    impl From<emf_wire_types::ssh::AuthOpts> for AuthOpts {
+        fn from(auth_opts: emf_wire_types::ssh::AuthOpts) -> Self {
+            Self {
+                agent: auth_opts.agent,
+                password: auth_opts.password,
+                key_path: auth_opts.key_path,
+                key_passphrase: auth_opts.key_passphrase,
+            }
+        }
     }
 
     #[cfg(feature = "ssh-conversions")]

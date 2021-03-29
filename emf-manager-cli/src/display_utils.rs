@@ -16,6 +16,14 @@ use prettytable::{Row, Table};
 use std::{fmt::Display, io, str::FromStr};
 use structopt::StructOpt;
 
+pub fn print_command_show_message(x: &Command) {
+    println!(
+        "To view progress: {} {}",
+        style("emf command show").bold(),
+        style(x.id.to_string()).bold()
+    );
+}
+
 pub fn wrap_fut<T>(msg: &str, fut: impl Future<Output = T>) -> impl Future<Output = T> {
     let pb = ProgressBar::new_spinner();
     pb.enable_steady_tick(100);

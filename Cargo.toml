@@ -47,9 +47,13 @@ members = [
   'version-utils',
   'wbem-client',
 ]
+resolver = "2"
 
 exclude = [
   'device-scanner',
   'emf-gui/crate',
   'emf-system-rpm-tests',
 ]
+
+[profile.dev]
+split-debuginfo = "unpacked"

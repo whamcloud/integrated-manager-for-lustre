@@ -21,6 +21,8 @@ type TransitionGraph = petgraph::graph::DiGraph<State, ActionName>;
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
+    #[error("{0}")]
+    ActionError(String),
     #[error(transparent)]
     SerdeJsonError(#[from] serde_json::Error),
     #[error(transparent)]

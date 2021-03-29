@@ -140,6 +140,14 @@ pub fn get_manager_url() -> String {
     get_var("SERVER_HTTP_URL")
 }
 
+pub fn get_manager_fqdn() -> String {
+    get_var("MANAGER_FQDN")
+}
+
+pub fn get_cp_addr() -> String {
+    get_var("CP_ADDR")
+}
+
 pub fn get_pg_user() -> String {
     get_var("PG_USER")
 }

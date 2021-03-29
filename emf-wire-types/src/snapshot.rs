@@ -105,7 +105,10 @@ pub const SNAPSHOT_RETENTION_TABLE_NAME: TableName = TableName("snapshot_retenti
 
 #[cfg_attr(feature = "graphql", derive(juniper::GraphQLEnum))]
 #[cfg_attr(feature = "postgres-interop", derive(sqlx::Type))]
-#[cfg_attr(feature = "postgres-interop", sqlx(rename = "snapshot_reserve_unit"))]
+#[cfg_attr(
+    feature = "postgres-interop",
+    sqlx(type_name = "snapshot_reserve_unit")
+)]
 #[cfg_attr(feature = "postgres-interop", sqlx(rename_all = "lowercase"))]
 #[derive(serde::Deserialize, serde::Serialize, Clone, Copy, PartialEq, Debug)]
 #[serde(rename_all = "lowercase")]

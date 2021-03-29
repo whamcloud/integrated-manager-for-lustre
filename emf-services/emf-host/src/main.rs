@@ -10,7 +10,7 @@ use emf_wire_types::MachineId;
 use futures::StreamExt;
 
 // Default pool limit if not overridden by POOL_LIMIT
-const DEFAULT_POOL_LIMIT: u32 = 2;
+const DEFAULT_POOL_LIMIT: u32 = 4;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

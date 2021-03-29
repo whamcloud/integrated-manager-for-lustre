@@ -9,8 +9,7 @@ use emf_manager_cli::{
     display_utils::display_error,
     error::EmfManagerCliError,
     filesystem::{self, filesystem_cli},
-    run, selfname,
-    server::{self, server_cli},
+    host, run, selfname,
     snapshot::{self, snapshot_cli},
     stratagem::{self, stratagem_cli},
     target::{self, target_cli},
@@ -40,11 +39,11 @@ pub enum App {
         #[structopt(subcommand)]
         command: stratagem::StratagemCommand,
     },
-    #[structopt(name = "server")]
-    /// Work with Storage Servers
-    Server {
+    #[structopt(name = "host")]
+    /// Work with Hosts
+    Host {
         #[structopt(subcommand)]
-        command: Option<server::ServerCommand>,
+        command: Option<host::Command>,
     },
     #[structopt(name = "filesystem")]
     /// Filesystem command
@@ -123,7 +122,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         App::DebugApi(command) => api_cli(command).await,
         App::DebugQl(command) => graphql_cli(command).await,
         App::Filesystem { command } => filesystem_cli(command).await,
-        App::Server { command } => server_cli(command).await,
+        App::Host { command } => host::cli(command).await,
         App::Snapshot { command } => snapshot_cli(command).await,
         App::Stratagem { command } => stratagem_cli(command).await,
         App::Target { command } => target_cli(command).await,

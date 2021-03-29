@@ -66,6 +66,8 @@ Vagrant.configure('2') do |config|
   config.vm.provision 'ssh', type: 'shell', path: './scripts/key_config.sh'
   config.vm.synced_folder ".", "/vagrant", type: "rsync"
 
+  reset_machine_id(config)
+
   #
   # Create the exascaler servers (HA group)
   #
@@ -204,7 +206,7 @@ Vagrant.configure('2') do |config|
   (1..8).each do |i|
     config.vm.define "client#{i}",
                      autostart: i <= 2 do |c|
-      c.vm.hostname = "client#{i}.local"
+      c.vm.hostname = "client#{i}"
       c.vm.box = "centos/7"
 
       c.vm.provider 'virtualbox' do |vbx|
@@ -275,7 +277,7 @@ Vagrant.configure('2') do |config|
       c.vm.box = box_name
       c.vm.box_url = "https://vagrantcloud.com/#{box_name}"
 
-      c.vm.hostname = "ubuntu#{i}.local"
+      c.vm.hostname = "ubuntu#{i}"
 
       c.vm.provider 'virtualbox' do |vbx|
         vbx.name = "ubuntu#{i}"
@@ -349,6 +351,13 @@ module OS
   def OS.linux?
     OS.unix? and not OS.mac?
   end
+end
+
+def reset_machine_id(config)
+    config.vm.provision 'reset-machine-id', type: 'shell', run: 'never', inline: <<-SHELL
+        : > /etc/machine-id
+        systemd-machine-id-setup
+    SHELL
 end
 
 def provision_mgmt_net(config, num)

@@ -2,8 +2,11 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file.
 
-use crate::{api_utils::graphql, display_utils::wrap_fut, error::EmfManagerCliError};
-use console::style;
+use crate::{
+    api_utils::graphql,
+    display_utils::{print_command_show_message, wrap_fut},
+    error::EmfManagerCliError,
+};
 use emf_graphql_queries::state_machine as state_machine_queries;
 use std::path::PathBuf;
 use tokio::fs;
@@ -28,11 +31,7 @@ pub async fn cli(path: PathBuf) -> Result<(), EmfManagerCliError> {
     tracing::debug!(?x);
 
     println!("Plan submitted.");
-    println!(
-        "To view progress: {} {}",
-        style("emf command show").bold(),
-        style(x.id.to_string()).bold()
-    );
+    print_command_show_message(&x);
 
     Ok(())
 }

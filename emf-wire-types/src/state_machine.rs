@@ -121,3 +121,17 @@ impl fmt::Display for State {
         write!(f, "{}", x)
     }
 }
+
+#[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
+#[derive(Debug, serde::Deserialize)]
+pub struct DryRun {
+    pub yaml: String,
+}
+
+#[cfg_attr(feature = "graphql", derive(juniper::GraphQLUnion))]
+#[derive(Debug, serde::Deserialize)]
+#[serde(untagged)]
+pub enum CommandOrDryRun {
+    Command(Command),
+    DryRun(DryRun),
+}

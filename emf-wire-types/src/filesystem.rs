@@ -11,10 +11,10 @@ use std::{convert::TryFrom, fmt};
 
 #[cfg_attr(feature = "graphql", derive(juniper::GraphQLEnum))]
 #[cfg_attr(feature = "postgres-interop", derive(sqlx::Type))]
-#[cfg_attr(feature = "postgres-interop", sqlx(rename = "fs_type"))]
+#[cfg_attr(feature = "postgres-interop", sqlx(type_name = "fs_type"))]
 #[cfg_attr(feature = "postgres-interop", sqlx(rename_all = "lowercase"))]
-#[serde(rename_all = "lowercase")]
 #[derive(PartialEq, Eq, Clone, Debug, serde::Serialize, serde::Deserialize, Ord, PartialOrd)]
+#[serde(rename_all = "lowercase")]
 pub enum FsType {
     #[cfg_attr(feature = "graphql", graphql(name = "zfs"))]
     Zfs,
