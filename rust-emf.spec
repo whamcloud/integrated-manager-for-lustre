@@ -230,6 +230,9 @@ Requires: kuma-ctl >= %{kuma_version}
 %description kuma
 %{summary}
 
+%preun kuma
+%systemd_preun kuma.service
+
 %files kuma
 %dir %{_sysconfdir}/emf/policies/
 %{_sysconfdir}/emf/policies/*
@@ -268,6 +271,9 @@ Requires: influxdb < 2
 %description influx
 %{summary}
 
+%preun influx
+%systemd_preun influxdb.service
+
 %files influx
 %{_unitdir}/influxdb.service.d/50-influx-dropin-emf.conf
 %{_unitdir}/emf-influx-sidecar.service
@@ -289,6 +295,9 @@ Requires: grafana
 
 %description grafana
 %{summary}
+
+%preun grafana
+%systemd_preun grafana-server.service
 
 %files grafana
 %{_sysconfdir}/grafana/grafana-emf.ini
@@ -318,6 +327,9 @@ Requires: nginx >= 1:1.12.2
 
 %description nginx
 %{summary}
+
+%preun nginx
+%systemd_preun nginx.service
 
 %files nginx
 %defattr(-,root,root)
@@ -849,6 +861,10 @@ Requires: getenvoy-envoy = %{envoy_version}
 Requires: kuma-dp >= %{kuma_version}
 Requires: rust-emf-bootstrap >= %{version}
 
+%preun action-agent
+%systemd_preun emf-action-agent.service
+%systemd_preun emf-action-agent-sidecar.service
+
 %description action-agent
 %{summary}
 
@@ -871,6 +887,10 @@ Requires: rust-emf-bootstrap >= %{version}
 %description corosync-agent
 %{summary}
 
+%preun corosync-agent
+%systemd_preun emf-corosync-agent.service
+%systemd_preun emf-corosync-agent-sidecar.service
+
 %files corosync-agent
 %{_bindir}/emf-corosync-agent
 %{_unitdir}/emf-corosync-agent.service
@@ -892,6 +912,10 @@ Obsoletes: emf-device-scanner-proxy
 %description device-agent
 %{summary}
 
+%preun device-agent
+%systemd_preun emf-device-agent.service
+%systemd_preun emf-device-agent-sidecar.service
+
 %files device-agent
 %{_bindir}/emf-device-agent
 %{_unitdir}/emf-device-agent.service
@@ -911,6 +935,10 @@ Requires: systemd-journal-gateway
 
 %description journal-agent
 %{summary}
+
+%preun journal-agent
+%systemd_preun emf-journal-agent.service
+%systemd_preun emf-journal-agent-sidecar.service
 
 %files journal-agent
 %{_bindir}/emf-journal-agent
@@ -937,6 +965,10 @@ Requires: rust-emf-bootstrap >= %{version}
 %description host-agent
 %{summary}
 
+%preun host-agent
+%systemd_preun emf-host-agent.service
+%systemd_preun emf-host-agent-sidecar.service
+
 %files host-agent
 %{_bindir}/emf-host-agent
 %{_unitdir}/emf-host-agent.service
@@ -955,6 +987,10 @@ Requires: rust-emf-bootstrap >= %{version}
 
 %description network-agent
 %{summary}
+
+%preun network-agent
+%systemd_preun emf-network-agent.service
+%systemd_preun emf-network-agent-sidecar.service
 
 %files network-agent
 %{_bindir}/emf-network-agent
@@ -975,6 +1011,10 @@ Requires: rust-emf-bootstrap >= %{version}
 %description ntp-agent
 %{summary}
 
+%preun ntp-agent
+%systemd_preun emf-ntp-agent.service
+%systemd_preun emf-ntp-agent-sidecar.service
+
 %files ntp-agent
 %{_bindir}/emf-ntp-agent
 %{_unitdir}/emf-ntp-agent.service
@@ -994,6 +1034,10 @@ Requires: rust-emf-bootstrap >= %{version}
 %description ostpool-agent
 %{summary}
 
+%preun ostpool-agent
+%systemd_preun emf-ostpool-agent.service
+%systemd_preun emf-ostpool-agent-sidecar.service
+
 %files ostpool-agent
 %{_bindir}/emf-ostpool-agent
 %{_unitdir}/emf-ostpool-agent.service
@@ -1011,6 +1055,10 @@ Requires: rust-emf-bootstrap >= %{version}
 %description postoffice-agent
 %{summary}
 
+%preun postoffice-agent
+%systemd_preun emf-postoffice-agent.service
+%systemd_preun emf-postoffice-agent-sidecar.service
+
 %files postoffice-agent
 %{_bindir}/emf-postoffice-agent
 %{_unitdir}/emf-postoffice-agent.service
@@ -1027,6 +1075,10 @@ Requires: rust-emf-bootstrap >= %{version}
 
 %description snapshot-agent
 %{summary}
+
+%preun snapshot-agent
+%systemd_preun emf-snapshot-agent.service
+%systemd_preun emf-snapshot-agent-sidecar.service
 
 %files snapshot-agent
 %{_bindir}/emf-snapshot-agent
@@ -1046,6 +1098,10 @@ Requires: rust-emf-bootstrap >= %{version}
 
 %description stats-agent
 %{summary}
+
+%preun stats-agent
+%systemd_preun emf-stats-agent.service
+%systemd_preun emf-stats-agent-sidecar.service
 
 %files stats-agent
 %{_bindir}/emf-stats-agent
