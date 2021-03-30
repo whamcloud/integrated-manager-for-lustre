@@ -441,3 +441,29 @@ pub fn wait_for_host_availability(fqdn: String) -> Step {
         outputs: None,
     }
 }
+
+pub fn configure_bonding(
+    host: String,
+    ssh_opts: SshOpts,
+    nic: String,
+    bonding_mode: String,
+) -> Step {
+    Step {
+        action: StepPair::new(ComponentType::Host, ActionName::CreateFileSsh.into()),
+        id: format!("Configure network bonding on {}", &host),
+        inputs: Input::CreateFileSsh(CreateFileSsh {
+            host,
+            contents: format!(
+                r#"
+alias {} bonding
+options bonding miimon=100 mode={}
+"#,
+                nic, bonding_mode
+            ),
+            path: "/etc/modprobe.d/bonding.conf".to_string(),
+            ssh_opts,
+        })
+        .into(),
+        outputs: None,
+    }
+}
