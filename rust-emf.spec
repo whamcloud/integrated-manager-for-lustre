@@ -819,6 +819,7 @@ Summary: EMF Agent CLI
 License: MIT
 Group: System Environment/Libraries
 Requires: rust-emf-bootstrap >= %{version}
+Requires: rust-emf-action-agent >= %{version}
 Requires: rust-emf-corosync-agent >= %{version}
 Requires: rust-emf-device-agent >= %{version}
 Requires: rust-emf-host-agent >= %{version}

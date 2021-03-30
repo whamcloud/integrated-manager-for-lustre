@@ -1,6 +1,9 @@
 [Unit]
 Description=EMF Manager Target
 
+Wants=emf-action-agent.service
+After=emf-action-agent.service
+
 Wants=emf-corosync-agent.service
 After=emf-corosync-agent.service
 

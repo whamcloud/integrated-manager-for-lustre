@@ -354,13 +354,13 @@ pub fn install_agent_client_rpms(host: String, ssh_opts: SshOpts) -> Step {
         inputs: Input::SshCommand(SshCommand {
             host,
             run: r#"yum install -y \
-emf-action-agent \
-emf-device-agent \
-emf-journal-agent \
-emf-network-agent \
-emf-host-agent \
-emf-ntp-agent \
-emf-stats-agent"#
+rust-emf-action-agent \
+rust-emf-device-agent \
+rust-emf-journal-agent \
+rust-emf-network-agent \
+rust-emf-host-agent \
+rust-emf-ntp-agent \
+rust-emf-stats-agent"#
                 .to_string(),
             ssh_opts,
         })

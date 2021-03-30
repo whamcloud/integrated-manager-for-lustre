@@ -1,7 +1,7 @@
 [Unit]
 Description=EMF action agent sidecar
-PartOf=emf-action-agent.service
-Requires=emf-action-agent.service
+Wants=emf-action-agent.service
+PartOf=emf-agent.target
 
 [Service]
 EnvironmentFile=/etc/emf/bootstrap.conf
@@ -21,3 +21,6 @@ RestartSec=5
 StandardOutput=journal
 StandardError=journal
 LimitNOFILE=4096
+
+[Install]
+WantedBy=emf-agent.target

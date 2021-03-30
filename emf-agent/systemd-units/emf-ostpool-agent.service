@@ -15,3 +15,7 @@ Restart=always
 RestartSec=5
 StandardOutput=journal
 StandardError=journal
+
+[Install]
+WantedBy=emf-agent.target
+Also=emf-ostpool-agent-sidecar.service

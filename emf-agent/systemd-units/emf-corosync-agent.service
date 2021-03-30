@@ -18,3 +18,4 @@ StandardError=journal
 
 [Install]
 WantedBy=emf-agent.target
+Also=emf-corosync-agent-sidecar.service

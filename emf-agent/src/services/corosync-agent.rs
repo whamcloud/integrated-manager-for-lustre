@@ -23,9 +23,23 @@ async fn main() -> Result<(), EmfAgentError> {
     loop {
         x.tick().await;
 
-        let node_id = get_local_nodeid().await?;
+        let x: Result<_, EmfAgentError> = async {
+            let node_id = get_local_nodeid().await?;
 
-        let cluster = get_crm_mon().await?;
+            let cluster = get_crm_mon().await?;
+
+            Ok((node_id, cluster))
+        }
+        .await;
+
+        let (node_id, cluster) = match x {
+            Ok(x) => x,
+            Err(e) => {
+                tracing::warn!("Could not fetch cluster information: {:?}", e);
+
+                continue;
+            }
+        };
 
         if let Some(x) = node_id.zip(cluster) {
             let _ = writer.send_msg(x);
