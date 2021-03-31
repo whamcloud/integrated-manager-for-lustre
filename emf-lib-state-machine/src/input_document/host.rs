@@ -160,10 +160,12 @@ pub struct CreateFileSsh {
 #[derive(Debug, serde::Serialize, serde::Deserialize, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct IsAvailable {
-    pub fqdn: String,
+    pub host: String,
     #[serde(with = "humantime_serde")]
     #[serde(default)]
     pub timeout: Option<Duration>,
+    #[serde(default)]
+    pub ssh_opts: SshOpts,
 }
 
 /// Configure the interfaces on a given host machine. `nics` provides a map
@@ -429,13 +431,14 @@ pub fn enable_emf_server_agent(host: String, ssh_opts: SshOpts) -> Step {
     }
 }
 
-pub fn wait_for_host_availability(fqdn: String) -> Step {
+pub fn wait_for_host_availability(host: String, ssh_opts: SshOpts) -> Step {
     Step {
         action: StepPair::new(ComponentType::Host, ActionName::IsAvailable.into()),
-        id: format!("Wait for {} agent to report in", &fqdn),
+        id: format!("Wait for {} agent to report in", &host),
         inputs: Input::IsAvailable(IsAvailable {
-            fqdn,
+            host,
             timeout: None,
+            ssh_opts,
         })
         .into(),
         outputs: None,

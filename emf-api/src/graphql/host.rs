@@ -85,7 +85,7 @@ impl HostMutation {
                         create_cli_conf(host.clone(), opts.clone()),
                         install_agent_rpms(host.clone(), opts.clone()),
                         enable_emf_server_agent(host.clone(), opts.clone()),
-                        wait_for_host_availability(host.clone()),
+                        wait_for_host_availability(host.clone(), opts.clone()),
                     ],
                     Flavor::UbuntuDgx => vec![
                         setup_planes(host.clone(), opts.clone()),
@@ -93,7 +93,7 @@ impl HostMutation {
                         add_emf_deb_repo_step(host.clone(), opts.clone()),
                         install_agent_debs(host.clone(), opts.clone()),
                         enable_emf_client_agent(host.clone(), opts.clone()),
-                        wait_for_host_availability(host.clone()),
+                        wait_for_host_availability(host.clone(), opts.clone()),
                     ],
                     Flavor::Client => vec![
                         setup_planes(host.clone(), opts.clone()),
@@ -102,7 +102,7 @@ impl HostMutation {
                         create_cli_conf(host.clone(), opts.clone()),
                         install_agent_client_rpms(host.clone(), opts.clone()),
                         enable_emf_client_agent(host.clone(), opts.clone()),
-                        wait_for_host_availability(host.clone()),
+                        wait_for_host_availability(host.clone(), opts.clone()),
                     ],
                 };
 

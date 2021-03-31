@@ -150,18 +150,26 @@ MANAGER_FQDN={}"#,
 
                 session.push_file(&from, &from).await?;
             }
-            host::Input::IsAvailable(host::IsAvailable { fqdn, timeout }) => {
+            host::Input::IsAvailable(host::IsAvailable {
+                host,
+                timeout,
+                ssh_opts,
+            }) => {
                 let timeout = timeout.unwrap_or_else(|| Duration::from_secs(30));
 
                 let mut interval = time::interval(Duration::from_millis(500));
+                let mut handle = ssh_connect(&host, ssh_opts).await?;
+                let mut channel = handle.create_channel().await?;
+
+                let machine_id: String = channel.exec_cmd("cat /etc/machine-id").await?.stdout;
 
                 let f = async {
                     loop {
                         interval.tick().await;
 
                         let x = sqlx::query!(
-                            "SELECT id FROM host WHERE fqdn = $1 AND state = 'up'",
-                            &fqdn
+                            "SELECT id FROM host WHERE machine_id = $1 AND state = 'up'",
+                            &machine_id
                         )
                         .fetch_optional(&pg_pool)
                         .await
@@ -177,7 +185,7 @@ MANAGER_FQDN={}"#,
                 match timeout_at(Instant::now() + timeout, f).await {
                     Ok(_) => {
                         stdout_writer
-                            .write_all(format!("FQDN: {} found in EMF database", fqdn).as_bytes())
+                            .write_all(format!("Host: {} found in EMF database", host).as_bytes())
                             .map_err(|e| tracing::warn!("Could not write stdout {:?}", e))
                             .map(drop)
                             .await;
@@ -190,8 +198,8 @@ MANAGER_FQDN={}"#,
                     }
                     Err(_) => {
                         let msg = format!(
-                            "FQDN: {} not found in EMF database after waiting {} seconds",
-                            fqdn,
+                            "Host: {} not found in EMF database after waiting {} seconds",
+                            host,
                             timeout.as_secs()
                         );
 
