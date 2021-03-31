@@ -52,9 +52,9 @@ pub enum Command {
     /// Start requisite services
     #[structopt(setting = structopt::clap::AppSettings::ColoredHelp)]
     Start,
-    /// Generate TLS certificate used by the control plane server
-    #[structopt(name = "generate-certs", setting = structopt::clap::AppSettings::ColoredHelp)]
-    GenerateCerts(GenerateCerts),
+    /// Generates TLS certificate used by the control plane server. Also generates override.conf for local node
+    #[structopt(name = "generate-config", setting = structopt::clap::AppSettings::ColoredHelp)]
+    GenerateConfig(GenerateConfig),
     /// Create dataplane tokens and apply default service policies
     #[structopt(setting = structopt::clap::AppSettings::ColoredHelp)]
     Setup(Setup),
@@ -77,11 +77,19 @@ pub struct CreateDb {
 }
 
 #[derive(Debug, Default, StructOpt)]
-pub struct GenerateCerts {
+pub struct GenerateConfig {
     #[structopt(short = "k", long = "key-file", env = "KUMA_GENERAL_TLS_KEY_FILE")]
     key_file: PathBuf,
     #[structopt(short = "c", long = "cert-file", env = "KUMA_GENERAL_TLS_CERT_FILE")]
     cert_file: PathBuf,
+    #[structopt(short, long, default_value = "/etc/emf", env = "KUMA_BASE_DIR")]
+    dir: PathBuf,
+    /// The FQDN where manager services can be reached.
+    /// This must be a floating FQDN (backed by floating IP) for embedded deployments,
+    ///and the manager nodes's FQDN for standalone deployments.
+    /// Defaults to `hostname` if not specified.
+    #[structopt(long, env = "MANAGER_FQDN")]
+    fqdn: Option<String>,
 }
 
 #[derive(Debug, Default, StructOpt)]
@@ -114,9 +122,11 @@ pub async fn cli(command: Command) -> Result<(), EmfManagerCliError> {
                 psql(&format!("CREATE DATABASE {} OWNER {}", db, user)).await?;
             }
         }
-        Command::GenerateCerts(GenerateCerts {
+        Command::GenerateConfig(GenerateConfig {
             key_file,
             cert_file,
+            dir,
+            fqdn,
         }) => {
             if emf_fs::file_exists(&key_file).await && emf_fs::file_exists(&cert_file).await {
                 println!("Control plane certs exist, skipping");
@@ -152,11 +162,16 @@ pub async fn cli(command: Command) -> Result<(), EmfManagerCliError> {
                 mkdirp(&cert_dir).await?;
             }
 
-            let fqdn = emf_cmd::Command::new("hostname")
-                .arg("-f")
-                .checked_output()
-                .await?;
-            let fqdn = fqdn.try_stdout_str()?.trim();
+            let fqdn = if let Some(fqdn) = fqdn {
+                fqdn
+            } else {
+                let fqdn = emf_cmd::Command::new("hostname")
+                    .arg("-f")
+                    .checked_output()
+                    .await?;
+
+                fqdn.try_stdout_str()?.trim().to_string()
+            };
 
             kumactl()
                 .arg("generate")
@@ -164,7 +179,7 @@ pub async fn cli(command: Command) -> Result<(), EmfManagerCliError> {
                 .arg("--type")
                 .arg("server")
                 .arg("--cp-hostname")
-                .arg(fqdn)
+                .arg(&fqdn)
                 .arg("--key-file")
                 .arg(&key_file)
                 .arg("--cert-file")
@@ -176,6 +191,24 @@ pub async fn cli(command: Command) -> Result<(), EmfManagerCliError> {
                 "Successfully generated control plane certs for {}",
                 fqdn
             ));
+
+            if !emf_fs::dir_exists(&dir).await {
+                mkdirp(&dir).await?;
+            }
+
+            fs::write(
+                dir.join("overrides.conf"),
+                format!(
+                    r#"CP_ADDR={0}
+MGMT_ADDR={0}
+MANAGER_FQDN={0}
+            "#,
+                    fqdn
+                ),
+            )
+            .await?;
+
+            display_success(format!("Successfully wrote overrides.conf for {}", fqdn));
         }
         Command::Start => restart_unit("kuma.service".to_string()).await?,
         Command::Setup(Setup { dir, work_dir }) => {

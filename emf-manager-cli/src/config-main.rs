@@ -76,7 +76,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             influx::cli(influx::Command::Setup(influx::Setup::from_env())).await?;
 
-            kuma::cli(kuma::Command::GenerateCerts(kuma::GenerateCerts::from_env())).await?;
+            kuma::cli(kuma::Command::GenerateConfig(
+                kuma::GenerateConfig::from_env(),
+            ))
+            .await?;
 
             kuma::cli(kuma::Command::Start).await?;
 
