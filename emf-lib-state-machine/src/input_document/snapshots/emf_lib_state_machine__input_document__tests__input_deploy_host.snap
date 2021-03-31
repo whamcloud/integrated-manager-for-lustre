@@ -89,8 +89,17 @@ jobs:
       - action: host.is_available
         id: Wait for node1 agent to report in
         inputs:
-          fqdn: node1
+          host: node1
           timeout: ~
+          ssh_opts:
+            port: 22
+            user: root
+            auth_opts:
+              agent: false
+              password: ~
+              key_path: ~
+              key_passphrase: ~
+            proxy_opts: ~
         outputs: ~
   deploy_node2:
     name: Deploy Node 2
@@ -206,8 +215,17 @@ jobs:
       - action: host.is_available
         id: Wait for node2 agent to report in
         inputs:
-          fqdn: node2
+          host: node2
           timeout: ~
+          ssh_opts:
+            port: 22
+            user: root
+            auth_opts:
+              agent: false
+              password: ~
+              key_path: ~
+              key_passphrase: ~
+            proxy_opts: ~
         outputs: ~
   deploy_node3:
     name: Deploy Node 3
@@ -323,8 +341,17 @@ jobs:
       - action: host.is_available
         id: Wait for node3 agent to report in
         inputs:
-          fqdn: node3
+          host: node3
           timeout: ~
+          ssh_opts:
+            port: 22
+            user: root
+            auth_opts:
+              agent: false
+              password: ~
+              key_path: ~
+              key_passphrase: ~
+            proxy_opts: ~
         outputs: ~
   deploy_node4:
     name: Deploy Node 4
@@ -440,8 +467,17 @@ jobs:
       - action: host.is_available
         id: Wait for node4 agent to report in
         inputs:
-          fqdn: node4
+          host: node4
           timeout: ~
+          ssh_opts:
+            port: 22
+            user: root
+            auth_opts:
+              agent: false
+              password: ~
+              key_path: ~
+              key_passphrase: ~
+            proxy_opts: ~
         outputs: ~
   deploy_ubuntu1:
     name: Deploy Ubuntu1
@@ -541,8 +577,17 @@ jobs:
       - action: host.is_available
         id: Wait for ubuntu1 agent to report in
         inputs:
-          fqdn: ubuntu1.local
+          host: ubuntu1.local
           timeout: ~
+          ssh_opts:
+            port: 22
+            user: root
+            auth_opts:
+              agent: false
+              password: ~
+              key_path: ~
+              key_passphrase: ~
+            proxy_opts: ~
         outputs: ~
 dry_run: true
 timeout: ~

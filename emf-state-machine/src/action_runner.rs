@@ -161,7 +161,13 @@ MANAGER_FQDN={}"#,
                 let mut handle = ssh_connect(&host, ssh_opts).await?;
                 let mut channel = handle.create_channel().await?;
 
-                let machine_id: String = channel.exec_cmd("cat /etc/machine-id").await?.stdout;
+                let machine_id = channel
+                    .exec_cmd("cat /etc/machine-id")
+                    .await?
+                    .stdout
+                    .trim()
+                    .to_string();
+                tracing::debug!("machine id for {} is {}", host, machine_id);
 
                 let f = async {
                     loop {
