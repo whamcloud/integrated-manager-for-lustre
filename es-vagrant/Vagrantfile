@@ -143,14 +143,26 @@ Vagrant.configure('2') do |config|
                         type: 'shell',
                         run: 'never',
                         path: './scripts/install_agent_local.sh'
-
+      # remove old emf bits
+      node.vm.provision 'emf-remove-old-bits.sh',
+                        type: 'shell',
+                        run: 'never',
+                        path: './scripts/emf-remove-old-bits.sh'      
+      
       if i == 1
         # This sets up cluster after all nodes provisioned
         node.vm.provision 'ha-setup',
                           type: 'shell',
                           run: 'never',
                           path: './scripts/configure_ha.sh'
-
+        node.vm.provision 'emf-install-repo',
+                          type: 'shell',
+                          run: 'never',
+                          path: './scripts/emf-install-repo.sh'
+        node.vm.provision 'emf-deploy',
+                          type: 'shell',
+                          run: 'never',
+                          path: './scripts/emf-deploy.sh'
         node.vm.provision 'config-pools',
                          type: 'shell',
                          run: 'never',
@@ -231,6 +243,12 @@ Vagrant.configure('2') do |config|
             type: 'shell',
             run: 'never',
             path: './scripts/install_agent_local.sh'
+
+      # remove old emf bits
+      c.vm.provision 'emf-remove-old-bits.sh',
+                     type: 'shell',
+                     run: 'never',
+                     path: './scripts/emf-remove-old-bits.sh'      
 
       c.vm.provision 'install-lustre-client',
                      type: 'shell',

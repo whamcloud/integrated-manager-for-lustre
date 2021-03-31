@@ -353,7 +353,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: emf_repo_rpm
-          path: _topdir/RPMS
+          path: _topdir/RPMS/x86_64
           retention-days: 1
 
   exa_base_testing:
