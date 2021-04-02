@@ -12,6 +12,7 @@ pub mod display_utils;
 pub mod error;
 pub mod filesystem;
 pub mod grafana;
+pub mod health;
 pub mod host;
 pub mod influx;
 pub mod kuma;

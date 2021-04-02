@@ -179,6 +179,14 @@ server {
         proxy_pass http://127.0.0.1:{{NGINX_WARP_DRIVE_SERVICE_PORT}};
     }
 
+    location /kuma/ {
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Server $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_pass http://127.0.0.1:5681/;
+    }
+
     location ~ /report/(.+)$ {
         types { } default_type application/octet-stream;
         gzip on;

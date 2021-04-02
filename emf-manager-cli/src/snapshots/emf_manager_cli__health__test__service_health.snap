@@ -1,0 +1,21 @@
+---
+source: emf-manager-cli/src/health.rs
+expression: xs
+
+---
+{
+  "emf-api-service": "online",
+  "emf-corosync-service": "online",
+  "emf-device-service": "online",
+  "emf-host-service": "online",
+  "emf-journal-service": "online",
+  "emf-network-service": "online",
+  "emf-ntp-service": "online",
+  "emf-ostpool-service": "online",
+  "emf-state-machine-service": "online",
+  "emf-stats-service": "online",
+  "emf-warp-drive-service": "online",
+  "grafana": "online",
+  "influx": "online",
+  "postgres": "online"
+}

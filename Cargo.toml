@@ -41,6 +41,7 @@ members = [
   'emf-util',
   'emf-warp-drive',
   'emf-wire-types',
+  'kuma-client',
   'liblustreapi-types',
   'liblustreapi',
   'number-formatter',

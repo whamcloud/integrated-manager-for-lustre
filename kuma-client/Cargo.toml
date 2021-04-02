@@ -1,0 +1,11 @@
+[package]
+authors = ["EMF Team <emf@whamcloud.com>"]
+edition = "2018"
+name = "kuma-client"
+version = "0.1.0"
+
+[dependencies]
+reqwest = {version = "0.11", default-features = false, features = ["rustls-tls", "json"]}
+serde = {version = "1", features = ["derive"]}
+thiserror = "1"
+url = "2.1"

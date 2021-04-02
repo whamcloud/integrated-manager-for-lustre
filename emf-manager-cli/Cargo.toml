@@ -21,6 +21,7 @@ emf-wire-types = {path = "../emf-wire-types", version = "0.4", features = ["cli"
 futures = "0.3"
 humantime = "*"
 indicatif = "0.15"
+kuma-client = {path = "../kuma-client", version = "0.1"}
 lazy_static = "1.4"
 liblustreapi = {path = "../liblustreapi", version = "0.4"}
 nix = "0.20"
