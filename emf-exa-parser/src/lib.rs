@@ -37,7 +37,7 @@ pub async fn parse_exascaler_conf_from_file(
         args.push(cfg);
     }
 
-    let output = Command::new("es_config_show")
+    let output = Command::new("/opt/ddn/es/tools/es_config_show")
         .args(args)
         .checked_output()
         .await?;
