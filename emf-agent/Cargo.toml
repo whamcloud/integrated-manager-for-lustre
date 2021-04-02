@@ -111,3 +111,7 @@ path = "src/services/stats-agent.rs"
 [[bin]]
 name = "emf-host-agent"
 path = "src/services/host-agent.rs"
+
+[[bin]]
+name = "emf-network-ib-agent"
+path = "src/services/network-ib-agent.rs"

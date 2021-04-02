@@ -87,7 +87,7 @@ sos-rpm:
 rust-core-rpms:
 	mkdir -p ${TMPDIR}/release/rust-core
 	cargo build --release
-	cp -r ${TARGET}/release/emf-{agent,api,corosync,device,host,journal,mailbox,network,ntp,ostpool,report,sfa,snapshot,state-machine,stats,task-runner,warp-drive,timer,action-agent,device-agent,corosync-agent,host-agent,journal-agent,network-agent,ntp-agent,ostpool-agent,postoffice-agent,snapshot-agent,stats-agent} \
+	cp -r ${TARGET}/release/emf-{agent,api,corosync,device,host,journal,mailbox,network,network-ib,ntp,ostpool,report,sfa,snapshot,state-machine,stats,task-runner,warp-drive,timer,action-agent,device-agent,corosync-agent,host-agent,journal-agent,network-agent,network-ib-agent,ntp-agent,ostpool-agent,postoffice-agent,snapshot-agent,stats-agent} \
 		emf-api.service \
 		emf-mailbox.service \
 		emf-report.conf \

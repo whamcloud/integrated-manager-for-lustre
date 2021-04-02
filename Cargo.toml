@@ -24,6 +24,7 @@ members = [
   'emf-services/emf-host',
   'emf-services/emf-journal',
   'emf-services/emf-network',
+  'emf-services/emf-network-ib',
   'emf-services/emf-ntp',
   'emf-services/emf-ostpool',
   'emf-services/emf-service-queue',

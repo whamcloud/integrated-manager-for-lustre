@@ -1,0 +1,4 @@
+/usr/bin/emf-network-ib-agent
+/lib/systemd/system/emf-network-ib-agent.service
+/lib/systemd/system/emf-network-ib-agent-sidecar.service
+/etc/emf/dataplanes/emf-network-ib-agent.yml

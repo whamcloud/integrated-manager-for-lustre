@@ -1,0 +1,26 @@
+[Unit]
+Description=EMF network IB agent sidecar
+Requires=emf-network-ib-agent.service
+PartOf=emf-network-ib-agent.service
+
+[Service]
+EnvironmentFile=/etc/emf/bootstrap.conf
+EnvironmentFile=-/etc/emf/overrides.conf
+ExecStartPre=/bin/rm -f /tmp/kuma-al-emf-network-ib-agent-%m-default.sock
+ExecStart=/usr/bin/kuma-dp run \
+    --cp-address=https://${CP_ADDR}:5678 \
+    --dataplane-file=/etc/emf/dataplanes/emf-network-ib-agent.yml \
+    --dataplane-token-file=/etc/emf/tokens/dataplane-token \
+    --dataplane-var network_ib_agent_port=${NETWORK_IB_AGENT_PORT} \
+    --dataplane-var mgmt_address=${MGMT_ADDR} \
+    --dataplane-var network_ib_agent_network_service_port=${NETWORK_IB_AGENT_NETWORK_SERVICE_PORT} \
+    --dataplane-var node_id=%m \
+    --admin-port=
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+LimitNOFILE=4096
+
+[Install]
+WantedBy=emf-agent.target

@@ -1,0 +1,23 @@
+[Unit]
+Description=EMF network IB service sidecar
+Requires=emf-network-ib.service
+PartOf=emf-network-ib.service
+
+[Service]
+EnvironmentFile=/etc/emf/bootstrap.conf
+EnvironmentFile=-/etc/emf/overrides.conf
+ExecStartPre=/bin/rm -f /tmp/kuma-al-emf-network-ib-service-default.sock
+ExecStart=/usr/bin/kuma-dp run \
+    --cp-address=https://${CP_ADDR}:5678 \
+    --dataplane-file=/etc/emf/dataplanes/emf-network-ib-service.yml \
+    --dataplane-token-file=/etc/emf/tokens/dataplane-token \
+    --dataplane-var mgmt_address=${MGMT_ADDR} \
+    --dataplane-var network_ib_service_port=${NETWORK_IB_SERVICE_PORT} \
+    --dataplane-var network_ib_service_pg_port=${NETWORK_IB_SERVICE_PG_PORT} \
+    --dataplane-var network_ib_service_influx_port=${NETWORK_IB_SERVICE_INFLUX_PORT} \
+    --admin-port=
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+LimitNOFILE=4096

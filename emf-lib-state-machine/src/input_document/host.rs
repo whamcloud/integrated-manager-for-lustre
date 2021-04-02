@@ -470,3 +470,51 @@ options bonding miimon=100 mode={}
         outputs: None,
     }
 }
+
+pub fn install_agent_debs_dgx(host: String, ssh_opts: SshOpts) -> Step {
+    Step {
+        action: StepPair::new(ComponentType::Host, ActionName::SshCommand.into()),
+        id: format!("Install emf DGX agent on {}", &host),
+        inputs: Input::SshCommand(SshCommand {
+            host,
+            run: r#"apt update
+apt install -y \
+emf-action-agent \
+emf-device-agent \
+emf-journal-agent \
+emf-network-agent \
+emf-network-ib-agent \
+emf-host-agent \
+emf-ntp-agent \
+emf-stats-agent"#
+                .to_string(),
+            ssh_opts,
+        })
+        .into(),
+        outputs: None,
+    }
+}
+
+pub fn enable_emf_client_agent_dgx(host: String, ssh_opts: SshOpts) -> Step {
+    Step {
+        action: StepPair::new(ComponentType::Host, ActionName::SshCommand.into()),
+        id: format!("Start DGX agent on {}", &host),
+        inputs: Input::SshCommand(SshCommand {
+            host,
+            run: r#"systemctl enable --now \
+emf-action-agent \
+emf-device-agent \
+emf-journal-agent \
+emf-network-agent \
+emf-network-ib-agent \
+emf-host-agent \
+emf-ntp-agent \
+emf-stats-agent \
+emf-agent.target"#
+                .to_string(),
+            ssh_opts,
+        })
+        .into(),
+        outputs: None,
+    }
+}

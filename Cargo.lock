@@ -1205,6 +1205,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "emf-network-ib"
+version = "0.4.0"
+dependencies = [
+ "emf-influx",
+ "emf-manager-env",
+ "emf-postgres",
+ "emf-service-queue",
+ "emf-tracing",
+ "emf-wire-types",
+ "futures",
+ "insta",
+ "sqlx",
+ "tokio",
+ "tracing",
+ "url",
+]
+
+[[package]]
 name = "emf-ntp"
 version = "0.4.0"
 dependencies = [

@@ -52,6 +52,7 @@ pub const HOST_TABLE_NAME: TableName = TableName("host");
 pub enum Flavor {
     Server,
     Client,
+    Ubuntu,
     UbuntuDgx,
 }
 
@@ -62,6 +63,7 @@ impl FromStr for Flavor {
         match s.to_lowercase().as_str() {
             "server" => Ok(Self::Server),
             "client" => Ok(Self::Client),
+            "ubuntu" => Ok(Self::Ubuntu),
             "ubuntudgx" | "ubuntu_dgx" => Ok(Self::UbuntuDgx),
             x => Err(format!("Unexpected '{}'", x)),
         }

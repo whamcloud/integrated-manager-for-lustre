@@ -7,8 +7,9 @@ use emf_lib_state_machine::input_document::{
     self,
     host::{
         add_emf_deb_repo_step, add_emf_rpm_repo_step, create_cli_conf, enable_emf_client_agent,
-        enable_emf_server_agent, install_agent_client_rpms, install_agent_debs, install_agent_rpms,
-        setup_planes, sync_dataplane_token, wait_for_host_availability,
+        enable_emf_client_agent_dgx, enable_emf_server_agent, install_agent_client_rpms,
+        install_agent_debs, install_agent_debs_dgx, install_agent_rpms, setup_planes,
+        sync_dataplane_token, wait_for_host_availability,
     },
     Job,
 };
@@ -87,12 +88,20 @@ impl HostMutation {
                         enable_emf_server_agent(host.clone(), opts.clone()),
                         wait_for_host_availability(host.clone(), opts.clone()),
                     ],
-                    Flavor::UbuntuDgx => vec![
+                    Flavor::Ubuntu => vec![
                         setup_planes(host.clone(), opts.clone()),
                         sync_dataplane_token(host.clone(), opts.clone()),
                         add_emf_deb_repo_step(host.clone(), opts.clone()),
                         install_agent_debs(host.clone(), opts.clone()),
                         enable_emf_client_agent(host.clone(), opts.clone()),
+                        wait_for_host_availability(host.clone(), opts.clone()),
+                    ],
+                    Flavor::UbuntuDgx => vec![
+                        setup_planes(host.clone(), opts.clone()),
+                        sync_dataplane_token(host.clone(), opts.clone()),
+                        add_emf_deb_repo_step(host.clone(), opts.clone()),
+                        install_agent_debs_dgx(host.clone(), opts.clone()),
+                        enable_emf_client_agent_dgx(host.clone(), opts.clone()),
                         wait_for_host_availability(host.clone(), opts.clone()),
                     ],
                     Flavor::Client => vec![

@@ -1365,3 +1365,10 @@ pub struct BannedResource {
     /// Is master only
     pub master_only: bool,
 }
+
+#[derive(PartialEq, Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
+pub struct IBInterface {
+    pub interface: String,
+    pub rcv_byte_total: u64,
+    pub xmit_byte_total: u64,
+}

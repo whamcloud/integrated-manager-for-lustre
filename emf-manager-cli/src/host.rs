@@ -18,7 +18,7 @@ struct Config {
     #[structopt(required = true)]
     fqdns: Vec<String>,
     /// The type of server to deploy
-    #[structopt(required = true, long, possible_values = &["server", "client", "ubuntu_dgx"], case_insensitive = true)]
+    #[structopt(required = true, long, possible_values = &["server", "client", "ubuntu", "ubuntu_dgx"], case_insensitive = true)]
     flavor: Flavor,
     /// Return the generated input document instead of running it on the state machine.
     /// The document can later be executed with the `emf run` command.

@@ -1,0 +1,21 @@
+[package]
+authors = ["EMF Team <emf@whamcloud.com>"]
+edition = "2018"
+name = "emf-network-ib"
+version = "0.4.0"
+
+[dependencies]
+emf-influx = {path = "../../emf-influx", version = "0.2", features = ["with-db-client"]}
+emf-manager-env = {path = "../../emf-manager-env", version = "0.4"}
+emf-postgres = {path = "../../emf-postgres", version = "0.4"}
+emf-service-queue = {path = "../emf-service-queue", version = "0.4"}
+emf-tracing = {version = "0.4", path = "../../emf-tracing"}
+emf-wire-types = {path = "../../emf-wire-types", version = "0.4", features = ["postgres-interop"]}
+futures = "0.3"
+sqlx = {version = "0.5", features = ["json", "offline", "postgres", "runtime-tokio-rustls", "chrono"]}
+tokio = {version = "1", features = ["macros", "rt-multi-thread"]}
+tracing = "0.1"
+url = "2.1"
+
+[dev-dependencies]
+insta = "1"

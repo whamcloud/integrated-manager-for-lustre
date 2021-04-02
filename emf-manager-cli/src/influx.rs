@@ -126,10 +126,14 @@ pub async fn cli(command: Command) -> Result<(), EmfManagerCliError> {
                 format!(r#"DROP CONTINUOUS QUERY "downsample_lnet" ON "{}""#, statdb),
                 format!(r#"DROP CONTINUOUS QUERY "downsample_samples" ON "{}""#, statdb),
                 format!(r#"DROP CONTINUOUS QUERY "downsample_sums" ON "{}""#, statdb),
-                format!(r#"CREATE CONTINUOUS QUERY "downsample_means" ON "{}" BEGIN SELECT mean(*) INTO "{}"."long_term".:MEASUREMENT FROM "{}"."autogen"."target","{}"."autogen"."host","{}"."autogen"."node","{}"."autogen"."jobstats" GROUP BY time(30m),* END"#, statdb, statdb, statdb, statdb, statdb, statdb),
+                format!(r#"DROP CONTINUOUS QUERY "ib_rcv_rate" ON "{}""#, statdb),
+                format!(r#"DROP CONTINUOUS QUERY "ib_xmit_rate" ON "{}""#, statdb),
+                format!(r#"CREATE CONTINUOUS QUERY "downsample_means" ON "{}" BEGIN SELECT mean(*) INTO "{}"."long_term".:MEASUREMENT FROM "{}"."autogen"."target","{}"."autogen"."host","{}"."autogen"."node","{}"."autogen"."jobstats","{}"."autogen"."infiniband" GROUP BY time(30m),* END"#, statdb, statdb, statdb, statdb, statdb, statdb, statdb),
                 format!(r#"CREATE CONTINUOUS QUERY "downsample_lnet" ON "{}" BEGIN SELECT (last("send_count") - first("send_count")) / count("send_count") AS "mean_diff_send", (last("recv_count") - first("recv_count")) / count("recv_count") AS "mean_diff_recv" INTO "{}"."long_term"."lnet" FROM "lnet" WHERE "nid" != '"0@lo"' GROUP BY time(30m),"host","nid" END"#, statdb, statdb),
                 format!(r#"CREATE CONTINUOUS QUERY "downsample_samples" ON "{}" BEGIN SELECT (last("samples") - first("samples")) / count("samples") AS "mean_diff_samples" INTO "{}"."long_term"."target" FROM "target" GROUP BY time(30m),* END"#, statdb, statdb),
                 format!(r#"CREATE CONTINUOUS QUERY "downsample_sums" ON "{}" BEGIN SELECT (last("sum") - first("sum")) / count("sum") AS "mean_diff_sum" INTO "{}"."long_term"."target" FROM "target" WHERE "units"='"bytes"' GROUP BY time(30m),* END"#, statdb, statdb),
+                format!(r#"CREATE CONTINUOUS QUERY ib_rcv_rate ON emf_stats BEGIN SELECT non_negative_derivative(mean(port_rcv_data), 1s) * 4 AS rcv_rate INTO "{}".autogen.infiniband FROM "{}".autogen.infiniband GROUP BY time(10s),* END"#, statdb, statdb),
+                format!(r#"CREATE CONTINUOUS QUERY ib_xmit_rate ON emf_stats BEGIN SELECT non_negative_derivative(mean(port_xmit_data), 1s) * 4 AS xmit_rate INTO "{}".autogen.infiniband FROM "{}".autogen.infiniband GROUP BY time(10s),* END"#, statdb, statdb),
                 ].join("; ");
             influx(&statdb, cmd).await?;
             influx(&statdb, format!(r#"ALTER RETENTION POLICY "autogen" ON "{}" DURATION 1d  REPLICATION 1 SHARD DURATION 2h DEFAULT"#, statdb)).await?;

@@ -144,6 +144,16 @@ install-agent: build-agent
 
 
 	$(INSTALL_DIR) '$(DESTDIR)$(BINDIR)'
+	$(INSTALL_BIN) "$(CARGO_TARGET_DIR)/release/emf-network-ib-agent" '$(DESTDIR)$(BINDIR)';
+
+	$(INSTALL_DIR) '$(DESTDIR)$(SYSTEMDDIR)/system'
+	$(INSTALL_FILE) "emf-agent/systemd-units/emf-network-ib-agent.service" '$(DESTDIR)$(SYSTEMDDIR)/system';
+	$(INSTALL_FILE) "kuma/systemd-units/emf-network-ib-agent-sidecar.service" '$(DESTDIR)$(SYSTEMDDIR)/system';
+
+	$(INSTALL_DIR) '$(DESTDIR)$(SYSCONFDIR)/emf/dataplanes'
+	$(INSTALL_FILE) "kuma/dataplanes/emf-network-ib-agent.yml" '$(DESTDIR)$(SYSCONFDIR)/emf/dataplanes'
+
+	$(INSTALL_DIR) '$(DESTDIR)$(BINDIR)'
 	$(INSTALL_BIN) "$(CARGO_TARGET_DIR)/release/emf-ntp-agent" '$(DESTDIR)$(BINDIR)';
 
 	$(INSTALL_DIR) '$(DESTDIR)$(SYSTEMDDIR)/system'
@@ -196,5 +206,3 @@ install-agent: build-agent
 .PHONY: clean
 clean:
 	rm -rf $(CARGO_TARGET_DIR)
-
-

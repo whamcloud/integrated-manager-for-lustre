@@ -82,6 +82,15 @@ Depends: ${shlibs:Depends}, ${misc:Depends},
     getenvoy-envoy (${envoy:Version})
 Description: ships network info to the manager
 
+Package: emf-network-ib-agent
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends},
+    emf-agent-target (= ${source:Version}),
+    emf-bootstrap (= ${source:Version}),
+    kuma-dp (${kuma:Version}),
+    getenvoy-envoy (${envoy:Version})
+Description: ships network IB info to the manager
+
 Package: emf-ntp-agent
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends},

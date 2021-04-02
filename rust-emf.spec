@@ -47,6 +47,7 @@ cp emf-host %{buildroot}%{_bindir}
 cp emf-journal %{buildroot}%{_bindir}
 cp emf-mailbox %{buildroot}%{_bindir}
 cp emf-network %{buildroot}%{_bindir}
+cp emf-network-ib %{buildroot}%{_bindir}
 cp emf-ntp %{buildroot}%{_bindir}
 cp emf-ostpool %{buildroot}%{_bindir}
 cp emf-report %{buildroot}%{_bindir}
@@ -62,6 +63,7 @@ cp emf-device-agent %{buildroot}%{_bindir}
 cp emf-host-agent %{buildroot}%{_bindir}
 cp emf-journal-agent %{buildroot}%{_bindir}
 cp emf-network-agent %{buildroot}%{_bindir}
+cp emf-network-ib-agent %{buildroot}%{_bindir}
 cp emf-ntp-agent %{buildroot}%{_bindir}
 cp emf-ostpool-agent %{buildroot}%{_bindir}
 cp emf-postoffice-agent %{buildroot}%{_bindir}
@@ -76,6 +78,7 @@ cp emf-host.service %{buildroot}%{_unitdir}
 cp emf-journal.service %{buildroot}%{_unitdir}
 cp emf-mailbox.service %{buildroot}%{_unitdir}
 cp emf-network.service %{buildroot}%{_unitdir}
+cp emf-network-ib.service %{buildroot}%{_unitdir}
 cp emf-ntp.service %{buildroot}%{_unitdir}
 cp emf-ostpool.service %{buildroot}%{_unitdir}
 cp emf-report.service %{buildroot}%{_unitdir}
@@ -174,6 +177,7 @@ Requires: rust-emf-kuma >= %{version}
 Requires: rust-emf-mailbox >= %{version}
 Requires: rust-emf-manager-target >= %{version}
 Requires: rust-emf-network >= %{version}
+Requires: rust-emf-network-ib >= %{version}
 Requires: rust-emf-nginx >= %{version}
 Requires: rust-emf-ntp >= %{version}
 Requires: rust-emf-ostpool >= %{version}
@@ -619,6 +623,31 @@ Obsoletes: rust-iml-network
 %{_unitdir}/emf-network-sidecar.service
 %{_sysconfdir}/emf/dataplanes/emf-network-service.yml
 
+%package network-ib
+Summary: Consumer of EMF Agent Network IB push queue
+License: MIT
+Group: System Environment/Libraries
+Requires: rust-emf-manager-target >= %{version}
+Requires: getenvoy-envoy = %{envoy_version}
+Requires: kuma-dp >= %{kuma_version}
+Requires: rust-emf-postgres >= %{version}
+Requires: rust-emf-influx >= %{version}
+Requires: rust-emf-bootstrap >= %{version}
+Provides: rust-iml-network-ib
+Obsoletes: rust-iml-network-ib
+
+%description network-ib
+%{summary}
+
+%preun network-ib
+%systemd_preun emf-network-ib.service
+
+%files network-ib
+%{_bindir}/emf-network-ib
+%attr(0644,root,root)%{_unitdir}/emf-network-ib.service
+%{_unitdir}/emf-network-ib-sidecar.service
+%{_sysconfdir}/emf/dataplanes/emf-network-ib-service.yml
+
 
 %package ntp
 Summary: Consumer of EMF Agent Ntp push queue
@@ -998,6 +1027,28 @@ Requires: rust-emf-bootstrap >= %{version}
 %{_unitdir}/emf-network-agent.service
 %{_unitdir}/emf-network-agent-sidecar.service
 %{_sysconfdir}/emf/dataplanes/emf-network-agent.yml
+
+%package network-ib-agent
+Summary: ships network IB info to the manager
+License: MIT
+Group: System Environment/Libraries
+Requires: rust-emf-agent-target >= %{version}
+Requires: getenvoy-envoy = %{envoy_version}
+Requires: kuma-dp >= %{kuma_version}
+Requires: rust-emf-bootstrap >= %{version}
+
+%description network-ib-agent
+%{summary}
+
+%preun network-ib-agent
+%systemd_preun emf-network-ib-agent.service
+%systemd_preun emf-network-ib-agent-sidecar.service
+
+%files network-ib-agent
+%{_bindir}/emf-network-ib-agent
+%{_unitdir}/emf-network-ib-agent.service
+%{_unitdir}/emf-network-ib-agent-sidecar.service
+%{_sysconfdir}/emf/dataplanes/emf-network-ib-agent.yml
 
 
 %package ntp-agent

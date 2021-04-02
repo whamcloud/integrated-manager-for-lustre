@@ -35,7 +35,7 @@ if  ! emf host deploy node[1-4] --flavor server ; then
     exit 1
 fi
 
-if ! emf host deploy ubuntu1 --flavor ubuntu_dgx ; then
+if ! emf host deploy ubuntu1 --flavor ubuntu ; then
     echo "Can't deploy emf to clients"
     exit 1
 fi
