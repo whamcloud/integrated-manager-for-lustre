@@ -165,7 +165,7 @@ migrate_db:
 	cargo sqlx migrate run
 
 sqlx-data.json:
-	cargo sqlx prepare --merged -- --tests
+	CARGO_TARGET_DIR=/tmp/sqlx_target cargo sqlx prepare --merged -- --tests
 
 nuke_logs:
 	@$(ALWAYS_NUKE_LOGS) && { \
